@@ -1,22 +1,438 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="منصة الموسوعات الذكية — معاينة مجانية ومحتوى معرفي متكامل في الذكاء الاصطناعي.">
 <title>منصة الموسوعات الذكية</title>
 <link rel="stylesheet" href="assets/styles.css">
 </head>
+
 <body>
-<header class="topbar"><div class="wrap nav"><a class="brand" href="#top">منصة <span>الموسوعات الذكية</span></a><nav><a href="#preview">المعاينة</a><a href="#features">ماذا ستحصل؟</a><a href="#faq">الأسئلة</a></nav><button class="ghost" data-open-chat>اسأل المساعد</button></div></header>
+
+<header class="topbar">
+  <div class="wrap nav">
+    <a class="brand" href="#top">
+      منصة <span>الموسوعات الذكية</span>
+    </a>
+
+    <nav>
+      <a href="#preview">المعاينة</a>
+      <a href="#features">ماذا ستحصل؟</a>
+      <a href="#faq">الأسئلة</a>
+    </nav>
+
+    <button class="ghost" data-open-chat>
+      اسأل المساعد
+    </button>
+  </div>
+</header>
+
 <main id="top">
-<section class="hero wrap"><div class="hero-copy"><div class="eyebrow">نسخة معاينة مجانية • 20 صفحة مختارة</div><h1>اكتشف قيمة الموسوعة قبل أن تشتريها.</h1><p class="lead">دليل معرفي واسع في الذكاء الاصطناعي، من المفاهيم الأساسية إلى LLMs وRAG وهندسة الأوامر والوكلاء والذكاء متعدد الوسائط.</p><div class="actions"><a class="primary" href="#preview">ابدأ المعاينة المجانية</a><button class="secondary" data-open-chat>تحدث مع المساعد قبل الشراء</button></div><div class="trust"><span>✓ 250 صفحة في النسخة الكاملة</span><span>✓ 20 صفحة مفتوحة للمعاينة</span><span>✓ محتوى منظم للقراءة والتعلّم</span></div></div><div class="hero-card"><div class="cover-badge">PREVIEW</div><div class="book-icon">AI</div><h2>الموسوعة الشاملة<br>في الذكاء الاصطناعي</h2><p>20 صفحة منتقاة بعناية</p><div class="lockline">🔒 بقية المحتوى محفوظ للنسخة الكاملة</div></div></section>
-<section class="stats wrap"><div><b>250</b><span>صفحة في النسخة الكاملة</span></div><div><b>20</b><span>صفحة معاينة مفتوحة</span></div><div><b>∞</b><span>أسئلة يمكنك طرحها على المساعد</span></div></section>
-<section id="preview" class="section wrap"><div class="section-head"><div><div class="eyebrow">المعاينة المجانية</div><h2>20 صفحة تكشف لك مستوى المحتوى</h2></div><p>تنقّل بينها، كبّر الصفحة، وابدأ من أي موضوع يهمك.</p></div><div id="previewGrid" class="grid"></div></section>
-<section id="features" class="section dark"><div class="wrap"><div class="section-head"><div><div class="eyebrow">ما بعد المعاينة</div><h2>لماذا النسخة الكاملة؟</h2></div></div><div class="feature-grid"><article><i>01</i><h3>مسار معرفي واسع</h3><p>تنتقل من أساسيات الذكاء الاصطناعي والتعلم الآلي إلى موضوعات أكثر تقدمًا.</p></article><article><i>02</i><h3>موضوعات حديثة</h3><p>LLMs، Fine-Tuning، RAG، هندسة الأوامر، الوكلاء والذكاء متعدد الوسائط.</p></article><article><i>03</i><h3>مساعد قبل الشراء</h3><p>اسأل عن المحتوى والنسخة الكاملة والسعر والعروض الحالية من خلال المساعد.</p></article><article><i>04</i><h3>تحديث تجاري مرن</h3><p>السعر والعرض محفوظان في إعدادات منفصلة لتحديثهما بسهولة لاحقًا.</p></article></div></div></section>
-<section class="offer wrap"><div><div class="eyebrow">العرض الحالي</div><h2 id="offerTitle">احصل على النسخة الكاملة</h2><p id="offerText">الدفع من داخل السودان عبر بنكك. بعد التحويل أرسل إشعار الدفع عبر واتساب لتأكيد الطلب.</p><div class="payment-box"><div><b>طريقة الدفع:</b> بنكك</div><div><b>رقم الحساب:</b> <span id="accountNumber">1882224</span></div><div><b>إشعار الدفع:</b> <span id="whatsappNumber">+249914488188</span></div></div></div><div class="price"><small id="oldPrice"></small><strong id="priceValue">150 جنيه سوداني</strong><button class="primary" data-open-chat>أريد الشراء</button><a class="whatsapp-btn" id="whatsappLink" href="https://wa.me/249914488188" target="_blank" rel="noopener">إرسال إشعار عبر واتساب</a></div></section>
-<section id="faq" class="section wrap"><div class="section-head"><div><div class="eyebrow">أسئلة شائعة</div><h2>قبل اتخاذ القرار</h2></div></div><div class="faq"><details open><summary>هل كل الموسوعة مفتوحة في المعاينة؟</summary><p>لا. المعاينة تفتح 20 صفحة منتقاة فقط، بينما بقية المحتوى مخصص للنسخة الكاملة.</p></details><details><summary>هل يمكنني السؤال عن محتوى الموسوعة؟</summary><p>نعم. يمكنك استخدام المساعد لطرح أسئلة عن طبيعة المحتوى والموضوعات المتاحة ومزايا النسخة الكاملة.</p></details><details><summary>هل السعر ثابت؟</summary><p>لا. التصميم مجهز بحيث يمكن تحديث السعر والعروض دون إعادة بناء الواجهة.</p></details></div></section>
+
+<section class="hero wrap">
+
+  <div class="hero-copy">
+
+    <div class="eyebrow">
+      نسخة معاينة مجانية • 20 صفحة مختارة
+    </div>
+
+    <h1>
+      اكتشف قيمة الموسوعة قبل أن تشتريها.
+    </h1>
+
+    <p class="lead">
+      دليل معرفي واسع في الذكاء الاصطناعي، من المفاهيم الأساسية إلى LLMs وRAG وهندسة الأوامر والوكلاء والذكاء متعدد الوسائط.
+    </p>
+
+    <div class="actions">
+      <a class="primary" href="#preview">
+        ابدأ المعاينة المجانية
+      </a>
+
+      <button class="secondary" data-open-chat>
+        تحدث مع المساعد قبل الشراء
+      </button>
+    </div>
+
+    <div class="trust">
+      <span>✓ 250 صفحة في النسخة الكاملة</span>
+      <span>✓ 20 صفحة مفتوحة للمعاينة</span>
+      <span>✓ محتوى منظم للقراءة والتعلّم</span>
+    </div>
+
+  </div>
+
+  <div class="hero-card">
+
+    <div class="cover-badge">
+      PREVIEW
+    </div>
+
+    <div class="book-icon">
+      AI
+    </div>
+
+    <h2>
+      الموسوعة الشاملة<br>
+      في الذكاء الاصطناعي
+    </h2>
+
+    <p>
+      20 صفحة منتقاة بعناية
+    </p>
+
+    <div class="lockline">
+      🔒 بقية المحتوى محفوظ للنسخة الكاملة
+    </div>
+
+  </div>
+
+</section>
+
+
+<section class="stats wrap">
+
+  <div>
+    <b>250</b>
+    <span>صفحة في النسخة الكاملة</span>
+  </div>
+
+  <div>
+    <b>20</b>
+    <span>صفحة معاينة مفتوحة</span>
+  </div>
+
+  <div>
+    <b>∞</b>
+    <span>أسئلة يمكنك طرحها على المساعد</span>
+  </div>
+
+</section>
+
+
+<section id="preview" class="section wrap">
+
+  <div class="section-head">
+
+    <div>
+      <div class="eyebrow">
+        المعاينة المجانية
+      </div>
+
+      <h2>
+        20 صفحة تكشف لك مستوى المحتوى
+      </h2>
+    </div>
+
+    <p>
+      تنقّل بينها، كبّر الصفحة، وابدأ من أي موضوع يهمك.
+    </p>
+
+  </div>
+
+  <div id="previewGrid" class="grid"></div>
+
+</section>
+
+
+<section id="features" class="section dark">
+
+  <div class="wrap">
+
+    <div class="section-head">
+
+      <div>
+        <div class="eyebrow">
+          ما بعد المعاينة
+        </div>
+
+        <h2>
+          لماذا النسخة الكاملة؟
+        </h2>
+      </div>
+
+    </div>
+
+    <div class="feature-grid">
+
+      <article>
+        <i>01</i>
+
+        <h3>
+          مسار معرفي واسع
+        </h3>
+
+        <p>
+          تنتقل من أساسيات الذكاء الاصطناعي والتعلم الآلي إلى موضوعات أكثر تقدمًا.
+        </p>
+      </article>
+
+
+      <article>
+        <i>02</i>
+
+        <h3>
+          موضوعات حديثة
+        </h3>
+
+        <p>
+          LLMs، Fine-Tuning، RAG، هندسة الأوامر، الوكلاء والذكاء متعدد الوسائط.
+        </p>
+      </article>
+
+
+      <article>
+        <i>03</i>
+
+        <h3>
+          مساعد قبل الشراء
+        </h3>
+
+        <p>
+          اسأل عن المحتوى والنسخة الكاملة والسعر والعروض الحالية من خلال المساعد.
+        </p>
+      </article>
+
+
+      <article>
+        <i>04</i>
+
+        <h3>
+          تحديث تجاري مرن
+        </h3>
+
+        <p>
+          السعر والعرض محفوظان في إعدادات منفصلة لتحديثهما بسهولة لاحقًا.
+        </p>
+      </article>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<section class="offer wrap">
+
+  <div>
+
+    <div class="eyebrow">
+      العرض الحالي
+    </div>
+
+    <h2 id="offerTitle">
+      احصل على النسخة الكاملة
+    </h2>
+
+    <p id="offerText">
+      الدفع من داخل السودان عبر بنكك. بعد التحويل أرسل إشعار الدفع عبر واتساب لتأكيد الطلب.
+    </p>
+
+
+    <div class="payment-box">
+
+      <div>
+        <b>طريقة الدفع:</b>
+        بنكك
+      </div>
+
+      <div>
+        <b>رقم الحساب:</b>
+        <span id="accountNumber">1882224</span>
+      </div>
+
+      <div>
+        <b>إشعار الدفع:</b>
+        <span id="whatsappNumber">+249914488188</span>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div class="price">
+
+    <small id="oldPrice"></small>
+
+    <strong id="priceValue">
+      150 جنيه سوداني
+    </strong>
+
+    <button class="primary" data-open-chat>
+      أريد الشراء
+    </button>
+
+    <a
+      class="whatsapp-btn"
+      id="whatsappLink"
+      href="https://wa.me/249914488188"
+      target="_blank"
+      rel="noopener"
+    >
+      إرسال إشعار عبر واتساب
+    </a>
+
+  </div>
+
+</section>
+
+
+<section id="faq" class="section wrap">
+
+  <div class="section-head">
+
+    <div>
+      <div class="eyebrow">
+        أسئلة شائعة
+      </div>
+
+      <h2>
+        قبل اتخاذ القرار
+      </h2>
+    </div>
+
+  </div>
+
+
+  <div class="faq">
+
+    <details open>
+
+      <summary>
+        هل كل الموسوعة مفتوحة في المعاينة؟
+      </summary>
+
+      <p>
+        لا. المعاينة تفتح 20 صفحة منتقاة فقط، بينما بقية المحتوى مخصص للنسخة الكاملة.
+      </p>
+
+    </details>
+
+
+    <details>
+
+      <summary>
+        هل يمكنني السؤال عن محتوى الموسوعة؟
+      </summary>
+
+      <p>
+        نعم. يمكنك استخدام المساعد لطرح أسئلة عن طبيعة المحتوى والموضوعات المتاحة ومزايا النسخة الكاملة.
+      </p>
+
+    </details>
+
+
+    <details>
+
+      <summary>
+        هل السعر ثابت؟
+      </summary>
+
+      <p>
+        لا. التصميم مجهز بحيث يمكن تحديث السعر والعروض دون إعادة بناء الواجهة.
+      </p>
+
+    </details>
+
+  </div>
+
+</section>
+
 </main>
-<footer><div class="wrap foot"><span>© 2026 منصة الموسوعات الذكية</span><span>نسخة المعاينة • المحتوى الكامل محمي</span></div></foote<div id="chatOverlay" class="overlay" aria-hidden="true"><div class="chat"><button class="close" data-close-chat>×</button><div class="chat-head"><div class="bot">AI</div><div><b>مساعد المنصة</b><small>جاهز للإجابة عن أسئلتك</small></div></div><div id="messages" class="messages"></div><div class="quick"><button data-q="ماذا تحتوي الموسوعة؟">ماذا تحتوي؟</button><button data-q="كم السعر؟">السعر</button><button data-q="ماذا سأحصل بعد الشراء؟">ماذا سأحصل؟</button></div><form 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           id="chatForm"><input id="chatInput" autocomplete="off" placeholder="اكتب سؤالك هنا…"><button>إرسال</button></form></div></div
-<div id="chatOverlay" class="overlay" aria-hidden="true"><div class="chat"><button class="close" data-close-chat>×</button><div class="chat-head"><div class="bot">AI</div><div><b>مساعد المنصة</b><small>جاهز للإجابة عن أسئلتك</small></div></div><div id="messages" class="messages"></div><div class="quick"><button data-q="ماذا تحتوي الموسوعة؟">ماذا تحتوي؟</button><button data-q="كم السعر؟">السعر</button><button data-q="ماذا سأحصل بعد الشراء؟">ماذا سأحصل؟</button></div><form id="chatForm"><input id="chatInput" autocomplete="off" placeholder="اكتب سؤالك هنا…"><button>إرسال</button></form></div></div>
-<script src="assets/config.js"></script><script src="assets
+
+
+<footer>
+
+  <div class="wrap foot">
+
+    <span>
+      © 2026 منصة الموسوعات الذكية
+    </span>
+
+    <span>
+      نسخة المعاينة • المحتوى الكامل محمي
+    </span>
+
+  </div>
+
+</footer>
+
+
+<div id="chatOverlay" class="overlay" aria-hidden="true">
+
+  <div class="chat">
+
+    <button class="close" data-close-chat>
+      ×
+    </button>
+
+
+    <div class="chat-head">
+
+      <div class="bot">
+        AI
+      </div>
+
+      <div>
+
+        <b>
+          مساعد المنصة
+        </b>
+
+        <small>
+          جاهز للإجابة عن أسئلتك
+        </small>
+
+      </div>
+
+    </div>
+
+
+    <div id="messages" class="messages"></div>
+
+
+    <div class="quick">
+
+      <button data-q="ماذا تحتوي الموسوعة؟">
+        ماذا تحتوي؟
+      </button>
+
+      <button data-q="كم السعر؟">
+        السعر
+      </button>
+
+      <button data-q="ماذا سأحصل بعد الشراء؟">
+        ماذا سأحصل؟
+      </button>
+
+    </div>
+
+
+    <form id="chatForm">
+
+      <input
+        id="chatInput"
+        autocomplete="off"
+        placeholder="اكتب سؤالك هنا…"
+      >
+
+      <button>
+        إرسال
+      </button>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<script src="assets/config.js"></script>
+<script src="assets/app.js"></script>
+
+</body>
+</html>
