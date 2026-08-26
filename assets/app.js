@@ -1,22 +1,20 @@
-document.addEventListener("DOMContentLoaded", () => {
+      document.addEventListener("DOMContentLoaded", () => {
   const CONFIG = window.STORE_CONFIG || {};
 
-  // =========================
-  // بيانات المنتج
-  // =========================
   const price = CONFIG.price || "150";
   const currency = CONFIG.currency || "جنيه سوداني";
   const totalPages = CONFIG.pages || 250;
   const previewPages = CONFIG.previewPages || 20;
-  const bank = "بنكك";
   const accountNumber = CONFIG.accountNumber || "1882224";
   const whatsapp = CONFIG.whatsapp || "+249914488188";
   const whatsappUrl =
-    CONFIG.whatsappUrl || `https://wa.me/${whatsapp.replace(/\D/g, "")}`;
+    CONFIG.whatsappUrl ||
+    `https://wa.me/${whatsapp.replace(/\D/g, "")}`;
 
   // =========================
-  // تحديث بيانات العرض
+  // بيانات العرض
   // =========================
+
   const priceValue = document.getElementById("priceValue");
   const offerTitle = document.getElementById("offerTitle");
   const offerText = document.getElementById("offerText");
@@ -54,63 +52,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // الشات
+  // المساعد
   // =========================
+
   const overlay = document.getElementById("chatOverlay");
   const chatForm = document.getElementById("chatForm");
   const chatInput = document.getElementById("chatInput");
   const messages = document.getElementById("messages");
 
-  function openChat() {
-    if (!overlay) return;
-
-    overlay.classList.add("show");
-    overlay.setAttribute("aria-hidden", "false");
-
-    if (messages && messages.children.length === 0) {
-      addMessage(
-        "مرحبًا بك 👋\nأنا مساعد منصة الموسوعات الذكية. يمكنك سؤالي عن محتوى الموسوعة أو السعر أو طريقة الشراء.",
-        "botmsg"
-      );
-    }
-
-    setTimeout(() => {
-      if (chatInput) chatInput.focus();
-    }, 100);
-  }
-
-  function closeChat() {
-    if (!overlay) return;
-
-    overlay.classList.remove("show");
-    overlay.setAttribute("aria-hidden", "true");
-  }
-
-  document.querySelectorAll("[data-open-chat]").forEach((button) => {
-    button.addEventListener("click", openChat);
-  });
-
-  document.querySelectorAll("[data-close-chat]").forEach((button) => {
-    button.addEventListener("click", closeChat);
-  });
-
-  if (overlay) {
-    overlay.addEventListener("click", (event) => {
-      if (event.target === overlay) {
-        closeChat();
-      }
-    });
-  }
-
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      closeChat();
-    }
-  });
-
-  // =========================
-  // إرسال الرسائل
-  // =========================
   function addMessage(text, className) {
     if (!messages) return;
 
@@ -123,9 +72,63 @@ document.addEventListener("DOMContentLoaded", () => {
     messages.scrollTop = messages.scrollHeight;
   }
 
+  function openChat() {
+    if (!overlay) return;
+
+    overlay.classList.add("show");
+    overlay.setAttribute("aria-hidden", "false");
+
+    if (messages && messages.children.length === 0) {
+      addMessage(
+        "مرحبًا بك 👋\nأنا مساعد منصة الموسوعات الذكية.\n\nيمكنك سؤالي عن المحتوى أو السعر أو الصفحات أو طريقة الشراء.",
+        "botmsg"
+      );
+    }
+
+    setTimeout(() => {
+      if (chatInput) chatInput.focus();
+    }, 150);
+  }
+
+  function closeChat() {
+    if (!overlay) return;
+
+    overlay.classList.remove("show");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+
+  // جميع أزرار "اسأل المساعد"
+  document.querySelectorAll("[data-open-chat]").forEach((button) => {
+    button.addEventListener("click", openChat);
+  });
+
+  // زر الإغلاق
+  document.querySelectorAll("[data-close-chat]").forEach((button) => {
+    button.addEventListener("click", closeChat);
+  });
+
+  // الضغط خارج نافذة المحادثة
+  if (overlay) {
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) {
+        closeChat();
+      }
+    });
+  }
+
+  // زر Escape
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeChat();
+    }
+  });
+
+  // =========================
+  // الردود
+  // =========================
+
   function respondToUser(text) {
     const q = text.toLowerCase();
-
     let reply;
 
     if (
@@ -147,9 +150,9 @@ document.addEventListener("DOMContentLoaded", () => {
       q.includes("بنكك")
     ) {
       reply =
-        `طريقة الدفع داخل السودان: ${bank}.\n` +
+        `طريقة الدفع داخل السودان: بنكك.\n` +
         `رقم الحساب: ${accountNumber}.\n\n` +
-        `بعد التحويل أرسل إشعار الدفع عبر واتساب على:\n${whatsapp}`;
+        `بعد التحويل أرسل إشعار الدفع عبر واتساب:\n${whatsapp}`;
     }
 
     else if (
@@ -159,17 +162,17 @@ document.addEventListener("DOMContentLoaded", () => {
     ) {
       reply =
         `الموسوعة الكاملة تحتوي على ${totalPages} صفحة.\n` +
-        `ومتاح حاليًا ${previewPages} صفحة للمعاينة المجانية.`;
+        `ومتاح ${previewPages} صفحة للمعاينة المجانية.`;
     }
 
     else if (
-      q.includes("ماذا تحتوي") ||
-      q.includes("المحتوى") ||
+      q.includes("محتوى") ||
       q.includes("موضوع") ||
+      q.includes("تحتوي") ||
       q.includes("ماذا سأحصل")
     ) {
       reply =
-        "الموسوعة تتناول موضوعات الذكاء الاصطناعي من الأساسيات إلى الموضوعات المتقدمة، " +
+        "الموسوعة تتناول الذكاء الاصطناعي من الأساسيات إلى الموضوعات المتقدمة، " +
         "ومنها LLMs وRAG وهندسة الأوامر والوكلاء والذكاء متعدد الوسائط.";
     }
 
@@ -178,8 +181,8 @@ document.addEventListener("DOMContentLoaded", () => {
       q.includes("واتس")
     ) {
       reply =
-        `يمكنك التواصل عبر واتساب على ${whatsapp}.\n` +
-        `بعد التحويل أرسل إشعار الدفع لتأكيد الطلب.`;
+        `يمكنك التواصل عبر واتساب على:\n${whatsapp}\n\n` +
+        "وبعد التحويل أرسل إشعار الدفع لتأكيد الطلب.";
     }
 
     else {
@@ -196,6 +199,7 @@ document.addEventListener("DOMContentLoaded", () => {
     addMessage(reply, "botmsg");
   }
 
+  // إرسال السؤال
   if (chatForm) {
     chatForm.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -207,7 +211,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!text) return;
 
       addMessage(text, "usermsg");
-
       chatInput.value = "";
 
       setTimeout(() => {
@@ -219,6 +222,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================
   // الأزرار السريعة
   // =========================
+
   document.querySelectorAll("[data-q]").forEach((button) => {
     button.addEventListener("click", () => {
       const question = button.getAttribute("data-q");
@@ -235,8 +239,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // =========================
-  // معاينة الصفحات
+  // إنشاء صفحات المعاينة
   // =========================
+
   const previewGrid = document.getElementById("previewGrid");
 
   if (previewGrid) {
@@ -251,7 +256,6 @@ document.addEventListener("DOMContentLoaded", () => {
       page.type = "button";
 
       const img = document.createElement("img");
-
       img.src = `${previewFolder}${i}.jpg`;
       img.alt = `صفحة معاينة ${i}`;
       img.loading = "lazy";
@@ -281,8 +285,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================
-  // تكبير صفحات المعاينة
+  // تكبير صفحة المعاينة
   // =========================
+
   function openLightbox(src, title) {
     let box = document.getElementById("lightbox");
 
