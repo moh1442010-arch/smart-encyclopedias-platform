@@ -1,0 +1,15 @@
+const CONFIG = {
+    bookPrice: "150",
+    fullPages: 250,
+    previewPages: 20,
+    paymentBank: "بنكك",
+    whatsappNumber: "249914488188", 
+};
+const CONFIG = {
+    bookPrice: "150",
+    fullPages: 250,
+    previewPages: 20,
+    paymentBank: "بنكك",
+    whatsappNumber: "249914488188", 
+};
+
