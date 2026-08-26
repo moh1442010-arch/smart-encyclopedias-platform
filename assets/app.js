@@ -1,88 +1,318 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. فتح وإغلاق الصور (Lightbox)
-    const previewButtons = document.querySelectorAll(".preview-card .page");
-    
-    previewButtons.forEach((btn, index) => {
-        btn.addEventListener("click", () => {
-            const img = btn.querySelector("img");
-            if (img) {
-                openLightbox(img.src, `صفحة معاينة رقم ${index + 1}`);
-            }
-        });
+  const CONFIG = window.STORE_CONFIG || {};
+
+  // =========================
+  // بيانات المنتج
+  // =========================
+  const price = CONFIG.price || "150";
+  const currency = CONFIG.currency || "جنيه سوداني";
+  const totalPages = CONFIG.pages || 250;
+  const previewPages = CONFIG.previewPages || 20;
+  const bank = "بنكك";
+  const accountNumber = CONFIG.accountNumber || "1882224";
+  const whatsapp = CONFIG.whatsapp || "+249914488188";
+  const whatsappUrl =
+    CONFIG.whatsappUrl || `https://wa.me/${whatsapp.replace(/\D/g, "")}`;
+
+  // =========================
+  // تحديث بيانات العرض
+  // =========================
+  const priceValue = document.getElementById("priceValue");
+  const offerTitle = document.getElementById("offerTitle");
+  const offerText = document.getElementById("offerText");
+  const oldPrice = document.getElementById("oldPrice");
+  const account = document.getElementById("accountNumber");
+  const whatsappNumber = document.getElementById("whatsappNumber");
+  const whatsappLink = document.getElementById("whatsappLink");
+
+  if (priceValue) {
+    priceValue.textContent = `${price} ${currency}`;
+  }
+
+  if (offerTitle && CONFIG.offerTitle) {
+    offerTitle.textContent = CONFIG.offerTitle;
+  }
+
+  if (offerText && CONFIG.offerText) {
+    offerText.textContent = CONFIG.offerText;
+  }
+
+  if (oldPrice && CONFIG.oldPrice) {
+    oldPrice.textContent = `${CONFIG.oldPrice} ${currency}`;
+  }
+
+  if (account) {
+    account.textContent = accountNumber;
+  }
+
+  if (whatsappNumber) {
+    whatsappNumber.textContent = whatsapp;
+  }
+
+  if (whatsappLink) {
+    whatsappLink.href = whatsappUrl;
+  }
+
+  // =========================
+  // الشات
+  // =========================
+  const overlay = document.getElementById("chatOverlay");
+  const chatForm = document.getElementById("chatForm");
+  const chatInput = document.getElementById("chatInput");
+  const messages = document.getElementById("messages");
+
+  function openChat() {
+    if (!overlay) return;
+
+    overlay.classList.add("show");
+    overlay.setAttribute("aria-hidden", "false");
+
+    if (messages && messages.children.length === 0) {
+      addMessage(
+        "مرحبًا بك 👋\nأنا مساعد منصة الموسوعات الذكية. يمكنك سؤالي عن محتوى الموسوعة أو السعر أو طريقة الشراء.",
+        "botmsg"
+      );
+    }
+
+    setTimeout(() => {
+      if (chatInput) chatInput.focus();
+    }, 100);
+  }
+
+  function closeChat() {
+    if (!overlay) return;
+
+    overlay.classList.remove("show");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+
+  document.querySelectorAll("[data-open-chat]").forEach((button) => {
+    button.addEventListener("click", openChat);
+  });
+
+  document.querySelectorAll("[data-close-chat]").forEach((button) => {
+    button.addEventListener("click", closeChat);
+  });
+
+  if (overlay) {
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) {
+        closeChat();
+      }
     });
+  }
 
-    function openLightbox(src, title) {
-        let box = document.getElementById("lightbox");
-        if (!box) {
-            box = document.createElement("div");
-            box.id = "lightbox";
-            box.className = "lightbox";
-            box.innerHTML = `
-                <button onclick="document.getElementById('lightbox').remove()">✕</button>
-                <img src="" id="lightbox-img">
-                <div id="lightbox-title"></div>
-            `;
-            document.body.appendChild(box);
-        }
-        document.getElementById("lightbox-img").src = src;
-        document.getElementById("lightbox-title").innerText = title;
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeChat();
+    }
+  });
+
+  // =========================
+  // إرسال الرسائل
+  // =========================
+  function addMessage(text, className) {
+    if (!messages) return;
+
+    const msg = document.createElement("div");
+    msg.className = `msg ${className}`;
+    msg.style.whiteSpace = "pre-line";
+    msg.textContent = text;
+
+    messages.appendChild(msg);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function respondToUser(text) {
+    const q = text.toLowerCase();
+
+    let reply;
+
+    if (
+      q.includes("سعر") ||
+      q.includes("بكم") ||
+      q.includes("تكلف") ||
+      q.includes("كم")
+    ) {
+      reply =
+        `سعر النسخة الكاملة هو ${price} ${currency}.\n` +
+        `النسخة الكاملة تحتوي على ${totalPages} صفحة.`;
     }
 
-    // 2. منطق شات البوت الذكي
-    const chatForm = document.getElementById("chat-form");
-    const chatInput = document.getElementById("chat-input");
-    const messages = document.getElementById("chat-messages");
+    else if (
+      q.includes("دفع") ||
+      q.includes("شراء") ||
+      q.includes("بنك") ||
+      q.includes("تحويل") ||
+      q.includes("بنكك")
+    ) {
+      reply =
+        `طريقة الدفع داخل السودان: ${bank}.\n` +
+        `رقم الحساب: ${accountNumber}.\n\n` +
+        `بعد التحويل أرسل إشعار الدفع عبر واتساب على:\n${whatsapp}`;
+    }
 
-    if (chatForm) {
-        chatForm.addEventListener("submit", (e) => {
-            e.preventDefault();
-            const text = chatInput.value.trim();
-            if (!text) return;
+    else if (
+      q.includes("صفحة") ||
+      q.includes("صفحات") ||
+      q.includes("عدد")
+    ) {
+      reply =
+        `الموسوعة الكاملة تحتوي على ${totalPages} صفحة.\n` +
+        `ومتاح حاليًا ${previewPages} صفحة للمعاينة المجانية.`;
+    }
 
-            addMessage(text, "usermsg");
-            chatInput.value = "";
+    else if (
+      q.includes("ماذا تحتوي") ||
+      q.includes("المحتوى") ||
+      q.includes("موضوع") ||
+      q.includes("ماذا سأحصل")
+    ) {
+      reply =
+        "الموسوعة تتناول موضوعات الذكاء الاصطناعي من الأساسيات إلى الموضوعات المتقدمة، " +
+        "ومنها LLMs وRAG وهندسة الأوامر والوكلاء والذكاء متعدد الوسائط.";
+    }
 
-            setTimeout(() => {
-                respondToUser(text);
-            }, 400);
+    else if (
+      q.includes("واتساب") ||
+      q.includes("واتس")
+    ) {
+      reply =
+        `يمكنك التواصل عبر واتساب على ${whatsapp}.\n` +
+        `بعد التحويل أرسل إشعار الدفع لتأكيد الطلب.`;
+    }
+
+    else {
+      reply =
+        "أهلًا بك 👋\n\n" +
+        "يمكنك سؤالي عن:\n" +
+        "• محتوى الموسوعة\n" +
+        "• عدد الصفحات\n" +
+        "• السعر\n" +
+        "• طريقة الدفع\n" +
+        "• طريقة الشراء";
+    }
+
+    addMessage(reply, "botmsg");
+  }
+
+  if (chatForm) {
+    chatForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      if (!chatInput) return;
+
+      const text = chatInput.value.trim();
+
+      if (!text) return;
+
+      addMessage(text, "usermsg");
+
+      chatInput.value = "";
+
+      setTimeout(() => {
+        respondToUser(text);
+      }, 350);
+    });
+  }
+
+  // =========================
+  // الأزرار السريعة
+  // =========================
+  document.querySelectorAll("[data-q]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const question = button.getAttribute("data-q");
+
+      if (!question) return;
+
+      openChat();
+      addMessage(question, "usermsg");
+
+      setTimeout(() => {
+        respondToUser(question);
+      }, 300);
+    });
+  });
+
+  // =========================
+  // معاينة الصفحات
+  // =========================
+  const previewGrid = document.getElementById("previewGrid");
+
+  if (previewGrid) {
+    const previewFolder = "assets/preview/";
+
+    for (let i = 1; i <= previewPages; i++) {
+      const card = document.createElement("article");
+      card.className = "preview-card";
+
+      const page = document.createElement("button");
+      page.className = "page";
+      page.type = "button";
+
+      const img = document.createElement("img");
+
+      img.src = `${previewFolder}${i}.jpg`;
+      img.alt = `صفحة معاينة ${i}`;
+      img.loading = "lazy";
+
+      const label = document.createElement("span");
+      label.textContent = `صفحة ${i}`;
+
+      page.appendChild(img);
+      page.appendChild(label);
+
+      const title = document.createElement("h3");
+      title.textContent = `صفحة ${i} من المعاينة`;
+
+      const small = document.createElement("small");
+      small.textContent = "معاينة مجانية";
+
+      card.appendChild(page);
+      card.appendChild(title);
+      card.appendChild(small);
+
+      previewGrid.appendChild(card);
+
+      page.addEventListener("click", () => {
+        openLightbox(img.src, `صفحة معاينة رقم ${i}`);
+      });
+    }
+  }
+
+  // =========================
+  // تكبير صفحات المعاينة
+  // =========================
+  function openLightbox(src, title) {
+    let box = document.getElementById("lightbox");
+
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "lightbox";
+      box.className = "lightbox";
+
+      box.innerHTML = `
+        <button type="button" id="closeLightbox">✕</button>
+        <img id="lightbox-img" src="" alt="">
+        <div id="lightbox-title"></div>
+      `;
+
+      document.body.appendChild(box);
+
+      document
+        .getElementById("closeLightbox")
+        .addEventListener("click", () => {
+          box.remove();
         });
-    }
 
-    function addMessage(text, className) {
-        if (!messages) return;
-        const msg = document.createElement("div");
-        msg.className = `msg ${className}`;
-        msg.innerText = text;
-        messages.appendChild(msg);
-        messages.scrollTop = messages.scrollHeight;
-    }
-
-    function respondToUser(text) {
-        const q = text.toLowerCase();
-        let reply = "";
-
-        // فحص الاستفسار عن عدد الصفحات
-        if (q.includes("صفح") || q.includes("عدد") || q.includes("حجم")) {
-            const total = (typeof CONFIG !== 'undefined' && CONFIG.fullPages) ? CONFIG.fullPages : 250;
-            const preview = (typeof CONFIG !== 'undefined' && CONFIG.previewPages) ? CONFIG.previewPages : 20;
-            reply = `يحتوي الكتاب الكامل على ${total} صفحة، وتتوفر منه ${preview} صفحة للمعاينة المجانية عبر الموقع.`;
-        } 
-        // فحص الاستفسار عن السعر
-        else if (q.includes("سعر") || q.includes("بكم") || q.includes("تكلف")) {
-            const price = (typeof CONFIG !== 'undefined' && CONFIG.bookPrice) ? CONFIG.bookPrice : "150";
-            reply = `سعر النسخة الكاملة هو ${price} جنيه سوداني فقط.`;
-        } 
-        // فحص الاستفسار عن الدفع والتحويل
-        else if (q.includes("دفع") || q.includes("شراء") || q.includes("بنك") || q.includes("تحويل")) {
-            const bank = (typeof CONFIG !== 'undefined' && CONFIG.paymentBank) ? CONFIG.paymentBank : "بنكك";
-            reply = `يمكنك التملّك والدفع المباشر عبر تطبيق (${bank}). بعد التحويل يرجى إرسال الإشعار للواتساب لاستلام النسخة فوراً.`;
-        } 
-        // إجابة عامة وترحيب
-        else {
-            reply = "أهلاً بك! أنا المساعد الذكي للموسوعة. يمكنك الاستفسار عن: عدد الصفحات، سعر الكتاب، أو طريقة الشراء والدفع عبر بنكك.";
+      box.addEventListener("click", (event) => {
+        if (event.target === box) {
+          box.remove();
         }
-
-        addMessage(reply, "botmsg");
+      });
     }
-});
 
+    document.getElementById("lightbox-img").src = src;
+    document.getElementById("lightbox-title").textContent = title;
+  }
+});
