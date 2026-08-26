@@ -236,7 +236,115 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================
 
   function respondToUser(text) {
-    const intent = detectIntent(text);
+    const intent = function detectIntent(text) {
+  const q = normalize(text);
+
+  // السعر
+  if (
+    q.includes("سعر") ||
+    q.includes("بكم") ||
+    q.includes("كم السعر") ||
+    q.includes("تكلفة") ||
+    q.includes("القيمة")
+  ) {
+    return "price";
+  }
+
+  // الصفحات
+  if (
+    q.includes("عدد الصفحات") ||
+    q.includes("كم صفحة") ||
+    q.includes("عدد صفحة") ||
+    q.includes("250 صفحة")
+  ) {
+    return "pages";
+  }
+
+  // المعاينة
+  if (
+    q.includes("معاينة") ||
+    q.includes("مجاني") ||
+    q.includes("مجانية") ||
+    q.includes("الصفحات المجانية") ||
+    q.includes("اشوف الصفحات")
+  ) {
+    return "preview";
+  }
+
+  // الدفع
+  if (
+    q.includes("دفع") ||
+    q.includes("ادفع") ||
+    q.includes("تحويل") ||
+    q.includes("بنكك") ||
+    q.includes("بنك") ||
+    q.includes("حساب") ||
+    q.includes("رقم الحساب") ||
+    q.includes("طريقة الدفع")
+  ) {
+    return "payment";
+  }
+
+  // الشراء
+  if (
+    q.includes("شراء") ||
+    q.includes("اشتري") ||
+    q.includes("اريد شراء") ||
+    q.includes("كيف اشتري") ||
+    q.includes("الحصول على النسخة") ||
+    q.includes("النسخة الكاملة")
+  ) {
+    return "buy";
+  }
+
+  // واتساب
+  if (
+    q.includes("واتساب") ||
+    q.includes("واتس") ||
+    q.includes("رقم التواصل") ||
+    q.includes("رقم الهاتف")
+  ) {
+    return "whatsapp";
+  }
+
+  // المحتوى
+  if (
+    q.includes("المحتوى") ||
+    q.includes("محتوى الموسوعة") ||
+    q.includes("ماذا تحتوي") ||
+    q.includes("موضوعات") ||
+    q.includes("مواضيع") ||
+    q.includes("ماذا تتناول")
+  ) {
+    return "content";
+  }
+
+  // الفائدة
+  if (
+    q.includes("الفائدة") ||
+    q.includes("استفيد") ||
+    q.includes("ماذا استفيد") ||
+    q.includes("ماذا سأحصل") ||
+    q.includes("هل تستحق الشراء") ||
+    q.includes("لماذا اشتري")
+  ) {
+    return "benefit";
+  }
+
+  // الترحيب
+  if (
+    q.includes("مرحبا") ||
+    q.includes("اهلا") ||
+    q.includes("السلام عليكم") ||
+    q === "سلام" ||
+    q === "hello" ||
+    q === "hi"
+  ) {
+    return "welcome";
+  }
+
+  return "unknown";
+    }
 
     let reply = "";
 
