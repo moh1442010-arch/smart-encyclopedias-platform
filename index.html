@@ -7,432 +7,135 @@
 <title>منصة الموسوعات الذكية</title>
 <link rel="stylesheet" href="assets/styles.css">
 </head>
-
 <body>
-
 <header class="topbar">
   <div class="wrap nav">
-    <a class="brand" href="#top">
-      منصة <span>الموسوعات الذكية</span>
-    </a>
-
+    <a class="brand" href="#top">منصة <span>الموسوعات الذكية</span></a>
     <nav>
       <a href="#preview">المعاينة</a>
       <a href="#features">ماذا ستحصل؟</a>
       <a href="#faq">الأسئلة</a>
     </nav>
-
-    <button class="ghost" data-open-chat>
-      اسأل المساعد
-    </button>
+    <div class="nav-tools">
+      <button class="ghost" data-open-chat>الشات بوت</button>
+      <button class="agent-trigger" data-open-agent>الوكيل الذكي</button>
+    </div>
   </div>
 </header>
-
 <main id="top">
-
 <section class="hero wrap">
-
   <div class="hero-copy">
-
-    <div class="eyebrow">
-      نسخة معاينة مجانية • 20 صفحة مختارة
-    </div>
-
-    <h1>
-      اكتشف قيمة الموسوعة قبل أن تشتريها.
-    </h1>
-
-    <p class="lead">
-      دليل معرفي واسع في الذكاء الاصطناعي، من المفاهيم الأساسية إلى LLMs وRAG وهندسة الأوامر والوكلاء والذكاء متعدد الوسائط.
-    </p>
-
+    <div class="eyebrow">نسخة معاينة مجانية • 20 صفحة مختارة</div>
+    <h1>اكتشف قيمة الموسوعة قبل أن تشتريها.</h1>
+    <p class="lead">دليل معرفي واسع في الذكاء الاصطناعي، من المفاهيم الأساسية إلى LLMs وRAG وهندسة الأوامر والوكلاء والذكاء متعدد الوسائط.</p>
     <div class="actions">
-      <a class="primary" href="#preview">
-        ابدأ المعاينة المجانية
-      </a>
-
-      <button class="secondary" data-open-chat>
-        تحدث مع المساعد قبل الشراء
-      </button>
+      <a class="primary" href="#preview">ابدأ المعاينة المجانية</a>
+      <button class="secondary" data-open-chat>تحدث مع الشات بوت</button>
+      <button class="agent-btn" data-open-agent>شغّل الوكيل الذكي</button>
     </div>
-
     <div class="trust">
       <span>✓ 250 صفحة في النسخة الكاملة</span>
       <span>✓ 20 صفحة مفتوحة للمعاينة</span>
-      <span>✓ محتوى منظم للقراءة والتعلّم</span>
+      <span>✓ شات بوت للإجابة عن أسئلتك</span>
+      <span>✓ وكيل لتنفيذ المهام داخل الموقع</span>
     </div>
-
   </div>
-
   <div class="hero-card">
-
-    <div class="cover-badge">
-      PREVIEW
-    </div>
-
-    <div class="book-icon">
-      AI
-    </div>
-
-    <h2>
-      الموسوعة الشاملة<br>
-      في الذكاء الاصطناعي
-    </h2>
-
-    <p>
-      20 صفحة منتقاة بعناية
-    </p>
-
-    <div class="lockline">
-      🔒 بقية المحتوى محفوظ للنسخة الكاملة
-    </div>
-
+    <div class="cover-badge">PREVIEW</div>
+    <div class="book-icon">AI</div>
+    <h2>الموسوعة الشاملة<br>في الذكاء الاصطناعي</h2>
+    <p>20 صفحة منتقاة بعناية</p>
+    <div class="lockline">🔒 بقية المحتوى محفوظ للنسخة الكاملة</div>
   </div>
-
 </section>
-
-
 <section class="stats wrap">
-
-  <div>
-    <b>250</b>
-    <span>صفحة في النسخة الكاملة</span>
-  </div>
-
-  <div>
-    <b>20</b>
-    <span>صفحة معاينة مفتوحة</span>
-  </div>
-
-  <div>
-    <b>∞</b>
-    <span>أسئلة يمكنك طرحها على المساعد</span>
-  </div>
-
+  <div><b>250</b><span>صفحة في النسخة الكاملة</span></div>
+  <div><b>20</b><span>صفحة معاينة مفتوحة</span></div>
+  <div><b>∞</b><span>أسئلة يمكنك طرحها على المساعد</span></div>
 </section>
-
-
 <section id="preview" class="section wrap">
-
   <div class="section-head">
-
-    <div>
-      <div class="eyebrow">
-        المعاينة المجانية
-      </div>
-
-      <h2>
-        20 صفحة تكشف لك مستوى المحتوى
-      </h2>
-    </div>
-
-    <p>
-      تنقّل بينها، كبّر الصفحة، وابدأ من أي موضوع يهمك.
-    </p>
-
+    <div><div class="eyebrow">المعاينة المجانية</div><h2>20 صفحة تكشف لك مستوى المحتوى</h2></div>
+    <p>تنقّل بينها، كبّر الصفحة، وابدأ من أي موضوع يهمك.</p>
   </div>
-
   <div id="previewGrid" class="grid"></div>
-
 </section>
-
-
 <section id="features" class="section dark">
-
   <div class="wrap">
-
-    <div class="section-head">
-
-      <div>
-        <div class="eyebrow">
-          ما بعد المعاينة
-        </div>
-
-        <h2>
-          لماذا النسخة الكاملة؟
-        </h2>
-      </div>
-
-    </div>
-
+    <div class="section-head"><div><div class="eyebrow">ما بعد المعاينة</div><h2>لماذا النسخة الكاملة؟</h2></div></div>
     <div class="feature-grid">
-
-      <article>
-        <i>01</i>
-
-        <h3>
-          مسار معرفي واسع
-        </h3>
-
-        <p>
-          تنتقل من أساسيات الذكاء الاصطناعي والتعلم الآلي إلى موضوعات أكثر تقدمًا.
-        </p>
-      </article>
-
-
-      <article>
-        <i>02</i>
-
-        <h3>
-          موضوعات حديثة
-        </h3>
-
-        <p>
-          LLMs، Fine-Tuning، RAG، هندسة الأوامر، الوكلاء والذكاء متعدد الوسائط.
-        </p>
-      </article>
-
-
-      <article>
-        <i>03</i>
-
-        <h3>
-          مساعد قبل الشراء
-        </h3>
-
-        <p>
-          اسأل عن المحتوى والنسخة الكاملة والسعر والعروض الحالية من خلال المساعد.
-        </p>
-      </article>
-
-
-      <article>
-        <i>04</i>
-
-        <h3>
-          تحديث تجاري مرن
-        </h3>
-
-        <p>
-          السعر والعرض محفوظان في إعدادات منفصلة لتحديثهما بسهولة لاحقًا.
-        </p>
-      </article>
-
+      <article><i>01</i><h3>مسار معرفي واسع</h3><p>تنتقل من أساسيات الذكاء الاصطناعي والتعلم الآلي إلى موضوعات أكثر تقدمًا.</p></article>
+      <article><i>02</i><h3>موضوعات حديثة</h3><p>LLMs، Fine-Tuning، RAG، هندسة الأوامر، الوكلاء والذكاء متعدد الوسائط.</p></article>
+      <article><i>03</i><h3>مساعد قبل الشراء</h3><p>اسأل عن المحتوى والنسخة الكاملة والسعر والعروض الحالية من خلال الشات بوت.</p></article>
+      <article><i>04</i><h3>وكيل داخل الموقع</h3><p>اطلب من الوكيل تنفيذ مهام مثل فتح المعاينة أو الوصول إلى الدفع أو تجهيز مسار تصفح.</p></article>
     </div>
-
   </div>
-
 </section>
-
-
 <section class="offer wrap">
-
   <div>
-
-    <div class="eyebrow">
-      العرض الحالي
-    </div>
-
-    <h2 id="offerTitle">
-      احصل على النسخة الكاملة
-    </h2>
-
-    <p id="offerText">
-      الدفع من داخل السودان عبر بنكك. بعد التحويل أرسل إشعار الدفع عبر واتساب لتأكيد الطلب.
-    </p>
-
-
+    <div class="eyebrow">العرض الحالي</div>
+    <h2 id="offerTitle">احصل على النسخة الكاملة</h2>
+    <p id="offerText">الدفع من داخل السودان عبر بنكك. بعد التحويل أرسل إشعار الدفع عبر واتساب لتأكيد الطلب.</p>
     <div class="payment-box">
-
-      <div>
-        <b>طريقة الدفع:</b>
-        بنكك
-      </div>
-
-      <div>
-        <b>رقم الحساب:</b>
-        <span id="accountNumber">1882224</span>
-      </div>
-
-      <div>
-        <b>إشعار الدفع:</b>
-        <span id="whatsappNumber">+249914488188</span>
-      </div>
-
+      <div><b>طريقة الدفع:</b> بنكك</div>
+      <div><b>رقم الحساب:</b> <span id="accountNumber">1882224</span></div>
+      <div><b>إشعار الدفع:</b> <span id="whatsappNumber">+249914488188</span></div>
     </div>
-
   </div>
-
-
   <div class="price">
-
     <small id="oldPrice"></small>
-
-    <strong id="priceValue">
-      150 جنيه سوداني
-    </strong>
-
-    <button class="primary" data-open-chat>
-      أريد الشراء
-    </button>
-
-    <a
-      class="whatsapp-btn"
-      id="whatsappLink"
-      href="https://wa.me/249914488188"
-      target="_blank"
-      rel="noopener"
-    >
-      إرسال إشعار عبر واتساب
-    </a>
-
+    <strong id="priceValue">150 جنيه سوداني</strong>
+    <button class="primary" data-open-chat>أريد الشراء</button>
+    <button class="agent-btn" data-open-agent>دع الوكيل يساعدني</button>
+    <a class="whatsapp-btn" id="whatsappLink" href="https://wa.me/249914488188" target="_blank" rel="noopener">إرسال إشعار عبر واتساب</a>
   </div>
-
 </section>
-
-
 <section id="faq" class="section wrap">
-
-  <div class="section-head">
-
-    <div>
-      <div class="eyebrow">
-        أسئلة شائعة
-      </div>
-
-      <h2>
-        قبل اتخاذ القرار
-      </h2>
-    </div>
-
-  </div>
-
-
+  <div class="section-head"><div><div class="eyebrow">أسئلة شائعة</div><h2>قبل اتخاذ القرار</h2></div></div>
   <div class="faq">
-
-    <details open>
-
-      <summary>
-        هل كل الموسوعة مفتوحة في المعاينة؟
-      </summary>
-
-      <p>
-        لا. المعاينة تفتح 20 صفحة منتقاة فقط، بينما بقية المحتوى مخصص للنسخة الكاملة.
-      </p>
-
-    </details>
-
-
-    <details>
-
-      <summary>
-        هل يمكنني السؤال عن محتوى الموسوعة؟
-      </summary>
-
-      <p>
-        نعم. يمكنك استخدام المساعد لطرح أسئلة عن طبيعة المحتوى والموضوعات المتاحة ومزايا النسخة الكاملة.
-      </p>
-
-    </details>
-
-
-    <details>
-
-      <summary>
-        هل السعر ثابت؟
-      </summary>
-
-      <p>
-        لا. التصميم مجهز بحيث يمكن تحديث السعر والعروض دون إعادة بناء الواجهة.
-      </p>
-
-    </details>
-
+    <details open><summary>هل كل الموسوعة مفتوحة في المعاينة؟</summary><p>لا. المعاينة تفتح 20 صفحة منتقاة فقط، بينما بقية المحتوى مخصص للنسخة الكاملة.</p></details>
+    <details><summary>هل يمكنني السؤال عن محتوى الموسوعة؟</summary><p>نعم. يمكنك استخدام الشات بوت أو الوكيل لطرح أسئلة عن طبيعة المحتوى والموضوعات المتاحة ومزايا النسخة الكاملة.</p></details>
+    <details><summary>هل السعر ثابت؟</summary><p>لا. التصميم مجهز بحيث يمكن تحديث السعر والعروض دون إعادة بناء الواجهة.</p></details>
   </div>
-
 </section>
-
 </main>
-
-
-<footer>
-
-  <div class="wrap foot">
-
-    <span>
-      © 2026 منصة الموسوعات الذكية
-    </span>
-
-    <span>
-      نسخة المعاينة • المحتوى الكامل محمي
-    </span>
-
-  </div>
-
-</footer>
-
-
+<footer><div class="wrap foot"><span>© 2026 منصة الموسوعات الذكية</span><span>نسخة المعاينة • المحتوى الكامل محمي</span></div></footer>
 <div id="chatOverlay" class="overlay" aria-hidden="true">
-
   <div class="chat">
-
-    <button class="close" data-close-chat>
-      ×
-    </button>
-
-
-    <div class="chat-head">
-
-      <div class="bot">
-        AI
-      </div>
-
-      <div>
-
-        <b>
-          مساعد المنصة
-        </b>
-
-        <small>
-          جاهز للإجابة عن أسئلتك
-        </small>
-
-      </div>
-
-    </div>
-
-
+    <button class="close" data-close-chat aria-label="إغلاق">×</button>
+    <div class="chat-head"><div class="bot">AI</div><div><b>شات بوت المنصة</b><small>الإجابة عن المحتوى والسعر والشراء</small></div></div>
     <div id="messages" class="messages"></div>
-
-
     <div class="quick">
-
-      <button data-q="ماذا تحتوي الموسوعة؟">
-        ماذا تحتوي؟
-      </button>
-
-      <button data-q="كم السعر؟">
-        السعر
-      </button>
-
-      <button data-q="ماذا سأحصل بعد الشراء؟">
-        ماذا سأحصل؟
-      </button>
-
+      <button data-q="ماذا تحتوي الموسوعة؟">ماذا تحتوي؟</button>
+      <button data-q="كم السعر؟">السعر</button>
+      <button data-q="ماذا سأحصل بعد الشراء؟">ماذا سأحصل؟</button>
     </div>
-
-
-    <form id="chatForm">
-
-      <input
-        id="chatInput"
-        autocomplete="off"
-        placeholder="اكتب سؤالك هنا…"
-      >
-
-      <button>
-        إرسال
-      </button>
-
-    </form>
-
+    <form id="chatForm"><input id="chatInput" autocomplete="off" placeholder="اكتب سؤالك هنا…"><button>إرسال</button></form>
   </div>
-
 </div>
-
-
+<div id="agentOverlay" class="overlay agent-overlay" aria-hidden="true">
+  <div class="agent-panel">
+    <button class="close" data-close-agent aria-label="إغلاق">×</button>
+    <div class="agent-head">
+      <div class="agent-mark">AG</div>
+      <div><b>الوكيل الذكي</b><small>ينفذ مهام داخل الموقع</small></div>
+    </div>
+    <div class="agent-status"><span class="status-dot"></span><span id="agentStatus">جاهز لتنفيذ طلبك</span></div>
+    <div id="agentLog" class="agent-log"></div>
+    <div class="agent-quick">
+      <button data-agent-task="preview">افتح المعاينة</button>
+      <button data-agent-task="content">اقترح لي البداية</button>
+      <button data-agent-task="buy">ساعدني في الشراء</button>
+      <button data-agent-task="whatsapp">افتح واتساب</button>
+    </div>
+    <form id="agentForm" class="agent-form">
+      <input id="agentInput" autocomplete="off" placeholder="اطلب مهمة مثل: افتح صفحة المعاينة رقم 5">
+      <button>تنفيذ</button>
+    </form>
+    <div class="agent-note">الوكيل الحالي يعمل داخل واجهة الموقع دون كشف مفاتيح API في المتصفح.</div>
+  </div>
+</div>
 <script src="assets/config.js"></script>
 <script src="assets/app.js"></script>
-
 </body>
 </html>
