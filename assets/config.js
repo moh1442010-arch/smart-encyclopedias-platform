@@ -1,14 +1,20 @@
 window.STORE_CONFIG = {
-  price: "150",
+  price: "150000",
   currency: "جنيه سوداني",
   oldPrice: "",
-  offerTitle: "احصل على النسخة الكاملة",
-  offerText: "الدفع من داخل السودان عبر بنكك. بعد التحويل أرسل إشعار الدفع عبر واتساب لتأكيد الطلب.",
-  purchaseUrl: "https://wa.me/249914488188",
+  offerTitle: "عرض أسبقية الحجز لأول 200 نسخة",
+  offerText: "السعر الأساسي 150,000 جنيه سوداني. عرض أسبقية الحجز بخصم 25% لأول 200 نسخة بسعر 112,500 جنيه. للطلاب خصم ثابت 30% بسعر 105,000 جنيه مع إبراز بطاقة طالب أو بطاقة جامعية.",
+  purchaseUrl: "https://wa.me/249121851285",
   accountNumber: "1882224",
-  whatsapp: "+249914488188",
-  whatsappUrl: "https://wa.me/249914488188",
+  whatsapp: "+249121851285",
+  whatsappUrl: "https://wa.me/249121851285",
   pages: 250,
   previewPages: 20,
-  previewPdf: "الموسوعة_الشاملة_20_صفحة_للمعاينة.pdf"
+  previewPdf: "الموسوعة_الشاملة_20_صفحة_للمعاينة.pdf",
+  reservationOffer: "112500",
+  studentPrice: "105000",
+  studentDiscount: "30%",
+  reservationDiscount: "25%",
+  reservationLimit: 200,
+  paymentMethod: "بنكك"
 };
