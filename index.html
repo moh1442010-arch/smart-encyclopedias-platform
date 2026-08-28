@@ -74,40 +74,47 @@
 <section class="offer wrap">
   <div>
     <div class="eyebrow">العرض الحالي</div>
-    <h2 id="offerTitle">احصل على النسخة الكاملة</h2>
-    <p id="offerText">الدفع من داخل السودان عبر بنكك. بعد التحويل أرسل إشعار الدفع عبر واتساب لتأكيد الطلب.</p>
+    <h2 id="offerTitle">عرض أسبقية الحجز لأول 200 نسخة</h2>
+    <p id="offerText">السعر الأساسي 150,000 جنيه سوداني. عرض أسبقية الحجز بخصم 25% لأول 200 نسخة بسعر 112,500 جنيه. للطلاب خصم ثابت 30% بسعر 105,000 جنيه مع إبراز بطاقة طالب أو بطاقة جامعية.</p>
     <div class="payment-box">
+      <div><b>البنك:</b> بنك الخرطوم</div>
       <div><b>طريقة الدفع:</b> بنكك</div>
       <div><b>رقم الحساب:</b> <span id="accountNumber">1882224</span></div>
-      <div><b>إشعار الدفع:</b> <span id="whatsappNumber">+249914488188</span></div>
+      <div><b>واتساب أعمال:</b> <span id="whatsappNumber">+249121851285</span></div>
     </div>
   </div>
   <div class="price">
-    <small id="oldPrice"></small>
-    <strong id="priceValue">150 جنيه سوداني</strong>
+    <small>السعر الأساسي</small>
+    <div><strong>150,000</strong> جنيه سوداني</div>
+    <small>عرض أسبقية الحجز لأول 200 نسخة</small>
+    <div><strong id="priceValue">112,500</strong> جنيه سوداني</div>
+    <small>سعر الطلاب بعد خصم 30%</small>
+    <div><strong>105,000</strong> جنيه سوداني</div>
     <button class="primary" data-open-chat>أريد الشراء</button>
     <button class="agent-btn" data-open-agent>دع الوكيل يساعدني</button>
-    <a class="whatsapp-btn" id="whatsappLink" href="https://wa.me/249914488188" target="_blank" rel="noopener">إرسال إشعار عبر واتساب</a>
+    <a class="whatsapp-btn" id="whatsappLink" href="https://wa.me/249121851285" target="_blank" rel="noopener">إرسال إشعار عبر واتساب</a>
   </div>
 </section>
 <section id="faq" class="section wrap">
   <div class="section-head"><div><div class="eyebrow">أسئلة شائعة</div><h2>قبل اتخاذ القرار</h2></div></div>
   <div class="faq">
     <details open><summary>هل كل الموسوعة مفتوحة في المعاينة؟</summary><p>لا. المعاينة تفتح 20 صفحة منتقاة فقط، بينما بقية المحتوى مخصص للنسخة الكاملة.</p></details>
+    <details><summary>هل توجد أسعار مختلفة؟</summary><p>السعر الأساسي 150,000 جنيه سوداني. عرض أسبقية الحجز لأول 200 نسخة 112,500 جنيه. وللطلاب سعر 105,000 جنيه بعد خصم 30% مع إبراز بطاقة طالب أو بطاقة جامعية.</p></details>
     <details><summary>هل يمكنني السؤال عن محتوى الموسوعة؟</summary><p>نعم. يمكنك استخدام الشات بوت أو الوكيل لطرح أسئلة عن طبيعة المحتوى والموضوعات المتاحة ومزايا النسخة الكاملة.</p></details>
-    <details><summary>هل السعر ثابت؟</summary><p>لا. التصميم مجهز بحيث يمكن تحديث السعر والعروض دون إعادة بناء الواجهة.</p></details>
+    <details><summary>هل الدفع بالعملات الأجنبية متاح؟</summary><p>ستتم إضافة وصلة الدفع بالعملات الأجنبية إلى المنصة عند توفرها رسميًا.</p></details>
   </div>
 </section>
 </main>
-<footer><div class="wrap foot"><span>© 2026 منصة الموسوعات الذكية</span><span>نسخة المعاينة • المحتوى الكامل محمي</span></div></footer>
+<footer><div class="wrap foot"><span>© 2026 منصة الموسوعات الذكية</span><span>تأليف وإشراف محمد مصطفى بابكر • نسخة المعاينة • المحتوى الكامل محمي</span></div></footer>
 <div id="chatOverlay" class="overlay" aria-hidden="true">
   <div class="chat">
     <button class="close" data-close-chat aria-label="إغلاق">×</button>
-    <div class="chat-head"><div class="bot">AI</div><div><b>شات بوت المنصة</b><small>الإجابة عن المحتوى والسعر والشراء</small></div></div>
+    <div class="chat-head"><div class="bot">AI</div><div><b>شات بوت المنصة</b><small>المحتوى والسعر والشراء والشرح</small></div></div>
     <div id="messages" class="messages"></div>
     <div class="quick">
       <button data-q="ماذا تحتوي الموسوعة؟">ماذا تحتوي؟</button>
       <button data-q="كم السعر؟">السعر</button>
+      <button data-q="ما سعر الطلاب؟">سعر الطلاب</button>
       <button data-q="ماذا سأحصل بعد الشراء؟">ماذا سأحصل؟</button>
     </div>
     <form id="chatForm"><input id="chatInput" autocomplete="off" placeholder="اكتب سؤالك هنا…"><button>إرسال</button></form>
@@ -118,7 +125,7 @@
     <button class="close" data-close-agent aria-label="إغلاق">×</button>
     <div class="agent-head">
       <div class="agent-mark">AG</div>
-      <div><b>الوكيل الذكي</b><small>ينفذ مهام داخل الموقع</small></div>
+      <div><b>الوكيل الذكي</b><small>وكيل المبيعات والتعليم داخل الموقع</small></div>
     </div>
     <div class="agent-status"><span class="status-dot"></span><span id="agentStatus">جاهز لتنفيذ طلبك</span></div>
     <div id="agentLog" class="agent-log"></div>
@@ -132,7 +139,7 @@
       <input id="agentInput" autocomplete="off" placeholder="اطلب مهمة مثل: افتح صفحة المعاينة رقم 5">
       <button>تنفيذ</button>
     </form>
-    <div class="agent-note">الوكيل الحالي يعمل داخل واجهة الموقع دون كشف مفاتيح API في المتصفح.</div>
+    <div class="agent-note">الوكيل الحالي يعمل داخل واجهة الموقع. يمكن ربط Gemini لاحقًا دون تغيير واجهة الموقع.</div>
   </div>
 </div>
 <script src="assets/config.js"></script>
