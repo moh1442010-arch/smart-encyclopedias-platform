@@ -9,5 +9,6 @@ window.STORE_CONFIG = {
   whatsapp: "+249914488188",
   whatsappUrl: "https://wa.me/249914488188",
   pages: 250,
-  previewPages: 20
+  previewPages: 20,
+  previewPdf: "الموسوعة_الشاملة_20_صفحة_للمعاينة.pdf"
 };
