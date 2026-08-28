@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://moh1442010-arch.github.io/smart-encyclopedias-platform/sitemap.xml
