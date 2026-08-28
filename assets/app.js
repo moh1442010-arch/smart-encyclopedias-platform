@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
     overlay.setAttribute("aria-hidden", "false");
     if (messages && messages.children.length === 0) {
       addMessage(
-        "مرحبًا بك 👋\n\nأنا مساعد منصة الموسوعات الذكية.\nيمكنني مساعدتك في معرفة المحتوى والسعر وعدد الصفحات وطريقة الدفع والشراء.\n\nاكتب سؤالك أو اختر أحد الخيارات.",
+        "مرحبًا بك 👋\n\nأنا شات بوت منصة الموسوعات الذكية.\nيمكنني مساعدتك في معرفة المحتوى والسعر وعدد الصفحات وطريقة الدفع والشراء.\n\nاكتب سؤالك أو اختر أحد الخيارات.",
         "botmsg"
       );
     }
@@ -64,9 +64,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("[data-close-chat]").forEach((button) => button.addEventListener("click", closeChat));
   overlay?.addEventListener("click", (event) => {
     if (event.target === overlay) closeChat();
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") closeChat();
   });
 
   function normalize(text) {
@@ -152,43 +149,36 @@ document.addEventListener("DOMContentLoaded", () => {
   const previewGrid = document.getElementById("previewGrid");
 
   function openPdfPage(pageNumber) {
+    const safePage = Math.min(Math.max(Number(pageNumber) || 1, 1), previewPages);
     const separator = previewPdf.includes("#") ? "&" : "#";
-    window.open(`${previewPdf}${separator}page=${pageNumber}`, "_blank", "noopener,noreferrer");
+    window.open(`${previewPdf}${separator}page=${safePage}`, "_blank", "noopener,noreferrer");
   }
 
   function createPreviewCard(pageNumber) {
     const card = document.createElement("article");
     card.className = "preview-card";
-
     const page = document.createElement("button");
     page.type = "button";
     page.className = "page";
     page.setAttribute("aria-label", `فتح صفحة المعاينة ${pageNumber}`);
-
     const img = document.createElement("img");
     img.src = `assets/assets/preview/${pageNumber}.jpg`;
     img.alt = `صفحة معاينة ${pageNumber}`;
     img.loading = "lazy";
-
     const fallback = document.createElement("span");
     fallback.className = "preview-fallback";
     fallback.textContent = `صفحة ${pageNumber}`;
     fallback.hidden = true;
-
     img.addEventListener("error", () => {
       img.hidden = true;
       fallback.hidden = false;
     });
-
     page.append(img, fallback);
     page.addEventListener("click", () => openPdfPage(pageNumber));
-
     const title = document.createElement("h3");
     title.textContent = `صفحة ${pageNumber} من المعاينة`;
-
     const small = document.createElement("small");
     small.textContent = "افتح الصفحة من ملف المعاينة";
-
     card.append(page, title, small);
     return card;
   }
@@ -198,4 +188,125 @@ document.addEventListener("DOMContentLoaded", () => {
       previewGrid.appendChild(createPreviewCard(pageNumber));
     }
   }
+
+  const agentOverlay = document.getElementById("agentOverlay");
+  const agentForm = document.getElementById("agentForm");
+  const agentInput = document.getElementById("agentInput");
+  const agentLog = document.getElementById("agentLog");
+  const agentStatus = document.getElementById("agentStatus");
+
+  function logAgent(text, type = "") {
+    if (!agentLog) return;
+    const item = document.createElement("div");
+    item.className = `agent-item ${type}`;
+    item.textContent = text;
+    agentLog.appendChild(item);
+    agentLog.scrollTop = agentLog.scrollHeight;
+  }
+
+  function setAgentStatus(text) {
+    if (agentStatus) agentStatus.textContent = text;
+  }
+
+  function openAgent() {
+    if (!agentOverlay) return;
+    agentOverlay.classList.add("show");
+    agentOverlay.setAttribute("aria-hidden", "false");
+    if (agentLog && agentLog.children.length === 0) {
+      logAgent("مرحبًا. أنا الوكيل الذكي. أعطني مهمة وسأنفذها داخل الموقع.");
+      logAgent("أستطيع فتح المعاينة، الوصول إلى صفحة محددة، توجيهك للشراء أو فتح واتساب.");
+    }
+    window.setTimeout(() => agentInput?.focus(), 150);
+  }
+
+  function closeAgent() {
+    if (!agentOverlay) return;
+    agentOverlay.classList.remove("show");
+    agentOverlay.setAttribute("aria-hidden", "true");
+  }
+
+  document.querySelectorAll("[data-open-agent]").forEach((button) => button.addEventListener("click", openAgent));
+  document.querySelectorAll("[data-close-agent]").forEach((button) => button.addEventListener("click", closeAgent));
+  agentOverlay?.addEventListener("click", (event) => {
+    if (event.target === agentOverlay) closeAgent();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeChat();
+      closeAgent();
+    }
+  });
+
+  function agentIntent(text) {
+    const q = normalize(text);
+    const pageMatch = q.match(/(?:صفح|صفحه)\s*(?:رقم\s*)?(\d{1,3})/);
+    if (/واتساب|واتس|تواصل/.test(q)) return {type:"whatsapp"};
+    if (/شراء|اشتري|دفع|بنكك|حساب|السعر/.test(q)) return {type:"buy"};
+    if (pageMatch) return {type:"page", page:Number(pageMatch[1])};
+    if (/معاين|المعاينه|افتح.*معاين|الصفحات/.test(q)) return {type:"preview"};
+    if (/بداي|ابدأ|ابدا|من اين|من.*ابدأ|اقترح.*بدا/.test(q)) return {type:"content"};
+    if (/محتوي|موضوع|عن.*الموسوعه/.test(q)) return {type:"content"};
+    return {type:"unknown"};
+  }
+
+  function executeAgent(taskText) {
+    const task = agentIntent(taskText);
+    setAgentStatus("جارٍ تنفيذ المهمة...");
+    logAgent(`طلب المستخدم: ${taskText}`, "action");
+
+    switch (task.type) {
+      case "preview":
+        logAgent("أحدد قسم المعاينة المجانية.", "action");
+        document.getElementById("preview")?.scrollIntoView({behavior:"smooth", block:"start"});
+        logAgent(`تم فتح قسم المعاينة. لديك ${previewPages} صفحة متاحة.`, "done");
+        break;
+      case "page":
+        if (task.page < 1 || task.page > previewPages) {
+          logAgent(`الصفحة ${task.page} خارج نطاق المعاينة. المتاح من 1 إلى ${previewPages}.`, "done");
+        } else {
+          logAgent(`أفتح صفحة المعاينة رقم ${task.page}.`, "action");
+          document.getElementById("preview")?.scrollIntoView({behavior:"smooth", block:"start"});
+          window.setTimeout(() => openPdfPage(task.page), 450);
+          logAgent(`تم تجهيز فتح الصفحة ${task.page}.`, "done");
+        }
+        break;
+      case "content":
+        document.getElementById("features")?.scrollIntoView({behavior:"smooth", block:"start"});
+        logAgent("أرشح البداية: ابدأ من المعاينة ثم انتقل إلى أساسيات الذكاء الاصطناعي، وبعدها RAG والوكلاء.", "done");
+        break;
+      case "buy":
+        document.getElementById("offerTitle")?.scrollIntoView({behavior:"smooth", block:"center"});
+        logAgent(`السعر ${price} ${currency}. الدفع عبر بنكك. رقم الحساب ${accountNumber}. بعد التحويل أرسل الإشعار عبر واتساب ${whatsapp}.`, "done");
+        break;
+      case "whatsapp":
+        logAgent("أفتح قناة التواصل عبر واتساب.", "action");
+        logAgent(`جارٍ فتح ${whatsapp} ...`, "done");
+        window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+        break;
+      default:
+        logAgent("لم أفهم المهمة. جرّب: افتح المعاينة، افتح صفحة 5، ساعدني في الشراء، أو افتح واتساب.", "done");
+    }
+    window.setTimeout(() => setAgentStatus("اكتملت المهمة. أنا جاهز لطلب جديد."), 400);
+  }
+
+  agentForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const text = agentInput?.value.trim();
+    if (!text) return;
+    agentInput.value = "";
+    executeAgent(text);
+  });
+
+  document.querySelectorAll("[data-agent-task]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const task = button.getAttribute("data-agent-task");
+      const presets = {
+        preview: "افتح المعاينة",
+        content: "اقترح لي البداية",
+        buy: "ساعدني في الشراء",
+        whatsapp: "افتح واتساب"
+      };
+      executeAgent(presets[task] || task || "");
+    });
+  });
 });
