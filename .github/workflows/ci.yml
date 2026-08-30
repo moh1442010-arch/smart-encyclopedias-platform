@@ -33,6 +33,25 @@ jobs:
           test -s assets/app.js
           test -s assets/config.js
           test -s "الموسوعة_الشاملة_20_صفحة_للمعاينة.pdf"
+          test -f google30940fb9760e09d7.html
+
+      - name: Verify commercial configuration
+        run: |
+          grep -q 'reservationDiscount: "25%"' assets/config.js
+          grep -q 'reservationOffer: "112500"' assets/config.js
+          grep -q 'reservationLimit: 200' assets/config.js
+          grep -q 'studentPrice: "105000"' assets/config.js
+          grep -q 'previewPages: 20' assets/config.js
+          grep -q 'pages: 250' assets/config.js
+
+      - name: Verify public repository hygiene
+        run: |
+          test ! -e smart-encyclopedias-platform-ready-updated.zip
+          test ! -e assets/assets/preview/1.jpg
+          if find . -type f -size 0c -not -path './.git/*' | grep -q .; then
+            echo 'Zero-byte public files found'
+            exit 1
+          fi
 
       - name: Smoke test static site
         run: |
@@ -43,3 +62,6 @@ jobs:
           curl --fail --silent --show-error http://127.0.0.1:4173/ > /tmp/index.html
           grep -q 'assets/app.js' /tmp/index.html
           grep -q 'assets/styles.css' /tmp/index.html
+          grep -q '250 صفحة' /tmp/index.html
+          grep -q '112,500' /tmp/index.html
+          grep -q '25%' /tmp/index.html
