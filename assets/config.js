@@ -23,6 +23,19 @@ window.STORE_CONFIG = {
   agentApiUrl: ""
 };
 
+(function loadAgentAdapter(){
+  function load(){
+    if (!window.STORE_CONFIG.agentApiUrl || document.getElementById('agentApiAdapter')) return;
+    var script = document.createElement('script');
+    script.id = 'agentApiAdapter';
+    script.src = 'assets/agent-api.js';
+    script.defer = true;
+    document.head.appendChild(script);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', load);
+  else load();
+})();
+
 (function addPromotionLinks(){
   function render(){
     var footer = document.querySelector('footer .foot');
