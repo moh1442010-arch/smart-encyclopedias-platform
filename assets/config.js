@@ -19,7 +19,8 @@ window.STORE_CONFIG = {
   studentDiscount: "30%",
   reservationDiscount: "25%",
   reservationLimit: 200,
-  paymentMethod: "بنكك"
+  paymentMethod: "بنكك",
+  agentApiUrl: ""
 };
 
 (function addPromotionLinks(){
