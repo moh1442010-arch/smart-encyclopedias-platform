@@ -15,18 +15,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - name: Check JavaScript syntax
         run: |
           node --check assets/app.js
           node --check assets/config.js
           node --check assets/qa-fixes.js
-
+          node --check agent/worker.js
       - name: Verify required files
         run: |
           test -s index.html
@@ -37,20 +35,20 @@ jobs:
           test -s assets/qa-fixes.js
           test -s "الموسوعة_الشاملة_20_صفحة_للمعاينة.pdf"
           test -f google30940fb9760e09d7.html
-
       - name: Verify commercial configuration
         run: |
-          grep -q 'reservationDiscount: "25%"' assets/config.js
-          grep -q 'reservationOffer: "112500"' assets/config.js
-          grep -q 'reservationLimit: 200' assets/config.js
-          grep -q 'studentPrice: "105000"' assets/config.js
+          grep -q 'reservationDiscount: "10%"' assets/config.js
+          grep -q 'reservationOffer: "117000"' assets/config.js
+          grep -q 'reservationLimit: 100' assets/config.js
+          grep -q 'studentDiscount: "10%"' assets/config.js
+          grep -q 'studentPrice: "117000"' assets/config.js
           grep -q 'previewPages: 20' assets/config.js
           grep -q 'pages: 250' assets/config.js
           grep -q 'foreignCurrencyEnabled: true' assets/config.js
           grep -q 'foreignCurrencyPrice: "19"' assets/config.js
           grep -q 'foreignCurrencyDiscountedPrice: "16"' assets/config.js
           grep -q 'iban: "SD8504018822240001"' assets/config.js
-
+          grep -q 'agentIncluded: true' assets/config.js
       - name: Verify public repository hygiene
         run: |
           test ! -e smart-encyclopedias-platform-ready-updated.zip
@@ -59,7 +57,6 @@ jobs:
             echo 'Zero-byte public files found'
             exit 1
           fi
-
       - name: Smoke test static site
         run: |
           python3 -m http.server 4173 --directory . >/tmp/site.log 2>&1 &
@@ -71,8 +68,8 @@ jobs:
           grep -q 'assets/app.js' /tmp/index.html
           grep -q 'assets/styles.css' /tmp/index.html
           grep -q '250 صفحة' /tmp/index.html
-          grep -q '112,500' /tmp/index.html
-          grep -q '25%' /tmp/index.html
+          grep -q '117,000' /tmp/index.html
+          grep -q '10%' /tmp/index.html
           grep -q 'SD8504018822240001' /tmp/checkout.html
           grep -q '\$16' /tmp/checkout.html
-          grep -q '\$3' /tmp/checkout.html
+          grep -q '\$19' /tmp/checkout.html
