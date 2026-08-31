@@ -2,6 +2,13 @@ document.addEventListener('DOMContentLoaded', function () {
   'use strict';
 
   var C = window.STORE_CONFIG || {};
+  var localPrice = C.price || '130000';
+  var localOffer = C.reservationOffer || '117000';
+  var localDiscount = C.reservationDiscount || '10%';
+  var localStudent = C.studentPrice || '117000';
+  var localStudentDiscount = C.studentDiscount || '10%';
+  var limit = C.reservationLimit || 100;
+  var currency = C.currency || 'جنيه سوداني';
   var usd = C.foreignCurrencyPrice || '19';
   var usdOffer = C.foreignCurrencyDiscountedPrice || '16';
   var iban = C.iban || 'SD8504018822240001';
@@ -19,25 +26,25 @@ document.addEventListener('DOMContentLoaded', function () {
     var text = document.getElementById('offerText');
     var oldPrice = document.getElementById('oldPrice');
     var priceValue = document.getElementById('priceValue');
-    if (title) title.textContent = 'عرض لأول 200 نسخة';
-    if (text) text.textContent = 'السعر الأساسي $' + usd + ' USD. عرض لأول 200 نسخة بخصم $3، ليصبح السعر $' + usdOffer + ' USD.';
-    if (oldPrice) oldPrice.textContent = 'السعر الأساسي $' + usd + ' USD';
-    if (priceValue) priceValue.textContent = '$' + usdOffer + ' USD';
+    if (title) title.textContent = 'عرض لأول ' + limit + ' نسخة';
+    if (text) text.textContent = 'السعر الأساسي ' + localPrice + ' ' + currency + '. عرض لأول ' + limit + ' نسخة بخصم ' + localDiscount + ' بسعر ' + localOffer + ' ' + currency + '. للطلاب خصم ثابت ' + localStudentDiscount + ' بسعر ' + localStudent + ' ' + currency + ' مع إبراز بطاقة طالب أو بطاقة جامعية.';
+    if (oldPrice) oldPrice.textContent = 'السعر الأساسي ' + localPrice + ' ' + currency;
+    if (priceValue) priceValue.textContent = localOffer + ' ' + currency;
 
     var offer = document.querySelector('.offer');
     if (offer) {
       var rows = offer.querySelectorAll('.payment-box > div');
       if (rows.length >= 6) {
-        rows[0].textContent = 'السعر الأساسي: $' + usd + ' USD';
-        rows[1].textContent = 'عرض أول 200 نسخة: $' + usdOffer + ' USD';
-        rows[2].textContent = 'قيمة الخصم: $3 USD';
-        rows[3].textContent = 'طريقة الدفع: تحويل بنكي عبر بنك الخرطوم';
+        rows[0].textContent = 'السعر الأساسي: ' + localPrice + ' ' + currency;
+        rows[1].textContent = 'عرض أول ' + limit + ' نسخة: ' + localOffer + ' ' + currency;
+        rows[2].textContent = 'سعر الطلاب: ' + localStudent + ' ' + currency + ' بعد خصم ' + localStudentDiscount;
+        rows[3].textContent = 'طريقة الدفع: بنكك — بنك الخرطوم';
       }
     }
 
     document.querySelectorAll('#faq details p').forEach(function (p) {
-      if (p.textContent.indexOf('150,000') !== -1 || p.textContent.indexOf('112,500') !== -1) {
-        p.textContent = 'السعر الأساسي $' + usd + ' USD. عرض أول 200 نسخة بسعر $' + usdOffer + ' USD بعد خصم $3.';
+      if (p.textContent.indexOf('150,000') !== -1 || p.textContent.indexOf('112,500') !== -1 || p.textContent.indexOf('25%') !== -1 || p.textContent.indexOf('30%') !== -1 || p.textContent.indexOf('200 نسخة') !== -1) {
+        p.textContent = 'السعر الأساسي ' + localPrice + ' ' + currency + '. عرض أول ' + limit + ' نسخة بسعر ' + localOffer + ' ' + currency + ' بعد خصم ' + localDiscount + '. للطلاب خصم ثابت ' + localStudentDiscount + ' بسعر ' + localStudent + ' ' + currency + '.';
       }
     });
   }
@@ -55,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function () {
     title.style.cssText = 'font-weight:800;margin-bottom:8px';
     box.appendChild(title);
 
-    var p = make('div', 'السعر الأساسي: $' + usd + ' USD — سعر العرض لأول 200 نسخة: $' + usdOffer + ' USD — الخصم $3 USD');
+    var p = make('div', 'السعر الأساسي: $' + usd + ' USD — سعر العرض لأول ' + limit + ' نسخة: $' + usdOffer + ' USD — خصم الدولار: $3 USD');
     p.style.marginBottom = '8px';
     box.appendChild(p);
 
