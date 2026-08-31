@@ -1,38 +1,9 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="الدفع الدولي للموسوعة الشاملة في الذكاء الاصطناعي عبر IBAN بنك الخرطوم.">
-<title>الدفع الدولي | منصة الموسوعات الذكية</title>
-<link rel="stylesheet" href="assets/styles.css">
-<style>
-body{min-height:100vh}.checkout{max-width:760px;margin:50px auto;padding:0 18px}.checkout-card{background:#fff;border-radius:22px;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.08)}.row{display:flex;justify-content:space-between;gap:20px;padding:13px 0;border-bottom:1px solid #eee}.iban{direction:ltr;text-align:left;font-family:monospace;font-size:20px;word-break:break-all;background:#f5f5f5;padding:14px;border-radius:12px}.price-usd{font-size:32px;font-weight:800}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.actions a,.actions button{padding:12px 16px;border-radius:12px;border:1px solid currentColor;text-decoration:none;cursor:pointer;background:transparent}.primary-action{background:#111!important;color:#fff;border-color:#111!important}.back{display:inline-block;margin-bottom:20px}
-</style>
-</head>
-<body>
-<main class="checkout">
-<a class="back" href="index.html">العودة إلى المنصة</a>
-<section class="checkout-card">
-<div class="eyebrow">الدفع الدولي</div>
-<h1>شراء الموسوعة بالدولار</h1>
-<p>يمكنك تحويل قيمة النسخة عبر IBAN بنك الخرطوم ثم إرسال إيصال التحويل عبر واتساب أعمال المنصة.</p>
-<div class="row"><b>السعر الأساسي</b><span>$19 USD</span></div>
-<div class="row"><b>عرض أول 200 نسخة</b><span class="price-usd">$16 USD</span></div>
-<div class="row"><b>قيمة الخصم</b><span>$3 USD</span></div>
-<div class="row"><b>البنك</b><span>بنك الخرطوم</span></div>
-<div style="margin-top:20px"><b>IBAN</b><div class="iban">SD8504018822240001</div></div>
-<div class="actions">
-<button id="copyIban">نسخ IBAN</button>
-<a class="primary-action" href="https://wa.me/249121851285" target="_blank" rel="noopener">إرسال إيصال الدفع عبر واتساب</a>
-</div>
-<p id="copyStatus" style="margin-top:12px"></p>
-</section>
-</main>
-<script>
-document.getElementById('copyIban').addEventListener('click',function(){
-  navigator.clipboard.writeText('SD8504018822240001').then(function(){document.getElementById('copyStatus').textContent='تم نسخ IBAN.'}).catch(function(){document.getElementById('copyStatus').textContent='انسخ الرقم الظاهر يدويًا.'});
-});
-</script>
-</body>
-</html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="خيارات شراء الموسوعة الشاملة في الذكاء الاصطناعي بالدفع المحلي أو الدولار."><title>الشراء والدفع | منصة الموسوعات الذكية</title><link rel="stylesheet" href="assets/styles.css"><style>body{min-height:100vh}.checkout{max-width:820px;margin:50px auto;padding:0 18px}.checkout-card{background:#fff;border-radius:22px;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.08)}.row{display:flex;justify-content:space-between;gap:20px;padding:13px 0;border-bottom:1px solid #eee}.price{font-size:30px;font-weight:800}.iban{direction:ltr;text-align:left;font-family:monospace;font-size:20px;word-break:break-all;background:#f5f5f5;padding:14px;border-radius:12px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.actions a,.actions button{padding:12px 16px;border-radius:12px;border:1px solid currentColor;text-decoration:none;cursor:pointer;background:transparent}.primary-action{background:#111!important;color:#fff;border-color:#111!important}.back{display:inline-block;margin-bottom:20px}.agent-box{margin-top:22px;padding:18px;border-radius:16px;background:#f5f5f5}.agent-box strong{display:block;font-size:20px;margin-bottom:8px}</style></head>
+<body><main class="checkout"><a class="back" href="index.html">العودة إلى المنصة</a><section class="checkout-card"><div class="eyebrow">شراء الموسوعة</div><h1>اختر طريقة الدفع المناسبة لك</h1><p>تحصل على النسخة الكاملة من الموسوعة، ومعها وكيل ذكي يساعدك في الشرح والفهم والإجابة عن الأسئلة.</p>
+<h2>الدفع المحلي</h2><div class="row"><b>السعر الأساسي</b><span>130,000 جنيه سوداني</span></div><div class="row"><b>أول 100 نسخة بعد خصم 10%</b><span class="price">117,000 جنيه</span></div><div class="row"><b>الطلاب بعد خصم 10%</b><span class="price">117,000 جنيه</span></div><div class="row"><b>طريقة الدفع</b><span>بنكك — بنك الخرطوم</span></div><div class="row"><b>رقم الحساب</b><span>1882224</span></div>
+<h2 style="margin-top:30px">الدفع بالدولار</h2><div class="row"><b>السعر الأساسي</b><span>$19 USD</span></div><div class="row"><b>سعر العرض</b><span class="price">$16 USD</span></div><div class="row"><b>البنك</b><span>بنك الخرطوم</span></div><div style="margin-top:20px"><b>IBAN</b><div class="iban">SD8504018822240001</div></div>
+<div class="agent-box"><strong>مع كل نسخة كاملة تحصل على وكيل ذكي</strong><span>يساعدك في فهم محتوى الموسوعة، شرح المصطلحات، الإجابة عن الأسئلة، واقتراح نقطة البداية. الوكيل ليس مجرد زر بيع، بل أداة مساعدة للمشتري بعد الشراء.</span></div>
+<div class="actions"><button id="copyIban">نسخ IBAN</button><a class="primary-action" href="https://wa.me/249121851285?text=مرحباً، أريد شراء الموسوعة الشاملة في الذكاء الاصطناعي ومعها الوكيل الذكي. أريد معرفة طريقة الدفع المناسبة لي." target="_blank" rel="noopener">التواصل وإتمام الشراء عبر واتساب</a><a href="index.html#faq">الأسئلة الشائعة</a></div><p id="copyStatus" style="margin-top:12px"></p></section></main>
+<script>document.getElementById('copyIban').addEventListener('click',function(){navigator.clipboard.writeText('SD8504018822240001').then(function(){document.getElementById('copyStatus').textContent='تم نسخ IBAN.'}).catch(function(){document.getElementById('copyStatus').textContent='انسخ الرقم الظاهر يدويًا.'})});</script></body></html>
