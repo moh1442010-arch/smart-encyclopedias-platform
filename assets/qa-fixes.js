@@ -14,6 +14,34 @@ document.addEventListener('DOMContentLoaded', function () {
     return el;
   }
 
+  function normalizeOfferText() {
+    var title = document.getElementById('offerTitle');
+    var text = document.getElementById('offerText');
+    var oldPrice = document.getElementById('oldPrice');
+    var priceValue = document.getElementById('priceValue');
+    if (title) title.textContent = 'عرض لأول 200 نسخة';
+    if (text) text.textContent = 'السعر الأساسي $' + usd + ' USD. عرض لأول 200 نسخة بخصم $3، ليصبح السعر $' + usdOffer + ' USD.';
+    if (oldPrice) oldPrice.textContent = 'السعر الأساسي $' + usd + ' USD';
+    if (priceValue) priceValue.textContent = '$' + usdOffer + ' USD';
+
+    var offer = document.querySelector('.offer');
+    if (offer) {
+      var rows = offer.querySelectorAll('.payment-box > div');
+      if (rows.length >= 6) {
+        rows[0].textContent = 'السعر الأساسي: $' + usd + ' USD';
+        rows[1].textContent = 'عرض أول 200 نسخة: $' + usdOffer + ' USD';
+        rows[2].textContent = 'قيمة الخصم: $3 USD';
+        rows[3].textContent = 'طريقة الدفع: تحويل بنكي عبر بنك الخرطوم';
+      }
+    }
+
+    document.querySelectorAll('#faq details p').forEach(function (p) {
+      if (p.textContent.indexOf('150,000') !== -1 || p.textContent.indexOf('112,500') !== -1) {
+        p.textContent = 'السعر الأساسي $' + usd + ' USD. عرض أول 200 نسخة بسعر $' + usdOffer + ' USD بعد خصم $3.';
+      }
+    });
+  }
+
   function addInternationalPayment() {
     if (document.getElementById('internationalPaymentBox')) return;
     var paymentBox = document.querySelector('.payment-box');
@@ -27,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function () {
     title.style.cssText = 'font-weight:800;margin-bottom:8px';
     box.appendChild(title);
 
-    var p = make('div', 'السعر الأساسي: $' + usd + ' — سعر العرض لأول 200 نسخة: $' + usdOffer + ' — الخصم $3');
+    var p = make('div', 'السعر الأساسي: $' + usd + ' USD — سعر العرض لأول 200 نسخة: $' + usdOffer + ' USD — الخصم $3 USD');
     p.style.marginBottom = '8px';
     box.appendChild(p);
 
@@ -88,6 +116,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function run() {
+    normalizeOfferText();
     addInternationalPayment();
     addCheckoutButton();
     repairPreviewCards();
