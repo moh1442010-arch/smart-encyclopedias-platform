@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="الدفع الدولي للموسوعة الشاملة في الذكاء الاصطناعي عبر IBAN بنك الخرطوم.">
+<title>الدفع الدولي | منصة الموسوعات الذكية</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+body{min-height:100vh}.checkout{max-width:760px;margin:50px auto;padding:0 18px}.checkout-card{background:#fff;border-radius:22px;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.08)}.row{display:flex;justify-content:space-between;gap:20px;padding:13px 0;border-bottom:1px solid #eee}.iban{direction:ltr;text-align:left;font-family:monospace;font-size:20px;word-break:break-all;background:#f5f5f5;padding:14px;border-radius:12px}.price-usd{font-size:32px;font-weight:800}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.actions a,.actions button{padding:12px 16px;border-radius:12px;border:1px solid currentColor;text-decoration:none;cursor:pointer;background:transparent}.primary-action{background:#111!important;color:#fff;border-color:#111!important}.back{display:inline-block;margin-bottom:20px}
+</style>
+</head>
+<body>
+<main class="checkout">
+<a class="back" href="index.html">العودة إلى المنصة</a>
+<section class="checkout-card">
+<div class="eyebrow">الدفع الدولي</div>
+<h1>شراء الموسوعة بالدولار</h1>
+<p>يمكنك تحويل قيمة النسخة عبر IBAN بنك الخرطوم ثم إرسال إيصال التحويل عبر واتساب أعمال المنصة.</p>
+<div class="row"><b>السعر الأساسي</b><span>$9.99 USD</span></div>
+<div class="row"><b>عرض أول 200 نسخة</b><span class="price-usd">$6.99 USD</span></div>
+<div class="row"><b>البنك</b><span>بنك الخرطوم</span></div>
+<div style="margin-top:20px"><b>IBAN</b><div class="iban">SD8504018822240001</div></div>
+<div class="actions">
+<button id="copyIban">نسخ IBAN</button>
+<a class="primary-action" href="https://wa.me/249121851285" target="_blank" rel="noopener">إرسال إيصال الدفع عبر واتساب</a>
+</div>
+<p id="copyStatus" style="margin-top:12px"></p>
+</section>
+</main>
+<script>
+document.getElementById('copyIban').addEventListener('click',function(){
+  navigator.clipboard.writeText('SD8504018822240001').then(function(){document.getElementById('copyStatus').textContent='تم نسخ IBAN.'}).catch(function(){document.getElementById('copyStatus').textContent='انسخ الرقم الظاهر يدويًا.'});
+});
+</script>
+</body>
+</html>
