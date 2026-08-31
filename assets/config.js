@@ -24,8 +24,8 @@ window.STORE_CONFIG = {
   paymentMethod: "بنكك",
   foreignCurrencyEnabled: true,
   foreignCurrency: "USD",
-  foreignCurrencyPrice: "9.99",
-  foreignCurrencyDiscountedPrice: "6.99",
+  foreignCurrencyPrice: "19",
+  foreignCurrencyDiscountedPrice: "16",
   foreignPaymentMethod: "Bank of Khartoum IBAN",
   foreignPaymentDetails: "SD8504018822240001",
   agentApiUrl: "https://super-rice-31e6.moh1442010.workers.dev/api/agent"
