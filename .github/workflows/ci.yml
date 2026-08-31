@@ -25,13 +25,16 @@ jobs:
         run: |
           node --check assets/app.js
           node --check assets/config.js
+          node --check assets/qa-fixes.js
 
       - name: Verify required files
         run: |
           test -s index.html
+          test -s checkout.html
           test -s assets/styles.css
           test -s assets/app.js
           test -s assets/config.js
+          test -s assets/qa-fixes.js
           test -s "الموسوعة_الشاملة_20_صفحة_للمعاينة.pdf"
           test -f google30940fb9760e09d7.html
 
@@ -43,6 +46,10 @@ jobs:
           grep -q 'studentPrice: "105000"' assets/config.js
           grep -q 'previewPages: 20' assets/config.js
           grep -q 'pages: 250' assets/config.js
+          grep -q 'foreignCurrencyEnabled: true' assets/config.js
+          grep -q 'foreignCurrencyPrice: "9.99"' assets/config.js
+          grep -q 'foreignCurrencyDiscountedPrice: "6.99"' assets/config.js
+          grep -q 'iban: "SD8504018822240001"' assets/config.js
 
       - name: Verify public repository hygiene
         run: |
@@ -60,8 +67,11 @@ jobs:
           trap 'kill $server_pid' EXIT
           sleep 2
           curl --fail --silent --show-error http://127.0.0.1:4173/ > /tmp/index.html
+          curl --fail --silent --show-error http://127.0.0.1:4173/checkout.html > /tmp/checkout.html
           grep -q 'assets/app.js' /tmp/index.html
           grep -q 'assets/styles.css' /tmp/index.html
           grep -q '250 صفحة' /tmp/index.html
           grep -q '112,500' /tmp/index.html
           grep -q '25%' /tmp/index.html
+          grep -q 'SD8504018822240001' /tmp/checkout.html
+          grep -q '\$6.99' /tmp/checkout.html
