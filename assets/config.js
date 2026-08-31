@@ -20,7 +20,7 @@ window.STORE_CONFIG = {
   reservationDiscount: "25%",
   reservationLimit: 200,
   paymentMethod: "بنكك",
-  agentApiUrl: ""
+  agentApiUrl: "https://super-rice-31e6.moh1442010.workers.dev/api/agent"
 };
 
 (function loadAgentAdapter(){
