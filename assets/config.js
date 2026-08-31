@@ -6,6 +6,7 @@ window.STORE_CONFIG = {
   offerText: "السعر الأساسي 150,000 جنيه سوداني. عرض أسبقية الحجز بخصم 25% لأول 200 نسخة بسعر 112,500 جنيه. للطلاب خصم ثابت 30% بسعر 105,000 جنيه مع إبراز بطاقة طالب أو بطاقة جامعية.",
   purchaseUrl: "https://wa.me/249121851285",
   accountNumber: "1882224",
+  bankName: "بنك الخرطوم",
   whatsapp: "+249121851285",
   whatsappUrl: "https://wa.me/249121851285",
   facebookUrl: "https://www.facebook.com/share/1BkZXmQTW6/",
@@ -20,6 +21,11 @@ window.STORE_CONFIG = {
   reservationDiscount: "25%",
   reservationLimit: 200,
   paymentMethod: "بنكك",
+  foreignCurrencyEnabled: false,
+  foreignCurrency: "USD",
+  foreignCurrencyPrice: "",
+  foreignPaymentMethod: "",
+  foreignPaymentDetails: "",
   agentApiUrl: "https://super-rice-31e6.moh1442010.workers.dev/api/agent"
 };
 
