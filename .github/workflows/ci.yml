@@ -47,8 +47,8 @@ jobs:
           grep -q 'previewPages: 20' assets/config.js
           grep -q 'pages: 250' assets/config.js
           grep -q 'foreignCurrencyEnabled: true' assets/config.js
-          grep -q 'foreignCurrencyPrice: "9.99"' assets/config.js
-          grep -q 'foreignCurrencyDiscountedPrice: "6.99"' assets/config.js
+          grep -q 'foreignCurrencyPrice: "19"' assets/config.js
+          grep -q 'foreignCurrencyDiscountedPrice: "16"' assets/config.js
           grep -q 'iban: "SD8504018822240001"' assets/config.js
 
       - name: Verify public repository hygiene
@@ -74,4 +74,5 @@ jobs:
           grep -q '112,500' /tmp/index.html
           grep -q '25%' /tmp/index.html
           grep -q 'SD8504018822240001' /tmp/checkout.html
-          grep -q '\$6.99' /tmp/checkout.html
+          grep -q '\$16' /tmp/checkout.html
+          grep -q '\$3' /tmp/checkout.html
