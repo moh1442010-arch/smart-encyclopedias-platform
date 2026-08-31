@@ -2,8 +2,8 @@ document.addEventListener('DOMContentLoaded', function () {
   'use strict';
 
   var C = window.STORE_CONFIG || {};
-  var usd = C.foreignCurrencyPrice || '9.99';
-  var usdOffer = C.foreignCurrencyDiscountedPrice || '6.99';
+  var usd = C.foreignCurrencyPrice || '19';
+  var usdOffer = C.foreignCurrencyDiscountedPrice || '16';
   var iban = C.iban || 'SD8504018822240001';
   var bank = C.bankName || 'بنك الخرطوم';
   var whatsapp = C.whatsappUrl || '#';
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
     title.style.cssText = 'font-weight:800;margin-bottom:8px';
     box.appendChild(title);
 
-    var p = make('div', 'السعر الأساسي: $' + usd + ' — سعر العرض لأول 200 نسخة: $' + usdOffer);
+    var p = make('div', 'السعر الأساسي: $' + usd + ' — سعر العرض لأول 200 نسخة: $' + usdOffer + ' — الخصم $3');
     p.style.marginBottom = '8px';
     box.appendChild(p);
 
