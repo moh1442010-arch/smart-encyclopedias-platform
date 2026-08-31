@@ -4,9 +4,10 @@ window.STORE_CONFIG = {
   oldPrice: "",
   offerTitle: "عرض أسبقية الحجز لأول 200 نسخة",
   offerText: "السعر الأساسي 150,000 جنيه سوداني. عرض أسبقية الحجز بخصم 25% لأول 200 نسخة بسعر 112,500 جنيه. للطلاب خصم ثابت 30% بسعر 105,000 جنيه مع إبراز بطاقة طالب أو بطاقة جامعية.",
-  purchaseUrl: "https://wa.me/249121851285",
+  purchaseUrl: "checkout.html",
   accountNumber: "1882224",
   bankName: "بنك الخرطوم",
+  iban: "SD8504018822240001",
   whatsapp: "+249121851285",
   whatsappUrl: "https://wa.me/249121851285",
   facebookUrl: "https://www.facebook.com/share/1BkZXmQTW6/",
@@ -21,11 +22,12 @@ window.STORE_CONFIG = {
   reservationDiscount: "25%",
   reservationLimit: 200,
   paymentMethod: "بنكك",
-  foreignCurrencyEnabled: false,
+  foreignCurrencyEnabled: true,
   foreignCurrency: "USD",
-  foreignCurrencyPrice: "",
-  foreignPaymentMethod: "",
-  foreignPaymentDetails: "",
+  foreignCurrencyPrice: "9.99",
+  foreignCurrencyDiscountedPrice: "6.99",
+  foreignPaymentMethod: "Bank of Khartoum IBAN",
+  foreignPaymentDetails: "SD8504018822240001",
   agentApiUrl: "https://super-rice-31e6.moh1442010.workers.dev/api/agent"
 };
 
@@ -35,6 +37,19 @@ window.STORE_CONFIG = {
     var script = document.createElement('script');
     script.id = 'agentApiAdapter';
     script.src = 'assets/agent-api.js';
+    script.defer = true;
+    document.head.appendChild(script);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', load);
+  else load();
+})();
+
+(function loadQAFixes(){
+  function load(){
+    if (document.getElementById('qaFixes')) return;
+    var script = document.createElement('script');
+    script.id = 'qaFixes';
+    script.src = 'assets/qa-fixes.js';
     script.defer = true;
     document.head.appendChild(script);
   }
