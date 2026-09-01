@@ -37,6 +37,7 @@ jobs:
           test -s assets/config.js
           test -s assets/agent-api.js
           test -s assets/qa-fixes.js
+          test -s agent/smoke-test.mjs
           test -s "الموسوعة_الشاملة_20_صفحة_للمعاينة.pdf"
           test -f google30940fb9760e09d7.html
       - name: Verify commercial configuration
@@ -53,6 +54,8 @@ jobs:
           grep -q 'foreignCurrencyDiscountedPrice: "16"' assets/config.js
           grep -q 'iban: "SD8504018822240001"' assets/config.js
           grep -q 'agentIncluded: true' assets/config.js
+      - name: Smart-agent deterministic smoke test
+        run: node agent/smoke-test.mjs
       - name: Verify public repository hygiene
         run: |
           test ! -e smart-encyclopedias-platform-ready-updated.zip
