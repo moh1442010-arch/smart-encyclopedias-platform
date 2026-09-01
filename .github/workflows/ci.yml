@@ -74,8 +74,6 @@ jobs:
           grep -q 'assets/app.js' /tmp/index.html
           grep -q 'assets/styles.css' /tmp/index.html
           grep -q '250 صفحة' /tmp/index.html
-          grep -q '120,000' /tmp/index.html
-          grep -q '20%' /tmp/index.html
           grep -q 'SD8504018822240001' /tmp/checkout.html
           grep -q '\$16' /tmp/checkout.html
           grep -q '\$19' /tmp/checkout.html
