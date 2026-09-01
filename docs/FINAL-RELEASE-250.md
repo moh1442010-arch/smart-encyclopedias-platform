@@ -37,6 +37,7 @@
 - D1 order recording
 - Cloudflare Worker API
 - Gemini-backed smart agent with deterministic local fallback
+- Visible agent panel connected to the cloud-agent endpoint
 - Updates center with QR access
 - Final exam and level assessment
 - Certificate of completion after passing
@@ -46,12 +47,20 @@
 
 The approved 250-page PDF is the content source of record. Public preview remains limited to 20 pages. Payment status remains `pending` until the operator confirms payment.
 
-## QA status
+## Final QA status
 
-- PDF page count: 250
-- PDF open/render test: passed
-- Table of contents defect: corrected in the approved copy
-- Previous 252-page defective copy: rejected
+- PDF page count: 250 — passed
+- PDF open/render test — passed
+- Table of contents defect — corrected in the approved copy
+- Previous 252-page defective copy — rejected
+- JavaScript syntax checks — passed
+- Commercial configuration checks — passed
+- Smart-agent deterministic fallback smoke test — passed
+- Visible cloud-agent wiring check — passed
+- Static storefront smoke test — passed
+- Public repository hygiene check — passed
+- Cloudflare Workers production build for final release commit — passed
 - Smart-agent action list is server-sanitized to the allowed actions
 - Smart-agent local fallback keeps core product assistance available if Gemini is temporarily unavailable
 - Certificate output explicitly disclaims external academic/professional accreditation
+- Final release commit: `e59050da7649e5f9abea828d9c87ca861bfeb36f`
