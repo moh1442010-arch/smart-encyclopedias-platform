@@ -1,8 +1,10 @@
 const SYSTEM_PROMPT = `أنت الوكيل الذكي لمنصة الموسوعات الذكية.
 أجب بالعربية الواضحة وبأسلوب ودود يساعد الزائر على الفهم واتخاذ قرار الشراء دون ضغط أو ادعاءات غير صحيحة.
-مهمتك مساعدة الزائر في فهم الموسوعة والمعاينة والشراء.
+مهمتك مساعدة الزائر في فهم الموسوعة والمعاينة والشراء، وشرح دور الوكيل الذكي.
 بيانات المنتج المعتمدة: السعر الأساسي 150000 جنيه سوداني، خصم 20% لأول 200 نسخة ليصبح السعر 120000 جنيه. السعر بالدولار 19، وسعر العرض بالدولار 16. المعاينة 20 صفحة، النسخة الكاملة 250 صفحة، والنسخة الكاملة تشمل وكيلًا ذكيًا للمشتري.
 الدفع المحلي عبر بنك الخرطوم والحساب 1882224، والدفع الدولي عبر IBAN SD8504018822240001.
+الوكيل الحالي يستطيع الإجابة عن أسئلة المنتج والمحتوى وتوجيه المستخدم إلى المعاينة والشراء. لا تدّعِ أن الوكيل يقرأ كامل النسخة المدفوعة أو ينفذ عمليات خارج الموقع ما لم يظهر ذلك في البيانات المتاحة.
+التحديثات المستقبلية المعلنة تشمل تحسين تخصص الوكيل وربطه بموضوعات الفصول، منطقة للمشتري، إدارة الطلبات، إشعارات الطلب، إصدارات وملاحق جديدة للموسوعة، والبحث داخل المحتوى. قدّمها للمستخدم بصفتها تحديثات قادمة وليست ميزات متاحة الآن.
 لا تخترع أسعارًا أو أرقام حساب أو سياسات غير موجودة.
 لا تطلب من المستخدم إرسال رقم بطاقة أو كلمة مرور أو مفتاح API.
 إذا طلب المستخدم تنفيذ مهمة داخل الموقع، أعد إجراءً من القائمة المسموحة فقط.
@@ -10,90 +12,12 @@ const SYSTEM_PROMPT = `أنت الوكيل الذكي لمنصة الموسوع�
 أعد JSON فقط بالشكل: {"reply":"...","actions":[{"type":"...","page":1}]}`;
 
 const ALLOWED_ACTIONS = new Set(["open_preview", "open_preview_page", "open_whatsapp", "focus_offer", "open_checkout"]);
-
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "access-control-allow-origin": "*",
-      "access-control-allow-methods": "GET, POST, OPTIONS",
-      "access-control-allow-headers": "content-type, authorization"
-    }
-  });
-}
-function corsPreflight() {
-  return new Response(null, { status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-methods": "GET, POST, OPTIONS", "access-control-allow-headers": "content-type, authorization" } });
-}
-function sanitizeActions(actions) {
-  if (!Array.isArray(actions)) return [];
-  return actions.filter((a) => a && ALLOWED_ACTIONS.has(a.type)).slice(0, 3).map((a) => {
-    const out = { type: a.type };
-    if (a.type === "open_preview_page") {
-      const page = Number(a.page);
-      if (Number.isInteger(page) && page >= 1 && page <= 20) out.page = page; else return null;
-    }
-    return out;
-  }).filter(Boolean);
-}
-async function callGemini(message, env) {
-  if (!env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
-  const model = env.GEMINI_MODEL || "gemini-2.5-flash";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
-  const response = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] }, contents: [{ role: "user", parts: [{ text: message }] }], generationConfig: { temperature: 0.2, responseMimeType: "application/json" } }) });
-  if (!response.ok) throw new Error(`Gemini request failed: ${response.status}`);
-  const data = await response.json();
-  const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "";
-  if (!text) throw new Error("Empty model response");
-  return JSON.parse(text);
-}
-async function ensureOrdersTable(env) {
-  if (!env.DB) throw new Error("D1 binding DB is not configured");
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, customer_name TEXT NOT NULL, customer_email TEXT NOT NULL, customer_phone TEXT, product TEXT NOT NULL, currency TEXT NOT NULL, amount INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
-  await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at)`).run();
-}
+function json(data, status = 200) { return new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*", "access-control-allow-methods": "GET, POST, OPTIONS", "access-control-allow-headers": "content-type, authorization" } }); }
+function corsPreflight() { return new Response(null, { status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-methods": "GET, POST, OPTIONS", "access-control-allow-headers": "content-type, authorization" } }); }
+function sanitizeActions(actions) { if (!Array.isArray(actions)) return []; return actions.filter((a) => a && ALLOWED_ACTIONS.has(a.type)).slice(0, 3).map((a) => { const out = { type: a.type }; if (a.type === "open_preview_page") { const page = Number(a.page); if (Number.isInteger(page) && page >= 1 && page <= 20) out.page = page; else return null; } return out; }).filter(Boolean); }
+async function callGemini(message, env) { if (!env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured"); const model = env.GEMINI_MODEL || "gemini-2.5-flash"; const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`; const response = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] }, contents: [{ role: "user", parts: [{ text: message }] }], generationConfig: { temperature: 0.2, responseMimeType: "application/json" } }) }); if (!response.ok) throw new Error(`Gemini request failed: ${response.status}`); const data = await response.json(); const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || ""; if (!text) throw new Error("Empty model response"); return JSON.parse(text); }
+async function ensureOrdersTable(env) { if (!env.DB) throw new Error("D1 binding DB is not configured"); await env.DB.prepare(`CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, customer_name TEXT NOT NULL, customer_email TEXT NOT NULL, customer_phone TEXT, product TEXT NOT NULL, currency TEXT NOT NULL, amount INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run(); await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at)`).run(); }
 function validEmail(value) { return typeof value === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254; }
-async function createOrder(request, env) {
-  await ensureOrdersTable(env);
-  const body = await request.json();
-  const name = typeof body?.customerName === "string" ? body.customerName.trim() : "";
-  const email = typeof body?.customerEmail === "string" ? body.customerEmail.trim() : "";
-  const phone = typeof body?.customerPhone === "string" ? body.customerPhone.trim().slice(0, 40) : "";
-  const currency = body?.currency === "USD" ? "USD" : "SDG";
-  const amount = currency === "USD" ? (Number(body?.amount) === 16 ? 16 : 19) : (Number(body?.amount) === 120000 ? 120000 : 150000);
-  if (name.length < 2 || name.length > 120 || !validEmail(email)) return json({ error: "invalid_customer_data" }, 400);
-  const id = crypto.randomUUID();
-  await env.DB.prepare(`INSERT INTO orders (id, customer_name, customer_email, customer_phone, product, currency, amount) VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(id, name, email, phone, "الموسوعة الشاملة في الذكاء الاصطناعي + الوكيل الذكي", currency, amount).run();
-  return json({ ok: true, orderId: id, status: "pending" });
-}
-async function listOrders(request, env) {
-  const expected = env.ADMIN_API_TOKEN;
-  const provided = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || "";
-  if (!expected || provided !== expected) return json({ error: "unauthorized" }, 401);
-  await ensureOrdersTable(env);
-  const result = await env.DB.prepare(`SELECT id, customer_name, customer_email, customer_phone, product, currency, amount, status, created_at FROM orders ORDER BY created_at DESC LIMIT 100`).all();
-  return json({ ok: true, orders: result.results || [] });
-}
-export default { async fetch(request, env) {
-  if (request.method === "OPTIONS") return corsPreflight();
-  const url = new URL(request.url);
-  if (url.pathname === "/health") return json({ ok: true, service: "smart-encyclopedias-agent", d1: Boolean(env.DB), time: new Date().toISOString() });
-  if (url.pathname === "/api/order" && request.method === "POST") {
-    try { return await createOrder(request, env); } catch (error) { return json({ error: "order_unavailable", message: "تعذر تسجيل الطلب الآن." }, 503); }
-  }
-  if (url.pathname === "/api/orders" && request.method === "GET") {
-    try { return await listOrders(request, env); } catch (error) { return json({ error: "orders_unavailable" }, 503); }
-  }
-  if (url.pathname !== "/api/agent") return json({ error: "Not found" }, 404);
-  if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
-  try {
-    const body = await request.json();
-    const message = typeof body?.message === "string" ? body.message.trim() : "";
-    if (!message || message.length > 2000) return json({ error: "Invalid message" }, 400);
-    const result = await callGemini(message, env);
-    const reply = typeof result?.reply === "string" ? result.reply.slice(0, 5000) : "لم أتمكن من إعداد إجابة الآن.";
-    return json({ reply, actions: sanitizeActions(result?.actions) });
-  } catch (error) {
-    return json({ error: "agent_unavailable", message: "الوكيل السحابي غير متاح الآن. استخدم المساعد المحلي مؤقتًا." }, 503);
-  }
-} };
+async function createOrder(request, env) { await ensureOrdersTable(env); const body = await request.json(); const name = typeof body?.customerName === "string" ? body.customerName.trim() : ""; const email = typeof body?.customerEmail === "string" ? body.customerEmail.trim() : ""; const phone = typeof body?.customerPhone === "string" ? body.customerPhone.trim().slice(0, 40) : ""; const currency = body?.currency === "USD" ? "USD" : "SDG"; const amount = currency === "USD" ? (Number(body?.amount) === 16 ? 16 : 19) : (Number(body?.amount) === 120000 ? 120000 : 150000); if (name.length < 2 || name.length > 120 || !validEmail(email)) return json({ error: "invalid_customer_data" }, 400); const id = crypto.randomUUID(); await env.DB.prepare(`INSERT INTO orders (id, customer_name, customer_email, customer_phone, product, currency, amount) VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(id, name, email, phone, "الموسوعة الشاملة في الذكاء الاصطناعي + الوكيل الذكي", currency, amount).run(); return json({ ok: true, orderId: id, status: "pending" }); }
+async function listOrders(request, env) { const expected = env.ADMIN_API_TOKEN; const provided = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || ""; if (!expected || provided !== expected) return json({ error: "unauthorized" }, 401); await ensureOrdersTable(env); const result = await env.DB.prepare(`SELECT id, customer_name, customer_email, customer_phone, product, currency, amount, status, created_at FROM orders ORDER BY created_at DESC LIMIT 100`).all(); return json({ ok: true, orders: result.results || [] }); }
+export default { async fetch(request, env) { if (request.method === "OPTIONS") return corsPreflight(); const url = new URL(request.url); if (url.pathname === "/health") return json({ ok: true, service: "smart-encyclopedias-agent", d1: Boolean(env.DB), time: new Date().toISOString() }); if (url.pathname === "/api/order" && request.method === "POST") { try { return await createOrder(request, env); } catch (error) { return json({ error: "order_unavailable", message: "تعذر تسجيل الطلب الآن." }, 503); } } if (url.pathname === "/api/orders" && request.method === "GET") { try { return await listOrders(request, env); } catch (error) { return json({ error: "orders_unavailable" }, 503); } } if (url.pathname !== "/api/agent") return json({ error: "Not found" }, 404); if (request.method !== "POST") return json({ error: "Method not allowed" }, 405); try { const body = await request.json(); const message = typeof body?.message === "string" ? body.message.trim() : ""; if (!message || message.length > 2000) return json({ error: "Invalid message" }, 400); const result = await callGemini(message, env); const reply = typeof result?.reply === "string" ? result.reply.slice(0, 5000) : "لم أتمكن من إعداد إجابة الآن."; return json({ reply, actions: sanitizeActions(result?.actions) }); } catch (error) { return json({ error: "agent_unavailable", message: "الوكيل السحابي غير متاح الآن. استخدم المساعد المحلي مؤقتًا." }, 503); } } };
