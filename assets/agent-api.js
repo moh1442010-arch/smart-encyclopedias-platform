@@ -61,7 +61,8 @@ document.addEventListener("DOMContentLoaded", () => {
       (Array.isArray(data.actions) ? data.actions : []).forEach(executeAction);
       setStatus("اكتملت المهمة. أنا جاهز لطلب جديد.");
     } catch (error) {
-      addLog("تعذر الاتصال بالوكيل السحابي. سيتم استخدام الوكيل المحلي.", "done");
+      const local = window.PLATFORM_ASSISTANT?.answer?.(text);
+      addLog(local || "تعذر الاتصال بالوكيل السحابي، والوكيل المحلي جاهز.", "done");
       setStatus("الوكيل المحلي جاهز.");
     }
   }, true);
