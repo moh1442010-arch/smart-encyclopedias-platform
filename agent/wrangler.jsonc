@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "smart-encyclopedias-agent",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "smart-encyclopedias",
+      "database_id": "c5060020-3842-4efc-9607-6671e5a90fd5"
+    }
+  ],
+  "vars": {
+    "GEMINI_MODEL": "gemini-2.5-flash"
+  }
+}
