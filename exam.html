@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="الامتحان النهائي للموسوعة الشاملة في الذكاء الاصطناعي وتقدير مستوى المتعلم وإصدار شهادة إتمام.">
+<title>الامتحان النهائي والشهادة | منصة الموسوعات الذكية</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;color:#18202a;background:#f5f7fa}*{box-sizing:border-box}body{margin:0}.wrap{max-width:900px;margin:auto;padding:24px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:22px}.brand{font-weight:800;color:#18202a;text-decoration:none}.back{color:#18202a;text-decoration:none}.card{background:#fff;border:1px solid #e4e8ed;border-radius:22px;padding:28px;box-shadow:0 12px 35px rgba(0,0,0,.06)}h1{margin:0 0 10px;font-size:clamp(28px,5vw,44px)}h2{margin-top:28px}.lead{line-height:1.9;color:#56616d}.progress{height:9px;background:#e8edf2;border-radius:20px;overflow:hidden;margin:18px 0}.bar{height:100%;width:0;background:#18202a;transition:.25s}.q{padding:20px 0;border-bottom:1px solid #edf0f3}.q h3{margin:0 0 14px;font-size:19px}.option{display:block;padding:12px 14px;border:1px solid #d9dfe6;border-radius:12px;margin:9px 0;cursor:pointer}.option:hover{background:#f7f8fa}.option input{margin-left:8px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.btn{border:0;border-radius:12px;padding:13px 18px;font:inherit;cursor:pointer}.primary{background:#18202a;color:#fff}.secondary{background:#edf1f5;color:#18202a}.result{display:none;text-align:center;padding:25px}.score{font-size:48px;font-weight:900}.level{font-size:26px;font-weight:800;margin:8px 0}.certificate{margin-top:22px;border:4px double #18202a;padding:28px;background:#fff}.certificate h2{margin:0 0 8px}.cert-name{font-size:26px;font-weight:800;margin:18px 0}.cert-meta{line-height:1.9}.small{font-size:13px;color:#65707c;margin-top:18px}.namebox{width:100%;padding:13px;border:1px solid #ccd3db;border-radius:10px;font:inherit;margin-top:8px}@media(max-width:600px){.wrap{padding:14px}.card{padding:20px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top"><a class="brand" href="index.html">منصة الموسوعات الذكية</a><a class="back" href="checkout.html">العودة إلى الشراء</a></header>
+<section class="card">
+<div id="intro">
+<h1>الامتحان النهائي</h1>
+<p class="lead">اختبر فهمك لمحتوى الموسوعة. بعد الإرسال تحصل على درجتك وتقدير مستواك. عند اجتياز الحد المطلوب تظهر لك شهادة إتمام باسمك.</p>
+<label for="studentName"><b>اسم صاحب الشهادة</b></label>
+<input id="studentName" class="namebox" maxlength="120" placeholder="اكتب الاسم كما تريد ظهوره في الشهادة" required>
+<div class="progress"><div id="bar" class="bar"></div></div>
+<form id="examForm"></form>
+<div class="actions"><button id="submitBtn" class="btn primary" type="button">تصحيح الامتحان وإظهار النتيجة</button></div>
+</div>
+<div id="result" class="result"></div>
+</section>
+</div>
+<script>
+const questions=[
+['ما المقصود بالتعلم الآلي؟',['كتابة كل القواعد يدويًا','تعلم الأنماط من البيانات لاتخاذ تنبؤات أو قرارات','تخزين الملفات فقط','ضغط الصور'],1],
+['ما وظيفة نموذج اللغة الكبير LLM؟',['معالجة اللغة وتوليد نصوص اعتمادًا على أنماط تعلمها','تشغيل قاعدة بيانات فقط','تشفير القرص','إدارة الشبكة'],0],
+['ما الهدف الأساسي من RAG؟',['زيادة حجم الشاشة','ربط النموذج بمصادر معرفة مسترجعة لتحسين الإجابة','إلغاء الحاجة إلى البيانات','تسريع الإنترنت'],1],
+['ماذا تعني هندسة الأوامر؟',['تصميم التعليمات التي توجه النموذج للحصول على مخرجات مناسبة','برمجة المعالج','إصلاح الطابعة','ضغط ملفات PDF'],0],
+['ما المقصود بالوكيل الذكي؟',['نظام يكتفي بعرض صورة','نظام يستطيع التخطيط واستخدام أدوات وتنفيذ مهام وفق هدف','ملف نصي','محرك بحث فقط'],1],
+['ما فائدة Fine-Tuning؟',['تخصيص نموذج مدرب لمهمة أو بيانات محددة','حذف النموذج','إيقاف الإنترنت','تغيير حجم الشاشة'],0],
+['ما معنى Multimodal AI؟',['معالجة نوع واحد من البيانات فقط','التعامل مع أكثر من نمط مثل النص والصورة والصوت','قاعدة بيانات محلية','لغة برمجة'],1],
+['ما المشكلة التي يسببها Overfitting؟',['النموذج يحفظ بيانات التدريب ويفشل في التعميم على بيانات جديدة','النموذج لا يتعلم إطلاقًا','زيادة مساحة القرص','إغلاق المتصفح'],0],
+['لماذا نستخدم التحقق والاختبار في التعلم الآلي؟',['لقياس قدرة النموذج على التعميم وضبط الأداء','لزيادة عدد الملفات','لتغيير لغة الجهاز','لإلغاء البيانات'],0],
+['ما المبدأ الأفضل عند تقييم إجابة نموذج ذكاء اصطناعي؟',['قبولها دون تحقق','التحقق من دقتها ومصدرها وسياقها','اختيار أطول إجابة','اختيار الإجابة الأسرع فقط'],1]
+];
+const form=document.getElementById('examForm');
+questions.forEach((q,i)=>{const box=document.createElement('div');box.className='q';box.innerHTML='<h3>'+(i+1)+' — '+q[0]+'</h3>'+q[1].map((o,j)=>'<label class="option"><input type="radio" name="q'+i+'" value="'+j+'" required> '+o+'</label>').join('');form.appendChild(box)});
+const bar=document.getElementById('bar');
+form.addEventListener('change',()=>{const done=[...new FormData(form).keys()].length;bar.style.width=(done/questions.length*100)+'%'});
+document.getElementById('submitBtn').onclick=()=>{const name=document.getElementById('studentName').value.trim();if(name.length<2){alert('اكتب اسم صاحب الشهادة أولاً.');return}const data=new FormData(form);let score=0;questions.forEach((q,i)=>{if(Number(data.get('q'+i))===q[2])score++});const pct=Math.round(score/questions.length*100);let level='يحتاج إلى مزيد من المراجعة';if(pct>=90)level='خبير';else if(pct>=80)level='متقدم';else if(pct>=70)level='جيد';else if(pct>=60)level='أساسي';const passed=pct>=70;const id='AI-'+new Date().getFullYear()+'-'+Math.random().toString(36).slice(2,8).toUpperCase();document.getElementById('intro').style.display='none';const r=document.getElementById('result');r.style.display='block';r.innerHTML='<h2>نتيجة الامتحان النهائي</h2><div class="score">'+pct+'%</div><div class="level">المستوى: '+level+'</div><p>أجبت عن '+score+' من '+questions.length+' إجابات صحيحة.</p>'+(passed?'<div class="certificate"><h2>شهادة إتمام</h2><p>تشهد منصة الموسوعات الذكية بأن</p><div class="cert-name">'+escapeHtml(name)+'</div><p>اجتاز الامتحان النهائي للموسوعة الشاملة في الذكاء الاصطناعي</p><p class="cert-meta"><b>التقدير:</b> '+level+'<br><b>النتيجة:</b> '+pct+'%<br><b>رقم الشهادة:</b> '+id+'</p><p class="small">هذه شهادة إتمام صادرة عن المنصة بناءً على نتيجة الامتحان النهائي. لا تعني اعتمادًا أكاديميًا أو مهنيًا من جهة خارجية.</p></div>':'<p>لم تصل إلى حد الاجتياز 70%. راجع المحتوى والتحديات ثم أعد المحاولة.</p>')+'<div class="actions"><button class="btn secondary" onclick="location.reload()">إعادة الامتحان</button><a class="btn primary" href="index.html">العودة إلى المنصة</a></div>'};
+function escapeHtml(s){return s.replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+</script>
+</body>
+</html>
