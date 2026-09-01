@@ -24,24 +24,28 @@ jobs:
           node --check assets/app.js
           node --check assets/config.js
           node --check assets/qa-fixes.js
+          node --check assets/agent-api.js
           node --check agent/worker.js
       - name: Verify required files
         run: |
           test -s index.html
           test -s checkout.html
+          test -s exam.html
+          test -s updates.html
           test -s assets/styles.css
           test -s assets/app.js
           test -s assets/config.js
+          test -s assets/agent-api.js
           test -s assets/qa-fixes.js
           test -s "الموسوعة_الشاملة_20_صفحة_للمعاينة.pdf"
           test -f google30940fb9760e09d7.html
       - name: Verify commercial configuration
         run: |
-          grep -q 'reservationDiscount: "10%"' assets/config.js
-          grep -q 'reservationOffer: "117000"' assets/config.js
-          grep -q 'reservationLimit: 100' assets/config.js
-          grep -q 'studentDiscount: "10%"' assets/config.js
-          grep -q 'studentPrice: "117000"' assets/config.js
+          grep -q 'reservationDiscount: "20%"' assets/config.js
+          grep -q 'reservationOffer: "120000"' assets/config.js
+          grep -q 'reservationLimit: 200' assets/config.js
+          grep -q 'studentDiscount: "20%"' assets/config.js
+          grep -q 'studentPrice: "120000"' assets/config.js
           grep -q 'previewPages: 20' assets/config.js
           grep -q 'pages: 250' assets/config.js
           grep -q 'foreignCurrencyEnabled: true' assets/config.js
@@ -65,11 +69,16 @@ jobs:
           sleep 2
           curl --fail --silent --show-error http://127.0.0.1:4173/ > /tmp/index.html
           curl --fail --silent --show-error http://127.0.0.1:4173/checkout.html > /tmp/checkout.html
+          curl --fail --silent --show-error http://127.0.0.1:4173/exam.html > /tmp/exam.html
+          curl --fail --silent --show-error http://127.0.0.1:4173/updates.html > /tmp/updates.html
           grep -q 'assets/app.js' /tmp/index.html
           grep -q 'assets/styles.css' /tmp/index.html
           grep -q '250 صفحة' /tmp/index.html
-          grep -q '117,000' /tmp/index.html
-          grep -q '10%' /tmp/index.html
+          grep -q '120,000' /tmp/index.html
+          grep -q '20%' /tmp/index.html
           grep -q 'SD8504018822240001' /tmp/checkout.html
           grep -q '\$16' /tmp/checkout.html
           grep -q '\$19' /tmp/checkout.html
+          grep -q 'الامتحان النهائي' /tmp/exam.html
+          grep -q 'شهادة خبير' /tmp/exam.html
+          grep -q 'مركز التحديثات المستمرة' /tmp/updates.html
