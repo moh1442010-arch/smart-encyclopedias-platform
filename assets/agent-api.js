@@ -3,13 +3,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const CONFIG = window.STORE_CONFIG || {};
   const apiUrl = String(CONFIG.agentApiUrl || "").trim();
   if (!apiUrl) return;
-
   const form = document.getElementById("agentForm");
   const input = document.getElementById("agentInput");
   const log = document.getElementById("agentLog");
   const status = document.getElementById("agentStatus");
   if (!form || !input || !log) return;
-
   const addLog = (text, type = "") => {
     const item = document.createElement("div");
     item.className = `agent-item ${type}`;
@@ -17,9 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     log.appendChild(item);
     log.scrollTop = log.scrollHeight;
   };
-
   const setStatus = (text) => { if (status) status.textContent = text; };
-
   const executeAction = (action) => {
     if (!action || !action.type) return;
     switch (action.type) {
@@ -40,22 +36,17 @@ document.addEventListener("DOMContentLoaded", () => {
       case "focus_offer":
         document.querySelector(".offer")?.scrollIntoView({ behavior: "smooth", block: "center" });
         break;
-      default:
+      case "open_checkout":
+        window.location.href = CONFIG.purchaseUrl || "checkout.html";
         break;
     }
   };
-
   async function askAgent(message) {
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ message, context: { page: window.location.pathname } }),
-    });
+    const response = await fetch(apiUrl, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message, context: { page: window.location.pathname } }) });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || "agent unavailable");
     return data;
   }
-
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
