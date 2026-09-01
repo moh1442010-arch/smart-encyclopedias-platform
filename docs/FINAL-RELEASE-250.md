@@ -36,9 +36,11 @@
 - Dual-currency checkout
 - D1 order recording
 - Cloudflare Worker API
-- Gemini-backed smart agent
+- Gemini-backed smart agent with deterministic local fallback
 - Updates center with QR access
 - Final exam and level assessment
+- Certificate of completion after passing
+- Expert certificate at 90% or higher
 
 ## Release rule
 
@@ -50,4 +52,6 @@ The approved 250-page PDF is the content source of record. Public preview remain
 - PDF open/render test: passed
 - Table of contents defect: corrected in the approved copy
 - Previous 252-page defective copy: rejected
-- No claim of academic accreditation is made by the certificate system
+- Smart-agent action list is server-sanitized to the allowed actions
+- Smart-agent local fallback keeps core product assistance available if Gemini is temporarily unavailable
+- Certificate output explicitly disclaims external academic/professional accreditation
