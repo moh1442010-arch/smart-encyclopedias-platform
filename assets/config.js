@@ -30,7 +30,7 @@ window.STORE_CONFIG = {
   foreignPaymentDetails: "SD8504018822240001",
   agentIncluded: true,
   agentDescription: "وكيل ذكي مرفق مع كل نسخة كاملة للمساعدة في الشرح والفهم والإجابة عن الأسئلة.",
-  agentApiUrl: "https://super-rice-31e6.moh1442010.workers.dev/api/agent"
+  agentApiUrl: "/api/agent"
 };
 
 (function loadScriptOnce(id,src){
