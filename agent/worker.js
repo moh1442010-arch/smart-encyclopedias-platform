@@ -9,13 +9,21 @@ const SYSTEM_PROMPT = `أنت الوكيل الذكي لمنصة الموسوع�
 الإجراءات المسموحة: open_preview, open_preview_page, open_whatsapp, focus_offer, open_checkout.
 أعد JSON فقط بالشكل: {"reply":"...","actions":[{"type":"...","page":1}]}`;
 
-const ALLOWED_ACTIONS = new Set(["open_preview","open_preview_page","open_whatsapp","focus_offer","open_checkout"]);
+const ALLOWED_ACTIONS = new Set(["open_preview", "open_preview_page", "open_whatsapp", "focus_offer", "open_checkout"]);
 
 function json(data, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8", "access-control-allow-origin": "*", "access-control-allow-methods": "POST, OPTIONS", "access-control-allow-headers": "content-type" } });
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "access-control-allow-origin": "*",
+      "access-control-allow-methods": "GET, POST, OPTIONS",
+      "access-control-allow-headers": "content-type, authorization"
+    }
+  });
 }
 function corsPreflight() {
-  return new Response(null, { status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-methods": "POST, OPTIONS", "access-control-allow-headers": "content-type" } });
+  return new Response(null, { status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-methods": "GET, POST, OPTIONS", "access-control-allow-headers": "content-type, authorization" } });
 }
 function sanitizeActions(actions) {
   if (!Array.isArray(actions)) return [];
@@ -39,9 +47,43 @@ async function callGemini(message, env) {
   if (!text) throw new Error("Empty model response");
   return JSON.parse(text);
 }
+async function ensureOrdersTable(env) {
+  if (!env.DB) throw new Error("D1 binding DB is not configured");
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, customer_name TEXT NOT NULL, customer_email TEXT NOT NULL, customer_phone TEXT, product TEXT NOT NULL, currency TEXT NOT NULL, amount INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+  await env.DB.prepare(`CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at)`).run();
+}
+function validEmail(value) { return typeof value === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254; }
+async function createOrder(request, env) {
+  await ensureOrdersTable(env);
+  const body = await request.json();
+  const name = typeof body?.customerName === "string" ? body.customerName.trim() : "";
+  const email = typeof body?.customerEmail === "string" ? body.customerEmail.trim() : "";
+  const phone = typeof body?.customerPhone === "string" ? body.customerPhone.trim().slice(0, 40) : "";
+  const currency = body?.currency === "USD" ? "USD" : "SDG";
+  const amount = currency === "USD" ? (Number(body?.amount) === 16 ? 16 : 19) : (Number(body?.amount) === 117000 ? 117000 : 130000);
+  if (name.length < 2 || name.length > 120 || !validEmail(email)) return json({ error: "invalid_customer_data" }, 400);
+  const id = crypto.randomUUID();
+  await env.DB.prepare(`INSERT INTO orders (id, customer_name, customer_email, customer_phone, product, currency, amount) VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(id, name, email, phone, "الموسوعة الشاملة في الذكاء الاصطناعي + الوكيل الذكي", currency, amount).run();
+  return json({ ok: true, orderId: id, status: "pending" });
+}
+async function listOrders(request, env) {
+  const expected = env.ADMIN_API_TOKEN;
+  const provided = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || "";
+  if (!expected || provided !== expected) return json({ error: "unauthorized" }, 401);
+  await ensureOrdersTable(env);
+  const result = await env.DB.prepare(`SELECT id, customer_name, customer_email, customer_phone, product, currency, amount, status, created_at FROM orders ORDER BY created_at DESC LIMIT 100`).all();
+  return json({ ok: true, orders: result.results || [] });
+}
 export default { async fetch(request, env) {
   if (request.method === "OPTIONS") return corsPreflight();
   const url = new URL(request.url);
+  if (url.pathname === "/health") return json({ ok: true, service: "smart-encyclopedias-agent", d1: Boolean(env.DB), time: new Date().toISOString() });
+  if (url.pathname === "/api/order" && request.method === "POST") {
+    try { return await createOrder(request, env); } catch (error) { return json({ error: "order_unavailable", message: "تعذر تسجيل الطلب الآن." }, 503); }
+  }
+  if (url.pathname === "/api/orders" && request.method === "GET") {
+    try { return await listOrders(request, env); } catch (error) { return json({ error: "orders_unavailable" }, 503); }
+  }
   if (url.pathname !== "/api/agent") return json({ error: "Not found" }, 404);
   if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
   try {
