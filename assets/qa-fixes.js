@@ -1,4 +1,4 @@
-/* Final QA guardrails. Never introduce a second price source. */
+/* Final storefront QA guardrails and release links. */
 (function(){
   'use strict';
   function run(){
@@ -11,7 +11,20 @@
     if(account)account.textContent=c.accountNumber;
     if(wa)wa.textContent=c.whatsappDisplay||c.whatsapp;
     if(link)link.href=c.whatsappUrl;
-    var box=document.querySelector('.payment-box');if(box&&!document.getElementById('agentIncludedNotice')){var d=document.createElement('div');d.id='agentIncludedNotice';d.innerHTML='<b>وكيل ذكي مع النسخة:</b> مرفق مع كل نسخة كاملة للمساعدة في الشرح والفهم والإجابة عن الأسئلة.';box.appendChild(d)}
+    var box=document.querySelector('.payment-box');
+    if(box&&!document.getElementById('agentIncludedNotice')){
+      var d=document.createElement('div');d.id='agentIncludedNotice';d.innerHTML='<b>وكيل ذكي مع النسخة:</b> مرفق مع كل نسخة كاملة للمساعدة في الشرح والفهم والإجابة عن الأسئلة.';box.appendChild(d);
+    }
+    var nav=document.querySelector('nav');
+    if(nav&&!document.getElementById('updatesNavLink')){
+      var a=document.createElement('a');a.id='updatesNavLink';a.href='updates.html';a.textContent='التحديثات';nav.appendChild(a);
+    }
+    var features=document.getElementById('features');
+    if(features&&!document.getElementById('learningPathNotice')){
+      var card=document.createElement('div');card.id='learningPathNotice';card.style.cssText='margin-top:18px;padding:16px 18px;border:1px solid #29445e;border-radius:16px;background:#0b2137;color:#d6e2ed;line-height:1.9';
+      card.innerHTML='<b>مسار ما بعد الشراء</b><br>الموسوعة الكاملة + الوكيل الذكي + التحديات + الامتحان النهائي + تقدير المستوى + شهادة بعد الاجتياز + مركز التحديثات.';
+      features.querySelector('.wrap')?.appendChild(card);
+    }
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
 })();
