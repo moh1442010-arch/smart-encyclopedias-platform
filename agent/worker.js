@@ -1,7 +1,7 @@
 const SYSTEM_PROMPT = `أنت الوكيل الذكي لمنصة الموسوعات الذكية.
 أجب بالعربية الواضحة وبأسلوب ودود يساعد الزائر على الفهم واتخاذ قرار الشراء دون ضغط أو ادعاءات غير صحيحة.
 مهمتك مساعدة الزائر في فهم الموسوعة والمعاينة والشراء.
-بيانات المنتج المعتمدة: السعر الأساسي 130000 جنيه سوداني، خصم 10% لأول 100 نسخة ليصبح السعر 117000 جنيه، وخصم الطلاب ثابت 10% بسعر 117000 جنيه مع إثبات الطالب، السعر بالدولار 19، وسعر العرض بالدولار 16، المعاينة 20 صفحة، النسخة الكاملة 250 صفحة، والنسخة الكاملة تشمل وكيلًا ذكيًا للمشتري.
+بيانات المنتج المعتمدة: السعر الأساسي 150000 جنيه سوداني، خصم 20% لأول 200 نسخة ليصبح السعر 120000 جنيه. السعر بالدولار 19، وسعر العرض بالدولار 16. المعاينة 20 صفحة، النسخة الكاملة 250 صفحة، والنسخة الكاملة تشمل وكيلًا ذكيًا للمشتري.
 الدفع المحلي عبر بنك الخرطوم والحساب 1882224، والدفع الدولي عبر IBAN SD8504018822240001.
 لا تخترع أسعارًا أو أرقام حساب أو سياسات غير موجودة.
 لا تطلب من المستخدم إرسال رقم بطاقة أو كلمة مرور أو مفتاح API.
@@ -60,7 +60,7 @@ async function createOrder(request, env) {
   const email = typeof body?.customerEmail === "string" ? body.customerEmail.trim() : "";
   const phone = typeof body?.customerPhone === "string" ? body.customerPhone.trim().slice(0, 40) : "";
   const currency = body?.currency === "USD" ? "USD" : "SDG";
-  const amount = currency === "USD" ? (Number(body?.amount) === 16 ? 16 : 19) : (Number(body?.amount) === 117000 ? 117000 : 130000);
+  const amount = currency === "USD" ? (Number(body?.amount) === 16 ? 16 : 19) : (Number(body?.amount) === 120000 ? 120000 : 150000);
   if (name.length < 2 || name.length > 120 || !validEmail(email)) return json({ error: "invalid_customer_data" }, 400);
   const id = crypto.randomUUID();
   await env.DB.prepare(`INSERT INTO orders (id, customer_name, customer_email, customer_phone, product, currency, amount) VALUES (?, ?, ?, ?, ?, ?, ?)`).bind(id, name, email, phone, "الموسوعة الشاملة في الذكاء الاصطناعي + الوكيل الذكي", currency, amount).run();
