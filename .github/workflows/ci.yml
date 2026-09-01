@@ -56,6 +56,11 @@ jobs:
           grep -q 'agentIncluded: true' assets/config.js
       - name: Smart-agent deterministic smoke test
         run: node agent/smoke-test.mjs
+      - name: Verify visible agent wiring
+        run: |
+          grep -q 'id="agentForm"' index.html
+          grep -q 'id="agentInput"' index.html
+          grep -q 'agentApiUrl' assets/config.js
       - name: Verify public repository hygiene
         run: |
           test ! -e smart-encyclopedias-platform-ready-updated.zip
