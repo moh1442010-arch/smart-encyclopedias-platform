@@ -65,8 +65,9 @@ jobs:
         run: |
           test ! -e smart-encyclopedias-platform-ready-updated.zip
           test ! -e assets/assets/preview/1.jpg
-          if find . -type f -size 0c -not -path './.git/*' | grep -q .; then
+          if find . -type f -size 0c -not -path './.git/*' -not -path './.nojekyll' | grep -q .; then
             echo 'Zero-byte public files found'
+            find . -type f -size 0c -not -path './.git/*' -not -path './.nojekyll'
             exit 1
           fi
       - name: Smoke test static site
