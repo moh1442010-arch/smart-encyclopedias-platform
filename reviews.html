@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>آراء وتجارب زوار الموسوعة | منصة الموسوعات الذكية</title>
+  <meta name="description" content="آراء وتجارب قراء وزوار الموسوعة الشاملة في الذكاء الاصطناعي باللغة العربية. شاركنا رأيك بصراحة واقتراحاتك لتطوير النسخ القادمة.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://moh1442010-arch.github.io/smart-encyclopedias-platform/reviews.html">
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    .reviews-page{max-width:1050px;margin:auto;padding:32px 18px}.reviews-hero{text-align:center;margin-bottom:28px}.reviews-hero h1{margin-bottom:10px}.reviews-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}.review-card,.review-form{background:var(--card-bg,#fff);border:1px solid rgba(127,127,127,.2);border-radius:18px;padding:20px;box-shadow:0 8px 25px rgba(0,0,0,.06)}.stars{letter-spacing:2px;font-size:1.15rem}.review-meta{font-size:.9rem;opacity:.75;margin-top:8px}.review-note{margin:22px 0;padding:16px;border-radius:14px;background:rgba(127,127,127,.08)}.review-form{margin-top:26px}.review-form label{display:block;margin:12px 0 6px;font-weight:700}.review-form input,.review-form select,.review-form textarea{width:100%;box-sizing:border-box;padding:12px;border:1px solid rgba(127,127,127,.35);border-radius:10px;background:transparent;color:inherit;font:inherit}.review-form textarea{min-height:120px;resize:vertical}.review-form button{margin-top:15px;padding:12px 22px;border:0;border-radius:10px;cursor:pointer;font:inherit;font-weight:700}.back-link{display:inline-block;margin-bottom:20px}
+  </style>
+</head>
+<body>
+  <main class="reviews-page">
+    <a class="back-link" href="index.html">← العودة إلى المنصة</a>
+    <section class="reviews-hero">
+      <h1>⭐ آراء وتجارب زوار الموسوعة</h1>
+      <p>آراؤكم الصادقة تساعد القراء الجدد على معرفة التجربة، وتساعدنا على تطوير الإصدارات القادمة.</p>
+    </section>
+
+    <div class="review-note"><strong>المصداقية أولًا:</strong> لا ننشر آراء وهمية. التعليقات التي يرسلها الزوار تخضع لمراجعة قبل النشر، ويمكن أن تتضمن ملاحظات أو اقتراحات للتحسين.</div>
+
+    <section aria-labelledby="published-reviews">
+      <h2 id="published-reviews">تجارب القراء</h2>
+      <div class="reviews-grid">
+        <article class="review-card">
+          <div class="stars" aria-label="بانتظار أول تقييم">☆ ☆ ☆ ☆ ☆</div>
+          <h3>ننتظر أول تجربة حقيقية</h3>
+          <p>هل اطلعت على الموسوعة؟ شاركنا رأيك بصراحة، سواء كان إعجابًا أو ملاحظة أو اقتراحًا.</p>
+          <div class="review-meta">سيتم تحديث هذه الصفحة مع وصول التعليقات الحقيقية.</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="review-form" aria-labelledby="send-review">
+      <h2 id="send-review">شاركنا رأيك</h2>
+      <p>اكتب رأيك، وسنراجعه قبل نشره. لا تضع أرقامًا سرية أو بيانات دفع أو معلومات شخصية غير ضرورية.</p>
+      <form onsubmit="event.preventDefault(); document.getElementById('review-status').textContent='تم استلام رسالتك محليًا. لإرسالها للنشر، تواصل معنا عبر واتساب من صفحة المنصة.';">
+        <label for="review-name">الاسم</label>
+        <input id="review-name" name="name" maxlength="60" required placeholder="الاسم الأول أو اسم مختصر">
+        <label for="review-role">الصفة (اختيارية)</label>
+        <input id="review-role" name="role" maxlength="80" placeholder="طالب، معلم، باحث، مهتم بالذكاء الاصطناعي...">
+        <label for="review-rating">التقييم</label>
+        <select id="review-rating" name="rating" required>
+          <option value="">اختر تقييمك</option><option>5 نجوم</option><option>4 نجوم</option><option>3 نجوم</option><option>نجمتان</option><option>نجمة واحدة</option>
+        </select>
+        <label for="review-text">رأيك</label>
+        <textarea id="review-text" name="review" maxlength="1000" required placeholder="ما الذي أعجبك؟ وما الذي تقترح تطويره؟"></textarea>
+        <button type="submit">إرسال الرأي للمراجعة</button>
+        <p id="review-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+</body>
+</html>
