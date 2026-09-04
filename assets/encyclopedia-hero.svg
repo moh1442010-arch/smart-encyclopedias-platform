@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-labelledby="t d">
+<title id="t">منصة الموسوعات الذكية</title><desc id="d">واجهة تعريفية للموسوعة الشاملة في الذكاء الاصطناعي باللغة العربية</desc>
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#07111d"/><stop offset="1" stop-color="#10243a"/></linearGradient>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe28a"/><stop offset="1" stop-color="#e6a92f"/></linearGradient>
+ <linearGradient id="book" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#222"/><stop offset="1" stop-color="#050505"/></linearGradient>
+ <filter id="shadow"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-opacity=".45"/></filter>
+</defs>
+<rect width="1200" height="700" rx="32" fill="url(#bg)"/>
+<g opacity=".18" fill="#5cc8ff"><circle cx="120" cy="150" r="100"/><circle cx="1060" cy="90" r="150"/></g>
+<text x="70" y="70" fill="url(#gold)" font-family="Arial,sans-serif" font-size="28" font-weight="700">منصة الموسوعات الذكية</text>
+<rect x="55" y="105" width="350" height="500" rx="24" fill="#121821" stroke="#d9a83c" stroke-width="2" filter="url(#shadow)"/>
+<rect x="78" y="128" width="304" height="454" rx="15" fill="url(#book)"/>
+<text x="230" y="195" text-anchor="middle" fill="#f7d37b" font-family="Arial,sans-serif" font-size="27" font-weight="700">الموسوعة الشاملة</text>
+<text x="230" y="235" text-anchor="middle" fill="#f7d37b" font-family="Arial,sans-serif" font-size="25" font-weight="700">في الذكاء الاصطناعي</text>
+<text x="230" y="275" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="19">باللغة العربية</text>
+<text x="230" y="312" text-anchor="middle" fill="#f7d37b" font-family="Arial,sans-serif" font-size="18">من الصفر إلى الاحتراف</text>
+<circle cx="230" cy="410" r="78" fill="#111" stroke="#e6b64e" stroke-width="3"/>
+<text x="230" y="430" text-anchor="middle" fill="url(#gold)" font-family="Arial,sans-serif" font-size="72" font-weight="700">AI</text>
+<text x="230" y="525" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="22" font-weight="700">250 صفحة</text>
+<rect x="440" y="105" width="700" height="500" rx="28" fill="#0c1724" stroke="#293d54" stroke-width="2"/>
+<text x="790" y="175" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="44" font-weight="700">الموسوعة الشاملة</text>
+<text x="790" y="230" text-anchor="middle" fill="url(#gold)" font-family="Arial,sans-serif" font-size="48" font-weight="700">في الذكاء الاصطناعي</text>
+<text x="790" y="275" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="30">باللغة العربية</text>
+<text x="790" y="320" text-anchor="middle" fill="#f3c65c" font-family="Arial,sans-serif" font-size="25">من الصفر إلى الاحتراف</text>
+<g transform="translate(475 365)">
+ <rect width="195" height="150" rx="18" fill="#121f2e" stroke="#3b5168"/>
+ <text x="97" y="55" text-anchor="middle" fill="url(#gold)" font-family="Arial,sans-serif" font-size="36" font-weight="700">250</text><text x="97" y="90" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="18">صفحة</text><text x="97" y="120" text-anchor="middle" fill="#b9c6d3" font-family="Arial,sans-serif" font-size="15">النسخة الكاملة</text>
+</g>
+<g transform="translate(690 365)">
+ <rect width="195" height="150" rx="18" fill="#121f2e" stroke="#3b5168"/>
+ <text x="97" y="55" text-anchor="middle" fill="url(#gold)" font-family="Arial,sans-serif" font-size="36" font-weight="700">20</text><text x="97" y="90" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="18">صفحة</text><text x="97" y="120" text-anchor="middle" fill="#b9c6d3" font-family="Arial,sans-serif" font-size="15">معاينة مجانية</text>
+</g>
+<g transform="translate(905 365)">
+ <rect width="195" height="150" rx="18" fill="#121f2e" stroke="#3b5168"/>
+ <text x="97" y="55" text-anchor="middle" fill="url(#gold)" font-family="Arial,sans-serif" font-size="36" font-weight="700">AI</text><text x="97" y="90" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="18">وكيل ذكي</text><text x="97" y="120" text-anchor="middle" fill="#b9c6d3" font-family="Arial,sans-serif" font-size="15">مع النسخة الكاملة</text>
+</g>
+<rect x="475" y="540" width="625" height="42" rx="21" fill="#18283a" stroke="#c99a34"/>
+<text x="787" y="568" text-anchor="middle" fill="#f5d67e" font-family="Arial,sans-serif" font-size="18">محتوى منظم • مناسب للمبتدئ والمحترف • يعمل على الجوال</text>
+</svg>
