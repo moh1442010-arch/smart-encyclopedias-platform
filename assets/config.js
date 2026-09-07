@@ -16,6 +16,7 @@ window.STORE_CONFIG = {
   pages: 250,
   previewPages: 20,
   previewPdf: "الموسوعة_الشاملة_20_صفحة_للمعاينة.pdf",
+  previewUrl: "preview.html",
   reservationOffer: "120000",
   studentPrice: "120000",
   studentDiscount: "20%",
