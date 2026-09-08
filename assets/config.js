@@ -31,7 +31,7 @@ window.STORE_CONFIG = {
   foreignPaymentDetails: "SD8504018822240001",
   agentIncluded: true,
   agentDescription: "وكيل ذكي مرفق مع كل نسخة كاملة للمساعدة في الشرح والفهم والإجابة عن الأسئلة.",
-  agentApiUrl: "/api/agent"
+  agentApiUrl: "https://smart-encyclopedias-platform.moh1442010.workers.dev/api/agent"
 };
 
 (function loadScriptOnce(id,src){
