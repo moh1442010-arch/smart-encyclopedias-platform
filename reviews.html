@@ -4,54 +4,136 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>آراء وتجارب زوار الموسوعة | منصة الموسوعات الذكية</title>
-  <meta name="description" content="آراء وتجارب قراء وزوار الموسوعة الشاملة في الذكاء الاصطناعي باللغة العربية. شاركنا رأيك بصراحة واقتراحاتك لتطوير النسخ القادمة.">
+  <meta name="description" content="آراء وتجارب زوار وقراء الموسوعة الشاملة في الذكاء الاصطناعي باللغة العربية. شارك رأيك بصدق وساعدنا على تطوير الإصدارات القادمة.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://moh1442010-arch.github.io/smart-encyclopedias-platform/reviews.html">
   <link rel="stylesheet" href="assets/styles.css">
   <style>
-    .reviews-page{max-width:1050px;margin:auto;padding:32px 18px}.reviews-hero{text-align:center;margin-bottom:28px}.reviews-hero h1{margin-bottom:10px}.reviews-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}.review-card,.review-form{background:var(--card-bg,#fff);border:1px solid rgba(127,127,127,.2);border-radius:18px;padding:20px;box-shadow:0 8px 25px rgba(0,0,0,.06)}.stars{letter-spacing:2px;font-size:1.15rem}.review-meta{font-size:.9rem;opacity:.75;margin-top:8px}.review-note{margin:22px 0;padding:16px;border-radius:14px;background:rgba(127,127,127,.08)}.review-form{margin-top:26px}.review-form label{display:block;margin:12px 0 6px;font-weight:700}.review-form input,.review-form select,.review-form textarea{width:100%;box-sizing:border-box;padding:12px;border:1px solid rgba(127,127,127,.35);border-radius:10px;background:transparent;color:inherit;font:inherit}.review-form textarea{min-height:120px;resize:vertical}.review-form button{margin-top:15px;padding:12px 22px;border:0;border-radius:10px;cursor:pointer;font:inherit;font-weight:700}.back-link{display:inline-block;margin-bottom:20px}
+    :root{--gold:#c9a227;--navy:#10264d;--soft:#f7f4eb}
+    body{margin:0}
+    .reviews-page{max-width:1100px;margin:auto;padding:22px 16px 70px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+    .back-link,.nav-link{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-weight:700}
+    .reviews-hero{padding:34px 20px;text-align:center;border-radius:24px;background:linear-gradient(135deg,rgba(16,38,77,.96),rgba(16,38,77,.84));color:#fff;box-shadow:0 14px 35px rgba(0,0,0,.12)}
+    .reviews-hero .badge{display:inline-block;padding:7px 12px;border:1px solid rgba(255,255,255,.25);border-radius:999px;margin-bottom:12px;font-size:.9rem}
+    .reviews-hero h1{margin:0 0 12px;font-size:clamp(1.7rem,5vw,2.6rem)}
+    .reviews-hero p{max-width:760px;margin:0 auto;line-height:1.9;opacity:.94}
+    .hero-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:20px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border:0;border-radius:12px;padding:12px 18px;font:inherit;font-weight:800;cursor:pointer}
+    .btn-primary{background:#fff;color:var(--navy)}
+    .btn-gold{background:var(--gold);color:#fff}
+    .trust-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:20px 0}
+    .trust-card{padding:17px;border:1px solid rgba(127,127,127,.18);border-radius:16px;background:var(--card-bg,#fff);text-align:center}
+    .trust-card strong{display:block;font-size:1.25rem;margin-bottom:5px}
+    .section{margin-top:28px}
+    .section h2{margin-bottom:10px}
+    .review-card,.review-form,.review-note{background:var(--card-bg,#fff);border:1px solid rgba(127,127,127,.2);border-radius:18px;padding:20px;box-shadow:0 8px 25px rgba(0,0,0,.05)}
+    .empty-review{display:grid;place-items:center;text-align:center;min-height:170px}
+    .empty-review .icon{font-size:2rem;margin-bottom:8px}
+    .review-note{margin-top:18px;background:rgba(201,162,39,.08);border-color:rgba(201,162,39,.28);line-height:1.9}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+    .field{margin-top:12px}
+    .field.full{grid-column:1/-1}
+    .review-form label{display:block;margin-bottom:6px;font-weight:800}
+    .review-form input,.review-form select,.review-form textarea{width:100%;box-sizing:border-box;padding:12px;border:1px solid rgba(127,127,127,.35);border-radius:10px;background:transparent;color:inherit;font:inherit}
+    .review-form textarea{min-height:130px;resize:vertical}
+    .form-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+    .form-help{font-size:.9rem;opacity:.78;line-height:1.7}
+    .status{margin-top:12px;line-height:1.8}
+    .policy{font-size:.88rem;opacity:.8;line-height:1.8;margin-top:16px}
+    @media(max-width:650px){.reviews-page{padding-top:14px}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.btn{width:100%}.hero-actions{display:grid}.topbar{align-items:stretch}}
   </style>
 </head>
 <body>
   <main class="reviews-page">
-    <a class="back-link" href="index.html">← العودة إلى المنصة</a>
-    <section class="reviews-hero">
+    <nav class="topbar" aria-label="التنقل">
+      <a class="back-link" href="index.html">← العودة إلى المنصة</a>
+      <a class="nav-link" href="preview.html">📖 مشاهدة المعاينة</a>
+    </nav>
+
+    <header class="reviews-hero">
+      <span class="badge">صفحة المجتمع والمصداقية</span>
       <h1>⭐ آراء وتجارب زوار الموسوعة</h1>
-      <p>آراؤكم الصادقة تساعد القراء الجدد على معرفة التجربة، وتساعدنا على تطوير الإصدارات القادمة.</p>
-    </section>
-
-    <div class="review-note"><strong>المصداقية أولًا:</strong> لا ننشر آراء وهمية. التعليقات التي يرسلها الزوار تخضع لمراجعة قبل النشر، ويمكن أن تتضمن ملاحظات أو اقتراحات للتحسين.</div>
-
-    <section aria-labelledby="published-reviews">
-      <h2 id="published-reviews">تجارب القراء</h2>
-      <div class="reviews-grid">
-        <article class="review-card">
-          <div class="stars" aria-label="بانتظار أول تقييم">☆ ☆ ☆ ☆ ☆</div>
-          <h3>ننتظر أول تجربة حقيقية</h3>
-          <p>هل اطلعت على الموسوعة؟ شاركنا رأيك بصراحة، سواء كان إعجابًا أو ملاحظة أو اقتراحًا.</p>
-          <div class="review-meta">سيتم تحديث هذه الصفحة مع وصول التعليقات الحقيقية.</div>
-        </article>
+      <p>هذه الصفحة مخصصة للتجارب الحقيقية. لا نشتري تقييمات ولا ننشئ شهادات وهمية؛ نريد أن يرى الزائر رأي القارئ الحقيقي، بما فيه الملاحظات والاقتراحات التي تساعدنا على التطوير.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="preview.html">شاهد 20 صفحة حقيقية</a>
+        <a class="btn btn-gold" href="https://wa.me/249121851285?text=%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%B9%D9%84%D9%8A%D9%83%D9%85%D8%8C%20%D8%A3%D8%B1%D8%BA%D8%A8%20%D9%81%D9%8A%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D8%A7%D9%84%D9%85%D9%88%D8%B3%D9%88%D8%B9%20%D9%88%D8%A7%D9%84%D8%B4%D8%B1%D8%A7%D8%A1.">💬 الاستفسار والشراء</a>
       </div>
+    </header>
+
+    <section class="trust-grid" aria-label="معلومات عن الصفحة">
+      <div class="trust-card"><strong>250 صفحة</strong><span>في النسخة الكاملة</span></div>
+      <div class="trust-card"><strong>20 صفحة</strong><span>معاينة مجانية</span></div>
+      <div class="trust-card"><strong>مراجعة بشرية</strong><span>قبل نشر الرأي</span></div>
+      <div class="trust-card"><strong>بدون آراء وهمية</strong><span>المصداقية أولًا</span></div>
     </section>
 
-    <section class="review-form" aria-labelledby="send-review">
+    <section class="section" aria-labelledby="published-reviews">
+      <h2 id="published-reviews">تجارب القراء</h2>
+      <article class="review-card empty-review">
+        <div>
+          <div class="icon">💬</div>
+          <h3>ننتظر أول تجربة حقيقية</h3>
+          <p>ستظهر هنا التقييمات التي تصلنا ويتم اعتمادها للنشر. وجود هذه المساحة الفارغة أفضل من اختلاق شهادة لا وجود لها.</p>
+        </div>
+      </article>
+      <div class="review-note"><strong>كيف نتعامل مع الآراء؟</strong><br>نراجع المحتوى للتأكد من خلوه من بيانات الدفع أو المعلومات الحساسة أو الإساءة. قد ننشر النقد والملاحظات أيضًا؛ فالهدف هو بناء ثقة حقيقية وتحسين المنتج.</div>
+    </section>
+
+    <section class="section review-form" aria-labelledby="send-review">
       <h2 id="send-review">شاركنا رأيك</h2>
-      <p>اكتب رأيك، وسنراجعه قبل نشره. لا تضع أرقامًا سرية أو بيانات دفع أو معلومات شخصية غير ضرورية.</p>
-      <form onsubmit="event.preventDefault(); document.getElementById('review-status').textContent='تم استلام رسالتك محليًا. لإرسالها للنشر، تواصل معنا عبر واتساب من صفحة المنصة.';">
-        <label for="review-name">الاسم</label>
-        <input id="review-name" name="name" maxlength="60" required placeholder="الاسم الأول أو اسم مختصر">
-        <label for="review-role">الصفة (اختيارية)</label>
-        <input id="review-role" name="role" maxlength="80" placeholder="طالب، معلم، باحث، مهتم بالذكاء الاصطناعي...">
-        <label for="review-rating">التقييم</label>
-        <select id="review-rating" name="rating" required>
-          <option value="">اختر تقييمك</option><option>5 نجوم</option><option>4 نجوم</option><option>3 نجوم</option><option>نجمتان</option><option>نجمة واحدة</option>
-        </select>
-        <label for="review-text">رأيك</label>
-        <textarea id="review-text" name="review" maxlength="1000" required placeholder="ما الذي أعجبك؟ وما الذي تقترح تطويره؟"></textarea>
-        <button type="submit">إرسال الرأي للمراجعة</button>
-        <p id="review-status" role="status" aria-live="polite"></p>
+      <p class="form-help">إذا اطلعت على المعاينة أو اشتريت النسخة الكاملة، أرسل تقييمك. بعد الضغط على زر الإرسال سيتم تجهيز الرسالة في واتساب لإرسالها مباشرة إلى فريق المنصة للمراجعة.</p>
+      <form id="review-form">
+        <div class="form-grid">
+          <div class="field">
+            <label for="review-name">الاسم</label>
+            <input id="review-name" name="name" maxlength="60" required placeholder="الاسم الأول أو اسم مختصر">
+          </div>
+          <div class="field">
+            <label for="review-role">الصفة (اختيارية)</label>
+            <input id="review-role" name="role" maxlength="80" placeholder="طالب، معلم، باحث...">
+          </div>
+          <div class="field">
+            <label for="review-rating">التقييم</label>
+            <select id="review-rating" name="rating" required>
+              <option value="">اختر تقييمك</option>
+              <option value="5 نجوم">★★★★★ — 5 نجوم</option>
+              <option value="4 نجوم">★★★★☆ — 4 نجوم</option>
+              <option value="3 نجوم">★★★☆☆ — 3 نجوم</option>
+              <option value="نجمتين">★★☆☆☆ — نجمتان</option>
+              <option value="نجمة واحدة">★☆☆☆☆ — نجمة واحدة</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label for="review-text">رأيك</label>
+            <textarea id="review-text" name="review" maxlength="1000" required placeholder="ما الذي أعجبك؟ وما الذي تقترح تطويره؟"></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-gold" type="submit">📨 إرسال الرأي للمراجعة</button>
+          <a class="btn" href="index.html">العودة للصفحة الرئيسية</a>
+        </div>
+        <p id="review-status" class="status" role="status" aria-live="polite"></p>
+        <p class="policy">تنبيه: لا تكتب كلمة مرور، رقم حساب، بيانات بطاقة، أو أي معلومات حساسة. إرسال الرأي لا يعني نشره تلقائيًا.</p>
       </form>
     </section>
   </main>
+
+  <script>
+    const form=document.getElementById('review-form');
+    const status=document.getElementById('review-status');
+    form.addEventListener('submit',function(e){
+      e.preventDefault();
+      const name=document.getElementById('review-name').value.trim();
+      const role=document.getElementById('review-role').value.trim() || 'غير محدد';
+      const rating=document.getElementById('review-rating').value;
+      const review=document.getElementById('review-text').value.trim();
+      if(!name||!rating||!review){status.textContent='يرجى إكمال الاسم والتقييم والرأي.';return;}
+      const text='طلب نشر رأي في الموسوعة\n\nالاسم: '+name+'\nالصفة: '+role+'\nالتقييم: '+rating+'\n\nالرأي:\n'+review+'\n\nأوافق على مراجعة الرأي قبل نشره.';
+      const url='https://wa.me/249121851285?text='+encodeURIComponent(text);
+      status.innerHTML='تم تجهيز رأيك. افتح واتساب لإرساله للمراجعة ثم نتابع اعتماده للنشر.';
+      window.open(url,'_blank','noopener');
+    });
+  </script>
 </body>
 </html>
