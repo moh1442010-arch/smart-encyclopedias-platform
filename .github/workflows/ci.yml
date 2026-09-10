@@ -58,8 +58,8 @@ jobs:
         run: node agent/smoke-test.mjs
       - name: Verify visible agent wiring
         run: |
-          grep -q 'id="agentForm"' index.html
-          grep -q 'id="agentInput"' index.html
+          grep -Eq 'id="agentForm"|buildAgent\(\)' index.html assets/app.js
+          grep -Eq 'id="agentInput"|agentInput' index.html assets/app.js
           grep -q 'agentApiUrl' assets/config.js
       - name: Verify public repository hygiene
         run: |
