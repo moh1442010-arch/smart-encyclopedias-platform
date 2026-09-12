@@ -11,7 +11,7 @@
 .bar{position:sticky;top:0;background:#fff;padding:10px 12px;box-shadow:0 2px 12px #0002;z-index:10}.barin{width:min(1100px,94vw);margin:auto;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.bar a{color:var(--navy);text-decoration:none;font-weight:900}.count{font-weight:900;color:var(--navy)}
 .viewer{width:min(1100px,94vw);margin:20px auto}.page-wrap{background:#dfe3e8;border-radius:14px;padding:14px;box-shadow:0 5px 25px #0002;min-height:70vh;display:flex;justify-content:center;align-items:flex-start}.page-wrap canvas{display:block;max-width:100%;height:auto;background:#fff;box-shadow:0 2px 12px #0003}
 .status{text-align:center;padding:18px;font-weight:800;color:#53657d}.nav{width:min(1100px,94vw);margin:14px auto 24px;display:flex;justify-content:space-between;gap:10px}.nav button,.nav a{border:0;border-radius:10px;padding:12px 18px;background:var(--navy);color:#fff;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}.nav button:disabled{opacity:.35;cursor:not-allowed}.dots{width:min(1100px,94vw);margin:0 auto 28px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.dots button{width:36px;height:36px;border:1px solid #cbd3dc;background:#fff;border-radius:8px;cursor:pointer;font-weight:800}.dots button.active{background:var(--navy);color:#fff}
-.audio-section{width:min(1100px,94vw);margin:0 auto 32px;background:#fff;border-radius:18px;padding:22px;box-shadow:0 4px 18px #0001}.audio-section h2{text-align:center;color:var(--navy);margin:0 0 8px}.audio-section .intro{text-align:center;color:#53657d;margin:0 0 18px}.audio-card{border:1px solid #d9dee5;border-radius:14px;padding:16px;margin-top:14px}.audio-card h3{margin:0 0 6px;color:var(--navy)}.audio-card p{margin:0 0 12px;color:#53657d}.audio-card audio{width:100%;display:block}
+.audio-section{width:min(1100px,94vw);margin:0 auto 32px;background:#fff;border-radius:18px;padding:22px;box-shadow:0 4px 18px #0001}.audio-section h2{text-align:center;color:var(--navy);margin:0 0 8px}.audio-section .intro{text-align:center;color:#53657d;margin:0 0 18px}.audio-card{border:1px solid #d9dee5;border-radius:14px;padding:16px;margin-top:14px}.audio-card h3{margin:0 0 6px;color:var(--navy)}.audio-card p{margin:0 0 12px;color:#53657d}.audio-card audio,.audio-card video{width:100%;display:block;border-radius:10px}
 .cta{width:min(1100px,94vw);margin:0 auto 40px;background:var(--navy);color:#fff;border-radius:18px;padding:22px;text-align:center}.cta strong{font-size:1.2rem}.cta a{display:inline-block;margin-top:12px;background:var(--gold);color:#142033;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:900}
 .note{width:min(1100px,94vw);margin:0 auto 18px;text-align:center;color:#53657d;font-size:.95rem}.error{color:#a33;font-weight:900;text-align:center;padding:30px}
 @media(max-width:600px){.barin{justify-content:center}.viewer{margin-top:12px}.page-wrap{padding:6px}.nav{flex-wrap:wrap}.nav button,.nav a{flex:1;text-align:center}.dots button{width:32px;height:32px}.cta{padding:18px}.audio-section{padding:16px}.audio-card{padding:12px}}
@@ -26,19 +26,12 @@
 <div class="nav"><button id="prev">← السابقة</button><button id="next">التالية →</button></div>
 <div id="dots" class="dots" aria-label="اختيار صفحة من المعاينة"></div>
 <div class="note">هذه المعاينة تعرض الصفحات الفعلية من ملف المعاينة، وليست صفحات نصية بديلة.</div>
-<section class="audio-section" aria-label="الصوتيات المجانية">
-<h2>استمع إلى محتوى الموسوعة</h2>
-<p class="intro">جزء من المحتوى الصوتي متاح مجانًا مع المعاينة قبل الشراء.</p>
-<div class="audio-card">
-<h3>مقدمة بالذكاء الاصطناعي</h3>
-<p>استمع إلى المقدمة قبل الانتقال إلى النسخة الكاملة.</p>
-<audio controls preload="metadata"><source src="assets/audio/مقدمة_بالذكاء_الاصطناعي%20(1).mp4" type="video/mp4">متصفحك لا يدعم تشغيل هذا الملف.</audio>
-</div>
-<div class="audio-card">
-<h3>شرح الباب الأول في الموسوعة الشاملة في الذكاء الاصطناعي</h3>
-<p>استمع إلى شرح الباب الأول ضمن العرض المجاني.</p>
-<audio controls preload="metadata"><source src="assets/audio/شرح_الباب_الأول_في_الموسوعة_الشاملة_في_الذكاء_الاصطناعي.m4a" type="audio/mp4">متصفحك لا يدعم تشغيل هذا الملف.</audio>
-</div>
+<section class="audio-section" aria-label="المحتوى المجاني الصوتي والمرئي">
+<h2>استمع وشاهد محتوى الموسوعة</h2>
+<p class="intro">جزء من المحتوى الصوتي والمرئي متاح مجانًا مع المعاينة قبل الشراء.</p>
+<div class="audio-card"><h3>مقدمة بالذكاء الاصطناعي</h3><p>استمع إلى المقدمة قبل الانتقال إلى النسخة الكاملة.</p><audio controls preload="metadata"><source src="assets/audio/%D9%85%D9%82%D8%AF%D9%85%D8%A9_%D8%A8%D8%A7%D9%84%D8%B0%D9%83%D8%A7%D8%A1_%D8%A7%D9%84%D8%A7%D8%B5%D8%B7%D9%86%D8%A7%D8%B9%D9%8A%20%281%29.mp4" type="video/mp4">متصفحك لا يدعم تشغيل هذا الملف.</audio></div>
+<div class="audio-card"><h3>شرح الباب الأول في الموسوعة الشاملة في الذكاء الاصطناعي</h3><p>استمع إلى شرح الباب الأول ضمن العرض المجاني.</p><audio controls preload="metadata"><source src="assets/audio/%D8%B4%D8%B1%D8%AD_%D8%A7%D9%84%D8%A8%D8%A7%D8%A8_%D8%A7%D9%84%D8%A3%D9%88%D9%84_%D9%81%D9%8A_%D8%A7%D9%84%D9%85%D9%88%D8%B3%D9%88%D8%B9%D8%A9_%D8%A7%D9%84%D8%B4%D8%A7%D9%85%D9%84%D8%A9_%D9%81%D9%8A_%D8%A7%D9%84%D8%B0%D9%83%D8%A7%D8%A1_%D8%A7%D9%84%D8%A7%D8%B5%D8%B7%D9%86%D8%A7%D8%B9%D9%8A.m4a" type="audio/mp4">متصفحك لا يدعم تشغيل هذا الملف.</audio></div>
+<div class="audio-card"><h3>مقطع مرئي إضافي من المحتوى</h3><p>مقطع مرئي مجاني ضمن المواد التي تم تجهيزها للمعاينة.</p><video controls preload="metadata" playsinline><source src="assets/audio/VID-20260910-WA0009.mp4" type="video/mp4">متصفحك لا يدعم تشغيل هذا الفيديو.</video></div>
 </section>
 <section class="cta"><strong>شاهدت الجودة؟ أكمل الرحلة.</strong><div>النسخة الكاملة تضم 250 صفحة والمحتوى الموسع والوكيل الذكي المصاحب.</div><a href="checkout.html">الانتقال إلى الشراء</a></section>
 <script type="module">
