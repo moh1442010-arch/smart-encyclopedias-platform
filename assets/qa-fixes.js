@@ -11,6 +11,12 @@
     if(account)account.textContent=c.accountNumber;
     if(wa)wa.textContent=c.whatsappDisplay||c.whatsapp;
     if(link)link.href=c.whatsappUrl;
+    /* Repair any stale/duplicated Arabic text inside prebuilt WhatsApp links without changing their destination. */
+    document.querySelectorAll('a[href*="wa.me"]').forEach(function(a){
+      if(a.href.indexOf('%D8%A7%D9%84%D8%B0%D9%83%D8%A7%D8%A1%20%D8%A7%D9%84%D8%B0%D9%83%D8%A7%D8%A1%20%D8%A7%D9%84%D8%A7%D8%B5%D8%B7%D9%86%D8%A7%D8%B9%D9%8A')!==-1){
+        a.href=a.href.replace(/%D8%A7%D9%84%D8%B0%D9%83%D8%A7%D8%A1%20%D8%A7%D9%84%D8%B0%D9%83%D8%A7%D8%A1%20%D8%A7%D9%84%D8%A7%D8%B5%D8%B7%D9%86%D8%A7%D8%B9%D9%8A/g,'%D8%A7%D9%84%D8%B0%D9%83%D8%A7%D8%A1%20%D8%A7%D9%84%D8%A7%D8%B5%D8%B7%D9%86%D8%A7%D8%B9%D9%8A');
+      }
+    });
     var box=document.querySelector('.payment-box');
     if(box&&!document.getElementById('agentIncludedNotice')){
       var d=document.createElement('div');d.id='agentIncludedNotice';d.innerHTML='<b>وكيل ذكي مع النسخة:</b> مرفق مع كل نسخة كاملة للمساعدة في الشرح والفهم والإجابة عن الأسئلة.';box.appendChild(d);
