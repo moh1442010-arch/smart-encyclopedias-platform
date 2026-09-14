@@ -36,6 +36,6 @@ const purchase = await ask("أريد شراء النسخة");
 assert.deepEqual(purchase.actions[0], { type: "open_checkout" });
 
 const agent = await ask("هل يوجد وكيل ذكي مع النسخة؟");
-assert.match(agent.reply, /وكيلًا ذكيًا/);
+assert.match(agent.reply, /الوكيل الذكي/);
 
 console.log("smart-agent fallback smoke tests: PASS");
