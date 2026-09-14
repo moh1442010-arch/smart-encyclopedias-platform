@@ -4,7 +4,7 @@
   if(window.__STORE_COUNTERS__) return;
   window.__STORE_COUNTERS__ = true;
 
-  var NS = 'moh1442010-arch.github.io/smart-encyclopedias-platform';
+  var NS = 'moh1442010-arch.github.io';
   var API = 'https://counterapi.com/api/';
   var WIDGET = 'https://counterapi.com/c.js?ns=' + encodeURIComponent(NS);
 
