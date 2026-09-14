@@ -24,10 +24,10 @@
     box.id='storeCounters';
     box.className='store-counters';
     box.setAttribute('aria-label','إحصاءات المنصة');
-    box.innerHTML='<div class="store-counter"><b class="sc-visitors">—</b><span>زائر للموقع</span></div>'+
-      '<div class="store-counter online"><b class="sc-online">—</b><span>ضيف الآن</span></div>'+
+    box.innerHTML='<div class="store-counter"><b class="sc-visitors">—</b><span>إجمالي الزوار الفريدين</span></div>'+
+      '<div class="store-counter online"><b class="sc-online">—</b><span>زوار نشطون خلال 30 دقيقة</span></div>'+
       '<div class="store-counter orders"><b class="sc-orders">—</b><span>طلبات شراء مسجلة</span></div>'+
-      '<div class="store-counters-note">الأعداد تُحدّث تلقائياً وليست بديلاً عن سجل المبيعات المؤكد.</div>';
+      '<div class="store-counters-note">العدادات إحصاءات تشغيلية؛ طلب الشراء المسجل لا يعني أن الدفع تم تأكيده.</div>';
     if(host && host.parentNode) host.parentNode.insertBefore(box,host.nextSibling); else document.body.appendChild(box);
   }
 
