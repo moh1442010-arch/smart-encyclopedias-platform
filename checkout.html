@@ -38,56 +38,33 @@ body{min-height:100vh}.checkout{max-width:820px;margin:50px auto;padding:0 18px}
 <input id="customerEmail" name="customerEmail" type="email" maxlength="254" autocomplete="email" required>
 <label for="customerPhone">رقم الهاتف</label>
 <input id="customerPhone" name="customerPhone" type="tel" maxlength="40" autocomplete="tel">
-<div class="quantity-box">
- <div class="quantity-row"><label for="quantity"><b>عدد النسخ</b></label><input id="quantity" name="quantity" type="number" min="1" max="2000" step="1" value="1" inputmode="numeric"></div>
- <div id="quantitySummary" class="quantity-summary" role="status" aria-live="polite"></div>
-</div>
+<div class="quantity-box"><div class="quantity-row"><label for="quantity"><b>عدد النسخ</b></label><input id="quantity" name="quantity" type="number" min="1" max="2000" step="1" value="1" inputmode="numeric"></div><div id="quantitySummary" class="quantity-summary" role="status" aria-live="polite"></div></div>
 <label>اختر العملة</label>
 <div class="currency-choice" role="radiogroup" aria-label="اختيار العملة">
- <div class="currency-option">
-  <input id="currencySDG" name="currency" type="radio" value="SDG" checked>
-  <label for="currencySDG"><span class="currency-title">🇸🇩 الجنيه السوداني</span><span class="currency-price">120,000 جنيه</span><span class="currency-detail">عرض أول 200 نسخة<br>بنكك — بنك الخرطوم<br>الحساب: 1882224</span><span class="currency-selected" aria-live="polite">✓ العملة المختارة: الجنيه السوداني</span></label>
- </div>
- <div class="currency-option">
-  <input id="currencyUSD" name="currency" type="radio" value="USD">
-  <label for="currencyUSD"><span class="currency-title">🇺🇸 الدولار الأمريكي</span><span class="currency-price">$16 USD</span><span class="currency-detail">عرض أول 200 نسخة<br>بنك الخرطوم<br>IBAN: SD8504018822240001</span><span class="currency-selected" aria-live="polite">✓ العملة المختارة: الدولار الأمريكي</span></label>
- </div>
+<div class="currency-option"><input id="currencySDG" name="currency" type="radio" value="SDG" checked><label for="currencySDG"><span class="currency-title">🇸🇩 الجنيه السوداني</span><span class="currency-price">120,000 جنيه</span><span class="currency-detail">عرض أول 200 نسخة<br>بنكك — بنك الخرطوم<br>الحساب: 1882224</span><span class="currency-selected">✓ العملة المختارة: الجنيه السوداني</span></label></div>
+<div class="currency-option"><input id="currencyUSD" name="currency" type="radio" value="USD"><label for="currencyUSD"><span class="currency-title">🇺🇸 الدولار الأمريكي</span><span class="currency-price">$16 USD</span><span class="currency-detail">عرض أول 200 نسخة<br>بنك الخرطوم<br>IBAN: SD8504018822240001</span><span class="currency-selected">✓ العملة المختارة: الدولار الأمريكي</span></label></div>
 </div>
-<div id="selectedCurrency" class="selected-currency" role="status" aria-live="polite">العملة المختارة الآن: 🇸🇩 الجنيه السوداني — 120,000 جنيه للنسخة ضمن العرض</div>
+<div id="selectedCurrency" class="selected-currency" role="status" aria-live="polite"></div>
 <button id="submitOrder" class="primary-action" type="submit">تسجيل طلب الشراء</button>
 <div id="orderStatus" class="form-status" role="status" aria-live="polite"></div>
 </form>
-<div class="actions">
-<button id="copyIban" type="button">نسخ IBAN</button>
-<a id="whatsappLink" class="primary-action" href="https://wa.me/249121851285?text=مرحباً، أريد شراء الموسوعة الشاملة في الذكاء الاصطناعي ومعها الوكيل الذكي. أريد معرفة طريقة الدفع المناسبة لي." target="_blank" rel="noopener">التواصل وإتمام الشراء عبر واتساب</a>
-<a href="index.html#faq">الأسئلة الشائعة</a>
-</div>
+<div class="actions"><button id="copyIban" type="button">نسخ IBAN</button><a id="whatsappLink" class="primary-action" href="https://wa.me/249121851285" target="_blank" rel="noopener">التواصل وإتمام الشراء عبر واتساب</a><a href="index.html#faq">الأسئلة الشائعة</a></div>
 <p id="copyStatus" style="margin-top:12px"></p>
 </section>
 </main>
+<script src="assets/counters.js" defer></script>
 <script>
 const ORDER_API='https://smart-encyclopedias-platform.moh1442010.workers.dev/api/order';
 const WHATSAPP='https://wa.me/249121851285';
-const form=document.getElementById('buyerForm');
-const status=document.getElementById('orderStatus');
-const submit=document.getElementById('submitOrder');
-const whatsappLink=document.getElementById('whatsappLink');
-const selectedCurrency=document.getElementById('selectedCurrency');
-const quantityInput=document.getElementById('quantity');
-const quantitySummary=document.getElementById('quantitySummary');
+const form=document.getElementById('buyerForm'),status=document.getElementById('orderStatus'),submit=document.getElementById('submitOrder'),whatsappLink=document.getElementById('whatsappLink'),selectedCurrency=document.getElementById('selectedCurrency'),quantityInput=document.getElementById('quantity'),quantitySummary=document.getElementById('quantitySummary');
 const getCurrency=()=>document.querySelector('input[name="currency"]:checked').value;
 function getQuantity(){const n=Number.parseInt(quantityInput.value,10);return Number.isFinite(n)?Math.min(2000,Math.max(1,n)):1}
-function totals(qty,selected){const offer=Math.min(qty,200),regular=Math.max(0,qty-200);if(selected==='USD')return{total:offer*16+regular*19,saving:offer*3};return{total:offer*120000+regular*150000,saving:offer*30000}}
-function updateQuantityUI(){const qty=getQuantity(),selected=getCurrency(),z=totals(qty,selected),unit=selected==='USD'?'دولار':'جنيه سوداني';quantitySummary.textContent='عدد النسخ: '+qty+' — الإجمالي: '+z.total.toLocaleString('ar-EG')+' '+unit+' — التوفير: '+z.saving.toLocaleString('ar-EG')+' '+unit}
-function updateCurrencyUI(){const selected=getCurrency();selectedCurrency.textContent=selected==='USD'?'العملة المختارة الآن: 🇺🇸 الدولار الأمريكي — $16 USD للنسخة ضمن العرض':'العملة المختارة الآن: 🇸🇩 الجنيه السوداني — 120,000 جنيه للنسخة ضمن العرض';updateQuantityUI()}
-document.querySelectorAll('input[name="currency"]').forEach(function(input){input.addEventListener('change',updateCurrencyUI)});
-quantityInput.addEventListener('input',updateQuantityUI);
-quantityInput.addEventListener('change',function(){quantityInput.value=getQuantity();updateQuantityUI()});
-updateCurrencyUI();
+function totals(qty,c){const offer=Math.min(qty,200),regular=Math.max(0,qty-200);return c==='USD'?{total:offer*16+regular*19,saving:offer*3}:{total:offer*120000+regular*150000,saving:offer*30000}}
+function updateUI(){const c=getCurrency(),q=getQuantity(),z=totals(q,c),unit=c==='USD'?'دولار':'جنيه سوداني';selectedCurrency.textContent=c==='USD'?'العملة المختارة الآن: 🇺🇸 الدولار الأمريكي — $16 USD للنسخة ضمن العرض':'العملة المختارة الآن: 🇸🇩 الجنيه السوداني — 120,000 جنيه للنسخة ضمن العرض';quantitySummary.textContent='عدد النسخ: '+q+' — الإجمالي: '+z.total.toLocaleString('ar-EG')+' '+unit+' — التوفير: '+z.saving.toLocaleString('ar-EG')+' '+unit}
+document.querySelectorAll('input[name="currency"]').forEach(i=>i.addEventListener('change',updateUI));quantityInput.addEventListener('input',updateUI);quantityInput.addEventListener('change',()=>{quantityInput.value=getQuantity();updateUI()});updateUI();
 function setStatus(text,type){status.textContent=text;status.className='form-status '+(type||'')}
-form.addEventListener('submit',async function(event){event.preventDefault();const name=document.getElementById('customerName').value.trim(),email=document.getElementById('customerEmail').value.trim(),phone=document.getElementById('customerPhone').value.trim(),selected=getCurrency(),quantity=getQuantity(),z=totals(quantity,selected);if(name.length<2||!/^\S+@\S+\.\S+$/.test(email)){setStatus('أدخل الاسم والبريد الإلكتروني بصورة صحيحة.','error');return}submit.disabled=true;submit.textContent='جارٍ تسجيل الطلب...';setStatus('جاري تسجيل طلبك...');try{const response=await fetch(ORDER_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({customerName:name,customerEmail:email,customerPhone:phone,currency:selected,amount:z.total,quantity})});const data=await response.json().catch(()=>({}));if(!response.ok||!data.ok)throw new Error(data.error||'order_failed');const orderId=data.orderId;const message=encodeURIComponent('مرحباً، أتممت تسجيل طلب شراء للموسوعة الشاملة في الذكاء الاصطناعي.\nرقم الطلب: '+orderId+'\nالاسم: '+name+'\nعدد النسخ: '+quantity+'\nالعملة: '+selected+'\nالمبلغ الإجمالي: '+z.total+'\nأريد إكمال الدفع وتسليم النسخ.');whatsappLink.href=WHATSAPP+'?text='+message;setStatus('تم تسجيل طلبك بنجاح. رقم الطلب: '+orderId+' — '+quantity+' نسخة — '+z.total.toLocaleString('ar-EG')+' '+(selected==='USD'?'دولار':'جنيه سوداني')+' — اضغط زر واتساب لإكمال الدفع والتسليم.','success');submit.textContent='تم تسجيل الطلب'}catch(error){setStatus('تعذر تسجيل الطلب في الخادم الآن. لم نفقد بياناتك. استخدم واتساب لإتمام الشراء مباشرة.','error');submit.disabled=false;submit.textContent='تسجيل طلب الشراء'}});
-document.getElementById('copyIban').addEventListener('click',function(){const value='SD8504018822240001';if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(value).then(function(){document.getElementById('copyStatus').textContent='تم نسخ IBAN.'}).catch(function(){document.getElementById('copyStatus').textContent='انسخ الرقم الظاهر يدوياً.'})}else document.getElementById('copyStatus').textContent='انسخ الرقم الظاهر يدوياً.'});
+form.addEventListener('submit',async e=>{e.preventDefault();const name=document.getElementById('customerName').value.trim(),email=document.getElementById('customerEmail').value.trim(),phone=document.getElementById('customerPhone').value.trim(),currency=getCurrency(),quantity=getQuantity(),z=totals(quantity,currency);if(name.length<2||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){setStatus('أدخل الاسم والبريد الإلكتروني بصورة صحيحة.','error');return}submit.disabled=true;submit.textContent='جارٍ تسجيل الطلب...';setStatus('جاري تسجيل طلبك...');try{const response=await fetch(ORDER_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({customerName:name,customerEmail:email,customerPhone:phone,currency,amount:z.total,quantity})});const data=await response.json().catch(()=>({}));if(!response.ok||!data.ok)throw new Error(data.error||'order_failed');const orderId=data.orderId;const message=encodeURIComponent('مرحباً، أتممت تسجيل طلب شراء للموسوعة الشاملة في الذكاء الاصطناعي.\nرقم الطلب: '+orderId+'\nالاسم: '+name+'\nعدد النسخ: '+quantity+'\nالعملة: '+currency+'\nالمبلغ الإجمالي: '+z.total+'\nأريد إكمال الدفع وتسليم النسخ.');whatsappLink.href=WHATSAPP+'?text='+message;setStatus('تم تسجيل طلبك بنجاح. رقم الطلب: '+orderId+' — '+quantity+' نسخة — '+z.total.toLocaleString('ar-EG')+' '+(currency==='USD'?'دولار':'جنيه سوداني')+'.','success');}catch(err){setStatus('تعذر تسجيل الطلب الآن. يمكنك إكمال الشراء مباشرة عبر واتساب.','error')}finally{submit.disabled=false;submit.textContent='تسجيل طلب الشراء'}});
+document.getElementById('copyIban').addEventListener('click',async()=>{try{await navigator.clipboard.writeText('SD8504018822240001');document.getElementById('copyStatus').textContent='تم نسخ IBAN.'}catch(e){document.getElementById('copyStatus').textContent='تعذر النسخ التلقائي؛ انسخ الرقم الظاهر أعلاه.'}});
 </script>
-<script data-gabster-widget src="https://widget.gabster.ai/loader?cbid=6aa587c39ec56a4287e9c161" data-embed-type="widget"></script>
 </body>
 </html>
