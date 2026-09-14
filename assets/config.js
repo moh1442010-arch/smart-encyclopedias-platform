@@ -31,13 +31,13 @@ window.STORE_CONFIG = {
   foreignPaymentDetails: "SD8504018822240001",
   agentIncluded: true,
   agentDescription: "وكيل ذكي مرفق مع كل نسخة كاملة للمساعدة في الشرح والفهم والإجابة عن الأسئلة.",
-  agentApiUrl: "https://smart-encyclopedias-platform.moh1442010.workers.dev/api/agent"
+  agentApiUrl: "https://super-rice-31e6.moh1442010.workers.dev/api/agent"
 };
 
 (function loadScriptOnce(id,src){
   function load(){if(document.getElementById(id))return;var s=document.createElement('script');s.id=id;s.src=src;s.defer=true;document.head.appendChild(s);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load);else load();
-})('agentApiAdapter','assets/agent-api.js');
+})('agentApiAdapter','assets/agent-api-v2.js');
 
 (function loadQAFixes(){
   function load(){if(document.getElementById('qaFixes'))return;var s=document.createElement('script');s.id='qaFixes';s.src='assets/qa-fixes.js';s.defer=true;document.head.appendChild(s);}
