@@ -1,0 +1,21 @@
+name: Agent Certification
+
+on:
+  push:
+    paths:
+      - 'agent/**'
+      - '.github/workflows/agent-certification.yml'
+  workflow_dispatch:
+
+jobs:
+  certification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run harsh agent certification
+        run: node agent/certification-test.mjs
