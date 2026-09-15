@@ -28,29 +28,93 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p assets/audio
-
           if [ -f 'assets/audio/.m4achapter1-ai.m4a' ]; then
             ffmpeg -y -i 'assets/audio/.m4achapter1-ai.m4a' -vn -c:a libmp3lame -b:a 128k 'assets/audio/chapter1-ai.mp3'
           fi
-
           if [ -f 'assets/audio/مقدمة_بالذكاء_الاصطناعي.mp4' ]; then
             ffmpeg -y -i 'assets/audio/مقدمة_بالذكاء_الاصطناعي.mp4' -map 0:v:0 -map 0:a? -c:v libx264 -profile:v main -level 4.0 -pix_fmt yuv420p -movflags +faststart -c:a aac -b:a 128k 'assets/audio/intro-ai-web.mp4'
           fi
-
           if [ -f 'assets/audio/VID-20260910-WA0009.mp4' ]; then
             ffmpeg -y -i 'assets/audio/VID-20260910-WA0009.mp4' -map 0:v:0 -map 0:a? -c:v libx264 -profile:v main -level 4.0 -pix_fmt yuv420p -movflags +faststart -c:a aac -b:a 128k 'assets/audio/bonus-video-web.mp4'
           fi
 
-      - name: Commit compatible copies
+      - name: Switch preview to compatible copies and add graceful fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('preview.html')
+          s = p.read_text(encoding='utf-8')
+          replacements = {
+              'assets/audio/.m4achapter1-ai.m4a': 'assets/audio/chapter1-ai.mp3',
+              'type="audio/mp4"': 'type="audio/mpeg"',
+              'assets/audio/%D9%85%D9%82%D8%AF%D9%85%D8%A9_%D8%A8%D8%A7%D9%84%D8%B0%D9%83%D8%A7%D8%A1_%D8%A7%D9%84%D8%A7%D8%B5%D8%B7%D9%86%D8%A7%D8%B9%D9%8A.mp4?v=20260914': 'assets/audio/intro-ai-web.mp4?v=20260915',
+              'assets/audio/VID-20260910-WA0009.mp4': 'assets/audio/bonus-video-web.mp4',
+          }
+          for old, new in replacements.items():
+              s = s.replace(old, new)
+          marker = '<script type="module">'
+          fallback = '''<script>
+          document.querySelectorAll('audio,video').forEach(function(media){
+            media.addEventListener('error', function(){
+              var card=media.closest('.media-card');
+              if(!card) return;
+              var missing=card.querySelector('.media-missing');
+              if(missing){
+                missing.style.display='block';
+                missing.textContent='تعذر التشغيل داخل المتصفح. استخدم رابط الفتح المباشر أدناه أو جرّب متصفح Chrome.';
+              }
+              var existing=card.querySelector('.media-open');
+              if(!existing){
+                var src=media.currentSrc || (media.querySelector('source') && media.querySelector('source').src);
+                if(src){
+                  var a=document.createElement('a');
+                  a.className='media-open'; a.target='_blank'; a.rel='noopener';
+                  a.href=src; a.textContent='↗ فتح المقطع مباشرة';
+                  card.appendChild(a);
+                }
+              }
+            });
+          });
+          </script>
+          '''
+          if marker in s and 'جرّب متصفح Chrome' not in s:
+              s = s.replace(marker, fallback + marker, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Update media documentation
+        shell: bash
+        run: |
+          cat > assets/audio/README.md <<'EOF'
+          # ملفات المعاينة الصوتية والمرئية
+
+          الملفات الأصلية محفوظة كما وصلت إلى المشروع، وتُنشأ تلقائيًا نسخ متوافقة مع أغلب متصفحات الهاتف بواسطة GitHub Actions وFFmpeg.
+
+          ## النسخ المستخدمة في صفحة المعاينة
+          - `chapter1-ai.mp3` — شرح الباب الأول، نسخة ويب متوافقة.
+          - `intro-ai-web.mp4` — مقدمة الموسوعة، H.264/AAC، نسخة ويب متوافقة.
+          - `bonus-video-web.mp4` — المقطع المرئي الإضافي، H.264/AAC، نسخة ويب متوافقة.
+
+          ## الملفات الأصلية
+          - `.m4achapter1-ai.m4a`
+          - `مقدمة_بالذكاء_الاصطناعي.mp4`
+          - `VID-20260910-WA0009.mp4`
+
+          لا يتم حذف الملفات الأصلية عند إنشاء النسخ المتوافقة.
+          EOF
+
+      - name: Commit compatible copies and preview fix
         shell: bash
         run: |
           set -e
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add assets/audio/chapter1-ai.mp3 assets/audio/intro-ai-web.mp4 assets/audio/bonus-video-web.mp4
+          git add assets/audio/chapter1-ai.mp3 assets/audio/intro-ai-web.mp4 assets/audio/bonus-video-web.mp4 preview.html assets/audio/README.md
           if git diff --cached --quiet; then
             echo 'No media conversion changes to commit.'
           else
-            git commit -m 'build: add browser-compatible media copies'
+            git commit -m 'build: add browser-compatible media and preview fallback'
             git push
           fi
