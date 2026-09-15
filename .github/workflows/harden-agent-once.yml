@@ -1,0 +1,49 @@
+name: Harden agent once
+
+on:
+  push:
+    paths:
+      - '.github/workflows/harden-agent-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch worker
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('agent/worker.js')
+          s=p.read_text()
+          old='role: m?.role === "model" ? "model" : "user"'
+          new='role: (m?.role === "model" || m?.role === "assistant") ? "model" : "user"'
+          assert old in s
+          s=s.replace(old,new,1)
+          old='function quantityFromMessage(message) { const q = normalizeDigits(message).toLowerCase(); const patterns = ['
+          new='function quantityFromMessage(message) { const q = normalizeDigits(message).toLowerCase(); if (/(?:صفحة|صفحات|صفحه|صفحات|preview|معاينة|تجربة)/i.test(q)) return null; const patterns = ['
+          assert old in s
+          s=s.replace(old,new,1)
+          old='const has = (...terms) => terms.some((t) => q.includes(t)); const bulk = salesQuantityReply(message); if (bulk) return bulk; if (has("كلمة المرور", "كلمه المرور", "رقم البطاقة", "رقم البطاقه", "مفتاح api", "api key")) return { reply:'
+          new='const has = (...terms) => terms.some((t) => q.includes(t)); if (has("كلمة المرور", "كلمه المرور", "رقم البطاقة", "رقم البطاقه", "مفتاح api", "api key")) return { reply:'
+          assert old in s
+          s=s.replace(old,new,1)
+          marker='if (has("كم صفحة", "كم صفحه", "عدد الصفحات", "صفحة في الموسوعة", "صفحه في الموسوعه")) return { reply: "الموسوعة الكاملة 250 صفحة، ويمكنك معاينة 20 صفحة حقيقية مجاناً قبل الشراء.", actions: [{ type: "open_preview" }] };'
+          assert marker in s
+          s=s.replace(marker, marker+' const bulk = salesQuantityReply(message); if (bulk) return bulk;',1)
+          p.write_text(s)
+          PY
+      - name: Commit hardened worker and remove one-time workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add agent/worker.js .github/workflows/harden-agent-once.yml
+          git rm .github/workflows/harden-agent-once.yml
+          git commit -m 'fix(agent): harden context and page intent handling'
+          git push
