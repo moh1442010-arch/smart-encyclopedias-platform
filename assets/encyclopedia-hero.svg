@@ -35,6 +35,6 @@
  <rect width="195" height="150" rx="18" fill="#121f2e" stroke="#3b5168"/>
  <text x="97" y="55" text-anchor="middle" fill="url(#gold)" font-family="Arial,sans-serif" font-size="36" font-weight="700">AI</text><text x="97" y="90" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="18">وكيل ذكي</text><text x="97" y="120" text-anchor="middle" fill="#b9c6d3" font-family="Arial,sans-serif" font-size="15">مع النسخة الكاملة</text>
 </g>
-<rect x="475" y="540" width="625" height="42" rx="21" fill="#18283a" stroke="#c99a34"/>
-<text x="787" y="568" text-anchor="middle" fill="#f5d67e" font-family="Arial,sans-serif" font-size="18">محتوى منظم • مناسب للمبتدئ والمحترف • يعمل على الجوال</text>
+<rect x="475" y="535" width="625" height="55" rx="27.5" fill="#18283a" stroke="#c99a34"/>
+<text x="787" y="571" text-anchor="middle" fill="#f8d979" font-family="Arial,sans-serif" font-size="24" font-weight="700">محتوى منظم • مناسب للمبتدئ والمحترف</text>
 </svg>
