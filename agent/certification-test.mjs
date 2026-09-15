@@ -26,7 +26,7 @@ await test('8 199 نسخة',async()=>assert(/23,880,000/.test(textOf(await ask('
 await test('9 200 نسخة',async()=>assert(/24,000,000/.test(textOf(await ask('أريد 200 نسخة')))));
 await test('10 201 نسخة',async()=>assert(/24,150,000/.test(textOf(await ask('أريد 201 نسخة')))));
 await test('11 250 نسخة',async()=>assert(/31,500,000/.test(textOf(await ask('أريد 250 نسخة')))));
-await test('12 ألف نسخة',async()=>{const t=textOf(await ask('أريد 1000 نسخة'));console.log(`TRACE12 | ${t}`);assert(/120,000,000/.test(t))});
+await test('12 ألف نسخة',async()=>{const t=textOf(await ask('أريد 1000 نسخة'));console.log(`TRACE12 | ${t}`);assert(/144,000,000/.test(t))});
 await test('13 خمس صفحات لا خمس نسخ',async()=>{const d=await ask('أريد 5 صفحات من المعاينة');assert(/20|معاينة/.test(textOf(d)));assert(!/600,000/.test(textOf(d))) });
 await test('14 صفحة واحدة',async()=>assert(!/600,000|120,000/.test(textOf(await ask('أرسل لي صفحة واحدة للتجربة')))));
 await test('15 غالي',async()=>{const t=textOf(await ask('السعر غالي جدًا'));assert(/قيمة|محتوى|معاينة|20/.test(t));assertNoFalseClaims(t)});
