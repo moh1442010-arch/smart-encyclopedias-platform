@@ -1,0 +1,56 @@
+name: Media compatibility
+
+on:
+  push:
+    paths:
+      - 'assets/audio/**'
+      - '.github/workflows/media-compatibility.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  convert-media:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Convert media for broad browser compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/audio
+
+          if [ -f 'assets/audio/.m4achapter1-ai.m4a' ]; then
+            ffmpeg -y -i 'assets/audio/.m4achapter1-ai.m4a' -vn -c:a libmp3lame -b:a 128k 'assets/audio/chapter1-ai.mp3'
+          fi
+
+          if [ -f 'assets/audio/مقدمة_بالذكاء_الاصطناعي.mp4' ]; then
+            ffmpeg -y -i 'assets/audio/مقدمة_بالذكاء_الاصطناعي.mp4' -map 0:v:0 -map 0:a? -c:v libx264 -profile:v main -level 4.0 -pix_fmt yuv420p -movflags +faststart -c:a aac -b:a 128k 'assets/audio/intro-ai-web.mp4'
+          fi
+
+          if [ -f 'assets/audio/VID-20260910-WA0009.mp4' ]; then
+            ffmpeg -y -i 'assets/audio/VID-20260910-WA0009.mp4' -map 0:v:0 -map 0:a? -c:v libx264 -profile:v main -level 4.0 -pix_fmt yuv420p -movflags +faststart -c:a aac -b:a 128k 'assets/audio/bonus-video-web.mp4'
+          fi
+
+      - name: Commit compatible copies
+        shell: bash
+        run: |
+          set -e
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/audio/chapter1-ai.mp3 assets/audio/intro-ai-web.mp4 assets/audio/bonus-video-web.mp4
+          if git diff --cached --quiet; then
+            echo 'No media conversion changes to commit.'
+          else
+            git commit -m 'build: add browser-compatible media copies'
+            git push
+          fi
