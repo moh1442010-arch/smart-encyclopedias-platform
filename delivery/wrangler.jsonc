@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "smart-encyclopedias-delivery",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "smart-encyclopedias",
+      "database_id": "c5060020-3842-4efc-9607-6671e5a90fd5"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PAID_BOOKS",
+      "bucket_name": "smart-encyclopedias-paid-books"
+    }
+  ],
+  "vars": {
+    "PUBLIC_ORIGIN": "https://moh1442010-arch.github.io/smart-encyclopedias-platform"
+  }
+}
