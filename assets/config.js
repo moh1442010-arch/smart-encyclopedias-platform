@@ -40,7 +40,8 @@ window.STORE_CONFIG = {
 })('agentApiAdapter','assets/agent-api-v2.js');
 
 (function loadFinalSalesAgent(){
-  function load(){if(document.getElementById('finalSalesAgent'))return;var s=document.createElement('script');s.id='finalSalesAgent';s.src='assets/sales-agent-final.js';s.defer=true;document.head.appendChild(s);}
+  function load(){if(document.getElementById(id))return;var s=document.createElement('script');s.id='finalSalesAgent';s.src='assets/sales-agent-v4.js';s.defer=true;document.head.appendChild(s);}
+  var id='finalSalesAgent';
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load);else load();
 })();
 
