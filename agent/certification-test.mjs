@@ -26,7 +26,7 @@ await test('8 199 نسخة',async()=>assert(/23,880,000/.test(textOf(await ask('
 await test('9 200 نسخة',async()=>assert(/24,000,000/.test(textOf(await ask('أريد 200 نسخة')))));
 await test('10 201 نسخة',async()=>assert(/24,150,000/.test(textOf(await ask('أريد 201 نسخة')))));
 await test('11 250 نسخة',async()=>assert(/31,500,000/.test(textOf(await ask('أريد 250 نسخة')))));
-await test('12 ألف نسخة',async()=>assert(/120,000,000/.test(textOf(await ask('أريد 1000 نسخة')))));
+await test('12 ألف نسخة',async()=>{const t=textOf(await ask('أريد 1000 نسخة'));console.log(`TRACE12 | ${t}`);assert(/120,000,000/.test(t))});
 await test('13 خمس صفحات لا خمس نسخ',async()=>{const d=await ask('أريد 5 صفحات من المعاينة');assert(/20|معاينة/.test(textOf(d)));assert(!/600,000/.test(textOf(d))) });
 await test('14 صفحة واحدة',async()=>assert(!/600,000|120,000/.test(textOf(await ask('أرسل لي صفحة واحدة للتجربة')))));
 await test('15 غالي',async()=>{const t=textOf(await ask('السعر غالي جدًا'));assert(/قيمة|محتوى|معاينة|20/.test(t));assertNoFalseClaims(t)});
@@ -34,7 +34,7 @@ await test('16 أريده مجانًا',async()=>{const t=textOf(await ask('لا
 await test('17 هل يغني عن الكورس',async()=>{const t=textOf(await ask('هل الموسوعة تغنيني عن الكورس؟'));assert(!/تغني عن جميع الكورسات|تستبدل أي كورس/.test(t));assert(/كورس|دورة|موسوعة/.test(t))});
 await test('18 طالب',async()=>assert(/120,000|19|طالب|طلاب/.test(textOf(await ask('أنا طالب، ماذا أستفيد؟')))));
 await test('19 مؤسسة',async()=>assert(/كم|عدد|نسخ|مؤسسة/.test(textOf(await ask('نحن مؤسسة ونحتاج نسخًا لموظفينا')))));
-await test('20 واتساب',async()=>{const d=await ask('أريد التواصل مباشرة');assert(hasAction(d,'open_whatsapp')||/واتساب/.test(textOf(d)))});
+await test('20 واتساب',async()=>{const d=await ask('أريد التواصل مباشرة');console.log(`TRACE20 | ${JSON.stringify(d)}`);assert(hasAction(d,'open_whatsapp')||/واتساب/.test(textOf(d)))});
 await test('21 محتوى',async()=>assert(/ذكاء اصطناعي|LLM|RAG|وكلاء|Prompt/i.test(textOf(await ask('ماذا سأتعلم داخل الموسوعة؟')))));
 await test('22 الوكيل',async()=>assert(/وكيل|شرح|تدريب|تعليم/i.test(textOf(await ask('ماذا يفعل الوكيل الذكي مع النسخة؟')))));
 await test('23 لا أحتاجها',async()=>{const t=textOf(await ask('أنا لا أحتاج الموسوعة'));assert(t.length>30);assert(!/اشتري الآن فورًا|آخر فرصة/i.test(t))});
