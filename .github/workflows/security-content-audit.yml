@@ -17,9 +17,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if find . -type f -iname '*.pdf' -not -path './.git/*' | grep -q .; then
-            echo 'ERROR: PDF files must not be stored in the public repository.'
-            find . -type f -iname '*.pdf' -not -path './.git/*'
+          preview_pdf='./الموسوعة_الشاملة_20_صفحة_للمعاينة.pdf'
+          test -f "$preview_pdf"
+          public_pdfs=$(find . -type f -iname '*.pdf' -not -path './.git/*' -not -path "$preview_pdf")
+          if [ -n "$public_pdfs" ]; then
+            echo 'ERROR: Only the public 20-page preview PDF may be stored in the public repository.'
+            printf '%s\n' "$public_pdfs"
             exit 1
           fi
 
