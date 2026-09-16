@@ -14,11 +14,11 @@ body{min-height:100vh}.updates{padding:45px 0}.back{display:inline-flex;color:va
 <header class="topbar"><div class="wrap nav"><a class="brand" href="index.html">منصة <span>الموسوعات الذكية</span></a><div class="nav-tools"><a class="ghost" href="index.html">العودة إلى المنصة</a></div></div></header>
 <main class="updates wrap">
 <a class="back" href="index.html">العودة إلى المنصة</a>
-<section class="hero-update"><div class="eyebrow">خدمة ما بعد الشراء</div><h1>مركز التحديثات المستمرة</h1><p>مشتري النسخة الكاملة يستطيع العودة إلى هذه الصفحة للوصول إلى الإضافات والتصحيحات والتحديثات التي تنشرها المنصة. يمكن وضع رمز QR الخاص بهذه الصفحة داخل النسخة المطبوعة في الإصدار القادم.</p></section>
+<section class="hero-update"><div class="eyebrow">خدمة ما بعد الشراء</div><h1>مركز التحديثات المستمرة</h1><p>مشتري النسخة الكاملة يستطيع العودة إلى هذه الصفحة للوصول إلى الإضافات والتصحيحات والتحديثات التي تنشرها المنصة. رمز QR داخل النسخة المطبوعة يقود إلى هذا المركز الثابت، لذلك يمكن تحديث المحتوى مستقبلاً دون تغيير الرمز.</p></section>
 <section class="roadmap">
 <article class="current"><span class="tag">متاح الآن</span><h2>الموسوعة الكاملة</h2><p>نسخة كاملة من الموسوعة في موضوعات الذكاء الاصطناعي والتعلم الآلي وLLMs وRAG وهندسة الأوامر والوكلاء والذكاء متعدد الوسائط.</p></article>
 <article class="current"><span class="tag">متاح الآن</span><h2>الوكيل الذكي</h2><p>وكيل يساعد المشتري في شرح المفاهيم والإجابة عن الأسئلة وتسهيل فهم المحتوى.</p></article>
-<article class="current"><span class="tag">متاح الآن</span><h2>التحديات والامتحان</h2><p>تدريبات واختبار نهائي لقياس الفهم، مع تقدير المستوى وإظهار شهادة باسم المتعلم عند اجتياز المتطلبات.</p></article>
+<article class="current"><span class="tag">متاح الآن</span><h2>التحديات والامتحان</h2><p>تدريبات واختبار نهائي لقياس الفهم. لا يُعلن عن شهادة إلا عندما تكون متاحة فعلياً في النظام.</p></article>
 <article class="current"><span class="tag">متاح الآن</span><h2>طلبات الشراء</h2><p>يُسجل طلب الشراء في النظام مع بيانات المشتري والعملة والمبلغ وحالة الطلب.</p></article>
 <article class="future"><span class="tag">تحديث مستمر</span><h2>إضافات المحتوى</h2><p>إضافة مواد وشرح وتصحيحات عند الحاجة، خاصة في الموضوعات التي تتغير بسرعة.</p></article>
 <article class="future"><span class="tag">تحديث مستمر</span><h2>تطوير الوكيل</h2><p>تحسين الوكيل وربطه بصورة أدق بفصول الموسوعة ومسارات التعلم والتطبيق.</p></article>
@@ -27,17 +27,12 @@ body{min-height:100vh}.updates{padding:45px 0}.back{display:inline-flex;color:va
 </section>
 <section class="qr-card">
 <h2>رمز QR للوصول إلى التحديثات</h2>
-<p>امسح الرمز بهاتفك لفتح مركز التحديثات. هذا الرابط ثابت، ويمكن تحديث محتوى الصفحة دون تغيير الرمز.</p>
-<div class="qr-frame"><img id="qrImage" alt="رمز QR لمركز تحديثات منصة الموسوعات الذكية"></div>
-<div class="qr-url" id="updateUrl"></div>
-<div class="buyer-note">اقتراح الإصدار المطبوع القادم: وضع هذا الرمز في صفحة مستقلة بعنوان «التحديثات» وفي نهاية الموسوعة، بحيث يستطيع المشتري الوصول إلى النسخ والإضافات الجديدة من الهاتف.</div>
+<p>امسح الرمز بهاتفك لفتح مركز التحديثات. الرمز ثابت ولا يعتمد على خدمة QR خارجية.</p>
+<div class="qr-frame"><img src="assets/updates-qr.svg" alt="رمز QR لمركز تحديثات منصة الموسوعات الذكية"></div>
+<div class="qr-url">https://moh1442010-arch.github.io/smart-encyclopedias-platform/updates.html</div>
+<div class="buyer-note">اقتراح الإصدار المطبوع: وضع هذا الرمز في صفحة مستقلة بعنوان «التحديثات» وفي نهاية الموسوعة، بحيث يستطيع المشتري الوصول إلى النسخ والإضافات الجديدة من الهاتف. الرمز يقود إلى مركز التحديثات فقط، وليس إلى ملف PDF المدفوع.</div>
 </section>
 </main>
 <footer><div class="wrap foot"><span>© 2026 منصة الموسوعات الذكية — محمد مصطفى بابكر</span><span>التحديثات تخضع للتنفيذ والاختبار قبل إعلان إتاحتها</span></div></footer>
-<script>
-const updateUrl=new URL('updates.html',location.href).href;
-document.getElementById('updateUrl').textContent=updateUrl;
-document.getElementById('qrImage').src='https://api.qrserver.com/v1/create-qr-code/?size=190x190&data='+encodeURIComponent(updateUrl);
-</script>
 </body>
 </html>
