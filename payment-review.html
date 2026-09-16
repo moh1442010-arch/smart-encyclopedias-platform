@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>بلاغ الدفع — مراجعة صاحب الموسوعة</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+body{min-height:100vh}.wrap{max-width:720px;margin:40px auto;padding:18px}.card{background:#fff;border-radius:22px;padding:26px;box-shadow:0 12px 40px rgba(0,0,0,.08)}label{display:block;font-weight:700;margin:14px 0 6px}input,textarea{width:100%;box-sizing:border-box;padding:13px;border:1px solid #ccc;border-radius:10px;font:inherit}textarea{min-height:150px;resize:vertical}.primary{display:inline-block;margin-top:18px;padding:13px 18px;border-radius:12px;background:#111;color:#fff;text-decoration:none;border:0;cursor:pointer;font:inherit}.note{padding:14px;border-radius:12px;background:#fff8e8;line-height:1.8}.status{margin-top:14px;font-weight:700;line-height:1.8}.success{padding:14px;border-radius:12px;background:#eef9f0}
+</style>
+</head>
+<body>
+<main class="wrap"><section class="card">
+<div class="eyebrow">قناة مراجعة الدفع</div>
+<h1>إبلاغ صاحب الموسوعة</h1>
+<p>هذه القناة لا تعتمد الدفع تلقائياً. هي فقط توصل بلاغك إلى صاحب الموسوعة لمراجعة العملية. <strong>لن يتم إنشاء الترخيص أو تسليم النسخة قبل الاعتماد.</strong></p>
+<div class="note">🔒 لا تكتب كلمة مرور أو رقم بطاقة أو مفتاح API. يكفي رقم الطلب، المبلغ، والعملة، وأي ملاحظة تريد إيصالها.</div>
+<form id="reportForm">
+<label for="orderId">رقم الطلب</label><input id="orderId" maxlength="80" autocomplete="off" required>
+<label for="name">اسم المشتري</label><input id="name" maxlength="120" required>
+<label for="amount">المبلغ المدفوع</label><input id="amount" maxlength="40" required>
+<label for="message">رسالة الزبون</label><textarea id="message" maxlength="1000" required placeholder="مثال: تم التحويل الآن، وأرجو مراجعة الدفع."></textarea>
+<button class="primary" type="submit">📨 إرسال البلاغ للمراجعة</button>
+<div id="status" class="status" role="status" aria-live="polite"></div>
+</form>
+<p><a href="checkout.html">العودة إلى صفحة الشراء</a></p>
+</section></main>
+<script>
+const OWNER_WHATSAPP='https://wa.me/249121851285';
+const qs=new URLSearchParams(location.search);
+for(const [id,key] of [['orderId','orderId'],['name','name'],['amount','amount'],['message','message']]){const v=qs.get(key);if(v)document.getElementById(id).value=v}
+function clean(v){return String(v||'').trim().slice(0,1000)}
+document.getElementById('reportForm').addEventListener('submit',e=>{e.preventDefault();const orderId=clean(document.getElementById('orderId').value),name=clean(document.getElementById('name').value),amount=clean(document.getElementById('amount').value),message=clean(document.getElementById('message').value);if(!orderId||!name||!amount||!message)return;const text=`🔔 بلاغ دفع يحتاج مراجعة صاحب الموسوعة\nرقم الطلب: ${orderId}\nاسم المشتري: ${name}\nالمبلغ: ${amount}\nرسالة الزبون: ${message}\n\n⚠️ البلاغ لا يعني اعتماد الدفع؛ يرجى مراجعة العملية واعتمادها من صاحب الموسوعة قبل التسليم.`;const url=OWNER_WHATSAPP+'?text='+encodeURIComponent(text);document.getElementById('status').innerHTML='<div class="success">تم تجهيز البلاغ. افتح واتساب الآن لإرساله إلى صاحب الموسوعة، ثم انتظر الاعتماد.</div>';window.open(url,'_blank','noopener');});
+</script>
+</body></html>
