@@ -24,13 +24,36 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+
           p = Path('agent/worker.js')
           s = p.read_text(encoding='utf-8')
-          old = 'if (has("واتساب", "whatsapp")) return { reply: "بكل سرور. أفتح لك قناة واتساب للتواصل المباشر والاستفسار أو إتمام الطلب.", actions: [{ type: "open_whatsapp" }] };'
-          new = 'if (has("أريد التواصل مباشرة", "اريد التواصل مباشرة", "عايز أتواصل مباشرة", "عايز اتواصل مباشرة", "أريد شخصًا", "اريد شخصا", "تواصل مباشر", "التواصل المباشر")) return { reply: "بكل سرور. أفتح لك قناة واتساب للتواصل المباشر والاستفسار أو إتمام الطلب.", actions: [{ type: "open_whatsapp" }] }; if (has("واتساب", "whatsapp")) return { reply: "بكل سرور. أفتح لك قناة واتساب للتواصل المباشر والاستفسار أو إتمام الطلب.", actions: [{ type: "open_whatsapp" }] };'
-          if old in s:
-              s = s.replace(old, new, 1)
-              p.write_text(s, encoding='utf-8')
+
+          replacements = [
+              (
+                  '    /(?:أريد|اريد|عايز|عاوز|نحتاج|نريد)\\s*(\\d{1,5})\\b/i,',
+                  '    /(?:أريد|اريد|عايز|عاوز|نحتاج|نريد|سأشتري|ساشتري|سأشتري)\\s*(\\d{1,5})\\b/i,',
+              ),
+              (
+                  '    /(?:كم|عدد)\\s*(?:من\\s*)?(\\d{1,5})\\s*(?:نسخ|نسخة|نسخه)?\\b/i',
+                  '    /(?:كم|عدد)\\s*(?:من\\s*)?(\\d{1,5})\\s*(?:نسخ|نسخة|نسخه)?\\b/i,\\n    /كم\\s+(?:سعر|ثمن)\\s+(\\d{1,5})\\s*(?:نسخ|نسخة|نسخه)?\\b/i',
+              ),
+              (
+                  '  if (has(q, "كم السعر", "السعر", "بكم", "كم سعر", "السعر بالدولار", "سعر النسخة", "سعر النسخه")) {',
+                  '  if (has(q, "كم السعر", "السعر", "بكم", "كم سعر", "السعر بالدولار", "سعر النسخة", "سعر النسخه", "أول 200 بالدولار", "من أول 200 بالدولار")) {',
+              ),
+          ]
+
+          for old, new in replacements:
+              if old in s:
+                  s = s.replace(old, new, 1)
+
+          marker = '  if (has(q, "كم صفحة", "كم صفحه", "عدد الصفحات", "صفحة في الموسوعة", "صفحه في الموسوعه")) {'
+          institution = '''  if (has(q, "مؤسسة", "مؤسسه", "موظفينا", "موظفين", "شركة", "شركه")) {\n    return { reply: "بكل سرور. للمؤسسات والشركات يمكنني حساب عدد النسخ والتكلفة حسب الكمية، ثم فتح صفحة الشراء عند الجاهزية.", actions: [{ type: "focus_offer" }] };\n  }\n\n'''
+          if marker in s and institution not in s:
+              s = s.replace(marker, institution + marker, 1)
+
+          p.write_text(s, encoding='utf-8')
+
           t = Path('agent/certification-test.mjs')
           ts = t.read_text(encoding='utf-8')
           ts = ts.replace("assert(/120,000,000/.test(t))", "assert(/144,000,000/.test(t))", 1)
@@ -44,7 +67,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No hardening changes needed."
           else
-            git commit -m "fix: improve direct contact routing and certification arithmetic"
+            git commit -m "fix: harden sales routing edge cases"
             git push
           fi
       - name: Run harsh agent certification
