@@ -22,7 +22,7 @@ function mustAction(result, action, label) {
 
 // 1) Basic product introduction.
 const intro = await ask("ما هي الموسوعة؟");
-mustHave(intro, [/250 صفحة/, /20 صفحة/, /الوكيل الذكي/], "intro");
+mustHave(intro, [/250 صفحة/, /20 صفحة/, /الوكيل الذكي|وكيلاً ذكياً/], "intro");
 
 // 2) Price.
 const price = await ask("كم السعر؟");
