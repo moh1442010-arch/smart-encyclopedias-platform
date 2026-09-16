@@ -28,6 +28,12 @@ jobs:
           p = Path('agent/worker.js')
           s = p.read_text(encoding='utf-8')
 
+          # Repair any literal backslash-n introduced by an earlier automated patch.
+          s = s.replace(chr(92) + 'n    /كم', chr(10) + '    /كم')
+          quantity_price_pattern = '    /كم\\s+(?:سعر|ثمن)\\s+(\\d{1,5})\\s*(?:نسخ|نسخة|نسخه)?\\b/i'
+          while (quantity_price_pattern + chr(10) + quantity_price_pattern) in s:
+              s = s.replace(quantity_price_pattern + chr(10) + quantity_price_pattern, quantity_price_pattern, 1)
+
           replacements = [
               (
                   '    /(?:أريد|اريد|عايز|عاوز|نحتاج|نريد)\\s*(\\d{1,5})\\b/i,',
@@ -35,7 +41,7 @@ jobs:
               ),
               (
                   '    /(?:كم|عدد)\\s*(?:من\\s*)?(\\d{1,5})\\s*(?:نسخ|نسخة|نسخه)?\\b/i',
-                  '    /(?:كم|عدد)\\s*(?:من\\s*)?(\\d{1,5})\\s*(?:نسخ|نسخة|نسخه)?\\b/i,' + chr(10) + '    /كم\\s+(?:سعر|ثمن)\\s+(\\d{1,5})\\s*(?:نسخ|نسخة|نسخه)?\\b/i',
+                  '    /(?:كم|عدد)\\s*(?:من\\s*)?(\\d{1,5})\\s*(?:نسخ|نسخة|نسخه)?\\b/i,' + chr(10) + quantity_price_pattern,
               ),
               (
                   '  if (has(q, "كم السعر", "السعر", "بكم", "كم سعر", "السعر بالدولار", "سعر النسخة", "سعر النسخه")) {',
@@ -44,7 +50,7 @@ jobs:
           ]
 
           for old, new in replacements:
-              if old in s:
+              if old in s and new not in s:
                   s = s.replace(old, new, 1)
 
           marker = '  if (has(q, "كم صفحة", "كم صفحه", "عدد الصفحات", "صفحة في الموسوعة", "صفحه في الموسوعه")) {'
@@ -67,7 +73,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No hardening changes needed."
           else
-            git commit -m "fix: harden sales routing edge cases"
+            git commit -m "fix: normalize automated sales routing patch"
             git push
           fi
       - name: Run harsh agent certification
