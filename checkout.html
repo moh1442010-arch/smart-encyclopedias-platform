@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="خيارات شراء الموسوعة الشاملة في الذكاء الاصطناعي بالدفع المحلي أو الدولار مع حاسبة العملات العربية.">
+<meta name="description" content="شراء الموسوعة الشاملة بالدفع الفعلي بالجنيه السوداني أو الدولار الأمريكي، مع حاسبة استرشادية للعملات الأخرى.">
 <title>الشراء والدفع | منصة الموسوعات الذكية</title>
 <link rel="stylesheet" href="assets/styles.css">
 <style>
@@ -17,7 +17,8 @@ body{min-height:100vh}.checkout{max-width:820px;margin:50px auto;padding:0 18px}
 <div class="eyebrow">شراء الموسوعة</div>
 <h1>اختر طريقة الدفع المناسبة لك</h1>
 <p>تحصل على النسخة الكاملة من الموسوعة، ومعها وكيل ذكي يساعدك في الشرح والفهم والإجابة عن الأسئلة.</p>
-<h2>خيارات الدفع</h2>
+<h2>خيارات الدفع الفعلية</h2>
+<p><strong>الدفع الفعلي متاح فقط بالجنيه السوداني (SDG) أو الدولار الأمريكي (USD).</strong> حاسبة العملات الأخرى أدناه للاستعلام التقريبي فقط وليست وسيلة دفع.</p>
 <div class="row"><b>الجنيه السوداني</b><span>150,000 جنيه أساسي</span></div>
 <div class="row"><b>عرض أول 200 نسخة</b><span class="price">120,000 جنيه</span></div>
 <div class="row"><b>طريقة الدفع المحلية</b><span>بنكك — بنك الخرطوم</span></div>
@@ -44,11 +45,11 @@ body{min-height:100vh}.checkout{max-width:820px;margin:50px auto;padding:0 18px}
 <div class="currency-option"><input id="currencySDG" name="currency" type="radio" value="SDG" checked><label for="currencySDG"><span class="currency-title">🇸🇩 الجنيه السوداني</span><span class="currency-price">120,000 جنيه</span><span class="currency-detail">عرض أول 200 نسخة<br>بنكك — بنك الخرطوم<br>الحساب: 1882224</span><span class="currency-selected">✓ العملة المختارة: الجنيه السوداني</span></label></div>
 <div class="currency-option"><input id="currencyUSD" name="currency" type="radio" value="USD"><label for="currencyUSD"><span class="currency-title">🇺🇸 الدولار الأمريكي</span><span class="currency-price">$16 USD</span><span class="currency-detail">عرض أول 200 نسخة<br>بنك الخرطوم<br>IBAN: SD8504018822240001</span><span class="currency-selected">✓ العملة المختارة: الدولار الأمريكي</span></label></div>
 </div>
-<button id="fxToggle" class="fx-toggle" type="button" aria-expanded="false" aria-controls="fxPanel">🌍 ما يعادل الدولار بعملتك — سعر الصرف اليوم</button>
+<button id="fxToggle" class="fx-toggle" type="button" aria-expanded="false" aria-controls="fxPanel">🌍 حاسبة استرشادية — ليست وسيلة دفع</button>
 <div id="fxPanel" class="fx-panel" aria-live="polite">
-<div class="fx-head"><strong>💱 الأسعار التقريبية بعملات عربية</strong><span id="fxUpdated" class="fx-updated">جاري جلب سعر الصرف...</span></div>
+<div class="fx-head"><strong>💱 تحويل تقريبي من الدولار إلى عملات أخرى</strong><span id="fxUpdated" class="fx-updated">جاري جلب سعر الصرف...</span></div>
 <div id="fxGrid" class="fx-grid"></div>
-<p class="fx-note">السعر محسوب من سعر النسخ بالدولار (حسب الكمية والعرض) وفق سعر صرف إرشادي محدث يوميًا. قد يختلف السعر الفعلي قليلًا حسب البنك أو مزود الدفع. مصدر أسعار الصرف: <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">ExchangeRate-API</a>.</p>
+<p class="fx-note">هذه الحاسبة للاستعلام فقط ولا تنشئ التزامًا بالدفع بهذه العملات. الدفع الفعلي متاح بالجنيه السوداني أو الدولار الأمريكي فقط. السعر محسوب من سعر النسخ بالدولار وفق سعر صرف إرشادي محدث يوميًا، وقد يختلف السعر الفعلي قليلًا حسب البنك. مصدر أسعار الصرف: <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">ExchangeRate-API</a>.</p>
 <div id="fxError" class="fx-error" hidden>تعذر جلب أسعار الصرف الآن. يمكنك استخدام السعر بالدولار مباشرة، وسنحاول التحديث عند فتح الخانة مرة أخرى.</div>
 </div>
 <div id="selectedCurrency" class="selected-currency" role="status" aria-live="polite"></div>
