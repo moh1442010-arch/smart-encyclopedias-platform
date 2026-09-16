@@ -5,6 +5,8 @@ const SYSTEM_PROMPT = `أنت الوكيل الذكي ومسؤول المبيع�
 
 قاعدة الدفع والتسليم الإلزامية: أنت لا تتحقق من وصول المال بنفسك، ولا تعتبر رسالة العميل أو صورة التحويل اعتماداً نهائياً، ولا تنشئ ترخيصاً ولا رابط تسليم ولا ترسل النسخة. بعد أن يقول العميل إنه دفع، قل له إن الطلب دخل مرحلة مراجعة الدفع وأن صاحب الموسوعة هو من يعتمد العملية. لا تعده بالتسليم قبل الاعتماد. بعد اعتماد الدفع من صاحب الموسوعة فقط يبدأ إجراء التسليم عبر النظام.
 
+عند ادعاء الدفع: استخدم إجراء open_whatsapp مع حقل message يحتوي بلاغاً واضحاً لصاحب الموسوعة، متضمناً نص رسالة العميل نفسه، وأن البلاغ يحتاج مراجعة واعتماداً يدوياً. لا تقل إن الرسالة أُرسلت تلقائياً؛ الإجراء يفتح قناة واتساب ويجهز الرسالة للإرسال.
+
 الحماية: النسخة المدفوعة مرتبطة بترخيص واحد وبجهاز/ملف متصفح واحد بعد أول تفعيل. إذا طلب العميل استخدام الترخيص على جهاز آخر، لا تمنحه طريقة لتجاوز الربط؛ وجّهه للتواصل مع صاحب الموسوعة لإعادة التفعيل رسمياً.
 
 لا تقل إن الموسوعة تلغي كل الكورسات. لا تدّع قراءة كامل النسخة المدفوعة أو تنفيذ عمليات مصرفية. لا تطلب كلمة مرور أو بطاقة أو مفتاح API. أعد JSON فقط مع reply وactions. الإجراءات: open_preview, open_preview_page, open_whatsapp, focus_offer, open_checkout.`;
@@ -32,6 +34,10 @@ function corsPreflight() {
   }});
 }
 
+function safeActionMessage(value) {
+  return String(value || "").replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F]/g, "").trim().slice(0, 1800);
+}
+
 function sanitizeActions(actions) {
   if (!Array.isArray(actions)) return [];
   return actions.filter(a => a && ALLOWED_ACTIONS.has(a.type)).slice(0, 3).map(a => {
@@ -41,6 +47,7 @@ function sanitizeActions(actions) {
       if (!Number.isInteger(page) || page < 1 || page > 20) return null;
       out.page = page;
     }
+    if (a.type === "open_whatsapp" && a.message) out.message = safeActionMessage(a.message);
     return out;
   }).filter(Boolean);
 }
@@ -68,7 +75,7 @@ function quantityFromMessage(message) {
   if (has(q, "صفحة", "صفحات", "صفحه", "preview", "معاينة", "تجربة")) return null;
   const patterns = [
     /(?:^|\s)(\d{1,5})\s*(?:نسخ(?:ة)?|نسخه|copy|copies|طبعة|كتاب|كتب)\b/i,
-    /(?:أريد|اريد|عايز|عاوز|نحتاج|نريد|سأشتري|ساشتري|سأشتري)\s*(\d{1,5})\b/i,
+    /(?:أريد|اريد|عايز|عاوز|نحتاج|نريد|سأشتري|ساشتري)\s*(\d{1,5})\b/i,
     /(?:كم|عدد)\s*(?:من\s*)?(\d{1,5})\s*(?:نسخ|نسخة|نسخه)?\b/i,
     /كم\s+(?:سعر|ثمن)\s+(\d{1,5})\s*(?:نسخ|نسخة|نسخه)?\b/i
   ];
@@ -98,6 +105,14 @@ function salesQuantityReply(message) {
   return { reply: `لعدد ${q} نسخة: ${offer} نسخة بسعر العرض 120,000 ج.س${regular ? `، و${regular} نسخة بالسعر الأساسي 150,000 ج.س` : ""}. الإجمالي ${total.toLocaleString("en-US")} جنيه سوداني، والتوفير ${saving.toLocaleString("en-US")} جنيه. إذا كنت جاهزاً أفتح لك صفحة الشراء.`, actions: [{ type: "open_checkout" }] };
 }
 
+function paymentReviewAction(message) {
+  const clean = safeActionMessage(message);
+  return {
+    type: "open_whatsapp",
+    message: `🔔 بلاغ دفع يحتاج مراجعة صاحب الموسوعة\n\nرسالة الزبون:\n${clean}\n\n⚠️ هذا البلاغ لا يعني اعتماد الدفع. يرجى مراجعة العملية واعتمادها يدوياً قبل إنشاء الترخيص أو تسليم النسخة.`
+  };
+}
+
 function fallbackAgent(message, history = []) {
   const q = textOf(message);
 
@@ -106,7 +121,7 @@ function fallbackAgent(message, history = []) {
   }
 
   if (has(q, "دفعت", "دفعت المبلغ", "حولت", "حولت المبلغ", "تم التحويل", "تم الدفع", "ارسلت التحويل", "أرسلت التحويل", "اثبات الدفع", "إثبات الدفع", "صورة التحويل", "وصل المبلغ")) {
-    return { reply: "شكراً لك. تم تسجيل خطوة الدفع، لكن الوكيل لا يعتمد وصول المبلغ بنفسه. سيبقى الطلب بانتظار مراجعة واعتماد صاحب الموسوعة. لن يتم إنشاء الترخيص أو إرسال النسخة قبل هذا الاعتماد.", actions: [{ type: "open_whatsapp" }] };
+    return { reply: "شكراً لك. دخل طلبك الآن مرحلة مراجعة الدفع. الوكيل لا يعتمد وصول المال بنفسه، ولن يتم إنشاء الترخيص أو إرسال النسخة قبل اعتماد صاحب الموسوعة. سأفتح لك قناة المراجعة في واتساب لتجهيز البلاغ لصاحب الموسوعة.", actions: [paymentReviewAction(message)] };
   }
 
   const page = previewPageFromMessage(message);
