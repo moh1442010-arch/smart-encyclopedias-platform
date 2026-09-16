@@ -44,6 +44,17 @@
     document.head.appendChild(s);
   }
 
+  function loadGabsterOnCheckout(){
+    if(!/checkout\.html$/i.test(location.pathname)) return;
+    if(document.querySelector('script[data-gabster-widget]')) return;
+    var s=document.createElement('script');
+    s.setAttribute('data-gabster-widget','');
+    s.setAttribute('data-embed-type','widget');
+    s.src='https://widget.gabster.ai/loader?cbid=6aa587c39ec56a4287e9c161';
+    s.async=true;
+    document.body.appendChild(s);
+  }
+
   function refresh(){
     var v=document.querySelector('.sc-visitors'),o=document.querySelector('.sc-online'),p=document.querySelector('.sc-orders');
     if(!v||!o||!p) return;
@@ -87,6 +98,7 @@
     trackCurrentVisit();
     loadCounterLibrary();
     observeOrderSuccess();
+    loadGabsterOnCheckout();
     setTimeout(refresh,900);
     setInterval(refresh,60000);
   }
