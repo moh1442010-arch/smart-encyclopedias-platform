@@ -1,0 +1,57 @@
+name: Security & Knowledge Content Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Block paid-edition PDFs in public repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          if find . -type f -iname '*.pdf' -not -path './.git/*' | grep -q .; then
+            echo 'ERROR: PDF files must not be stored in the public repository.'
+            find . -type f -iname '*.pdf' -not -path './.git/*'
+            exit 1
+          fi
+
+      - name: Verify protected-content policy files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f SECURITY.md
+          test -f assets/SECURITY-NOTICE.txt
+          test -f agent/encyclopedia-knowledge.md
+          test -f updates.json
+          test -f assets/updates-qr.svg
+
+      - name: Verify fixed QR update center
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'assets/updates-qr.svg' updates.html
+          ! grep -q 'api.qrserver.com' updates.html
+          grep -q 'updates.html' updates.json
+
+      - name: Scan for accidental secret/payment leakage in public agent files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RniE 'GEMINI_API_KEY=|Bearer [A-Za-z0-9._-]{20,}|-----BEGIN (RSA|OPENSSH|EC|PRIVATE) KEY-----' agent --exclude='*.md' --exclude='*.html' --exclude='*.txt'; then
+            echo 'ERROR: Possible secret detected in agent source.'
+            exit 1
+          fi
+
+      - name: Verify security routes are not advertised as public data endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -RniE '/api/orders|orders\?format|admin\.html.*api' --include='*.html' --include='*.js' .
