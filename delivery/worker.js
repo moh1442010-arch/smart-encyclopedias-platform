@@ -1,4 +1,4 @@
-const ALLOW_METHODS = "GET, POST, OPTIONS";
+const ALLOW_METHODS = "GET, POST, PUT, OPTIONS";
 const MAX_TTL_DAYS = 30;
 const DEFAULT_MAX_DOWNLOADS = 3;
 const BOOK_KEY = "paid/encyclopedia-250-pages.pdf";
@@ -24,7 +24,7 @@ function deviceId(request) { return String(request.headers.get("x-device-id") ||
 async function createLicense(request, env) {
   if (!isAdmin(request, env)) return json({ ok: false, error: "payment_approval_required" }, 403, env);
   const body = await request.json().catch(() => null);
-  if (!body || body.approved !== true || !safeId(body.licenseId) || !String(body.customerName || "").trim() || !validEmail(body.customerEmail) || !String(body.objectKey || "").trim()) {
+  if (!body || body.approved !== true || !safeId(body.licenseId) || !String(body.customerName || "").trim() || !validEmail(body.customerEmail) || String(body.objectKey || BOOK_KEY).trim() !== BOOK_KEY) {
     return json({ ok: false, error: "explicit_payment_approval_required" }, 400, env);
   }
   const days = clampInt(body.expiresDays, 1, MAX_TTL_DAYS, 7);
@@ -35,7 +35,7 @@ async function createLicense(request, env) {
   const approvedBy = String(body.approvedBy || "owner").trim().slice(0, 120);
   try {
     await env.DB.prepare(`INSERT INTO licenses (id, order_id, customer_name, customer_email, object_key, token_hash, expires_at, max_downloads, payment_verified_at, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`)
-      .bind(body.licenseId, body.orderId || null, String(body.customerName).trim(), String(body.customerEmail).trim().toLowerCase(), String(body.objectKey).trim(), tokenHash, expiresAt, maxDownloads, approvedBy).run();
+      .bind(body.licenseId, body.orderId || null, String(body.customerName).trim(), String(body.customerEmail).trim().toLowerCase(), BOOK_KEY, tokenHash, expiresAt, maxDownloads, approvedBy).run();
   } catch (e) { return json({ ok: false, error: "license_create_failed" }, 409, env); }
   return json({ ok: true, licenseId: body.licenseId, paymentApproved: true, expiresAt, maxDownloads, token, deliveryUrl: `${origin(env)}/delivery.html?token=${encodeURIComponent(token)}` }, 201, env);
 }
@@ -99,6 +99,11 @@ async function uploadBook(request, env) {
   return json({ ok: true, key: BOOK_KEY, message: "paid_book_uploaded" }, 201, env);
 }
 
+function uploadPage(env) {
+  const page = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>رفع النسخة المدفوعة | منصة الموسوعات الذكية</title><style>body{font-family:system-ui,sans-serif;background:#f6f3ed;margin:0;color:#222}.wrap{max-width:650px;margin:35px auto;padding:18px}.card{background:#fff;border-radius:20px;padding:24px;box-shadow:0 10px 35px #0001}label{display:block;font-weight:700;margin:16px 0 7px}input,button{width:100%;box-sizing:border-box;padding:14px;border-radius:10px;font:inherit}input{border:1px solid #ccc}button{margin-top:18px;border:0;background:#111;color:#fff;font-weight:800}.status{margin-top:18px;padding:14px;border-radius:10px;background:#f3f3f3;line-height:1.8}.ok{background:#edf9ef}.bad{background:#fff0f0}.small{color:#666;line-height:1.8}</style></head><body><main class="wrap"><section class="card"><h1>📚 رفع الموسوعة المدفوعة</h1><p class="small">هذه الصفحة خاصة بصاحب الموسوعة. سيتم حفظ الملف تحت المفتاح المحمي للنسخة الكاملة ذات 250 صفحة.</p><form id="f"><label>مفتاح المشرف</label><input id="key" type="password" autocomplete="off" required><label>ملف PDF الكامل</label><input id="file" type="file" accept="application/pdf,.pdf" required><button>رفع النسخة الآن</button></form><div id="s" class="status">جاهز للرفع.</div></section></main><script>const f=document.getElementById('f'),s=document.getElementById('s');f.addEventListener('submit',async e=>{e.preventDefault();const file=document.getElementById('file').files[0],key=document.getElementById('key').value;if(!file){s.className='status bad';s.textContent='اختر ملف PDF أولاً.';return}if(file.size>25*1024*1024){s.className='status bad';s.textContent='الملف أكبر من الحد المسموح 25 ميجابايت.';return}s.className='status';s.textContent='جارٍ رفع الملف… لا تغلق الصفحة.';try{const r=await fetch('/api/admin/upload-book',{method:'PUT',headers:{'content-type':'application/pdf','x-admin-key':key},body:file});const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok)throw new Error(d.error||'upload_failed');s.className='status ok';s.textContent='✅ تم رفع النسخة الكاملة بنجاح. المفتاح: '+d.key;}catch(err){s.className='status bad';s.textContent='❌ لم يتم الرفع: '+err.message}});</script></body></html>`;
+  return new Response(page, { status: 200, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" } });
+}
+
 async function resetDevice(request, env) {
   if (!isAdmin(request, env)) return json({ ok: false, error: "unauthorized" }, 401, env);
   const body = await request.json().catch(() => null);
@@ -112,6 +117,7 @@ export default {
     if (request.method === "OPTIONS") return preflight(env);
     const url = new URL(request.url);
     try {
+      if (url.pathname === "/admin/upload-book" && request.method === "GET") return uploadPage(env);
       if (url.pathname === "/api/license/create" && request.method === "POST") return createLicense(request, env);
       if (url.pathname === "/api/license/reset-device" && request.method === "POST") return resetDevice(request, env);
       if (url.pathname === "/api/admin/upload-book" && request.method === "PUT") return uploadBook(request, env);
