@@ -2,8 +2,8 @@ window.STORE_CONFIG = {
   price: "150000",
   currency: "جنيه سوداني",
   oldPrice: "150000",
-  offerTitle: "خصم 20% لأول 200 نسخة",
-  offerText: "السعر الأساسي 150,000 جنيه سوداني. لأول 200 نسخة خصم 20% بسعر 120,000 جنيه.",
+  offerTitle: "عرض أول 200 نسخة لغير الطلاب",
+  offerText: "السعر الأساسي 150,000 جنيه سوداني. غير الطلاب: أول 200 نسخة بسعر 120,000 جنيه. الطالب بعد إثبات صفته: 120,000 جنيه ثابت في جميع الأوقات.",
   purchaseUrl: "checkout.html",
   accountNumber: "1882224",
   bankName: "بنك الخرطوم",
@@ -20,6 +20,10 @@ window.STORE_CONFIG = {
   reservationOffer: "120000",
   studentPrice: "120000",
   studentDiscount: "20%",
+  studentPriceUSD: "16",
+  studentDiscountUSD: "20%",
+  studentPriceFixed: true,
+  studentEligibility: "بعد إثبات صفة الطالب",
   reservationDiscount: "20%",
   reservationLimit: 200,
   paymentMethod: "بنكك — بنك الخرطوم",
@@ -40,7 +44,7 @@ window.STORE_CONFIG = {
 })('agentApiAdapter','assets/agent-api-v2.js');
 
 (function loadFinalSalesAgent(){
-  function load(){if(document.getElementById(id))return;var s=document.createElement('script');s.id='finalSalesAgent';s.src='assets/sales-agent-v4.js';s.defer=true;document.head.appendChild(s);}
+  function load(){if(document.getElementById(id))return;var s=document.createElement('script');s.id=id;s.src='assets/sales-agent-v4.js';s.defer=true;document.head.appendChild(s);}
   var id='finalSalesAgent';
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load);else load();
 })();
