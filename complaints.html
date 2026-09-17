@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="description" content="باب الشكاوى والمقترحات لمنصة الموسوعات الذكية.">
+<title>الشكاوى والمقترحات | منصة الموسوعات الذكية</title>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+.feedback{max-width:820px;margin:36px auto;padding:0 18px}.card{background:#fff;border-radius:22px;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.08)}.intro{line-height:1.9}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0}.option{position:relative}.option input{position:absolute;opacity:0}.option label{display:block;padding:15px;border:2px solid #ddd;border-radius:14px;cursor:pointer;font-weight:800}.option input:checked+label{border-color:#111;background:#f7f7f7}.field{margin-top:16px}.field label{display:block;font-weight:800;margin-bottom:7px}.field input,.field textarea{width:100%;box-sizing:border-box;padding:13px;border:1px solid #ccc;border-radius:11px;font:inherit}.field textarea{min-height:150px;resize:vertical}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.actions a,.actions button{padding:12px 17px;border-radius:12px;border:1px solid currentColor;text-decoration:none;cursor:pointer;font:inherit}.primary{background:#111!important;color:#fff;border-color:#111!important}.notice{margin-top:18px;padding:14px;border-radius:12px;background:#fff8e8;line-height:1.8}.success{margin-top:16px;padding:14px;border-radius:12px;background:#eef9f0;line-height:1.8}.back{display:inline-block;margin-bottom:18px}@media(max-width:640px){.grid{grid-template-columns:1fr}.card{padding:20px}}
+</style>
+</head>
+<body>
+<main class="feedback">
+<a class="back" href="index.html">العودة إلى المنصة</a>
+<section class="card">
+<div class="eyebrow">خدمة الزوار والعملاء</div>
+<h1>📝 الشكاوى والمقترحات</h1>
+<p class="intro">نريد أن نعرف ما الذي يمكن تحسينه. يمكنك إرسال شكوى، اقتراح، ملاحظة على المحتوى، أو مشكلة تقنية. كل رسالة تصل للمراجعة البشرية، ولا يعني إرسالها قبول أي مطالبة أو اعتماد أي عملية دفع.</p>
+<div class="grid" role="radiogroup" aria-label="نوع الرسالة">
+<div class="option"><input id="complaint" name="type" type="radio" value="شكوى" checked><label for="complaint">⚠️ شكوى</label></div>
+<div class="option"><input id="suggestion" name="type" type="radio" value="اقتراح"><label for="suggestion">💡 اقتراح</label></div>
+<div class="option"><input id="content" name="type" type="radio" value="ملاحظة على المحتوى"><label for="content">📚 ملاحظة على المحتوى</label></div>
+<div class="option"><input id="technical" name="type" type="radio" value="مشكلة تقنية"><label for="technical">🛠️ مشكلة تقنية</label></div>
+</div>
+<div class="field"><label for="name">الاسم (اختياري)</label><input id="name" maxlength="120" autocomplete="name"></div>
+<div class="field"><label for="orderId">رقم الطلب (إن وجد)</label><input id="orderId" maxlength="80"></div>
+<div class="field"><label for="message">اكتب رسالتك</label><textarea id="message" maxlength="3000" placeholder="اكتب التفاصيل بوضوح، وما الذي تتوقع أن نراجعه أو نحسّنه..."></textarea></div>
+<div class="actions"><button id="send" class="primary" type="button">📨 إرسال للمراجعة عبر واتساب</button><a href="index.html">إلغاء والعودة</a></div>
+<div class="notice">🔒 لا ترسل كلمة مرور، رقم بطاقة، رمز تحقق، مفتاح API، أو أي بيانات مصرفية سرية. إذا كانت الرسالة مرتبطة بطلب شراء، يكفي رقم الطلب.</div>
+<div id="status" class="success" hidden></div>
+</section>
+</main>
+<script>
+const WHATSAPP='https://wa.me/249121851285';
+document.getElementById('send').addEventListener('click',function(){
+ const type=document.querySelector('input[name="type"]:checked')?.value||'ملاحظة';
+ const name=document.getElementById('name').value.trim();
+ const orderId=document.getElementById('orderId').value.trim();
+ const message=document.getElementById('message').value.trim();
+ const status=document.getElementById('status');
+ if(message.length<5){status.hidden=false;status.textContent='يرجى كتابة تفاصيل الرسالة قبل الإرسال.';return;}
+ const text='📝 رسالة من باب الشكاوى والمقترحات\n\nالنوع: '+type+'\nالاسم: '+(name||'غير مذكور')+'\nرقم الطلب: '+(orderId||'غير مذكور')+'\n\nنص الرسالة:\n'+message+'\n\n⚠️ هذه الرسالة للمراجعة البشرية ولا تعني اعتماد أي مطالبة أو عملية دفع.';
+ window.open(WHATSAPP+'?text='+encodeURIComponent(text),'_blank','noopener');
+ status.hidden=false;status.textContent='تم تجهيز الرسالة وفتح واتساب لإرسالها. المراجعة والرد يتمان بشريًا.';
+});
+</script>
+</body>
+</html>
