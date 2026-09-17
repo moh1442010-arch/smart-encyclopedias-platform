@@ -1,6 +1,7 @@
 const ALLOW_METHODS = "GET, POST, OPTIONS";
 const MAX_TTL_DAYS = 30;
 const DEFAULT_MAX_DOWNLOADS = 3;
+const BOOK_KEY = "paid/encyclopedia-250-pages.pdf";
 
 function origin(env) { return env.PUBLIC_ORIGIN || "https://moh1442010-arch.github.io/smart-encyclopedias-platform"; }
 function headers(env, extra = {}) {
@@ -21,7 +22,6 @@ function isAdmin(request, env) { const expected = env.LICENSE_ADMIN_KEY; const s
 function deviceId(request) { return String(request.headers.get("x-device-id") || "").trim(); }
 
 async function createLicense(request, env) {
-  // Creating a license is the explicit owner-controlled payment approval step.
   if (!isAdmin(request, env)) return json({ ok: false, error: "payment_approval_required" }, 403, env);
   const body = await request.json().catch(() => null);
   if (!body || body.approved !== true || !safeId(body.licenseId) || !String(body.customerName || "").trim() || !validEmail(body.customerEmail) || !String(body.objectKey || "").trim()) {
@@ -61,9 +61,7 @@ async function checkDevice(request, env, row, bindIfEmpty = false) {
   }
   return { ok: true };
 }
-async function lookupById(id, env) {
-  return env.DB.prepare(`SELECT id, device_hash FROM licenses WHERE id = ?`).bind(id).first();
-}
+async function lookupById(id, env) { return env.DB.prepare(`SELECT id, device_hash FROM licenses WHERE id = ?`).bind(id).first(); }
 
 async function info(request, env, token) {
   const row = await lookup(token, env);
@@ -80,12 +78,25 @@ async function download(request, env, token) {
   if (!row || !active(row)) return json({ ok: false, error: "payment_not_approved_or_link_expired" }, 403, env);
   const device = await checkDevice(request, env, row, true);
   if (!device.ok) return json({ ok: false, error: device.error }, 403, env);
-  const object = await env.PAID_BOOKS.get(row.object_key);
+  const key = String(row.object_key || BOOK_KEY).trim();
+  if (key !== BOOK_KEY) return json({ ok: false, error: "invalid_book_key" }, 400, env);
+  const object = await env.PAID_BOOKS.get(key, { type: "stream" });
   if (!object) return json({ ok: false, error: "file_not_found" }, 404, env);
   const update = await env.DB.prepare(`UPDATE licenses SET download_count = download_count + 1, last_download_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'active' AND payment_verified_at IS NOT NULL AND download_count < max_downloads`).bind(row.id).run();
   if (!update.meta?.changes) return json({ ok: false, error: "download_limit_reached" }, 403, env);
-  const h = headers(env, { "content-type": "application/pdf", "content-length": String(object.size), "content-disposition": `attachment; filename="encyclopedia-${row.id}.pdf"`, "cache-control": "private, no-store, max-age=0", "x-content-type-options": "nosniff" });
-  return new Response(object.body, { status: 200, headers: h });
+  const h = headers(env, { "content-type": "application/pdf", "content-disposition": `attachment; filename="encyclopedia-${row.id}.pdf"`, "cache-control": "private, no-store, max-age=0", "x-content-type-options": "nosniff" });
+  return new Response(object, { status: 200, headers: h });
+}
+
+async function uploadBook(request, env) {
+  if (!isAdmin(request, env)) return json({ ok: false, error: "unauthorized" }, 401, env);
+  if (request.method !== "PUT") return json({ ok: false, error: "method_not_allowed" }, 405, env);
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (contentLength && contentLength > 25 * 1024 * 1024) return json({ ok: false, error: "file_too_large" }, 413, env);
+  const contentType = request.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().includes("application/pdf")) return json({ ok: false, error: "pdf_required" }, 400, env);
+  await env.PAID_BOOKS.put(BOOK_KEY, request.body, { metadata: { contentType: "application/pdf", pages: 250 } });
+  return json({ ok: true, key: BOOK_KEY, message: "paid_book_uploaded" }, 201, env);
 }
 
 async function resetDevice(request, env) {
@@ -103,6 +114,7 @@ export default {
     try {
       if (url.pathname === "/api/license/create" && request.method === "POST") return createLicense(request, env);
       if (url.pathname === "/api/license/reset-device" && request.method === "POST") return resetDevice(request, env);
+      if (url.pathname === "/api/admin/upload-book" && request.method === "PUT") return uploadBook(request, env);
       if (url.pathname === "/api/delivery/info" && request.method === "GET") return info(request, env, url.searchParams.get("token"));
       if (url.pathname === "/api/delivery/download" && request.method === "GET") return download(request, env, url.searchParams.get("token"));
       return json({ ok: false, error: "not_found" }, 404, env);
