@@ -257,14 +257,64 @@ async function download(request, env, token) {
     return json({ ok: false, error: "invalid_book_key" }, 400, env);
   }
 
-  const object = await env.PAID_BOOKS.get(BOOK_KEY, { type: "stream" });
+  const stored = await env.PAID_BOOKS.getWithMetadata(BOOK_KEY, { type: "text" });
+  if (!stored?.value) return json({ ok: false, error: "file_not_found" }, 404, env);
 
-  if (!object) {
-    return json({ ok: false, error: "file_not_found" }, 404, env);
+  let object = null;
+  let contentLength = null;
+  const metadata = stored.metadata && typeof stored.metadata === "object" ? stored.metadata : null;
+
+  if (metadata?.chunked === true) {
+    const manifest = JSON.parse(stored.value);
+    if (!manifest.session || !Number.isInteger(manifest.total) || !Number.isInteger(manifest.size)) {
+      return json({ ok: false, error: "invalid_book_manifest" }, 500, env);
+    }
+
+    const chunkStreams = [];
+    for (let i = 0; i < manifest.total; i++) {
+      const chunk = await env.PAID_BOOKS.get(`upload/${manifest.session}/${i}`, { type: "stream" });
+      if (!chunk) return json({ ok: false, error: "file_chunk_not_found" }, 404, env);
+      chunkStreams.push(chunk);
+    }
+
+    let streamIndex = 0;
+    let currentReader = null;
+    object = new ReadableStream({
+      async pull(controller) {
+        try {
+          while (true) {
+            if (!currentReader) {
+              if (streamIndex >= chunkStreams.length) {
+                controller.close();
+                return;
+              }
+              currentReader = chunkStreams[streamIndex++].getReader();
+            }
+            const part = await currentReader.read();
+            if (part.done) {
+              currentReader = null;
+              continue;
+            }
+            controller.enqueue(part.value);
+            return;
+          }
+        } catch (error) {
+          controller.error(error);
+        }
+      },
+      cancel() {
+        if (currentReader) currentReader.cancel().catch(() => {});
+      }
+    });
+    contentLength = String(manifest.size);
+  } else {
+    object = await env.PAID_BOOKS.get(BOOK_KEY, { type: "stream" });
+    contentLength = metadata?.size ? String(metadata.size) : null;
   }
 
-  const update = await env.DB.prepare(
-    `UPDATE licenses
+  if (!object) return json({ ok: false, error: "file_not_found" }, 404, env);
+
+  const update = await env.DB.prepare(`UPDATE licenses
      SET download_count = download_count + 1,
          last_download_at = CURRENT_TIMESTAMP
      WHERE id = ?
@@ -282,6 +332,7 @@ async function download(request, env, token) {
     headers: headers(env, {
       "content-type": "application/pdf",
       "content-disposition": `attachment; filename="encyclopedia-${row.id}.pdf"`,
+      ...(contentLength ? { "content-length": contentLength } : {}),
       "cache-control": "private, no-store, max-age=0",
       "x-content-type-options": "nosniff"
     })
@@ -338,34 +389,21 @@ async function finalizeUpload(request, env, url) {
     if (!exists) return json({ ok: false, error: "missing_upload_chunk", key }, 409, env);
   }
 
-  // Reassemble in memory instead of passing a composed ReadableStream to KV.
-  // This avoids KV/runtime failures during the final PUT for ~20 MiB PDFs.
-  const parts = [];
-  let totalBytes = 0;
-  for (const key of keys) {
-    const part = await env.PAID_BOOKS.get(key, { type: "arrayBuffer" });
-    if (!part) return json({ ok: false, error: "missing_chunk", key }, 409, env);
-    const bytes = new Uint8Array(part);
-    parts.push(bytes);
-    totalBytes += bytes.byteLength;
-  }
-
-  if (totalBytes !== size) {
-    return json({ ok: false, error: "upload_size_mismatch", expected: size, actual: totalBytes }, 400, env);
-  }
-
-  const combined = new Uint8Array(totalBytes);
-  let offset = 0;
-  for (const part of parts) {
-    combined.set(part, offset);
-    offset += part.byteLength;
-  }
-
-  await env.PAID_BOOKS.put(BOOK_KEY, combined.buffer, {
-    metadata: { contentType: "application/pdf", pages: 260, size: totalBytes }
+  // Keep the PDF as 1 MiB KV chunks and store only a tiny manifest at BOOK_KEY.
+  // Finalization therefore does not allocate a ~20 MiB ArrayBuffer inside the Worker.
+  // Downloads stream the chunks back as one PDF response.
+  const manifest = JSON.stringify({
+    version: 1,
+    chunked: true,
+    session,
+    total,
+    size,
+    pages: 260
   });
 
-  await Promise.all(keys.map(key => env.PAID_BOOKS.delete(key)));
+  await env.PAID_BOOKS.put(BOOK_KEY, manifest, {
+    metadata: { chunked: true, contentType: "application/pdf", pages: 260, size }
+  });
 
   return json({ ok: true, key: BOOK_KEY, size, pages: 260, message: "paid_book_uploaded" }, 201, env);
 }
