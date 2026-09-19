@@ -338,32 +338,31 @@ async function finalizeUpload(request, env, url) {
     if (!exists) return json({ ok: false, error: "missing_upload_chunk", key }, 409, env);
   }
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      try {
-        for (const key of keys) {
-          const part = await env.PAID_BOOKS.get(key, { type: "stream" });
-          if (!part) throw new Error("missing_chunk");
-          const reader = part.getReader();
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              controller.enqueue(value);
-            }
-          } finally {
-            reader.releaseLock();
-          }
-        }
-        controller.close();
-      } catch (e) {
-        controller.error(e);
-      }
-    }
-  });
+  // Reassemble in memory instead of passing a composed ReadableStream to KV.
+  // This avoids KV/runtime failures during the final PUT for ~20 MiB PDFs.
+  const parts = [];
+  let totalBytes = 0;
+  for (const key of keys) {
+    const part = await env.PAID_BOOKS.get(key, { type: "arrayBuffer" });
+    if (!part) return json({ ok: false, error: "missing_chunk", key }, 409, env);
+    const bytes = new Uint8Array(part);
+    parts.push(bytes);
+    totalBytes += bytes.byteLength;
+  }
 
-  await env.PAID_BOOKS.put(BOOK_KEY, stream, {
-    metadata: { contentType: "application/pdf", pages: 260, size }
+  if (totalBytes !== size) {
+    return json({ ok: false, error: "upload_size_mismatch", expected: size, actual: totalBytes }, 400, env);
+  }
+
+  const combined = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const part of parts) {
+    combined.set(part, offset);
+    offset += part.byteLength;
+  }
+
+  await env.PAID_BOOKS.put(BOOK_KEY, combined.buffer, {
+    metadata: { contentType: "application/pdf", pages: 260, size: totalBytes }
   });
 
   await Promise.all(keys.map(key => env.PAID_BOOKS.delete(key)));
@@ -479,4 +478,4 @@ export default {
   }
 };
 
-// Deployment trigger: mobile upload flow fix verification.
+// Deployment trigger: finalize KV upload reliability fix.
