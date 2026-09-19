@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "delivery/worker.js"
+      - "delivery/worker.mjs"
       - "delivery/wrangler.jsonc"
       - ".github/workflows/deploy-delivery-worker.yml"
   workflow_dispatch:
