@@ -1,6 +1,9 @@
 const ALLOW_METHODS = "GET, POST, PUT, OPTIONS";
 const MAX_TTL_DAYS = 30;
 const DEFAULT_MAX_DOWNLOADS = 3;
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+const UPLOAD_CHUNK_BYTES = 1024 * 1024;
+const MAX_UPLOAD_CHUNKS = 25;
 const BOOK_KEY = "paid/encyclopedia-260-pages.pdf";
 
 function origin(env) {
@@ -274,45 +277,104 @@ async function download(request, env, token) {
   });
 }
 
-async function uploadBook(request, env) {
-  if (!isAdmin(request, env)) {
-    return json({ ok: false, error: "unauthorized" }, 401, env);
+async function uploadBookChunk(request, env, url) {
+  if (!isAdmin(request, env)) return json({ ok: false, error: "unauthorized" }, 401, env);
+  if (request.method !== "PUT") return json({ ok: false, error: "method_not_allowed" }, 405, env);
+
+  const session = String(url.searchParams.get("session") || "");
+  const index = Number.parseInt(url.searchParams.get("index") || "", 10);
+  const total = Number.parseInt(url.searchParams.get("total") || "", 10);
+  const size = Number.parseInt(url.searchParams.get("size") || "", 10);
+
+  if (!/^[A-Za-z0-9_-]{12,80}$/.test(session) ||
+      !Number.isInteger(index) || index < 0 ||
+      !Number.isInteger(total) || total < 1 || total > MAX_UPLOAD_CHUNKS ||
+      index >= total || !Number.isInteger(size) || size < 1 || size > MAX_UPLOAD_BYTES) {
+    return json({ ok: false, error: "invalid_upload_parameters" }, 400, env);
   }
 
-  if (request.method !== "PUT") {
-    return json({ ok: false, error: "method_not_allowed" }, 405, env);
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (contentLength && contentLength > UPLOAD_CHUNK_BYTES) {
+    return json({ ok: false, error: "chunk_too_large" }, 413, env);
   }
 
-  const contentLength = Number(
-    request.headers.get("content-length") || 0
-  );
-
-  if (contentLength && contentLength > 25 * 1024 * 1024) {
-    return json({ ok: false, error: "file_too_large" }, 413, env);
+  const chunk = await request.arrayBuffer();
+  if (!chunk.byteLength || chunk.byteLength > UPLOAD_CHUNK_BYTES) {
+    return json({ ok: false, error: "invalid_chunk_size" }, 400, env);
   }
 
-  const contentType = request.headers.get("content-type") || "";
+  await env.PAID_BOOKS.put(`upload/${session}/${index}`, chunk);
+  return json({ ok: true, index, total }, 200, env);
+}
 
-  if (!contentType.toLowerCase().includes("application/pdf")) {
-    return json({ ok: false, error: "pdf_required" }, 400, env);
+async function finalizeUpload(request, env, url) {
+  if (!isAdmin(request, env)) return json({ ok: false, error: "unauthorized" }, 401, env);
+  if (request.method !== "POST") return json({ ok: false, error: "method_not_allowed" }, 405, env);
+
+  const session = String(url.searchParams.get("session") || "");
+  const total = Number.parseInt(url.searchParams.get("total") || "", 10);
+  const size = Number.parseInt(url.searchParams.get("size") || "", 10);
+
+  if (!/^[A-Za-z0-9_-]{12,80}$/.test(session) ||
+      !Number.isInteger(total) || total < 1 || total > MAX_UPLOAD_CHUNKS ||
+      !Number.isInteger(size) || size < 1 || size > MAX_UPLOAD_BYTES) {
+    return json({ ok: false, error: "invalid_upload_parameters" }, 400, env);
   }
 
-  await env.PAID_BOOKS.put(
-    BOOK_KEY,
-    request.body,
-    {
-      metadata: {
-        contentType: "application/pdf",
-        pages: 260
+  const keys = Array.from({ length: total }, (_, i) => `upload/${session}/${i}`);
+  for (const key of keys) {
+    const exists = await env.PAID_BOOKS.head(key);
+    if (!exists) return json({ ok: false, error: "missing_upload_chunk", key }, 409, env);
+  }
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        for (const key of keys) {
+          const part = await env.PAID_BOOKS.get(key, { type: "stream" });
+          if (!part) throw new Error("missing_chunk");
+          const reader = part.getReader();
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              controller.enqueue(value);
+            }
+          } finally {
+            reader.releaseLock();
+          }
+        }
+        controller.close();
+      } catch (e) {
+        controller.error(e);
       }
     }
-  );
+  });
 
-  return json({
-    ok: true,
-    key: BOOK_KEY,
-    message: "paid_book_uploaded"
-  }, 201, env);
+  await env.PAID_BOOKS.put(BOOK_KEY, stream, {
+    metadata: { contentType: "application/pdf", pages: 260, size }
+  });
+
+  await Promise.all(keys.map(key => env.PAID_BOOKS.delete(key)));
+
+  return json({ ok: true, key: BOOK_KEY, size, pages: 260, message: "paid_book_uploaded" }, 201, env);
+}
+
+async function uploadBook(request, env) {
+  if (!isAdmin(request, env)) return json({ ok: false, error: "unauthorized" }, 401, env);
+  if (request.method !== "PUT") return json({ ok: false, error: "method_not_allowed" }, 405, env);
+
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (contentLength && contentLength > MAX_UPLOAD_BYTES) return json({ ok: false, error: "file_too_large" }, 413, env);
+
+  const contentType = request.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().includes("application/pdf")) return json({ ok: false, error: "pdf_required" }, 400, env);
+
+  await env.PAID_BOOKS.put(BOOK_KEY, request.body, {
+    metadata: { contentType: "application/pdf", pages: 260 }
+  });
+
+  return json({ ok: true, key: BOOK_KEY, message: "paid_book_uploaded" }, 201, env);
 }
 
 function uploadPage() {
@@ -339,7 +401,7 @@ button{margin-top:18px;border:0;background:#111;color:#fff;font-weight:800}
 <main class="wrap">
 <section class="card">
 <h1>📚 رفع الموسوعة المدفوعة</h1>
-<p class="small">رفع النسخة الكاملة المحمية ذات 260 صفحة إلى Workers KV.</p>
+<p class="small">رفع النسخة الكاملة المحمية ذات 260 صفحة إلى Workers KV على أجزاء صغيرة لتقليل استهلاك ذاكرة الهاتف.</p>
 <form id="f">
 <label>مفتاح المشرف</label>
 <input id="key" type="password" autocomplete="off" required>
@@ -359,18 +421,28 @@ f.addEventListener("submit",async e=>{
  const key=document.getElementById("key").value;
  if(!file){s.className="status bad";s.textContent="اختر ملف PDF أولاً.";return}
  if(file.size>25*1024*1024){s.className="status bad";s.textContent="الملف أكبر من 25 ميجابايت.";return}
+ const chunkSize=1024*1024;
+ const total=Math.ceil(file.size/chunkSize);
+ const session=crypto.randomUUID().replaceAll("-","");
  s.className="status";
- s.textContent="جارٍ رفع الملف… لا تغلق الصفحة.";
  try{
-  const r=await fetch("/api/admin/upload-book",{
-   method:"PUT",
-   headers:{"content-type":"application/pdf","x-admin-key":key},
-   body:file
+  for(let i=0;i<total;i++){
+   const chunk=file.slice(i*chunkSize,Math.min(file.size,(i+1)*chunkSize));
+   s.textContent="جارٍ رفع الجزء "+(i+1)+" من "+total+"…";
+   const r=await fetch("/api/admin/upload-book/chunk?session="+session+"&index="+i+"&total="+total+"&size="+file.size,{
+    method:"PUT",headers:{"content-type":"application/octet-stream","x-admin-key":key},body:chunk
+   });
+   const d=await r.json().catch(()=>({}));
+   if(!r.ok||!d.ok) throw new Error(d.error||"chunk_upload_failed");
+  }
+  s.textContent="جاري تجميع النسخة…";
+  const r=await fetch("/api/admin/upload-book/finalize?session="+session+"&total="+total+"&size="+file.size,{
+   method:"POST",headers:{"x-admin-key":key}
   });
   const d=await r.json().catch(()=>({}));
-  if(!r.ok||!d.ok) throw new Error(d.error||"upload_failed");
+  if(!r.ok||!d.ok) throw new Error(d.error||"finalize_failed");
   s.className="status ok";
-  s.textContent="✅ تم رفع النسخة الكاملة بنجاح: "+d.key;
+  s.textContent="✅ تم رفع النسخة الكاملة بنجاح: "+d.key+" — "+d.pages+" صفحة";
  }catch(err){
   s.className="status bad";
   s.textContent="❌ لم يتم الرفع: "+err.message;
@@ -440,6 +512,14 @@ export default {
 
       if (url.pathname === "/api/license/reset-device" && request.method === "POST") {
         return resetDevice(request, env);
+      }
+
+      if (url.pathname === "/api/admin/upload-book/chunk" && request.method === "PUT") {
+        return uploadBookChunk(request, env, url);
+      }
+
+      if (url.pathname === "/api/admin/upload-book/finalize" && request.method === "POST") {
+        return finalizeUpload(request, env, url);
       }
 
       if (url.pathname === "/api/admin/upload-book" && request.method === "PUT") {
