@@ -262,18 +262,15 @@ async function download(request, env, token) {
 
   let object = null;
   let contentLength = null;
-  const metadata = stored.metadata && typeof stored.metadata === "object" ? stored.metadata : null;
 
-  // The finalized KV object is a plain-text manifest. We intentionally avoid
-  // KV custom metadata here because the PDF is already stored safely as chunks.
-  let manifest = null;
-  try {
-    const parsed = JSON.parse(stored.value);
-    if (parsed && parsed.chunked === true) manifest = parsed;
-  } catch {}
+  // The PDF is stored as 1 MiB KV chunks. The active manifest lives in D1,
+  // so finalization never has to write the canonical BOOK_KEY in KV.
+  const manifest = await env.DB.prepare(
+    "SELECT object_key, session, total, size, pages FROM book_files WHERE id = ?"
+  ).bind(BOOK_KEY).first();
 
   if (manifest) {
-    if (!manifest.session || !Number.isInteger(manifest.total) || !Number.isInteger(manifest.size)) {
+    if (!manifest.session || !Number.isInteger(Number(manifest.total)) || !Number.isInteger(Number(manifest.size))) {
       return json({ ok: false, error: "invalid_book_manifest" }, 500, env);
     }
 
@@ -315,8 +312,8 @@ async function download(request, env, token) {
     });
     contentLength = String(manifest.size);
   } else {
+    // Legacy direct-KV fallback for any older single-object upload.
     object = await env.PAID_BOOKS.get(BOOK_KEY, { type: "stream" });
-    contentLength = metadata?.size ? String(metadata.size) : null;
   }
 
   if (!object) return json({ ok: false, error: "file_not_found" }, 404, env);
@@ -392,26 +389,35 @@ async function finalizeUpload(request, env, url) {
 
   const keys = Array.from({ length: total }, (_, i) => `upload/${session}/${i}`);
   for (const key of keys) {
-    const exists = await env.PAID_BOOKS.head(key);
+    const exists = await env.PAID_BOOKS.get(key, { type: "arrayBuffer" });
     if (!exists) return json({ ok: false, error: "missing_upload_chunk", key }, 409, env);
   }
 
-  // Keep the PDF as 1 MiB KV chunks and store only a tiny manifest at BOOK_KEY.
-  // Finalization therefore does not allocate a ~20 MiB ArrayBuffer inside the Worker.
-  // Downloads stream the chunks back as one PDF response.
-  const manifest = JSON.stringify({
-    version: 1,
-    chunked: true,
-    session,
-    total,
-    size,
-    pages: 260
-  });
+  // Keep the PDF as 1 MiB KV chunks. The manifest is stored in D1, avoiding
+  // the final KV write that has repeatedly returned HTTP 500 in this account.
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS book_files (
+      id TEXT PRIMARY KEY,
+      object_key TEXT NOT NULL,
+      session TEXT NOT NULL,
+      total INTEGER NOT NULL,
+      size INTEGER NOT NULL,
+      pages INTEGER NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `).run();
 
-  // Store only the tiny manifest as the canonical book key.
-  // No custom KV metadata is used: this removes the last known source of
-  // finalize-time 500s while keeping the PDF itself in 1 MiB KV chunks.
-  await env.PAID_BOOKS.put(BOOK_KEY, manifest);
+  await env.DB.prepare(`
+    INSERT INTO book_files (id, object_key, session, total, size, pages, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(id) DO UPDATE SET
+      object_key = excluded.object_key,
+      session = excluded.session,
+      total = excluded.total,
+      size = excluded.size,
+      pages = excluded.pages,
+      updated_at = CURRENT_TIMESTAMP
+  `).bind(BOOK_KEY, BOOK_KEY, session, total, size, 260).run();
 
   return json({ ok: true, key: BOOK_KEY, size, pages: 260, message: "paid_book_uploaded" }, 201, env);
 }
@@ -480,7 +486,7 @@ export default {
           ok: true,
           service: "smart-encyclopedias-delivery",
           status: "online",
-          version: "kv-delivery-v5-manifest-no-metadata",
+          version: "kv-delivery-v6-d1-manifest",
           book: BOOK_KEY
         }, 200, env);
       }
@@ -524,4 +530,4 @@ export default {
   }
 };
 
-// Deployment trigger: finalize KV manifest without custom metadata.
+// Deployment trigger: store chunk manifest in D1 instead of KV canonical key.
