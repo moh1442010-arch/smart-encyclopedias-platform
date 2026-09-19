@@ -405,21 +405,20 @@ button{margin-top:18px;border:0;background:#111;color:#fff;font-weight:800}
 <section class="card">
 <h1>📚 رفع الموسوعة المدفوعة</h1>
 <p class="small">رفع النسخة الكاملة المحمية ذات 260 صفحة إلى Workers KV على أجزاء صغيرة لتقليل استهلاك ذاكرة الهاتف.</p>
-<form id="f">
+<div id="f">
 <label>مفتاح المشرف</label>
 <input id="key" type="password" autocomplete="off" required>
 <label>ملف PDF الكامل</label>
 <input id="file" type="file" accept="application/pdf,.pdf" required>
-<button>رفع النسخة الآن</button>
-</form>
+<button type="button" id="uploadBtn">رفع النسخة الآن</button>
+</div>
 <div id="s" class="status">جاهز للرفع.</div>
 </section>
 </main>
 <script>
 const f=document.getElementById("f");
 const s=document.getElementById("s");
-f.addEventListener("submit",async e=>{
- e.preventDefault();
+document.getElementById("uploadBtn").addEventListener("click",async e=>{
  const file=document.getElementById("file").files[0];
  const key=document.getElementById("key").value;
  if(!file){s.className="status bad";s.textContent="اختر ملف PDF أولاً.";return}
