@@ -500,7 +500,7 @@ export default {
           ok: true,
           service: "smart-encyclopedias-delivery",
           status: "online",
-          version: "kv-delivery-v3",
+          version: "kv-delivery-v4-auth-fix",
           book: BOOK_KEY
         }, 200, env);
       }
