@@ -29,5 +29,5 @@ s.textContent="جاري تجميع النسخة…";const r=await fetch("/api/ad
 fileEl.addEventListener("change",async()=>{const file=fileEl.files[0];if(!file)return;try{await saveState(keyEl.value.trim(),file);s.className="status";s.textContent="تم حفظ الملف محليًا. يمكنك متابعة الرفع حتى لو أعاد الهاتف تحميل الصفحة."}catch{}})
 keyEl.addEventListener("input",async()=>{try{const st=await getState();if(st.file)await saveState(keyEl.value.trim(),st.file)}catch{}})
 btn.addEventListener("click",async()=>{const st=await getState().catch(()=>({}));await upload(fileEl.files[0]||st.file,keyEl.value.trim()||st.key||"")});
-(async()=>{try{const st=await getState();if(st.key)keyEl.value=st.key;if(st.file)s.textContent="تم استعادة الملف المحفوظ. اضغط «رفع النسخة الآن» للمتابعة."}catch{}})();
+(async()=>{try{const st=await getState();if(st.key)keyEl.value=st.key;if(st.file){s.textContent="تم استعادة الملف المحفوظ. سيستأنف الرفع تلقائيًا…";setTimeout(()=>upload(st.file,keyEl.value.trim()||st.key||""),500)}}catch{}})();
 </script></body></html>
