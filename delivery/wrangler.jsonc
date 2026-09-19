@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "smart-encyclopedias-delivery",
-  "main": "worker.js",
+  "main": "worker.mjs",
   "compatibility_date": "2026-09-01",
   "d1_databases": [
     {
