@@ -10,9 +10,17 @@ function origin(env) {
   return env.PUBLIC_ORIGIN || "https://moh1442010-arch.github.io/smart-encyclopedias-platform";
 }
 
+function corsOrigin(env) {
+  try {
+    return new URL(origin(env)).origin;
+  } catch {
+    return "https://moh1442010-arch.github.io";
+  }
+}
+
 function headers(env, extra = {}) {
   return {
-    "access-control-allow-origin": origin(env),
+    "access-control-allow-origin": corsOrigin(env),
     "access-control-allow-methods": ALLOW_METHODS,
     "access-control-allow-headers": "content-type, authorization, x-admin-key, x-device-id",
     "vary": "Origin",
