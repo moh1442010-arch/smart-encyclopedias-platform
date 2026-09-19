@@ -27,3 +27,5 @@ jobs:
       - name: Deploy to Cloudflare Workers
         working-directory: delivery
         run: npx --yes wrangler@4 deploy --config wrangler.jsonc
+
+# Trigger deployment after repository secret setup.
