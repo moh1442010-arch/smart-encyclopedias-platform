@@ -264,8 +264,15 @@ async function download(request, env, token) {
   let contentLength = null;
   const metadata = stored.metadata && typeof stored.metadata === "object" ? stored.metadata : null;
 
-  if (metadata?.chunked === true) {
-    const manifest = JSON.parse(stored.value);
+  // The finalized KV object is a plain-text manifest. We intentionally avoid
+  // KV custom metadata here because the PDF is already stored safely as chunks.
+  let manifest = null;
+  try {
+    const parsed = JSON.parse(stored.value);
+    if (parsed && parsed.chunked === true) manifest = parsed;
+  } catch {}
+
+  if (manifest) {
     if (!manifest.session || !Number.isInteger(manifest.total) || !Number.isInteger(manifest.size)) {
       return json({ ok: false, error: "invalid_book_manifest" }, 500, env);
     }
@@ -401,9 +408,10 @@ async function finalizeUpload(request, env, url) {
     pages: 260
   });
 
-  await env.PAID_BOOKS.put(BOOK_KEY, manifest, {
-    metadata: { chunked: true, contentType: "application/pdf", pages: 260, size }
-  });
+  // Store only the tiny manifest as the canonical book key.
+  // No custom KV metadata is used: this removes the last known source of
+  // finalize-time 500s while keeping the PDF itself in 1 MiB KV chunks.
+  await env.PAID_BOOKS.put(BOOK_KEY, manifest);
 
   return json({ ok: true, key: BOOK_KEY, size, pages: 260, message: "paid_book_uploaded" }, 201, env);
 }
@@ -472,7 +480,7 @@ export default {
           ok: true,
           service: "smart-encyclopedias-delivery",
           status: "online",
-          version: "kv-delivery-v4-auth-fix",
+          version: "kv-delivery-v5-manifest-no-metadata",
           book: BOOK_KEY
         }, 200, env);
       }
@@ -516,4 +524,4 @@ export default {
   }
 };
 
-// Deployment trigger: finalize KV upload reliability fix.
+// Deployment trigger: finalize KV manifest without custom metadata.
