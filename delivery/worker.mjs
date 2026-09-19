@@ -257,9 +257,6 @@ async function download(request, env, token) {
     return json({ ok: false, error: "invalid_book_key" }, 400, env);
   }
 
-  const stored = await env.PAID_BOOKS.getWithMetadata(BOOK_KEY, { type: "text" });
-  if (!stored?.value) return json({ ok: false, error: "file_not_found" }, 404, env);
-
   let object = null;
   let contentLength = null;
 
