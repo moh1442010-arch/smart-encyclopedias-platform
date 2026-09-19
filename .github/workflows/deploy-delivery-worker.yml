@@ -31,3 +31,4 @@ jobs:
 
 # Trigger deployment after repository secret setup.
 # Retrigger latest worker source after chunked-upload fix.
+# CORS origin hotfix deployment trigger.
