@@ -1,7 +1,7 @@
 const ALLOW_METHODS = "GET, POST, PUT, OPTIONS";
 const MAX_TTL_DAYS = 30;
 const DEFAULT_MAX_DOWNLOADS = 3;
-const BOOK_KEY = "paid/encyclopedia-250-pages.pdf";
+const BOOK_KEY = "paid/encyclopedia-260-pages.pdf";
 
 function origin(env) {
   return env.PUBLIC_ORIGIN || "https://moh1442010-arch.github.io/smart-encyclopedias-platform";
@@ -303,7 +303,7 @@ async function uploadBook(request, env) {
     {
       metadata: {
         contentType: "application/pdf",
-        pages: 250
+        pages: 260
       }
     }
   );
@@ -339,7 +339,7 @@ button{margin-top:18px;border:0;background:#111;color:#fff;font-weight:800}
 <main class="wrap">
 <section class="card">
 <h1>📚 رفع الموسوعة المدفوعة</h1>
-<p class="small">رفع النسخة الكاملة المحمية ذات 250 صفحة إلى Workers KV.</p>
+<p class="small">رفع النسخة الكاملة المحمية ذات 260 صفحة إلى Workers KV.</p>
 <form id="f">
 <label>مفتاح المشرف</label>
 <input id="key" type="password" autocomplete="off" required>
@@ -425,7 +425,7 @@ export default {
           ok: true,
           service: "smart-encyclopedias-delivery",
           status: "online",
-          version: "kv-delivery-v2",
+          version: "kv-delivery-v3",
           book: BOOK_KEY
         }, 200, env);
       }
