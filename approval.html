@@ -7,7 +7,7 @@
 <title>اعتماد الدفع وتسليم الترخيص | منصة الموسوعات الذكية</title>
 <link rel="stylesheet" href="assets/styles.css">
 <style>
-body{min-height:100vh}.wrap{max-width:760px;margin:32px auto;padding:18px}.card{background:#fff;border-radius:22px;padding:26px;box-shadow:0 12px 40px rgba(0,0,0,.08);margin-bottom:18px}label{display:block;font-weight:800;margin:13px 0 6px}input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #ccc;border-radius:10px;font:inherit}.primary{margin-top:18px;padding:14px 20px;border:0;border-radius:12px;background:#111;color:#fff;font:inherit;font-weight:800;cursor:pointer}.note{padding:14px;border-radius:12px;background:#fff8e8;line-height:1.9}.status{margin-top:16px;padding:14px;border-radius:12px;background:#f5f5f5;line-height:1.9}.ok{background:#eef9f0}.bad{background:#fff2f2}.result{display:none}.key{font-family:monospace;direction:ltr;text-align:left;background:#f5f5f5;padding:12px;border-radius:10px;word-break:break-all}.link{display:block;margin-top:10px;word-break:break-all}.copy{margin-top:10px;padding:10px 14px;border:0;border-radius:10px;cursor:pointer;font:inherit}.small{color:#666;font-size:.92rem;line-height:1.8}
+body{min-height:100vh}.wrap{max-width:760px;margin:32px auto;padding:18px}.card{background:#fff;border-radius:22px;padding:26px;box-shadow:0 12px 40px rgba(0,0,0,.08);margin-bottom:18px}label{display:block;font-weight:800;margin:13px 0 6px}input{width:100%;box-sizing:border-box;padding:13px;border:1px solid #ccc;border-radius:10px;font:inherit}.primary{margin-top:18px;padding:14px 20px;border:0;border-radius:12px;background:#111;color:#fff;font:inherit;font-weight:800;cursor:pointer}.note{padding:14px;border-radius:12px;background:#fff8e8;line-height:1.9}.status{margin-top:16px;padding:14px;border-radius:12px;background:#f5f5f5;line-height:1.9}.ok{background:#eef9f0}.bad{background:#fff2f2}.result{display:none}.key{font-family:monospace;direction:ltr;text-align:left;background:#f5f5f5;padding:12px;border-radius:10px;word-break:break-all}.link{display:block;margin-top:10px;word-break:break-all}.copy{margin-top:10px;padding:10px 14px;border:0;border-radius:10px;cursor:pointer;font:inherit}.small{color:#666;font-size:.92rem;line-height:1.8}.step{padding:10px 12px;margin:8px 0;border-radius:10px;background:#f7f7f7}.security{margin-top:18px;padding-top:14px;border-top:1px solid #eee}
 </style>
 </head>
 <body>
@@ -15,47 +15,110 @@ body{min-height:100vh}.wrap{max-width:760px;margin:32px auto;padding:18px}.card{
 <section class="card">
 <div class="eyebrow">منطقة صاحب الموسوعة</div>
 <h1>اعتماد الدفع ثم إنشاء المفتاح والتسليم</h1>
-<p>لا تستخدم هذه الصفحة إلا بعد التحقق الفعلي من وصول المبلغ. اعتمادك هنا ينشئ ترخيصاً نشطاً ورابط تسليم مؤقتاً.</p>
-<div class="note">🔐 مفتاح المشرف لا يُحفظ في الصفحة ولا يُرسل إلى أي مكان إلا إلى Worker التسليم عبر اتصال HTTPS. لا تضع المفتاح داخل رابط أو رسالة للزبون.</div>
+<p>بعد التحقق الفعلي من وصول المبلغ، أدخل <strong>3 بيانات فقط</strong> ثم نفّذ الاعتماد.</p>
+<div class="step">1️⃣ اسم المشتري</div>
+<div class="step">2️⃣ بريد المشتري</div>
+<div class="step">3️⃣ رقم الترخيص</div>
+<div class="note">🔐 مفتاح المشرف مطلوب للأمان فقط. لا يُحفظ في الصفحة ولا يُرسل إلا إلى Worker التسليم عبر HTTPS. لا ترسله للزبون.</div>
+
 <form id="form">
-<label for="adminKey">مفتاح المشرف LICENSE_ADMIN_KEY</label><input id="adminKey" type="password" autocomplete="off" required>
-<label for="licenseId">رقم الترخيص / المفتاح الذي تريد إصداره</label><input id="licenseId" maxlength="80" placeholder="مثال: ENC-2026-000001" required>
-<label for="orderId">رقم الطلب</label><input id="orderId" maxlength="80" required>
-<label for="customerName">اسم المشتري</label><input id="customerName" maxlength="120" required>
-<label for="customerEmail">بريد المشتري</label><input id="customerEmail" type="email" maxlength="200" required>
-<label for="objectKey">مفتاح النسخة داخل KV</label><input id="objectKey" maxlength="300" value="paid/encyclopedia-260-pages.pdf" required>
-<label for="expiresDays">صلاحية رابط التسليم بالأيام</label><input id="expiresDays" type="number" min="1" max="30" value="30">
-<label for="maxDownloads">عدد مرات التنزيل</label><input id="maxDownloads" type="number" min="1" max="10" value="3">
+<label for="customerName">اسم المشتري</label>
+<input id="customerName" maxlength="120" autocomplete="name" required>
+
+<label for="customerEmail">بريد المشتري</label>
+<input id="customerEmail" type="email" maxlength="200" autocomplete="email" required>
+
+<label for="licenseId">رقم الترخيص</label>
+<input id="licenseId" maxlength="80" placeholder="مثال: ENC-2026-000001" required>
+
+<div class="security">
+<label for="adminKey">مفتاح المشرف LICENSE_ADMIN_KEY</label>
+<input id="adminKey" type="password" autocomplete="off" required>
+</div>
+
 <button class="primary" type="submit">✅ اعتماد الدفع وإنشاء الترخيص</button>
 <div id="status" class="status" role="status" aria-live="polite"></div>
 </form>
 </section>
+
 <section id="result" class="card result">
 <h2>تم إنشاء التسليم</h2>
-<p><strong>مفتاح/رقم الترخيص:</strong></p><div id="key" class="key"></div><button class="copy" data-copy="key">نسخ المفتاح</button>
-<p><strong>رابط تنزيل النسخة:</strong></p><a id="delivery" class="link" target="_blank" rel="noopener"></a><button class="copy" data-copy="delivery">نسخ رابط التسليم</button>
-<p class="small">المفتاح هو رقم الترخيص. رابط التسليم هو الرابط السري الذي يفتح صفحة التحقق والتنزيل. لا ترسل مفتاح المشرف للزبون.</p>
+<p><strong>مفتاح/رقم الترخيص:</strong></p>
+<div id="key" class="key"></div>
+<button class="copy" data-copy="key">نسخ المفتاح</button>
+<p><strong>رابط تنزيل النسخة:</strong></p>
+<a id="delivery" class="link" target="_blank" rel="noopener"></a>
+<button class="copy" data-copy="delivery">نسخ رابط التسليم</button>
+<p class="small">تم ربط الترخيص تلقائياً بالنسخة الكاملة ذات 260 صفحة. لا ترسل للزبون مفتاح المشرف.</p>
 </section>
 </main>
+
 <script>
 const API='https://smart-encyclopedias-delivery.moh1442010.workers.dev';
+const BOOK_KEY='paid/encyclopedia-260-pages.pdf';
 const $=id=>document.getElementById(id);
+
+function makeOrderId(){
+ const d=new Date();
+ const stamp=d.toISOString().replace(/[-:TZ.]/g,'').slice(0,14);
+ const suffix=Math.random().toString(36).slice(2,7).toUpperCase();
+ return 'ORD-'+stamp+'-'+suffix;
+}
+
 $('form').addEventListener('submit',async e=>{
  e.preventDefault();
- const status=$('status'); status.className='status'; status.textContent='جارٍ اعتماد الدفع وإنشاء الترخيص…';
+ const status=$('status');
+ status.className='status';
+ status.textContent='جارٍ اعتماد الدفع وإنشاء الترخيص…';
+
  const adminKey=$('adminKey').value.trim();
- const body={approved:true,licenseId:$('licenseId').value.trim(),orderId:$('orderId').value.trim(),customerName:$('customerName').value.trim(),customerEmail:$('customerEmail').value.trim(),objectKey:$('objectKey').value.trim(),expiresDays:Number($('expiresDays').value||30),maxDownloads:Number($('maxDownloads').value||3),approvedBy:'owner'};
+ const body={
+  approved:true,
+  licenseId:$('licenseId').value.trim(),
+  orderId:makeOrderId(),
+  customerName:$('customerName').value.trim(),
+  customerEmail:$('customerEmail').value.trim(),
+  objectKey:BOOK_KEY,
+  expiresDays:30,
+  maxDownloads:3,
+  approvedBy:'owner'
+ };
+
  try{
-  const r=await fetch(API+'/api/license/create',{method:'POST',headers:{'content-type':'application/json','x-admin-key':adminKey,'authorization':'Bearer '+adminKey},body:JSON.stringify(body),cache:'no-store'});
+  const r=await fetch(API+'/api/license/create',{
+   method:'POST',
+   headers:{
+    'content-type':'application/json',
+    'x-admin-key':adminKey,
+    'authorization':'Bearer '+adminKey
+   },
+   body:JSON.stringify(body),
+   cache:'no-store'
+  });
   const d=await r.json().catch(()=>({}));
   if(!r.ok||!d.ok) throw new Error(d.error||'approval_failed');
-  status.className='status ok'; status.textContent='تم اعتماد الدفع وإنشاء الترخيص بنجاح. الآن أرسل للزبون رابط التسليم فقط، ولا ترسل مفتاح المشرف.';
+
+  status.className='status ok';
+  status.textContent='تم اعتماد الدفع وإنشاء الترخيص بنجاح. أرسل للزبون رابط التسليم فقط.';
   $('key').textContent=d.licenseId;
-  $('delivery').href=d.deliveryUrl; $('delivery').textContent=d.deliveryUrl;
+  $('delivery').href=d.deliveryUrl;
+  $('delivery').textContent=d.deliveryUrl;
   $('result').style.display='block';
- }catch(err){ status.className='status bad'; status.textContent='لم يتم التسليم: '+err.message; }
+ }catch(err){
+  status.className='status bad';
+  status.textContent='لم يتم التسليم: '+err.message;
+ }
 });
-document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',async()=>{const el=$(b.dataset.copy); const text=el.href||el.textContent; try{await navigator.clipboard.writeText(text);b.textContent='تم النسخ ✓';setTimeout(()=>b.textContent='نسخ',1200)}catch(e){}}));
+
+document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',async()=>{
+ const el=$(b.dataset.copy);
+ const text=el.href||el.textContent;
+ try{
+  await navigator.clipboard.writeText(text);
+  b.textContent='تم النسخ ✓';
+  setTimeout(()=>b.textContent='نسخ',1200);
+ }catch(e){}
+}));
 </script>
 </body>
 </html>
