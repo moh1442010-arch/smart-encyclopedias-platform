@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS orders (
   product TEXT NOT NULL,
   currency TEXT NOT NULL,
   amount INTEGER NOT NULL,
+  quantity INTEGER NOT NULL DEFAULT 1,
   status TEXT NOT NULL DEFAULT 'pending',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
