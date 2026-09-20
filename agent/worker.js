@@ -363,7 +363,7 @@ export default {
     }
     if (url.pathname === "/api/order") {
       if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
-      try { return await createOrder(request, env); catch (error) { return json({ ok: false, error: env?.DEBUG ? String(error?.message || error) : "order_create_failed" }, 500); }
+      try { return await createOrder(request, env); } catch (error) { return json({ ok: false, error: env?.DEBUG ? String(error?.message || error) : "order_create_failed" }, 500); }
     }\n    if (url.pathname !== "/api/agent") return json({ ok: true, service: "smart-agent" });
     if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
     try {
