@@ -257,10 +257,44 @@ async function createOrder(request, env) {
   return json({ ok: true, orderId: id, status: "pending", quantity, amount, currency }, 201);
 }
 
+const DELIVERY_API = "https://smart-encyclopedias-delivery.moh1442010.workers.dev";
+const BUYER_SYSTEM_PROMPT = `أنت الوكيل الذكي الخاص بالمشتري المرخّص لنسخة «الموسوعة الشاملة في الذكاء الاصطناعي باللغة العربية».
+هذه الجلسة لا تُفتح إلا بعد التحقق من ترخيص المشتري. النسخة المعتمدة هي الإصدار الكامل ذي 260 صفحة، والوكيل المرفق بها مساعد تعليمي.
+لا تكشف رمز الترخيص أو أي بيانات داخلية. لا تدّع أنك قرأت النص الكامل للكتاب إذا لم يُقدَّم لك نصه في السياق. اشرح مفاهيم الذكاء الاصطناعي وساعد المشتري تعليمياً، وإذا احتاج السؤال معلومة دقيقة من صفحة غير موجودة في السياق فاطلب منه نص الصفحة/المقطع ولا تخترع محتوى. لا تغيّر الترخيص ولا تتجاوز ربط الجهاز. أجب بالعربية بصورة ودودة ومهنية.`;
+async function validateBuyerLicense(token, deviceId) {
+  const t=String(token||"").trim(), d=String(deviceId||"").trim();
+  if(!t||!d) return {ok:false,error:"missing_license_context"};
+  const r=await fetch(DELIVERY_API+"/api/delivery/info?token="+encodeURIComponent(t),{headers:{"x-device-id":d},cache:"no-store"});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok||!data?.ok||!data?.active) return {ok:false,error:data?.error||"license_inactive"};
+  return {ok:true,buyer:String(data.buyer||""),edition:"encyclopedia-260-pages"};
+}
+async function buyerAgent(request,env){
+  const body=await request.json().catch(()=>null), message=String(body?.message||"").trim(), token=String(body?.token||"").trim(), deviceId=String(body?.deviceId||"").trim(), history=Array.isArray(body?.history)?body.history:[];
+  if(!message||!token||!deviceId) return json({ok:false,error:"missing_buyer_context"},400);
+  const lic=await validateBuyerLicense(token,deviceId);
+  if(!lic.ok) return json({ok:false,error:lic.error},403);
+  if(!env.GEMINI_API_KEY) return json({ok:false,error:"agent_not_configured"},503);
+  const model=env.GEMINI_MODEL||"gemini-2.5-flash";
+  const endpoint=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
+  const contents=history.slice(-12).map(m=>({role:(m?.role==="model"||m?.role==="assistant")?"model":"user",parts:[{text:String(m?.text||"")}] })).filter(m=>m.parts[0].text);
+  if(!contents.length||contents.at(-1)?.parts?.[0]?.text!==message) contents.push({role:"user",parts:[{text:message}]});
+  const system=BUYER_SYSTEM_PROMPT+"\\nالنسخة المرتبطة بهذه الجلسة: "+lic.edition+"\\nعدد صفحات النسخة: 260.";
+  const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:0.2}})});
+  if(!response.ok) return json({ok:false,error:"model_request_failed"},502);
+  const data=await response.json(), reply=data?.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("").trim();
+  if(!reply) return json({ok:false,error:"empty_model_response"},502);
+  return json({ok:true,reply,buyer:lic.buyer,edition:lic.edition,pages:260});
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return corsPreflight();
     const url = new URL(request.url);
+    if (url.pathname === "/api/buyer-agent") {
+      if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+      try { return await buyerAgent(request, env); } catch (error) { return json({ ok:false, error: env?.DEBUG ? String(error?.message || error) : "buyer_agent_failed" }, 500); }
+    }
     if (url.pathname === "/api/order") {\n      if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);\n      try { return await createOrder(request, env); } catch (error) { return json({ ok: false, error: env?.DEBUG ? String(error?.message || error) : "order_create_failed" }, 500); }\n    }\n    if (url.pathname !== "/api/agent") return json({ ok: true, service: "smart-agent" });
     if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
     try {
