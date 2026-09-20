@@ -131,6 +131,20 @@ async function checkDevice(request, env, row, bindIfEmpty = false) {
   return { ok: true };
 }
 
+async function ensureLicenseTable(env) {
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS licenses (
+      id TEXT PRIMARY KEY, order_id TEXT, customer_name TEXT NOT NULL,
+      customer_email TEXT NOT NULL, object_key TEXT NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE, status TEXT NOT NULL DEFAULT 'active',
+      expires_at TEXT NOT NULL, max_downloads INTEGER NOT NULL DEFAULT 3,
+      download_count INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      last_download_at TEXT, payment_verified_at TEXT, approved_by TEXT,
+      device_hash TEXT, device_bound_at TEXT
+    )
+  `).run();
+}
+
 async function createLicense(request, env) {
   if (!isAdmin(request, env)) {
     return json({ ok: false, error: "payment_approval_required" }, 403, env);
@@ -149,7 +163,9 @@ async function createLicense(request, env) {
     return json({ ok: false, error: "explicit_payment_approval_required" }, 400, env);
   }
 
-  const days = clampInt(body.expiresDays, 1, MAX_TTL_DAYS, 7);
+  await ensureLicenseTable(env);
+
+  const days = clampInt(body.expiresDays, 1, MAX_TTL_DAYS, 30);
   const maxDownloads = clampInt(
     body.maxDownloads, 1, 10, DEFAULT_MAX_DOWNLOADS
   );
@@ -483,7 +499,7 @@ export default {
           ok: true,
           service: "smart-encyclopedias-delivery",
           status: "online",
-          version: "kv-delivery-v6-d1-manifest",
+          version: "kv-delivery-v7-hardened-approval",
           book: BOOK_KEY
         }, 200, env);
       }
