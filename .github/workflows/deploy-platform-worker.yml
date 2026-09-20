@@ -1,0 +1,27 @@
+name: Deploy platform Worker
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "agent/**"
+      - "wrangler.jsonc"
+      - ".github/workflows/deploy-platform-worker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: b2f59f3997ad2918941d4d261370d1b4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Deploy platform Worker
+        run: npx --yes wrangler@4 deploy --config wrangler.jsonc
