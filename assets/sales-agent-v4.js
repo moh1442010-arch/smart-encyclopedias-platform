@@ -8,7 +8,7 @@
     var form=document.getElementById('agentForm'),input=document.getElementById('agentInput'),log=document.getElementById('agentLog'),status=document.getElementById('agentStatus');
     if(!form||!input||!log)return;
     var C=window.STORE_CONFIG||{};
-    var P={sdg:Number(C.reservationOffer||120000),sdgBase:Number(C.price||150000),usd:Number(C.foreignCurrencyDiscountedPrice||16),usdBase:Number(C.foreignCurrencyPrice||19),limit:Number(C.reservationLimit||200),pages:Number(C.pages||250),preview:Number(C.previewPages||20)};
+    var P={sdg:Number(C.reservationOffer||120000),sdgBase:Number(C.price||150000),usd:Number(C.foreignCurrencyDiscountedPrice||16),usdBase:Number(C.foreignCurrencyPrice||19),limit:Number(C.reservationLimit||200),pages:Number(C.pages||260),preview:Number(C.previewPages||20)};
     var S={intent:'unknown',audience:'',goal:'',qty:null,currency:'',stage:'discover',score:0,preview:false};
     function norm(s){return String(s||'').trim().toLowerCase().replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/[٠-٩]/g,function(d){return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d));});}
     function add(t,kind){var d=document.createElement('div');d.className='agent-item '+(kind||'done');d.textContent=t;log.appendChild(d);log.scrollTop=log.scrollHeight;}
