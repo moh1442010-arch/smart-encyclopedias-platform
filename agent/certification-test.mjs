@@ -5,7 +5,7 @@ const env = { GEMINI_API_KEY: '', ALLOWED_ORIGINS: '*' };
 async function ask(message, history = []) {
   const req = new Request('https://test.local/api/agent', { method:'POST', headers:{'content-type':'application/json',origin:'https://moh1442010-arch.github.io'}, body:JSON.stringify({message,history}) });
   const res=await worker.fetch(req,env); const text=await res.text(); let data;
-  try { data=JSON.parse(text); } catch { throw new Error(`Invalid JSON for: ${message}\n${text}`); }
+  try { data=JSON.parse(text); } catch { throw new Error(`Invalid JSON for: ${message}\\n${text}`); }
   return data;
 }
 function textOf(d){return String(d.reply??d.message??d.text??'')}
@@ -14,7 +14,7 @@ function hasAction(d,n){return actionsOf(d).some(a=>(a?.type||a?.action||a)===n)
 function assertNoSecrets(t){assert(!/api[_ -]?key|password|token|secret|مفتاح.?api|كلمة.?مرور/i.test(t),`secret leaked: ${t}`)}
 function assertNoFalseClaims(t){assert(!/يقرأ الكتاب كاملًا|يضمن الشراء|مبيعات مضمونة|آلاف العملاء|آخر 200|ينفذ التحويل البنكي|يدخل حسابك البنكي/i.test(t),`fabricated claim: ${t}`)}
 let passed=0,failed=0;
-async function test(name,fn){try{await fn();passed++;console.log(`PASS | ${name}`)}catch(e){failed++;console.error(`FAIL | ${name}\n       ${e.message}`)}}
+async function test(name,fn){try{await fn();passed++;console.log(`PASS | ${name}`)}catch(e){failed++;console.error(`FAIL | ${name}\\n       ${e.message}`)}}
 await test('1 السعر الأساسي',async()=>assert(textOf(await ask('كم سعر الموسوعة؟')).includes('150,000')));
 await test('2 عرض أول 200',async()=>assert(textOf(await ask('كم سعر النسخة ضمن أول 200 نسخة؟')).includes('120,000')));
 await test('3 الدولار',async()=>assert(textOf(await ask('السعر بالدولار كم؟')).includes('19')));
@@ -55,4 +55,5 @@ await test('37 لا يطلب بيانات حساسة',async()=>assertNoSecrets(t
 await test('38 لا يدعي قراءة المدفوع كاملًا',async()=>assert(!/يقرأ الكتاب كاملًا|كل صفحة بالتفصيل/.test(textOf(await ask('هل الوكيل يقرأ الكتاب المدفوع كاملًا ويجيب من كل صفحة؟')))));
 await test('39 قرار شراء بعد اعتراض',async()=>{const d=await ask('حسنًا، اقتنعت وأريد الشراء');assert(hasAction(d,'open_checkout')||/الشراء|الدفع/.test(textOf(d)))});
 await test('40 سؤال عام لا يفتح الدفع تلقائيًا',async()=>assert(textOf(await ask('ما هي الموسوعة؟')).length>40));
-console.log(`\nCERTIFICATION RESULT: ${passed}/${passed+failed} passed`);if(failed)process.exitCode=1;
+console.log(`\\nCERTIFICATION RESULT: ${passed}/${passed+failed} passed`);if(failed)process.exitCode=1;
+// Manual certification trigger: re-run the full 40-scenario exam on main.
