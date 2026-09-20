@@ -343,7 +343,7 @@ async function buyerAgent(request,env){
   const system=BUYER_SYSTEM_PROMPT+`\nالمشتري المصرح له بهذه الجلسة: ${lic.buyer}. الإصدار: الموسوعة المصححة v1.4 — 260 صفحة. استخدم ملف الموسوعة المرفق كمصدر المعرفة الأساسي.`;
   const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({
     systemInstruction:{parts:[{text:system}]},
-    contents:[{role:"user",parts:[{fileData:{mimeType:"application/pdf",fileUri:fileUri}}]},...contents],
+    contents:[{role:"user",parts:[{file_data:{mime_type:"application/pdf",file_uri:fileUri}}]},...contents],
     generationConfig:{temperature:0.15}
   })});
   if(!response.ok)return json({ok:false,error:"model_request_failed"},502);
