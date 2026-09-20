@@ -43,11 +43,6 @@ window.STORE_CONFIG = {
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load);else load();
 })('agentApiAdapter','assets/agent-api-v2.js');
 
-(function loadFinalSalesAgent(){
-  function load(){if(document.getElementById(id))return;var s=document.createElement('script');s.id=id;s.src='assets/sales-agent-v4.js';s.defer=true;document.head.appendChild(s);}
-  var id='finalSalesAgent';
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load);else load();
-})();
 
 (function loadQAFixes(){
   function load(){if(document.getElementById('qaFixes'))return;var s=document.createElement('script');s.id='qaFixes';s.src='assets/qa-fixes.js';s.defer=true;document.head.appendChild(s);}
