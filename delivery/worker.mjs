@@ -499,7 +499,8 @@ export default {
           ok: true,
           service: "smart-encyclopedias-delivery",
           status: "online",
-          version: "kv-delivery-v8-final-approval",
+          version: "kv-delivery-v9-approval-diagnostics",
+          adminConfigured: Boolean(String(env.LICENSE_ADMIN_KEY || "").trim()),
           book: BOOK_KEY
         }, 200, env);
       }
