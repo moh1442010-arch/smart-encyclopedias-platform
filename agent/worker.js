@@ -1,7 +1,7 @@
 const SYSTEM_PROMPT = `أنت الوكيل الذكي ومسؤول المبيعات الودود لمنصة الموسوعات الذكية.
 هدفك تحويل الزائر من فضولي إلى مقتنع ثم مشتري عندما تكون الموسوعة مناسبة له، عبر حوار استشاري صادق: افهم الحاجة، اربط القيمة بالحاجة، عالج الاعتراض، ثم اقترح خطوة واحدة واضحة. لا تكذب ولا تختلق شهادات أو أعداد مبيعات أو ضمانات أو استعجالاً زائفاً.
 
-المعلومات الثابتة: الموسوعة الكاملة 250 صفحة، والمعاينة 20 صفحة حقيقية. السعر الأساسي لغير الطلاب 150000 جنيه سوداني أو 19 دولاراً. عرض أول 200 نسخة لغير الطلاب فقط بسعر 120000 جنيه سوداني أو 16 دولاراً. الطالب بعد إثبات صفته يحصل على 120000 جنيه سوداني أو 16 دولاراً بشكل ثابت في جميع الأوقات، ولا يرتبط هذا السعر بانتهاء عرض أول 200 نسخة، ولا يُجمع مع خصم آخر. النسخة الكاملة تشمل الوكيل الذكي.
+المعلومات الثابتة: الموسوعة الكاملة 260 صفحة، والمعاينة 20 صفحة حقيقية. السعر الأساسي لغير الطلاب 150000 جنيه سوداني أو 19 دولاراً. عرض أول 200 نسخة لغير الطلاب فقط بسعر 120000 جنيه سوداني أو 16 دولاراً. الطالب بعد إثبات صفته يحصل على 120000 جنيه سوداني أو 16 دولاراً بشكل ثابت في جميع الأوقات، ولا يرتبط هذا السعر بانتهاء عرض أول 200 نسخة، ولا يُجمع مع خصم آخر. النسخة الكاملة تشمل الوكيل الذكي.
 
 قاعدة الدفع والتسليم الإلزامية: أنت لا تتحقق من وصول المال بنفسك، ولا تعتبر رسالة العميل أو صورة التحويل اعتماداً نهائياً، ولا تنشئ ترخيصاً ولا رابط تسليم ولا ترسل النسخة. بعد أن يقول العميل إنه دفع، قل له إن الطلب دخل مرحلة مراجعة الدفع وأن صاحب الموسوعة هو من يعتمد العملية. لا تعده بالتسليم قبل الاعتماد. بعد اعتماد الدفع من صاحب الموسوعة فقط يبدأ إجراء التسليم عبر النظام.
 
@@ -142,7 +142,7 @@ function fallbackAgent(message, history = []) {
   }
 
   if (has(q, "كم صفحة", "كم صفحه", "عدد الصفحات", "صفحة في الموسوعة", "صفحه في الموسوعه")) {
-    return { reply: "الموسوعة الكاملة 250 صفحة، ويمكنك معاينة 20 صفحة حقيقية مجاناً قبل الشراء.", actions: [{ type: "open_preview" }] };
+    return { reply: "الموسوعة الكاملة 260 صفحة، ويمكنك معاينة 20 صفحة حقيقية مجاناً قبل الشراء.", actions: [{ type: "open_preview" }] };
   }
 
   const bulk = salesQuantityReply(message);
@@ -159,7 +159,7 @@ function fallbackAgent(message, history = []) {
   }
 
   if (has(q, "غالي", "مكلف", "معلومات مجانية", "معلومات مجانا", "مجاناً", "مجانا")) {
-    return { reply: "أتفهم الاعتراض. القيمة هنا في تقديم محتوى عربي منظم في موسوعة كاملة من 250 صفحة مع وكيل ذكي للمساعدة، مع إمكانية فحص الجودة بنفسك عبر 20 صفحة حقيقية قبل الدفع. إذا أعجبتك المعاينة يصبح القرار أسهل.", actions: [{ type: "open_preview" }] };
+    return { reply: "أتفهم الاعتراض. القيمة هنا في تقديم محتوى عربي منظم في موسوعة كاملة من 260 صفحة مع وكيل ذكي للمساعدة، مع إمكانية فحص الجودة بنفسك عبر 20 صفحة حقيقية قبل الدفع. إذا أعجبتك المعاينة يصبح القرار أسهل.", actions: [{ type: "open_preview" }] };
   }
 
   if (has(q, "سأفكر", "سافكر", "أفكر", "افكر", "لاحقا", "لاحقاً", "ارجع لاحقا", "أرجع لاحقا")) {
@@ -183,7 +183,7 @@ function fallbackAgent(message, history = []) {
   }
 
   if (has(q, "ما هي الموسوعة", "ما هي الموسوعه", "ما تقدمون", "ماذا تقدمون", "أول مرة", "اول مرة")) {
-    return { reply: "هي موسوعة عربية شاملة في الذكاء الاصطناعي من الصفر إلى الاحتراف، في 250 صفحة، مع 20 صفحة معاينة مجانية، والنسخة الكاملة تشمل وكيلاً ذكياً للمساعدة التعليمية.", actions: [] };
+    return { reply: "هي موسوعة عربية شاملة في الذكاء الاصطناعي من الصفر إلى الاحتراف، في 260 صفحة، مع 20 صفحة معاينة مجانية، والنسخة الكاملة تشمل وكيلاً ذكياً للمساعدة التعليمية.", actions: [] };
   }
 
   if (has(q, "أريد الشراء", "اريد الشراء", "جاهز أشتري", "جاهز اشتري", "اشترِ الآن", "اشتري الآن", "الدفع", "الشراء الآن", "الشراء")) {
@@ -214,11 +214,54 @@ async function callGemini(message, env, history = []) {
   return JSON.parse(text);
 }
 
+async function createOrder(request, env) {
+  const body = await request.json().catch(() => null);
+  const name = String(body?.customerName || "").trim();
+  const email = String(body?.customerEmail || "").trim().toLowerCase();
+  const phone = String(body?.customerPhone || "").trim().slice(0, 40);
+  const currency = String(body?.currency || "").trim().toUpperCase();
+  const amount = Number.parseInt(body?.amount, 10);
+  const quantity = Math.max(1, Math.min(2000, Number.parseInt(body?.quantity, 10) || 1));
+  if (name.length < 2 || name.length > 120 || !validEmail(email) ||
+      !["SDG", "USD"].includes(currency) || !Number.isInteger(amount) || amount < 1) {
+    return json({ ok: false, error: "invalid_order_data" }, 400);
+  }
+
+  const id = "ORD-" + new Date().getFullYear() + "-" + crypto.randomUUID().replaceAll("-", "").slice(0, 10).toUpperCase();
+
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id TEXT PRIMARY KEY,
+      customer_name TEXT NOT NULL,
+      customer_email TEXT NOT NULL,
+      customer_phone TEXT,
+      product TEXT NOT NULL,
+      currency TEXT NOT NULL,
+      amount INTEGER NOT NULL,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `).run();
+
+  try {
+    await env.DB.prepare("ALTER TABLE orders ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1").run();
+  } catch {}
+
+  await env.DB.prepare(`
+    INSERT INTO orders
+      (id, customer_name, customer_email, customer_phone, product, currency, amount, quantity, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+  `).bind(id, name, email, phone || null, "encyclopedia-260-pages", currency, amount, quantity).run();
+
+  return json({ ok: true, orderId: id, status: "pending", quantity, amount, currency }, 201);
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return corsPreflight();
     const url = new URL(request.url);
-    if (url.pathname !== "/api/agent") return json({ ok: true, service: "smart-agent" });
+    if (url.pathname === "/api/order") {\n      if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);\n      try { return await createOrder(request, env); } catch (error) { return json({ ok: false, error: env?.DEBUG ? String(error?.message || error) : "order_create_failed" }, 500); }\n    }\n    if (url.pathname !== "/api/agent") return json({ ok: true, service: "smart-agent" });
     if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
     try {
       const body = await request.json();
