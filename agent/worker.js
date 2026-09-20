@@ -259,32 +259,98 @@ async function createOrder(request, env) {
 
 const DELIVERY_API = "https://smart-encyclopedias-delivery.moh1442010.workers.dev";
 const BUYER_SYSTEM_PROMPT = `أنت الوكيل الذكي الخاص بالمشتري المرخّص لنسخة «الموسوعة الشاملة في الذكاء الاصطناعي باللغة العربية».
-هذه الجلسة لا تُفتح إلا بعد التحقق من ترخيص المشتري. النسخة المعتمدة هي الإصدار الكامل ذي 260 صفحة، والوكيل المرفق بها مساعد تعليمي.
-لا تكشف رمز الترخيص أو أي بيانات داخلية. لا تدّع أنك قرأت النص الكامل للكتاب إذا لم يُقدَّم لك نصه في السياق. اشرح مفاهيم الذكاء الاصطناعي وساعد المشتري تعليمياً، وإذا احتاج السؤال معلومة دقيقة من صفحة غير موجودة في السياق فاطلب منه نص الصفحة/المقطع ولا تخترع محتوى. لا تغيّر الترخيص ولا تتجاوز ربط الجهاز. أجب بالعربية بصورة ودودة ومهنية.`;
-async function validateBuyerLicense(token, deviceId) {
-  const t=String(token||"").trim(), d=String(deviceId||"").trim();
-  if(!t||!d) return {ok:false,error:"missing_license_context"};
+أنت مرتبط بالموسوعة المصححة v1.4 ذات 260 صفحة. عند الإجابة التعليمية استخدم وثيقة PDF الأصلية المرتبطة بك في Gemini كمصدر المعرفة الأساسي، ولا تعتمد على الذاكرة العامة عندما يكون السؤال عن محتوى الموسوعة.
+افهم بنية الموسوعة كاملة: الأبواب العشرة، الطبقة التطبيقية والمهنية، الطبقة الاحترافية والمشاريع الموسعة، والملحق التصحيحي حتى الصفحة 260.
+اشرح للمشتري بأسلوب عربي واضح ومتدرج: للمبتدئ بالتبسيط، وللمتقدم بالتفصيل. عند السؤال عن صفحة أو باب، ارجع إلى الوثيقة وحدد الموضع قدر الإمكان. عند وجود تعارض بين معرفة عامة وبين الوثيقة، قدّم ما تقوله الوثيقة وبيّن أن الإجابة مبنية على النسخة المصححة v1.4.
+لا تخترع نصاً أو رقماً أو عنواناً غير موجود في الوثيقة. لا تدّع أنك حفظت حرفياً كل كلمة؛ أنت تستخدم الوثيقة الكاملة كمصدر معرفة حي.
+لا تكشف رمز الترخيص أو أي بيانات داخلية. لا تغيّر الترخيص ولا تتجاوز ربط الجهاز. أجب بالعربية بصورة ودودة ومهنية.`;
+
+async function validateBuyerLicense(token,deviceId){
+  const t=String(token||"").trim(),d=String(deviceId||"").trim();
+  if(!t||!d)return{ok:false,error:"missing_license_context"};
   const r=await fetch(DELIVERY_API+"/api/delivery/info?token="+encodeURIComponent(t),{headers:{"x-device-id":d},cache:"no-store"});
   const data=await r.json().catch(()=>({}));
-  if(!r.ok||!data?.ok||!data?.active) return {ok:false,error:data?.error||"license_inactive"};
-  return {ok:true,buyer:String(data.buyer||""),edition:"encyclopedia-260-pages"};
+  if(!r.ok||!data?.ok||!data?.active)return{ok:false,error:data?.error||"license_inactive"};
+  return{ok:true,buyer:String(data.buyer||""),edition:"encyclopedia-260-pages",licenseId:String(data.licenseId||"")};
 }
+
+async function loadPrivatePdf(env){
+  const manifest=await env.DB.prepare("SELECT object_key,session,total,size,pages FROM book_files WHERE id = ?").bind("paid/encyclopedia-260-pages.pdf").first();
+  if(!manifest?.session||!Number.isInteger(Number(manifest.total))||!Number.isInteger(Number(manifest.size))) throw new Error("invalid_book_manifest");
+  const chunks=[];
+  for(let i=0;i<Number(manifest.total);i++){
+    const chunk=await env.PAID_BOOKS.get(`upload/${manifest.session}/${i}`,{type:"arrayBuffer"});
+    if(!chunk) throw new Error("file_chunk_not_found");
+    chunks.push(chunk);
+  }
+  return new Blob(chunks,{type:"application/pdf"});
+}
+
+async function getGeminiFileUri(env){
+  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS ai_knowledge (id TEXT PRIMARY KEY, file_uri TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+  const cached=await env.DB.prepare("SELECT file_uri,expires_at FROM ai_knowledge WHERE id = 'encyclopedia-260-pages'").first();
+  if(cached?.file_uri && cached?.expires_at && Date.parse(cached.expires_at)>Date.now()+5*60*1000) return cached.file_uri;
+  const pdf=await loadPrivatePdf(env);
+  const size=pdf.size;
+  const init=await fetch("https://generativelanguage.googleapis.com/upload/v1beta/files?key="+encodeURIComponent(env.GEMINI_API_KEY),{
+    method:"POST",
+    headers:{
+      "X-Goog-Upload-Protocol":"resumable",
+      "X-Goog-Upload-Command":"start",
+      "X-Goog-Upload-Header-Content-Length":String(size),
+      "X-Goog-Upload-Header-Content-Type":"application/pdf",
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify({file:{display_name:"encyclopedia-260-pages-v1.4.pdf"}})
+  });
+  if(!init.ok) throw new Error("gemini_file_init_failed");
+  const uploadUrl=init.headers.get("x-goog-upload-url")||init.headers.get("X-Goog-Upload-URL")||init.headers.get("location");
+  if(!uploadUrl) throw new Error("gemini_upload_url_missing");
+  const uploaded=await fetch(uploadUrl,{
+    method:"POST",
+    headers:{
+      "Content-Length":String(size),
+      "X-Goog-Upload-Offset":"0",
+      "X-Goog-Upload-Command":"upload, finalize",
+      "Content-Type":"application/pdf"
+    },
+    body:pdf
+  });
+  if(!uploaded.ok) throw new Error("gemini_file_upload_failed");
+  const info=await uploaded.json().catch(()=>null);
+  const uri=info?.file?.uri;
+  if(!uri) throw new Error("gemini_file_uri_missing");
+  const expiresAt=new Date(Date.now()+47*60*60*1000).toISOString();
+  await env.DB.prepare("INSERT OR REPLACE INTO ai_knowledge (id,file_uri,expires_at) VALUES ('encyclopedia-260-pages',?,?)").bind(uri,expiresAt).run();
+  return uri;
+}
+
 async function buyerAgent(request,env){
-  const body=await request.json().catch(()=>null), message=String(body?.message||"").trim(), token=String(body?.token||"").trim(), deviceId=String(body?.deviceId||"").trim(), history=Array.isArray(body?.history)?body.history:[];
-  if(!message||!token||!deviceId) return json({ok:false,error:"missing_buyer_context"},400);
+  const body=await request.json().catch(()=>null);
+  const message=String(body?.message||"").trim();
+  const token=String(body?.token||"").trim();
+  const deviceId=String(body?.deviceId||"").trim();
+  const history=Array.isArray(body?.history)?body.history:[];
+  if(!message||!token||!deviceId)return json({ok:false,error:"missing_buyer_context"},400);
   const lic=await validateBuyerLicense(token,deviceId);
-  if(!lic.ok) return json({ok:false,error:lic.error},403);
-  if(!env.GEMINI_API_KEY) return json({ok:false,error:"agent_not_configured"},503);
+  if(!lic.ok)return json({ok:false,error:lic.error},403);
+  if(!env.GEMINI_API_KEY)return json({ok:false,error:"agent_not_configured"},503);
+  const fileUri=await getGeminiFileUri(env);
   const model=env.GEMINI_MODEL||"gemini-2.5-flash";
   const endpoint=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
-  const contents=history.slice(-12).map(m=>({role:(m?.role==="model"||m?.role==="assistant")?"model":"user",parts:[{text:String(m?.text||"")}] })).filter(m=>m.parts[0].text);
-  if(!contents.length||contents.at(-1)?.parts?.[0]?.text!==message) contents.push({role:"user",parts:[{text:message}]});
-  const system=BUYER_SYSTEM_PROMPT+"\\nالنسخة المرتبطة بهذه الجلسة: "+lic.edition+"\\nعدد صفحات النسخة: 260.";
-  const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents,generationConfig:{temperature:0.2}})});
-  if(!response.ok) return json({ok:false,error:"model_request_failed"},502);
-  const data=await response.json(), reply=data?.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("").trim();
-  if(!reply) return json({ok:false,error:"empty_model_response"},502);
-  return json({ok:true,reply,buyer:lic.buyer,edition:lic.edition,pages:260});
+  const contents=history.slice(-12).map(m=>({role:(m?.role==="model"||m?.role==="assistant")?"model":"user",parts:[{text:String(m?.text||"")}]})).filter(m=>m.parts[0].text);
+  if(!contents.length||contents.at(-1)?.parts?.[0]?.text!==message)contents.push({role:"user",parts:[{text:message}]});
+  const system=BUYER_SYSTEM_PROMPT+`\nالمشتري المصرح له بهذه الجلسة: ${lic.buyer}. الإصدار: الموسوعة المصححة v1.4 — 260 صفحة. استخدم ملف الموسوعة المرفق كمصدر المعرفة الأساسي.`;
+  const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({
+    systemInstruction:{parts:[{text:system}]},
+    contents:[{role:"user",parts:[{fileData:{mimeType:"application/pdf",fileUri:fileUri}}]},...contents],
+    generationConfig:{temperature:0.15}
+  })});
+  if(!response.ok)return json({ok:false,error:"model_request_failed"},502);
+  const data=await response.json();
+  const reply=data?.candidates?.[0]?.content?.parts?.map(p=>p.text||"").join("").trim();
+  if(!reply)return json({ok:false,error:"empty_model_response"},502);
+  return json({ok:true,reply,buyer:lic.buyer,edition:lic.edition,pages:260,knowledgeSource:"encyclopedia-260-pages-v1.4"});
 }
 
 export default {
