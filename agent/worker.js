@@ -109,7 +109,12 @@ function paymentReviewAction(message) {
   const clean = safeActionMessage(message);
   return {
     type: "open_whatsapp",
-    message: `🔔 بلاغ دفع يحتاج مراجعة صاحب الموسوعة\n\nرسالة الزبون:\n${clean}\n\n⚠️ هذا البلاغ لا يعني اعتماد الدفع. يرجى مراجعة العملية واعتمادها يدوياً قبل إنشاء الترخيص أو تسليم النسخة.`
+    message: `🔔 بلاغ دفع يحتاج مراجعة صاحب الموسوعة
+
+رسالة الزبون:
+${clean}
+
+⚠️ هذا البلاغ لا يعني اعتماد الدفع. يرجى مراجعة العملية واعتمادها يدوياً قبل إنشاء الترخيص أو تسليم النسخة.`
   };
 }
 
@@ -340,7 +345,8 @@ async function buyerAgent(request,env){
   const endpoint=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
   const contents=history.slice(-12).map(m=>({role:(m?.role==="model"||m?.role==="assistant")?"model":"user",parts:[{text:String(m?.text||"")}]})).filter(m=>m.parts[0].text);
   if(!contents.length||contents.at(-1)?.parts?.[0]?.text!==message)contents.push({role:"user",parts:[{text:message}]});
-  const system=BUYER_SYSTEM_PROMPT+`\nالمشتري المصرح له بهذه الجلسة: ${lic.buyer}. الإصدار: الموسوعة المصححة v1.4 — 260 صفحة. استخدم ملف الموسوعة المرفق كمصدر المعرفة الأساسي.`;
+  const system=BUYER_SYSTEM_PROMPT+`
+المشتري المصرح له بهذه الجلسة: ${lic.buyer}. الإصدار: الموسوعة المصححة v1.4 — 260 صفحة. استخدم ملف الموسوعة المرفق كمصدر المعرفة الأساسي.`;
   const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({
     systemInstruction:{parts:[{text:system}]},
     contents:[{role:"user",parts:[{file_data:{mime_type:"application/pdf",file_uri:fileUri}}]},...contents],
@@ -364,7 +370,8 @@ export default {
     if (url.pathname === "/api/order") {
       if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
       try { return await createOrder(request, env); } catch (error) { return json({ ok: false, error: env?.DEBUG ? String(error?.message || error) : "order_create_failed" }, 500); }
-    }\n    if (url.pathname !== "/api/agent") return json({ ok: true, service: "smart-agent" });
+    }
+    if (url.pathname !== "/api/agent") return json({ ok: true, service: "smart-agent" });
     if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
     try {
       const body = await request.json();
