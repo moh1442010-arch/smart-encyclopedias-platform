@@ -69,7 +69,7 @@ function isAdmin(request, env) {
   const expected = String(env.LICENSE_ADMIN_KEY || "").trim();
   const suppliedHeader = String(request.headers.get("x-admin-key") || "").trim();
   const bearer = String(request.headers.get("authorization") || "");
-  const suppliedBearer = bearer.replace(/^Bearer\\s+/i, "").trim();
+  const suppliedBearer = bearer.replace(/^Bearer\s+/i, "").trim();
   const supplied = suppliedHeader || suppliedBearer;
   return Boolean(expected && supplied && supplied === expected);
 }
