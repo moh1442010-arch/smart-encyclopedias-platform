@@ -295,7 +295,10 @@ export default {
       if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
       try { return await buyerAgent(request, env); } catch (error) { return json({ ok:false, error: env?.DEBUG ? String(error?.message || error) : "buyer_agent_failed" }, 500); }
     }
-    if (url.pathname === "/api/order") {\n      if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);\n      try { return await createOrder(request, env); } catch (error) { return json({ ok: false, error: env?.DEBUG ? String(error?.message || error) : "order_create_failed" }, 500); }\n    }\n    if (url.pathname !== "/api/agent") return json({ ok: true, service: "smart-agent" });
+    if (url.pathname === "/api/order") {
+      if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
+      try { return await createOrder(request, env); catch (error) { return json({ ok: false, error: env?.DEBUG ? String(error?.message || error) : "order_create_failed" }, 500); }
+    }\n    if (url.pathname !== "/api/agent") return json({ ok: true, service: "smart-agent" });
     if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
     try {
       const body = await request.json();
