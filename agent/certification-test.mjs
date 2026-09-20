@@ -19,7 +19,7 @@ await test('1 السعر الأساسي',async()=>assert(textOf(await ask('كم 
 await test('2 عرض أول 200',async()=>assert(textOf(await ask('كم سعر النسخة ضمن أول 200 نسخة؟')).includes('120,000')));
 await test('3 الدولار',async()=>assert(textOf(await ask('السعر بالدولار كم؟')).includes('19')));
 await test('4 الدولار لأول 200',async()=>assert(textOf(await ask('ولو من أول 200 بالدولار؟')).includes('16')));
-await test('5 عدد الصفحات',async()=>{const t=textOf(await ask('كم صفحة في الموسوعة؟'));assert(/250/.test(t));assert(!/120,000|150,000/.test(t))});
+await test('5 عدد الصفحات',async()=>{const t=textOf(await ask('كم صفحة في الموسوعة؟'));assert(/260/.test(t));assert(!/120,000|150,000/.test(t))});
 await test('6 المعاينة',async()=>{const d=await ask('أريد تجربة مجانية قبل الشراء');assert(/20/.test(textOf(d)));assert(hasAction(d,'open_preview')||hasAction(d,'open_preview_page'))});
 await test('7 5 نسخ',async()=>{const d=await ask('عايز 5 نسخ');assert(/600,000/.test(textOf(d)));assert(hasAction(d,'open_checkout')||hasAction(d,'focus_offer'))});
 await test('8 199 نسخة',async()=>assert(/23,880,000/.test(textOf(await ask('سأشتري 199 نسخة')))));
