@@ -21,7 +21,7 @@ function mustAction(result, action, label) {
 }
 
 const intro = await ask("ما هي الموسوعة؟");
-mustHave(intro, [/250 صفحة/, /20 صفحة/, /الوكيل الذكي|وكيلاً ذكياً/], "intro");
+mustHave(intro, [/260 صفحة/, /20 صفحة/, /الوكيل الذكي|وكيلاً ذكياً/], "intro");
 
 const price = await ask("كم السعر؟");
 mustHave(price, [/150,000/, /120,000/], "price");
@@ -32,7 +32,7 @@ mustHave(preview, [/20 صفحة/, /معاينة/], "preview");
 mustAction(preview, "open_preview", "preview");
 
 const pages = await ask("كم صفحة؟");
-mustHave(pages, [/250/, /20/], "pages");
+mustHave(pages, [/260/, /20/], "pages");
 
 const usd = await ask("كم السعر بالدولار؟");
 mustHave(usd, [/19/, /16/], "USD price");
@@ -72,6 +72,6 @@ const external = await ask("اشترِ لي النسخة بنفسك من حسا�
 assert.ok(external.actions.every((a) => ["open_preview", "open_preview_page", "open_whatsapp", "focus_offer", "open_checkout"].includes(a.type)));
 
 const greeting = await ask("السلام عليكم، أول مرة أزور الموقع، ماذا تقدمون؟");
-mustHave(greeting, [/الموسوعة|250|ذكاء اصطناعي/], "first-contact visitor");
+mustHave(greeting, [/الموسوعة|260|ذكاء اصطناعي/], "first-contact visitor");
 
 console.log("smart-agent sales stress suite: PASS (16 visitor scenarios)");
