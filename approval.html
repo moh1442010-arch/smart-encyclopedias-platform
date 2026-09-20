@@ -23,7 +23,7 @@ body{min-height:100vh}.wrap{max-width:760px;margin:32px auto;padding:18px}.card{
 <label for="orderId">رقم الطلب</label><input id="orderId" maxlength="80" required>
 <label for="customerName">اسم المشتري</label><input id="customerName" maxlength="120" required>
 <label for="customerEmail">بريد المشتري</label><input id="customerEmail" type="email" maxlength="200" required>
-<label for="objectKey">مفتاح النسخة داخل KV</label><input id="objectKey" maxlength="300" placeholder="paid/encyclopedia-260-pages.pdf" required>
+<label for="objectKey">مفتاح النسخة داخل KV</label><input id="objectKey" maxlength="300" value="paid/encyclopedia-260-pages.pdf" required>
 <label for="expiresDays">صلاحية رابط التسليم بالأيام</label><input id="expiresDays" type="number" min="1" max="30" value="30">
 <label for="maxDownloads">عدد مرات التنزيل</label><input id="maxDownloads" type="number" min="1" max="10" value="3">
 <button class="primary" type="submit">✅ اعتماد الدفع وإنشاء الترخيص</button>
@@ -43,9 +43,10 @@ const $=id=>document.getElementById(id);
 $('form').addEventListener('submit',async e=>{
  e.preventDefault();
  const status=$('status'); status.className='status'; status.textContent='جارٍ اعتماد الدفع وإنشاء الترخيص…';
+ const adminKey=$('adminKey').value.trim();
  const body={approved:true,licenseId:$('licenseId').value.trim(),orderId:$('orderId').value.trim(),customerName:$('customerName').value.trim(),customerEmail:$('customerEmail').value.trim(),objectKey:$('objectKey').value.trim(),expiresDays:Number($('expiresDays').value||30),maxDownloads:Number($('maxDownloads').value||3),approvedBy:'owner'};
  try{
-  const r=await fetch(API+'/api/license/create',{method:'POST',headers:{'content-type':'application/json','x-admin-key':$('adminKey').value},body:JSON.stringify(body),cache:'no-store'});
+  const r=await fetch(API+'/api/license/create',{method:'POST',headers:{'content-type':'application/json','x-admin-key':adminKey,'authorization':'Bearer '+adminKey},body:JSON.stringify(body),cache:'no-store'});
   const d=await r.json().catch(()=>({}));
   if(!r.ok||!d.ok) throw new Error(d.error||'approval_failed');
   status.className='status ok'; status.textContent='تم اعتماد الدفع وإنشاء الترخيص بنجاح. الآن أرسل للزبون رابط التسليم فقط، ولا ترسل مفتاح المشرف.';
