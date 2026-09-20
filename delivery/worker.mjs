@@ -499,7 +499,7 @@ export default {
           ok: true,
           service: "smart-encyclopedias-delivery",
           status: "online",
-          version: "kv-delivery-v7-hardened-approval",
+          version: "kv-delivery-v8-final-approval",
           book: BOOK_KEY
         }, 200, env);
       }
