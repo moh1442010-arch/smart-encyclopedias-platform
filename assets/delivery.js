@@ -5,6 +5,7 @@
   const status = document.getElementById('status');
   const details = document.getElementById('details');
   const download = document.getElementById('download');
+  const buyerAgent = document.getElementById('buyerAgent');
   const DEVICE_KEY = 'smart_encyclopedia_device_id_v1';
 
   function getDeviceId(){
@@ -32,6 +33,7 @@
       status.innerHTML='مرحباً <b>'+escapeHtml(d.buyer)+'</b>.<br>رقم الترخيص: <span class="license">'+escapeHtml(d.licenseId)+'</span><br>هذا الترخيص مرتبط بهذا الجهاز.<br>المتبقي من التنزيلات: <b>'+d.downloadsRemaining+'</b> — صالح حتى: <b>'+new Date(d.expiresAt).toLocaleString('ar-EG')+'</b>';
       download.href=API+'/api/delivery/download?token='+encodeURIComponent(token);
       download.setAttribute('data-device-bound','true');
+      if(buyerAgent){ buyerAgent.href='https://moh1442010-arch.github.io/smart-encyclopedias-platform/buyer-agent.html#token='+encodeURIComponent(token); buyerAgent.hidden=false; buyerAgent.setAttribute('rel','noreferrer'); }
       details.hidden=false;
     })
     .catch((e)=>{
