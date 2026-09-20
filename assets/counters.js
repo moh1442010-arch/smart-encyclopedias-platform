@@ -32,12 +32,12 @@
     }
     addMeta('property','og:type','website');
     addMeta('property','og:title','الموسوعة الشاملة في الذكاء الاصطناعي باللغة العربية | محمد مصطفى بابكر');
-    addMeta('property','og:description','موسوعة عربية شاملة في الذكاء الاصطناعي من الصفر إلى الاحتراف: 250 صفحة، معاينة حقيقية من 20 صفحة، ووكيل ذكي مع النسخة الكاملة.');
+    addMeta('property','og:description','موسوعة عربية شاملة في الذكاء الاصطناعي من الصفر إلى الاحتراف: 260 صفحة، معاينة حقيقية من 20 صفحة، ووكيل ذكي مع النسخة الكاملة.');
     addMeta('property','og:url','https://moh1442010-arch.github.io/smart-encyclopedias-platform/');
     addMeta('property','og:locale','ar_AR');
     addMeta('name','twitter:card','summary_large_image');
     addMeta('name','twitter:title','الموسوعة الشاملة في الذكاء الاصطناعي باللغة العربية');
-    addMeta('name','twitter:description','من الصفر إلى الاحتراف في الذكاء الاصطناعي — 250 صفحة ومعاينة حقيقية ووكيل ذكي.');
+    addMeta('name','twitter:description','من الصفر إلى الاحتراف في الذكاء الاصطناعي — 260 صفحة ومعاينة حقيقية ووكيل ذكي.');
 
     if(!document.getElementById('seoStructuredData')){
       var s=document.createElement('script');
@@ -47,7 +47,7 @@
         '@graph':[
           {'@type':'Organization','@id':'https://moh1442010-arch.github.io/smart-encyclopedias-platform/#organization','name':'منصة الموسوعات الذكية','url':'https://moh1442010-arch.github.io/smart-encyclopedias-platform/','founder':{'@type':'Person','name':'محمد مصطفى بابكر'}},
           {'@type':'WebSite','@id':'https://moh1442010-arch.github.io/smart-encyclopedias-platform/#website','url':'https://moh1442010-arch.github.io/smart-encyclopedias-platform/','name':'منصة الموسوعات الذكية','inLanguage':'ar','publisher':{'@id':'https://moh1442010-arch.github.io/smart-encyclopedias-platform/#organization'}},
-          {'@type':'Product','@id':'https://moh1442010-arch.github.io/smart-encyclopedias-platform/#product','name':'الموسوعة الشاملة في الذكاء الاصطناعي باللغة العربية','description':'موسوعة عربية من 250 صفحة في الذكاء الاصطناعي والتعلم الآلي وLLMs وRAG وهندسة الأوامر والوكلاء والذكاء متعدد الوسائط، مع وكيل ذكي للنسخة الكاملة.','brand':{'@type':'Brand','name':'منصة الموسوعات الذكية'},'author':{'@type':'Person','name':'محمد مصطفى بابكر'},'offers':{'@type':'Offer','url':'https://moh1442010-arch.github.io/smart-encyclopedias-platform/checkout.html','priceCurrency':'SDG','price':'150000','availability':'https://schema.org/InStock'}}
+          {'@type':'Product','@id':'https://moh1442010-arch.github.io/smart-encyclopedias-platform/#product','name':'الموسوعة الشاملة في الذكاء الاصطناعي باللغة العربية','description':'موسوعة عربية من 260 صفحة في الذكاء الاصطناعي والتعلم الآلي وLLMs وRAG وهندسة الأوامر والوكلاء والذكاء متعدد الوسائط، مع وكيل ذكي للنسخة الكاملة.','brand':{'@type':'Brand','name':'منصة الموسوعات الذكية'},'author':{'@type':'Person','name':'محمد مصطفى بابكر'},'offers':{'@type':'Offer','url':'https://moh1442010-arch.github.io/smart-encyclopedias-platform/checkout.html','priceCurrency':'SDG','price':'150000','availability':'https://schema.org/InStock'}}
         ]
       });
       document.head.appendChild(s);
