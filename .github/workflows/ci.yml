@@ -37,6 +37,8 @@ jobs:
           test -s assets/config.js
           test -s assets/agent-api.js
           test -s assets/qa-fixes.js
+          test -s assets/updates-qr.svg
+          test -s assets/updates-barcode.svg
           test -s agent/smoke-test.mjs
           test -s "الموسوعة_الشاملة_20_صفحة_للمعاينة.pdf"
           test -f google30940fb9760e09d7.html
@@ -88,4 +90,10 @@ jobs:
           grep -q '\$19' /tmp/checkout.html
           grep -q 'الامتحان النهائي' /tmp/exam.html
           grep -q 'شهادة خبير' /tmp/exam.html
-          grep -q 'مركز التحديثات المستمرة' /tmp/updates.html
+          grep -q 'مركز التحديثات والمراجع العلمية' /tmp/updates.html
+          grep -q 'assets/updates-qr.svg' /tmp/updates.html
+          grep -q 'assets/updates-barcode.svg' /tmp/updates.html
+          grep -q 'ENC260UPD' /tmp/updates.html
+          grep -q 'NIST AI RMF' /tmp/updates.html
+          grep -q 'UNESCO' /tmp/updates.html
+          grep -q 'Gemini API' /tmp/updates.html
