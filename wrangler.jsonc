@@ -15,6 +15,12 @@
       "database_id": "c5060020-3842-4efc-9607-6671e5a90fd5"
     }
   ],
+  "kv_namespaces": [
+    {
+      "binding": "PAID_BOOKS",
+      "id": "f429a6faa10c47f6a050ba92c7597ecf"
+    }
+  ],
   "vars": {
     "GEMINI_MODEL": "gemini-2.5-flash"
   }
