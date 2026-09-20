@@ -48,7 +48,7 @@ jobs:
           grep -q 'studentDiscount: "20%"' assets/config.js
           grep -q 'studentPrice: "120000"' assets/config.js
           grep -q 'previewPages: 20' assets/config.js
-          grep -q 'pages: 250' assets/config.js
+          grep -q 'pages: 260' assets/config.js
           grep -q 'foreignCurrencyEnabled: true' assets/config.js
           grep -q 'foreignCurrencyPrice: "19"' assets/config.js
           grep -q 'foreignCurrencyDiscountedPrice: "16"' assets/config.js
@@ -82,7 +82,7 @@ jobs:
           curl --fail --silent --show-error http://127.0.0.1:4173/updates.html > /tmp/updates.html
           grep -q 'assets/app.js' /tmp/index.html
           grep -q 'assets/styles.css' /tmp/index.html
-          grep -q '250 صفحة' /tmp/index.html
+          grep -q '260 صفحة' /tmp/index.html
           grep -q 'SD8504018822240001' /tmp/checkout.html
           grep -q '\$16' /tmp/checkout.html
           grep -q '\$19' /tmp/checkout.html
