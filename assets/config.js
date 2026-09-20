@@ -13,7 +13,7 @@ window.STORE_CONFIG = {
   facebookUrl: "https://www.facebook.com/share/1BkZXmQTW6/",
   tiktokUrl: "https://www.tiktok.com/@mohammedmustafababiker",
   whatsappDisplay: "+249121851285",
-  pages: 250,
+  pages: 260,
   previewPages: 20,
   previewPdf: "الموسوعة_الشاملة_20_صفحة_للمعاينة.pdf",
   previewUrl: "preview.html",
