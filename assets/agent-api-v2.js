@@ -69,10 +69,12 @@
     }
 
     function getQuantity(q) {
-      const m = digits(q).match(/(?:^|\s)(\d{1,4})\s*(?:نسخه|نسخ|copy|copies|طبعه|كتب)/i);
+      const x = digits(q).trim();
+      const m = x.match(/(?:^|\s)(\d{1,4})\s*(?:نسخه|نسخ|copy|copies|طبعه|كتب)\b/i);
       if (m) return Math.max(1, Math.min(2000, Number(m[1])));
-      if (/نسخه واحده|نسخه واحد|واحده|واحد/.test(q)) return 1;
-      return null;
+      const words = {'واحد':1,'واحده':1,'اثنان':2,'اثنين':2,'ثلاث':3,'ثلاثه':3,'اربعه':4,'اربع':4,'خمسه':5,'خمس':5,'سته':6,'ست':6,'سبعه':7,'سبع':7,'ثمانيه':8,'ثمان':8,'تسعه':9,'تسع':9,'عشره':10,'عشر':10};
+      const w = x.replace(/نسخه|نسخ|كتاب|كتب|copy|copies/g,'').trim();
+      return words[w] || null;
     }
 
     function getCurrency(q) {
@@ -167,7 +169,7 @@
       }
 
       if (/(السعر|كم|بكم|الثمن|تكلفه|الدفع)/.test(q) && !qty) {
-        return { reply: 'النسخة الكاملة 250 صفحة. السعر الأساسي ' + price.sdgRegular.toLocaleString('ar-EG') + ' جنيه سوداني، والعرض الحالي لأول 200 نسخة ' + price.sdg.toLocaleString('ar-EG') + ' جنيه للنسخة. وبالدولار 19 دولاراً، أو 16 دولاراً ضمن العرض. إذا أخبرتني بعدد النسخ أحسب لك الإجمالي مباشرة.', actions: [{ type: 'focus_offer' }] };
+        return { reply: 'النسخة الكاملة 260 صفحة. السعر الأساسي ' + price.sdgRegular.toLocaleString('ar-EG') + ' جنيه سوداني، والعرض الحالي لأول 200 نسخة ' + price.sdg.toLocaleString('ar-EG') + ' جنيه للنسخة. وبالدولار 19 دولاراً، أو 16 دولاراً ضمن العرض. إذا أخبرتني بعدد النسخ أحسب لك الإجمالي مباشرة.', actions: [{ type: 'focus_offer' }] };
       }
 
       if (/(اريد شراء|عايز اشتري|عايز شراء|جاهز للشراء|اشتري|ساشتري|أريد النسخه|عايز النسخه)/.test(q)) {
@@ -208,7 +210,7 @@
           sales_state: state,
           product: {
             title: 'الموسوعة الشاملة في الذكاء الاصطناعي باللغة العربية',
-            pages: Number(C.pages || 250),
+            pages: Number(C.pages || 260),
             previewPages: Number(C.previewPages || 20),
             priceSDG: price.sdg,
             priceUSD: price.usd,
