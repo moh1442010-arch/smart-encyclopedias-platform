@@ -227,6 +227,7 @@ async function createOrder(request, env) {
   const currency = String(body?.currency || "").trim().toUpperCase();
   const amount = Number.parseInt(body?.amount, 10);
   const quantity = Math.max(1, Math.min(2000, Number.parseInt(body?.quantity, 10) || 1));
+  const source = String(body?.source || '').trim().slice(0, 120);
   if (name.length < 2 || name.length > 120 || !validEmail(email) ||
       !["SDG", "USD"].includes(currency) || !Number.isInteger(amount) || amount < 1) {
     return json({ ok: false, error: "invalid_order_data" }, 400);
@@ -244,6 +245,7 @@ async function createOrder(request, env) {
       currency TEXT NOT NULL,
       amount INTEGER NOT NULL,
       quantity INTEGER NOT NULL DEFAULT 1,
+      source TEXT,
       status TEXT NOT NULL DEFAULT 'pending',
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
@@ -253,11 +255,15 @@ async function createOrder(request, env) {
     await env.DB.prepare("ALTER TABLE orders ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1").run();
   } catch {}
 
+  try {
+    await env.DB.prepare("ALTER TABLE orders ADD COLUMN source TEXT").run();
+  } catch {}
+
   await env.DB.prepare(`
     INSERT INTO orders
-      (id, customer_name, customer_email, customer_phone, product, currency, amount, quantity, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-  `).bind(id, name, email, phone || null, "encyclopedia-260-pages", currency, amount, quantity).run();
+      (id, customer_name, customer_email, customer_phone, product, currency, amount, quantity, source, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+  `).bind(id, name, email, phone || null, "encyclopedia-260-pages", currency, amount, quantity, source || null).run();
 
   return json({ ok: true, orderId: id, status: "pending", quantity, amount, currency }, 201);
 }
