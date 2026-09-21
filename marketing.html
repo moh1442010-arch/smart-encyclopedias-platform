@@ -69,8 +69,42 @@ https://moh1442010-arch.github.io/smart-encyclopedias-platform/?src=fb_business_
 <li>نكرر الرسالة التي تحقق تفاعلاً حقيقياً، ونوقف الرسائل التي لا تحرك الزائر إلى المعاينة.</li>
 </ul>
 </section>
+<section class="card" style="margin-top:14px">
+<h2>🚀 حزمة الإطلاق — جاهزة للنشر</h2>
+<p>روابط مستقلة لقياس مصدر الزيارة وطلبات الشراء.</p>
+<div class="copy" id="launchPosts">1) الطلاب والمبتدئون — fb_students_01
+تريد أن تبدأ الذكاء الاصطناعي من الصفر دون أن تتوه بين عشرات المصادر؟
+شاهد 20 صفحة حقيقية مجاناً، ثم اسأل الوكيل قبل أن تقرر.
+https://moh1442010-arch.github.io/smart-encyclopedias-platform/?src=fb_students_01
+
+2) المعلمون والمدربون — fb_teachers_01
+هل تحتاج مرجعاً عربياً منظماً يساعدك في شرح مفاهيم الذكاء الاصطناعي؟
+جرّب 20 صفحة حقيقية مجاناً، وتعرّف على الوكيل الذكي قبل اتخاذ قرار الشراء.
+https://moh1442010-arch.github.io/smart-encyclopedias-platform/?src=fb_teachers_01
+
+3) أصحاب الأعمال — fb_business_01
+الذكاء الاصطناعي ليس مجرد مصطلحات؛ المهم أن تنتقل من الفهم إلى الاستخدام.
+ابدأ بمعاينة 20 صفحة حقيقية واسأل الوكيل عما يناسب هدفك.
+https://moh1442010-arch.github.io/smart-encyclopedias-platform/?src=fb_business_01
+
+4) فيديو قصير — tiktok_ai_01
+من الصفر إلى الاحتراف في الذكاء الاصطناعي باللغة العربية.
+20 صفحة حقيقية مجاناً + وكيل ذكي مع النسخة الكاملة.
+https://moh1442010-arch.github.io/smart-encyclopedias-platform/?src=tiktok_ai_01
+
+5) واتساب — whatsapp_01
+إذا كنت تفكر في تعلم الذكاء الاصطناعي بالعربية، ابدأ بالمعاينة المجانية ثم اسأل الوكيل.
+https://moh1442010-arch.github.io/smart-encyclopedias-platform/?src=whatsapp_01
+
+6) إعادة استهداف — retarget_preview_01
+شاهدت المعاينة؟ اسأل الوكيل عن المحتوى والسعر وما إذا كانت النسخة الكاملة مناسبة لك.
+https://moh1442010-arch.github.io/smart-encyclopedias-platform/?src=retarget_preview_01</div>
+<div class="actions"><button class="primary" id="copyLaunch">نسخ حزمة الإطلاق</button></div>
+<p class="muted">لا نعلن عن أرقام غير موثقة؛ القياس يعتمد على الزيارات والتفاعل وطلبات الشراء المسجلة.</p>
+</section>
 </main>
 <script>
 document.querySelectorAll('[data-copy]').forEach(function(b){b.addEventListener('click',async function(){var x=document.getElementById(b.dataset.copy);try{await navigator.clipboard.writeText(x.innerText);b.textContent='✓ تم النسخ';setTimeout(function(){b.textContent='نسخ النص'},1400)}catch(e){b.textContent='انسخ النص يدوياً'}})});
+document.getElementById('copyLaunch').addEventListener('click',async function(){var x=document.getElementById('launchPosts');try{await navigator.clipboard.writeText(x.innerText);this.textContent='✓ تم نسخ الحزمة';setTimeout(()=>this.textContent='نسخ حزمة الإطلاق',1600)}catch(e){this.textContent='انسخها يدوياً'}});
 </script>
 </body></html>
