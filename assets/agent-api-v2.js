@@ -70,7 +70,7 @@
 
     function getQuantity(q) {
       const x = digits(q).trim();
-      const m = x.match(/(?:^|\s)(\d{1,4})\s*(?:نسخه|نسخ|copy|copies|طبعه|كتب)\b/i);
+      const m = x.match(/(?:^|\s)(\d{1,4})\s*(?:نسخه|نسخ|copy|copies|طبعه|كتب)?(?:\s|$)/i);
       if (m) return Math.max(1, Math.min(2000, Number(m[1])));
       const words = {'واحد':1,'واحده':1,'اثنان':2,'اثنين':2,'ثلاث':3,'ثلاثه':3,'اربعه':4,'اربع':4,'خمسه':5,'خمس':5,'سته':6,'ست':6,'سبعه':7,'سبع':7,'ثمانيه':8,'ثمان':8,'تسعه':9,'تسع':9,'عشره':10,'عشر':10};
       const w = x.replace(/نسخه|نسخ|كتاب|كتب|copy|copies/g,'').trim();
