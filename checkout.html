@@ -53,10 +53,10 @@ body{min-height:100vh}.checkout{max-width:820px;margin:50px auto;padding:0 18px}
 <div id="fxError" class="fx-error" hidden>تعذر جلب أسعار الصرف الآن. يمكنك استخدام السعر بالدولار مباشرة، وسنحاول التحديث عند فتح الخانة مرة أخرى.</div>
 </div>
 <div id="selectedCurrency" class="selected-currency" role="status" aria-live="polite"></div>
-<button id="submitOrder" class="primary-action" type="submit">تسجيل طلب الشراء</button>
+<button id="submitOrder" class="primary-action" type="submit" data-track="checkout_submit">تسجيل طلب الشراء</button>
 <div id="orderStatus" class="form-status" role="status" aria-live="polite"></div>
 </form>
-<div class="actions"><button id="copyIban" type="button">نسخ IBAN</button><a id="whatsappLink" class="primary-action" href="https://wa.me/249121851285" target="_blank" rel="noopener">التواصل وإتمام الشراء عبر واتساب</a><a href="index.html#faq">الأسئلة الشائعة</a></div>
+<div class="actions"><button id="copyIban" type="button" data-track="copy_iban">نسخ IBAN</button><a id="whatsappLink" class="primary-action" data-track="checkout_whatsapp" href="https://wa.me/249121851285" target="_blank" rel="noopener">التواصل وإتمام الشراء عبر واتساب</a><a href="index.html#faq">الأسئلة الشائعة</a></div>
 <p id="copyStatus" style="margin-top:12px"></p>
 </section>
 </main>
