@@ -4,6 +4,7 @@ Disallow: /admin.html
 Disallow: /agent-knowledge.html
 Disallow: /agent/
 Sitemap: https://moh1442010-arch.github.io/smart-encyclopedias-platform/sitemap.xml
+Sitemap: https://moh1442010-arch.github.io/smart-encyclopedias-platform/almatama-east/sitemap.xml
 
 Disallow: /الموسوعة_الشاملة_20_صفحة_للمعاينة.pdf
 Disallow: /*.pdf$
