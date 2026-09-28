@@ -3,8 +3,14 @@ Allow: /
 Disallow: /admin.html
 Disallow: /agent-knowledge.html
 Disallow: /agent/
-Sitemap: https://moh1442010-arch.github.io/smart-encyclopedias-platform/sitemap.xml
-Sitemap: https://moh1442010-arch.github.io/smart-encyclopedias-platform/almatama-east/sitemap.xml
-
+Disallow: /checkout.html
+Disallow: /approval.html
+Disallow: /payment-review.html
+Disallow: /delivery-upload.html
+Disallow: /reviewer.html
+Disallow: /marketing.html
+Disallow: /buyer-agent.html
 Disallow: /الموسوعة_الشاملة_20_صفحة_للمعاينة.pdf
 Disallow: /*.pdf$
+Sitemap: https://moh1442010-arch.github.io/smart-encyclopedias-platform/sitemap.xml
+Sitemap: https://moh1442010-arch.github.io/smart-encyclopedias-platform/almatama-east/sitemap.xml
