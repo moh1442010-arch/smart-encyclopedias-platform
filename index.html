@@ -14,11 +14,26 @@
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">{
   "@context":"https://schema.org",
-  "@type":"WebSite",
-  "name":"منصة الموسوعات الذكية",
-  "url":"https://moh1442010-arch.github.io/smart-encyclopedias-platform/",
-  "inLanguage":"ar",
-  "description":"منصة تعريفية للموسوعة الشاملة في الذكاء الاصطناعي باللغة العربية."
+  "@graph":[
+    {
+      "@type":"WebSite",
+      "@id":"https://moh1442010-arch.github.io/smart-encyclopedias-platform/#website",
+      "name":"منصة الموسوعات الذكية",
+      "url":"https://moh1442010-arch.github.io/smart-encyclopedias-platform/",
+      "inLanguage":"ar",
+      "description":"منصة تعريفية للموسوعة الشاملة في الذكاء الاصطناعي باللغة العربية."
+    },
+    {
+      "@type":"Book",
+      "@id":"https://moh1442010-arch.github.io/smart-encyclopedias-platform/#book",
+      "name":"الموسوعة الشاملة في الذكاء الاصطناعي باللغة العربية",
+      "alternateName":"من الصفر إلى الاحتراف في الذكاء الاصطناعي",
+      "author":{"@type":"Person","name":"محمد مصطفى بابكر"},
+      "inLanguage":"ar",
+      "numberOfPages":260,
+      "description":"موسوعة عربية تعليمية منظمة في الذكاء الاصطناعي والتعلم الآلي والنماذج اللغوية وRAG وهندسة الأوامر والوكلاء والذكاء متعدد الوسائط."
+    }
+  ]
 }</script>
 
 <link rel="stylesheet" href="assets/styles.css">
