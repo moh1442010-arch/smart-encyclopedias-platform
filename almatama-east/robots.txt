@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://almatama-east-sudan.pages.dev/sitemap.xml
