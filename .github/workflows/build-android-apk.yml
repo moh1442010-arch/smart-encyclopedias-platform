@@ -183,7 +183,7 @@ jobs:
                       } catch (Exception e) {
                           Intent browser = new Intent(
                                   Intent.ACTION_VIEW,
-                                  Uri.parse("https://wa.me/")
+                                  Uri.parse("https://wa.me/249121851285")
                           );
                           startActivity(browser);
                       }
