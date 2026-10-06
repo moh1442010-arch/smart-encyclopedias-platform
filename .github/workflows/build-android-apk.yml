@@ -1,0 +1,229 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/build-android-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Gradle
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
+          unzip -q gradle-8.9-bin.zip
+          echo "$PWD/gradle-8.9/bin" >> "$GITHUB_PATH"
+
+      - name: Create Android project
+        run: |
+          mkdir -p android-app/app/src/main/java/com/mohammedmustafa/encyclopedia
+          mkdir -p android-app/app/src/main/res/values
+          mkdir -p android-app/app/src/main/res/drawable
+
+          cat > android-app/settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          rootProject.name = "SmartEncyclopedias"
+          include(":app")
+          EOF
+
+          cat > android-app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.7.3' apply false
+          }
+          EOF
+
+          cat > android-app/app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.mohammedmustafa.encyclopedia'
+              compileSdk 35
+
+              defaultConfig {
+                  applicationId 'com.mohammedmustafa.encyclopedia'
+                  minSdk 23
+                  targetSdk 35
+                  versionCode 1
+                  versionName '1.0'
+              }
+          }
+          EOF
+
+          cat > android-app/app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+
+              <application
+                  android:allowBackup="true"
+                  android:label="الموسوعة الشاملة"
+                  android:supportsRtl="true"
+                  android:theme="@style/AppTheme">
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:screenOrientation="portrait"
+                      android:exported="true">
+
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+
+                  </activity>
+
+              </application>
+          </manifest>
+          EOF
+
+          cat > android-app/app/src/main/res/values/styles.xml <<'EOF'
+          <resources>
+              <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+                  <item name="android:fontFamily">sans</item>
+                  <item name="android:colorAccent">#D4AF37</item>
+                  <item name="android:navigationBarColor">#0B1F3A</item>
+                  <item name="android:statusBarColor">#0B1F3A</item>
+              </style>
+          </resources>
+          EOF
+
+          cat > android-app/app/src/main/java/com/mohammedmustafa/encyclopedia/MainActivity.java <<'EOF'
+          package com.mohammedmustafa.encyclopedia;
+
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.content.Intent;
+          import android.net.Uri;
+          import android.graphics.Color;
+          import android.view.Gravity;
+          import android.view.View;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.widget.Button;
+          import android.widget.FrameLayout;
+
+          public class MainActivity extends Activity {
+
+              private static final String WEBSITE =
+                      "https://moh1442010-arch.github.io/smart-encyclopedias-platform/";
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  FrameLayout root = new FrameLayout(this);
+
+                  WebView webView = new WebView(this);
+
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setDatabaseEnabled(true);
+                  settings.setLoadWithOverviewMode(true);
+                  settings.setUseWideViewPort(true);
+
+                  webView.setWebViewClient(new WebViewClient());
+                  webView.loadUrl(WEBSITE);
+
+                  root.addView(webView,
+                          new FrameLayout.LayoutParams(
+                                  FrameLayout.LayoutParams.MATCH_PARENT,
+                                  FrameLayout.LayoutParams.MATCH_PARENT));
+
+                  Button messageButton = new Button(this);
+                  messageButton.setText("مراسلة");
+                  messageButton.setTextColor(Color.WHITE);
+                  messageButton.setTextSize(14);
+                  messageButton.setBackgroundColor(Color.rgb(37, 211, 102));
+
+                  messageButton.setOnClickListener(v -> {
+                      Intent intent = new Intent(Intent.ACTION_SEND);
+                      intent.setType("text/plain");
+                      intent.setPackage("com.whatsapp");
+                      intent.putExtra(
+                              Intent.EXTRA_TEXT,
+                              "السلام عليكم، أريد الاستفسار عن الموسوعة الشاملة في الذكاء الاصطناعي."
+                      );
+
+                      try {
+                          startActivity(intent);
+                      } catch (Exception e) {
+                          Intent browser = new Intent(
+                                  Intent.ACTION_VIEW,
+                                  Uri.parse("https://wa.me/")
+                          );
+                          startActivity(browser);
+                      }
+                  });
+
+                  FrameLayout.LayoutParams buttonParams =
+                          new FrameLayout.LayoutParams(
+                                  FrameLayout.LayoutParams.WRAP_CONTENT,
+                                  FrameLayout.LayoutParams.WRAP_CONTENT);
+
+                  buttonParams.gravity = Gravity.BOTTOM | Gravity.END;
+                  buttonParams.setMargins(0, 0, 24, 24);
+
+                  root.addView(messageButton, buttonParams);
+
+                  setContentView(root);
+              }
+
+              @Override
+              public void onBackPressed() {
+                  WebView webView = (WebView) ((FrameLayout) findViewById(android.R.id.content))
+                          .getChildAt(0);
+
+                  if (webView != null && webView.canGoBack()) {
+                      webView.goBack();
+                  } else {
+                      super.onBackPressed();
+                  }
+              }
+          }
+          EOF
+
+      - name: Build APK
+        working-directory: android-app
+        run: |
+          gradle wrapper --gradle-version 8.9
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: smart-encyclopedias-apk
+          path: android-app/app/build/outputs/apk/debug/app-debug.apk
