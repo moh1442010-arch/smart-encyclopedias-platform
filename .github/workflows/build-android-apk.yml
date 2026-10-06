@@ -75,8 +75,8 @@ jobs:
                   applicationId 'com.mohammedmustafa.encyclopedia'
                   minSdk 23
                   targetSdk 35
-                  versionCode 1
-                  versionName '1.0'
+                  versionCode 2
+                  versionName '1.0.1'
               }
           }
           EOF
@@ -128,14 +128,15 @@ jobs:
           import android.net.Uri;
           import android.graphics.Color;
           import android.view.Gravity;
-          import android.view.View;
-          import android.webkit.WebSettings;
+                    import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
           import android.widget.Button;
           import android.widget.FrameLayout;
 
           public class MainActivity extends Activity {
+
+              private WebView webView;
 
               private static final String WEBSITE =
                       "https://moh1442010-arch.github.io/smart-encyclopedias-platform/";
@@ -146,7 +147,7 @@ jobs:
 
                   FrameLayout root = new FrameLayout(this);
 
-                  WebView webView = new WebView(this);
+                  webView = new WebView(this);
 
                   WebSettings settings = webView.getSettings();
                   settings.setJavaScriptEnabled(true);
@@ -195,9 +196,6 @@ jobs:
 
               @Override
               public void onBackPressed() {
-                  WebView webView = (WebView) ((FrameLayout) findViewById(android.R.id.content))
-                          .getChildAt(0);
-
                   if (webView != null && webView.canGoBack()) {
                       webView.goBack();
                   } else {
@@ -212,9 +210,14 @@ jobs:
         run: |
           gradle wrapper --gradle-version 8.9
           ./gradlew assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk smart-encyclopedias-v1.0.1.apk
+          sha256sum smart-encyclopedias-v1.0.1.apk > smart-encyclopedias-v1.0.1.apk.sha256
 
-      - name: Upload APK
+      - name: Upload final APK package
         uses: actions/upload-artifact@v4
         with:
-          name: smart-encyclopedias-apk
-          path: android-app/app/build/outputs/apk/debug/app-debug.apk
+          name: smart-encyclopedias-v1.0.1
+          path: |
+            android-app/smart-encyclopedias-v1.0.1.apk
+            android-app/smart-encyclopedias-v1.0.1.apk.sha256
+          retention-days: 90
