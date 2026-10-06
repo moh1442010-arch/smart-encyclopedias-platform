@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Smart Company Accounting APK
 
 on:
   workflow_dispatch:
@@ -29,11 +29,10 @@ jobs:
           unzip -q gradle-8.9-bin.zip
           echo "$PWD/gradle-8.9/bin" >> "$GITHUB_PATH"
 
-      - name: Create Android project
+      - name: Create native accounting app
         run: |
-          mkdir -p android-app/app/src/main/java/com/mohammedmustafa/encyclopedia
+          mkdir -p android-app/app/src/main/java/com/mohammedmustafa/smartcompany
           mkdir -p android-app/app/src/main/res/values
-          mkdir -p android-app/app/src/main/res/drawable
 
           cat > android-app/settings.gradle <<'EOF'
           pluginManagement {
@@ -43,7 +42,6 @@ jobs:
                   gradlePluginPortal()
               }
           }
-
           dependencyResolutionManagement {
               repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
               repositories {
@@ -51,8 +49,7 @@ jobs:
                   mavenCentral()
               }
           }
-
-          rootProject.name = "SmartEncyclopedias"
+          rootProject.name = "SmartCompany"
           include(":app")
           EOF
 
@@ -68,42 +65,36 @@ jobs:
           }
 
           android {
-              namespace 'com.mohammedmustafa.encyclopedia'
+              namespace 'com.mohammedmustafa.smartcompany'
               compileSdk 35
 
               defaultConfig {
-                  applicationId 'com.mohammedmustafa.encyclopedia'
+                  applicationId 'com.mohammedmustafa.smartcompany'
                   minSdk 23
                   targetSdk 35
-                  versionCode 2
-                  versionName '1.0.1'
+                  versionCode 3
+                  versionName '1.1.0'
               }
           }
           EOF
 
           cat > android-app/app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
               <uses-permission android:name="android.permission.INTERNET" />
-
               <application
                   android:allowBackup="true"
-                  android:label="الموسوعة الشاملة"
+                  android:label="شركة محمد مصطفي الذكية"
                   android:supportsRtl="true"
                   android:theme="@style/AppTheme">
-
                   <activity
                       android:name=".MainActivity"
                       android:screenOrientation="portrait"
                       android:exported="true">
-
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
                           <category android:name="android.intent.category.LAUNCHER" />
                       </intent-filter>
-
                   </activity>
-
               </application>
           </manifest>
           EOF
@@ -112,95 +103,227 @@ jobs:
           <resources>
               <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
                   <item name="android:fontFamily">sans</item>
-                  <item name="android:colorAccent">#D4AF37</item>
-                  <item name="android:navigationBarColor">#0B1F3A</item>
-                  <item name="android:statusBarColor">#0B1F3A</item>
+                  <item name="android:colorAccent">#0B5D3B</item>
+                  <item name="android:navigationBarColor">#12372A</item>
+                  <item name="android:statusBarColor">#12372A</item>
               </style>
           </resources>
           EOF
 
-          cat > android-app/app/src/main/java/com/mohammedmustafa/encyclopedia/MainActivity.java <<'EOF'
-          package com.mohammedmustafa.encyclopedia;
+          cat > android-app/app/src/main/java/com/mohammedmustafa/smartcompany/MainActivity.java <<'EOF'
+          package com.mohammedmustafa.smartcompany;
 
-          import android.app.Activity;
-          import android.os.Bundle;
-          import android.content.Intent;
-          import android.net.Uri;
+          import android.app.*;
+          import android.os.*;
+          import android.content.*;
+          import android.database.Cursor;
+          import android.database.sqlite.*;
           import android.graphics.Color;
-          import android.view.Gravity;
-                    import android.webkit.WebSettings;
+          import android.print.PrintAttributes;
+          import android.print.PrintManager;
+          import android.view.*;
           import android.webkit.WebView;
-          import android.webkit.WebViewClient;
-          import android.widget.Button;
-          import android.widget.FrameLayout;
+          import android.widget.*;
+          import java.util.*;
 
           public class MainActivity extends Activity {
+              DB db;
+              LinearLayout root, content;
+              TextView title, status;
+              int green = Color.rgb(11,93,59);
 
-              private WebView webView;
+              @Override public void onCreate(Bundle b) {
+                  super.onCreate(b);
+                  db = new DB(this);
+                  showLogin();
+              }
 
-              private static final String WEBSITE =
-                      "https://moh1442010-arch.github.io/smart-encyclopedias-platform/";
+              TextView tv(String s, int size) {
+                  TextView t = new TextView(this);
+                  t.setText(s); t.setTextSize(size); t.setPadding(18,14,18,14);
+                  return t;
+              }
+              Button btn(String s) {
+                  Button b = new Button(this); b.setText(s); b.setAllCaps(false);
+                  return b;
+              }
+              EditText input(String hint) {
+                  EditText e = new EditText(this); e.setHint(hint); e.setPadding(18,10,18,10);
+                  return e;
+              }
 
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-
-                  FrameLayout root = new FrameLayout(this);
-
-                  webView = new WebView(this);
-
-                  WebSettings settings = webView.getSettings();
-                  settings.setJavaScriptEnabled(true);
-                  settings.setDomStorageEnabled(true);
-                  settings.setDatabaseEnabled(true);
-                  settings.setLoadWithOverviewMode(true);
-                  settings.setUseWideViewPort(true);
-
-                  webView.setWebViewClient(new WebViewClient());
-                  webView.loadUrl(WEBSITE);
-
-                  root.addView(webView,
-                          new FrameLayout.LayoutParams(
-                                  FrameLayout.LayoutParams.MATCH_PARENT,
-                                  FrameLayout.LayoutParams.MATCH_PARENT));
-
-                  Button messageButton = new Button(this);
-                  messageButton.setText("مراسلة");
-                  messageButton.setTextColor(Color.WHITE);
-                  messageButton.setTextSize(14);
-                  messageButton.setBackgroundColor(Color.rgb(37, 211, 102));
-
-                  messageButton.setOnClickListener(v -> {
-                      String message = Uri.encode(
-                              "السلام عليكم، أريد الاستفسار عن الموسوعة الشاملة في الذكاء الاصطناعي."
-                      );
-                      Intent intent = new Intent(
-                              Intent.ACTION_VIEW,
-                              Uri.parse("https://wa.me/249121851285?text=" + message)
-                      );
-                      startActivity(intent);
-                  });
-
-                  FrameLayout.LayoutParams buttonParams =
-                          new FrameLayout.LayoutParams(
-                                  FrameLayout.LayoutParams.WRAP_CONTENT,
-                                  FrameLayout.LayoutParams.WRAP_CONTENT);
-
-                  buttonParams.gravity = Gravity.BOTTOM | Gravity.END;
-                  buttonParams.setMargins(0, 0, 24, 24);
-
-                  root.addView(messageButton, buttonParams);
-
+              void base(String heading) {
+                  root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
+                  root.setBackgroundColor(Color.rgb(248,249,250));
+                  LinearLayout bar = new LinearLayout(this); bar.setGravity(Gravity.CENTER_VERTICAL);
+                  bar.setBackgroundColor(green);
+                  title = tv(heading,20); title.setTextColor(Color.WHITE);
+                  bar.addView(title,new LinearLayout.LayoutParams(0,LinearLayout.LayoutParams.WRAP_CONTENT,1));
+                  Button home=btn("الرئيسية"); home.setTextColor(Color.WHITE);
+                  home.setOnClickListener(v->dashboard());
+                  bar.addView(home);
+                  root.addView(bar);
+                  ScrollView sv=new ScrollView(this);
+                  content=new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL);
+                  sv.addView(content); root.addView(sv,new LinearLayout.LayoutParams(-1,0,1));
+                  status=tv("",13); root.addView(status);
                   setContentView(root);
               }
 
-              @Override
-              public void onBackPressed() {
-                  if (webView != null && webView.canGoBack()) {
-                      webView.goBack();
-                  } else {
-                      super.onBackPressed();
+              void showLogin() {
+                  base("شركة محمد مصطفي الذكية");
+                  content.addView(tv("نظام المحاسبة والمخزون",24));
+                  content.addView(tv("تسجيل الدخول",18));
+                  EditText pass=input("كلمة المرور");
+                  pass.setInputType(0x81);
+                  content.addView(pass);
+                  Button login=btn("دخول");
+                  content.addView(login);
+                  login.setOnClickListener(v->{
+                      if(pass.getText().toString().equals("1234")) dashboard();
+                      else Toast.makeText(this,"كلمة المرور غير صحيحة",Toast.LENGTH_SHORT).show();
+                  });
+                  Button msg=btn("مراسلة الدعم بالبريد");
+                  content.addView(msg);
+                  msg.setOnClickListener(v->{
+                      Intent i=new Intent(Intent.ACTION_SEND);
+                      i.setType("message/rfc822");
+                      i.putExtra(Intent.EXTRA_EMAIL,new String[]{"awrad.m.m.m@hotmail.com"});
+                      i.putExtra(Intent.EXTRA_SUBJECT,"استفسار عن شركة محمد مصطفي الذكية");
+                      i.putExtra(Intent.EXTRA_TEXT,"السلام عليكم، أريد الاستفسار عن تطبيق المحاسبة.");
+                      try { startActivity(Intent.createChooser(i,"اختيار تطبيق البريد")); }
+                      catch(Exception e){ Toast.makeText(this,"لا يوجد تطبيق بريد مثبت",Toast.LENGTH_LONG).show(); }
+                  });
+              }
+
+              void dashboard() {
+                  base("لوحة التحكم");
+                  content.addView(tv("شركة محمد مصطفي الذكية",25));
+                  content.addView(tv("تطبيق محاسبة ومخزون متعدد الشركات",16));
+                  String[] names={"الشركات","الأصناف والمخزون","المبيعات","المشتريات","العملاء","الموردون","الموظفون والرواتب","التقارير والطباعة","المراسلة"};
+                  for(String n:names){
+                      Button b=btn(n); content.addView(b);
+                      b.setOnClickListener(v->{
+                          if(n.equals("الشركات")) companies();
+                          else if(n.equals("الأصناف والمخزون")) products();
+                          else if(n.equals("المبيعات")) sale();
+                          else if(n.equals("المشتريات")) purchase();
+                          else if(n.equals("العملاء")) simpleTable("العملاء","customers");
+                          else if(n.equals("الموردون")) simpleTable("الموردون","suppliers");
+                          else if(n.equals("الموظفون والرواتب")) simpleTable("الموظفون","employees");
+                          else if(n.equals("التقارير والطباعة")) reports();
+                          else showLogin();
+                      });
                   }
+              }
+
+              void companies() {
+                  base("الشركات");
+                  EditText name=input("اسم الشركة"); content.addView(name);
+                  Button add=btn("إضافة شركة"); content.addView(add);
+                  add.setOnClickListener(v->{db.exec("INSERT INTO companies(name) VALUES(?)",name.getText().toString()); name.setText(""); loadCompanies();});
+                  loadCompanies();
+              }
+              void loadCompanies(){
+                  Cursor c=db.raw("SELECT id,name FROM companies ORDER BY id DESC");
+                  while(c.moveToNext()){
+                      long id=c.getLong(0); Button b=btn("اختيار: "+c.getString(1)); content.addView(b);
+                      b.setOnClickListener(v->{getPreferences(0).edit().putLong("company",id).apply(); Toast.makeText(this,"تم اختيار الشركة",Toast.LENGTH_SHORT).show(); dashboard();});
+                  } c.close();
+              }
+
+              void products() {
+                  base("الأصناف والمخزون");
+                  EditText n=input("اسم الصنف"); EditText q=input("الكمية الافتتاحية"); EditText p=input("سعر الوحدة");
+                  q.setInputType(2); p.setInputType(2);
+                  content.addView(n);content.addView(q);content.addView(p);
+                  Button add=btn("إضافة الصنف"); content.addView(add);
+                  add.setOnClickListener(v->{
+                      db.exec("INSERT INTO products(name,qty,price) VALUES(?,?,?)",n.getText().toString(),num(q),num(p));
+                      n.setText("");q.setText("");p.setText(""); loadProducts();
+                  });
+                  loadProducts();
+              }
+              void loadProducts(){
+                  Cursor c=db.raw("SELECT name,qty,price FROM products ORDER BY id DESC");
+                  while(c.moveToNext()) content.addView(tv(c.getString(0)+" | المخزون: "+c.getDouble(1)+" | السعر: "+c.getDouble(2),15));
+                  c.close();
+              }
+
+              double num(EditText e){ try{return Double.parseDouble(e.getText().toString());}catch(Exception x){return 0;} }
+
+              void sale(){ transaction("بيع","sales",-1); }
+              void purchase(){ transaction("شراء","purchases",1); }
+
+              void transaction(String label,String table,int direction){
+                  base(label);
+                  EditText product=input("اسم الصنف"); EditText qty=input("الكمية"); EditText price=input("السعر");
+                  content.addView(product);content.addView(qty);content.addView(price);
+                  Button save=btn("حفظ "+label); content.addView(save);
+                  save.setOnClickListener(v->{
+                      double q=num(qty), pr=num(price);
+                      Cursor c=db.raw("SELECT id,qty FROM products WHERE name=?",product.getText().toString());
+                      if(c.moveToFirst()){
+                          long id=c.getLong(0); double old=c.getDouble(1);
+                          double next=old+(direction*q);
+                          if(next<0){Toast.makeText(this,"الرصيد غير كافٍ",Toast.LENGTH_LONG).show();c.close();return;}
+                          db.exec("UPDATE products SET qty=? WHERE id=?",next,id);
+                          db.exec("INSERT INTO "+table+"(product,qty,price,total) VALUES(?,?,?,?)",product.getText().toString(),q,pr,q*pr);
+                          Toast.makeText(this,"تم الحفظ وتحديث المخزون",Toast.LENGTH_SHORT).show();
+                      } else Toast.makeText(this,"الصنف غير موجود",Toast.LENGTH_LONG).show();
+                      c.close();
+                  });
+              }
+
+              void simpleTable(String heading,String table){
+                  base(heading);
+                  EditText n=input("الاسم"); content.addView(n);
+                  Button add=btn("إضافة");content.addView(add);
+                  add.setOnClickListener(v->{db.exec("INSERT INTO "+table+"(name) VALUES(?)",n.getText().toString());n.setText("");});
+                  Cursor c=db.raw("SELECT name FROM "+table+" ORDER BY id DESC");
+                  while(c.moveToNext()) content.addView(tv("• "+c.getString(0),16)); c.close();
+              }
+
+              void reports(){
+                  base("التقارير");
+                  Cursor s=db.raw("SELECT COALESCE(SUM(total),0) FROM sales");
+                  Cursor p=db.raw("SELECT COALESCE(SUM(total),0) FROM purchases");
+                  double sv=s.moveToFirst()?s.getDouble(0):0, pv=p.moveToFirst()?p.getDouble(0):0;s.close();p.close();
+                  content.addView(tv("إجمالي المبيعات: "+sv,20));
+                  content.addView(tv("إجمالي المشتريات: "+pv,20));
+                  content.addView(tv("صافي الحركة: "+(sv-pv),20));
+                  content.addView(tv("توقيع المحاسب: ____________________",16));
+                  Button print=btn("طباعة التقرير A4");content.addView(print);
+                  print.setOnClickListener(v->printReport(sv,pv));
+              }
+
+              void printReport(double sales,double purchases){
+                  WebView w=new WebView(this);
+                  String html="<html dir='rtl'><body style='font-family:sans-serif;padding:30px'><h1>شركة محمد مصطفي الذكية</h1><h2>تقرير مالي</h2><p>إجمالي المبيعات: "+sales+"</p><p>إجمالي المشتريات: "+purchases+"</p><p>الصافي: "+(sales-purchases)+"</p><br><p>توقيع المحاسب: ____________________</p></body></html>";
+                  w.loadDataWithBaseURL(null,html,"text/html","UTF-8",null);
+                  w.setWebViewClient(new android.webkit.WebViewClient(){public void onPageFinished(WebView v,String u){
+                      PrintManager pm=(PrintManager)getSystemService(PRINT_SERVICE);
+                      pm.print("تقرير شركة محمد مصطفي الذكية",v.createPrintDocumentAdapter("تقرير"),new PrintAttributes.Builder().build());
+                  }});
+              }
+
+              @Override public void onBackPressed(){ dashboard(); }
+
+              static class DB extends SQLiteOpenHelper {
+                  DB(Context c){super(c,"smartcompany.db",null,1);}
+                  public void onCreate(SQLiteDatabase d){
+                      d.execSQL("CREATE TABLE companies(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT)");
+                      d.execSQL("CREATE TABLE products(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT,qty REAL,price REAL)");
+                      d.execSQL("CREATE TABLE sales(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL)");
+                      d.execSQL("CREATE TABLE purchases(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL)");
+                      d.execSQL("CREATE TABLE customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT)");
+                      d.execSQL("CREATE TABLE suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT)");
+                      d.execSQL("CREATE TABLE employees(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT)");
+                      d.execSQL("INSERT INTO companies(name) VALUES('الشركة الرئيسية')");
+                  }
+                  public void onUpgrade(SQLiteDatabase d,int o,int n){}
+                  void exec(String sql,Object... a){SQLiteStatement s=getWritableDatabase().compileStatement(sql);for(int i=0;i<a.length;i++){if(a[i] instanceof Number)s.bindDouble(i+1,((Number)a[i]).doubleValue());else s.bindString(i+1,String.valueOf(a[i]));}s.executeInsert();}
+                  Cursor raw(String sql,String...a){return getReadableDatabase().rawQuery(sql,a);}
               }
           }
           EOF
@@ -210,14 +333,14 @@ jobs:
         run: |
           gradle wrapper --gradle-version 8.9
           ./gradlew assembleDebug
-          cp app/build/outputs/apk/debug/app-debug.apk smart-encyclopedias-v1.0.1.apk
-          sha256sum smart-encyclopedias-v1.0.1.apk > smart-encyclopedias-v1.0.1.apk.sha256
+          cp app/build/outputs/apk/debug/app-debug.apk smart-company-v1.1.0.apk
+          sha256sum smart-company-v1.1.0.apk > smart-company-v1.1.0.apk.sha256
 
       - name: Upload final APK package
         uses: actions/upload-artifact@v4
         with:
-          name: smart-encyclopedias-v1.0.1
+          name: smart-company-v1.1.0
           path: |
-            android-app/smart-encyclopedias-v1.0.1.apk
-            android-app/smart-encyclopedias-v1.0.1.apk.sha256
+            android-app/smart-company-v1.1.0.apk
+            android-app/smart-company-v1.1.0.apk.sha256
           retention-days: 90
