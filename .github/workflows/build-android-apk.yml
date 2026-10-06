@@ -322,7 +322,7 @@ jobs:
                       d.execSQL("INSERT INTO companies(name) VALUES('الشركة الرئيسية')");
                   }
                   public void onUpgrade(SQLiteDatabase d,int o,int n){}
-                  void exec(String sql,Object... a){SQLiteStatement s=getWritableDatabase().compileStatement(sql);for(int i=0;i<a.length;i++){if(a[i] instanceof Number)s.bindDouble(i+1,((Number)a[i]).doubleValue());else s.bindString(i+1,String.valueOf(a[i]));}s.executeInsert();}
+                  void exec(String sql,Object... a){SQLiteStatement s=getWritableDatabase().compileStatement(sql);for(int i=0;i<a.length;i++){if(a[i] instanceof Number)s.bindDouble(i+1,((Number)a[i]).doubleValue());else s.bindString(i+1,String.valueOf(a[i]));}s.execute();}
                   Cursor raw(String sql,String...a){return getReadableDatabase().rawQuery(sql,a);}
               }
           }
