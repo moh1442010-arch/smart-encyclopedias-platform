@@ -170,23 +170,14 @@ jobs:
                   messageButton.setBackgroundColor(Color.rgb(37, 211, 102));
 
                   messageButton.setOnClickListener(v -> {
-                      Intent intent = new Intent(Intent.ACTION_SEND);
-                      intent.setType("text/plain");
-                      intent.setPackage("com.whatsapp");
-                      intent.putExtra(
-                              Intent.EXTRA_TEXT,
+                      String message = Uri.encode(
                               "السلام عليكم، أريد الاستفسار عن الموسوعة الشاملة في الذكاء الاصطناعي."
                       );
-
-                      try {
-                          startActivity(intent);
-                      } catch (Exception e) {
-                          Intent browser = new Intent(
-                                  Intent.ACTION_VIEW,
-                                  Uri.parse("https://wa.me/249121851285")
-                          );
-                          startActivity(browser);
-                      }
+                      Intent intent = new Intent(
+                              Intent.ACTION_VIEW,
+                              Uri.parse("https://wa.me/249121851285?text=" + message)
+                      );
+                      startActivity(intent);
                   });
 
                   FrameLayout.LayoutParams buttonParams =
