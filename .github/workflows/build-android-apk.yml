@@ -182,20 +182,17 @@ jobs:
                   EditText pass=input("كلمة المرور");
                   pass.setInputType(0x81);
                   content.addView(pass);
-                  Button login=btn("دخول");
-                  content.addView(login);
+                  Button login=btn("دخول"); content.addView(login);
                   login.setOnClickListener(v->{
                       if(pass.getText().toString().equals("1234")) dashboard();
                       else Toast.makeText(this,"كلمة المرور غير صحيحة",Toast.LENGTH_SHORT).show();
                   });
-                  Button wa=btn("مراسلة الدعم عبر واتساب");
-                  content.addView(wa);
+                  Button wa=btn("مراسلة الدعم عبر واتساب"); content.addView(wa);
                   wa.setOnClickListener(v->{
                       Intent i=new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://wa.me/249121851285?text="+android.net.Uri.encode("السلام عليكم، أريد الاستفسار عن تطبيق المحاسبة.")));
                       try { startActivity(i); } catch(Exception e){ Toast.makeText(this,"تعذر فتح واتساب",Toast.LENGTH_LONG).show(); }
                   });
-                  Button msg=btn("مراسلة الدعم بالبريد");
-                  content.addView(msg);
+                  Button msg=btn("مراسلة الدعم بالبريد"); content.addView(msg);
                   msg.setOnClickListener(v->{
                       Intent i=new Intent(Intent.ACTION_SEND);
                       i.setType("message/rfc822");
