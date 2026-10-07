@@ -72,8 +72,8 @@ jobs:
                   applicationId 'com.mohammedmustafa.smartcompany'
                   minSdk 23
                   targetSdk 35
-                  versionCode 3
-                  versionName '1.1.0'
+                  versionCode 4
+                  versionName '1.2.0'
               }
           }
           EOF
@@ -183,6 +183,12 @@ jobs:
                       if(pass.getText().toString().equals("1234")) dashboard();
                       else Toast.makeText(this,"كلمة المرور غير صحيحة",Toast.LENGTH_SHORT).show();
                   });
+                  Button wa=btn("مراسلة الدعم عبر واتساب");
+                  content.addView(wa);
+                  wa.setOnClickListener(v->{
+                      Intent i=new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://wa.me/249121851285?text="+android.net.Uri.encode("السلام عليكم، أريد الاستفسار عن تطبيق المحاسبة.")));
+                      try { startActivity(i); } catch(Exception e){ Toast.makeText(this,"تعذر فتح واتساب",Toast.LENGTH_LONG).show(); }
+                  });
                   Button msg=btn("مراسلة الدعم بالبريد");
                   content.addView(msg);
                   msg.setOnClickListener(v->{
@@ -200,7 +206,7 @@ jobs:
                   base("لوحة التحكم");
                   content.addView(tv("شركة محمد مصطفي الذكية",25));
                   content.addView(tv("تطبيق محاسبة ومخزون متعدد الشركات",16));
-                  String[] names={"الشركات","الأصناف والمخزون","المبيعات","المشتريات","العملاء","الموردون","الموظفون والرواتب","التقارير والطباعة","المراسلة"};
+                  String[] names={"الشركات","الأصناف والمخزون","المبيعات","المشتريات","العملاء","الموردون","الموظفون","التقارير والطباعة","المراسلة"};
                   for(String n:names){
                       Button b=btn(n); content.addView(b);
                       b.setOnClickListener(v->{
@@ -210,7 +216,7 @@ jobs:
                           else if(n.equals("المشتريات")) purchase();
                           else if(n.equals("العملاء")) simpleTable("العملاء","customers");
                           else if(n.equals("الموردون")) simpleTable("الموردون","suppliers");
-                          else if(n.equals("الموظفون والرواتب")) simpleTable("الموظفون","employees");
+                          else if(n.equals("الموظفون")) simpleTable("الموظفون","employees");
                           else if(n.equals("التقارير والطباعة")) reports();
                           else showLogin();
                       });
@@ -333,14 +339,14 @@ jobs:
         run: |
           gradle wrapper --gradle-version 8.9
           ./gradlew assembleDebug
-          cp app/build/outputs/apk/debug/app-debug.apk smart-company-v1.1.0.apk
-          sha256sum smart-company-v1.1.0.apk > smart-company-v1.1.0.apk.sha256
+          cp app/build/outputs/apk/debug/app-debug.apk smart-company-v1.2.0.apk
+          sha256sum smart-company-v1.2.0.apk > smart-company-v1.2.0.apk.sha256
 
       - name: Upload final APK package
         uses: actions/upload-artifact@v4
         with:
-          name: smart-company-v1.1.0
+          name: smart-company-v1.2.0
           path: |
-            android-app/smart-company-v1.1.0.apk
-            android-app/smart-company-v1.1.0.apk.sha256
+            android-app/smart-company-v1.2.0.apk
+            android-app/smart-company-v1.2.0.apk.sha256
           retention-days: 90
