@@ -23,6 +23,11 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-35 build-tools;35.0.0
+
       - name: Install Gradle
         run: |
           wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
@@ -338,9 +343,11 @@ jobs:
         working-directory: android-app
         run: |
           gradle wrapper --gradle-version 8.9
-          ./gradlew clean assembleRelease bundleRelease
+          ./gradlew clean assembleDebug assembleRelease bundleRelease
+          cp app/build/outputs/apk/debug/app-debug.apk smart-company-v1.3.0-debug.apk
           cp app/build/outputs/apk/release/app-release-unsigned.apk smart-company-v1.3.0-unsigned.apk
           cp app/build/outputs/bundle/release/app-release.aab smart-company-v1.3.0-unsigned.aab
+          sha256sum smart-company-v1.3.0-debug.apk > smart-company-v1.3.0-debug.apk.sha256
           sha256sum smart-company-v1.3.0-unsigned.apk > smart-company-v1.3.0-unsigned.apk.sha256
           sha256sum smart-company-v1.3.0-unsigned.aab > smart-company-v1.3.0-unsigned.aab.sha256
 
@@ -349,6 +356,8 @@ jobs:
         with:
           name: smart-company-commercial-v1.3.0
           path: |
+            android-app/smart-company-v1.3.0-debug.apk
+            android-app/smart-company-v1.3.0-debug.apk.sha256
             android-app/smart-company-v1.3.0-unsigned.apk
             android-app/smart-company-v1.3.0-unsigned.apk.sha256
             android-app/smart-company-v1.3.0-unsigned.aab
