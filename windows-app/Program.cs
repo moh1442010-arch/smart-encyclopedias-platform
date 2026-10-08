@@ -99,7 +99,7 @@ sealed class MainForm : Form
     {
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!); InitDb();
         Text = UiLanguage.T("شركة محمد مصطفي الذكية 2.0"); Width = 1050; Height = 720; StartPosition = FormStartPosition.CenterScreen;
-        RightToLeft = RightToLeft.Yes; RightToLeftLayout = true;
+        RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes; RightToLeftLayout = !UiLanguage.English;
         var head = new Label { Text = UiLanguage.T("شركة محمد مصطفي الذكية 2.0"), Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(18,55,42), ForeColor = Color.White, Font = new Font("Segoe UI", 23, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
