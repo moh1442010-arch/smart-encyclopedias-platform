@@ -1,0 +1,4 @@
+plugins { id 'com.android.application' }
+android { namespace 'com.mohammedmustafa.smartcompany'; compileSdk 36
+ defaultConfig { applicationId 'com.mohammedmustafa.smartcompany'; minSdk 23; targetSdk 36; versionCode 20; versionName '2.0.0' }
+}
