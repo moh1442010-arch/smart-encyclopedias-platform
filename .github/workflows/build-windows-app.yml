@@ -50,10 +50,10 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
           Copy-Item windows-app/bin/Release/net8.0-windows/win-x64/publish/SmartCompany.exe release/SmartCompany-Windows-x64.exe
-          Set-Content release/README.txt "شركة محمد مصطفي الذكية - Windows x64 | نسخة تجريبية 7 أيام"
+          Set-Content release/README.txt "شركة محمد مصطفي الذكية 2.0 - Windows x64 | نسخة تجريبية 7 أيام | دعم باركود يدوي وماسح USB/Bluetooth"
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
-          name: smart-company-windows-v1.0.0
+          name: smart-company-windows-v2.0.0
           path: release/*
           retention-days: 90
