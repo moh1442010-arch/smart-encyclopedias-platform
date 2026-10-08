@@ -1,0 +1,59 @@
+name: Build Smart Company Windows App
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "windows-app/**"
+      - ".github/workflows/build-windows-app.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Create icon
+        shell: powershell
+        run: |
+          Add-Type -AssemblyName System.Drawing
+          $bmp = New-Object System.Drawing.Bitmap 256,256
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          $g.Clear([System.Drawing.Color]::FromArgb(18,55,42))
+          $gold = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(212,175,55))
+          $g.FillRectangle($gold,50,55,156,28)
+          $g.FillRectangle($gold,50,100,156,28)
+          $g.FillRectangle($gold,50,145,95,28)
+          $g.FillRectangle($gold,160,145,46,28)
+          $g.Dispose()
+          $icon = [System.Drawing.Icon]::FromHandle($bmp.GetHicon())
+          $stream = New-Object System.IO.FileStream("$PWD/windows-app/smartcompany.ico",[System.IO.FileMode]::Create)
+          $icon.Save($stream)
+          $stream.Close()
+          $icon.Dispose()
+          $bmp.Dispose()
+      - name: Restore
+        working-directory: windows-app
+        run: dotnet restore
+      - name: Publish Windows x64
+        working-directory: windows-app
+        run: dotnet publish SmartCompany.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None
+      - name: Package
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Copy-Item windows-app/bin/Release/net8.0-windows/win-x64/publish/SmartCompany.exe release/SmartCompany-Windows-x64.exe
+          Set-Content release/README.txt "شركة محمد مصطفي الذكية - Windows x64 | نسخة تجريبية 7 أيام"
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: smart-company-windows-v1.0.0
+          path: release/*
+          retention-days: 90
