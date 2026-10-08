@@ -336,27 +336,65 @@ jobs:
           }
           EOF
 
+      - name: Prepare release signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.SMARTCOMPANY_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.SMARTCOMPANY_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SMARTCOMPANY_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.SMARTCOMPANY_KEY_PASSWORD }}
+        run: |
+          mkdir -p android-app/signing
+          if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo "$KEYSTORE_B64" | base64 --decode > android-app/signing/smartcompany-release.jks
+            printf '%s' "$KEYSTORE_PASSWORD" > android-app/signing/keystore-password.txt
+            printf '%s' "$KEY_ALIAS" > android-app/signing/key-alias.txt
+            printf '%s' "$KEY_PASSWORD" > android-app/signing/key-password.txt
+            echo "Using repository release signing key."
+          else
+            echo "No release signing secrets found. Creating a one-time bootstrap signing key."
+            KEYSTORE_PASSWORD="$(openssl rand -hex 24)"
+            KEY_PASSWORD="$KEYSTORE_PASSWORD"
+            KEY_ALIAS="smartcompany"
+            keytool -genkeypair -v               -keystore android-app/signing/smartcompany-release.jks               -storepass "$KEYSTORE_PASSWORD"               -keypass "$KEY_PASSWORD"               -alias "$KEY_ALIAS"               -keyalg RSA -keysize 2048 -validity 10000               -dname "CN=Smart Company,O=Mohammed Mustafa,C=SD"
+            printf '%s' "$KEYSTORE_PASSWORD" > android-app/signing/keystore-password.txt
+            printf '%s' "$KEY_ALIAS" > android-app/signing/key-alias.txt
+            printf '%s' "$KEY_PASSWORD" > android-app/signing/key-password.txt
+            {
+              echo "SMARTCOMPANY_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+              echo "SMARTCOMPANY_KEY_ALIAS=$KEY_ALIAS"
+              echo "SMARTCOMPANY_KEY_PASSWORD=$KEY_PASSWORD"
+              echo "SMARTCOMPANY_KEYSTORE_BASE64<<EOF"
+              base64 -w 0 android-app/signing/smartcompany-release.jks
+              echo
+              echo "EOF"
+            } > android-app/smartcompany-signing-bootstrap.txt
+          fi
+
       - name: Build commercial release artifacts
         working-directory: android-app
         run: |
           gradle wrapper --gradle-version 8.9
           ./gradlew clean assembleDebug assembleRelease bundleRelease
           cp app/build/outputs/apk/debug/app-debug.apk smart-company-v1.3.0-debug.apk
-          cp app/build/outputs/apk/release/app-release-unsigned.apk smart-company-v1.3.0-unsigned.apk
+          cp app/build/outputs/release/app-release-unsigned.apk smart-company-v1.3.0-unsigned.apk
           cp app/build/outputs/bundle/release/app-release.aab smart-company-v1.3.0-unsigned.aab
+          APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          "$APKSIGNER" sign --ks signing/smartcompany-release.jks --ks-key-alias "$(cat signing/key-alias.txt)" --ks-pass "pass:$(cat signing/keystore-password.txt)" --key-pass "pass:$(cat signing/key-password.txt)" --out smart-company-v1.3.0-release.apk smart-company-v1.3.0-unsigned.apk
+          "$APKSIGNER" verify --verbose smart-company-v1.3.0-release.apk
+          sha256sum smart-company-v1.3.0-release.apk > smart-company-v1.3.0-release.apk.sha256
           sha256sum smart-company-v1.3.0-debug.apk > smart-company-v1.3.0-debug.apk.sha256
-          sha256sum smart-company-v1.3.0-unsigned.apk > smart-company-v1.3.0-unsigned.apk.sha256
-          sha256sum smart-company-v1.3.0-unsigned.aab > smart-company-v1.3.0-unsigned.aab.sha256
 
       - name: Upload commercial release package
         uses: actions/upload-artifact@v4
         with:
           name: smart-company-commercial-v1.3.0
           path: |
+            android-app/smart-company-v1.3.0-release.apk
+            android-app/smart-company-v1.3.0-release.apk.sha256
             android-app/smart-company-v1.3.0-debug.apk
             android-app/smart-company-v1.3.0-debug.apk.sha256
             android-app/smart-company-v1.3.0-unsigned.apk
-            android-app/smart-company-v1.3.0-unsigned.apk.sha256
             android-app/smart-company-v1.3.0-unsigned.aab
-            android-app/smart-company-v1.3.0-unsigned.aab.sha256
+            android-app/smartcompany-signing-bootstrap.txt
+          if-no-files-found: error
           retention-days: 90
