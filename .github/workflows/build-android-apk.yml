@@ -1,9 +1,10 @@
-name: Build Commercial Smart Company Accounting App
+name: Build Smart Company Accounting App 2.0
 
 on:
   workflow_dispatch:
   push:
     paths:
+      - "android-app/**"
       - ".github/workflows/build-android-apk.yml"
 
 permissions:
@@ -12,442 +13,61 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
+      - name: Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: platform-tools platforms;android-36 build-tools;36.0.0
 
-      - name: Install Gradle
+      - name: Gradle 8.9
         run: |
           wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
           unzip -q gradle-8.9-bin.zip
           echo "$PWD/gradle-8.9/bin" >> "$GITHUB_PATH"
 
-      - name: Create native accounting app
+      - name: Build debug and release
+        working-directory: android-app
         run: |
-          mkdir -p android-app/app/src/main/java/com/mohammedmustafa/smartcompany
-          mkdir -p android-app/app/src/main/res/values android-app/app/src/main/res/drawable
+          gradle wrapper --gradle-version 8.9
+          ./gradlew clean assembleDebug assembleRelease bundleRelease
 
-          cat > android-app/settings.gradle <<'EOF'
-          pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          rootProject.name = "SmartCompany"
-          include(":app")
-          EOF
-
-          cat > android-app/build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application' version '8.7.3' apply false
-          }
-          EOF
-
-          cat > android-app/app/build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application'
-          }
-
-          android {
-              namespace 'com.mohammedmustafa.smartcompany'
-              compileSdk 36
-
-              defaultConfig {
-                  applicationId 'com.mohammedmustafa.smartcompany'
-                  minSdk 23
-                  targetSdk 36
-                  versionCode 5
-                  versionName '1.3.0'
-              }
-          }
-          EOF
-
-          cat > android-app/app/src/main/AndroidManifest.xml <<'EOF'
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.INTERNET" />
-              <application
-                  android:allowBackup="true"
-                  android:label="شركة محمد مصطفي الذكية"
-                  android:icon="@drawable/ic_smart_company"
-                  android:roundIcon="@drawable/ic_smart_company"
-                  android:supportsRtl="true"
-                  android:theme="@style/AppTheme">
-                  <activity
-                      android:name=".MainActivity"
-                      android:screenOrientation="portrait"
-                      android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
-
-
-          cat > android-app/app/src/main/res/drawable/ic_smart_company.xml <<'EOF'
-          <vector xmlns:android="http://schemas.android.com/apk/res/android"
-              android:width="108dp" android:height="108dp"
-              android:viewportWidth="108" android:viewportHeight="108">
-              <path android:fillColor="#12372A" android:pathData="M0,0h108v108h-108z"/>
-              <path android:fillColor="#D4AF37" android:pathData="M24,30h60v12h-60zM24,48h60v12h-60zM24,66h38v12h-38z"/>
-              <path android:fillColor="#FFFFFF" android:pathData="M68,66h16v12h-16z"/>
-          </vector>
-          EOF
-
-          cat > android-app/app/src/main/res/values/styles.xml <<'EOF'
-          <resources>
-              <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
-                  <item name="android:fontFamily">sans</item>
-                  <item name="android:colorAccent">#0B5D3B</item>
-                  <item name="android:navigationBarColor">#12372A</item>
-                  <item name="android:statusBarColor">#12372A</item>
-              </style>
-          </resources>
-          EOF
-
-          cat > android-app/app/src/main/java/com/mohammedmustafa/smartcompany/MainActivity.java <<'EOF'
-          package com.mohammedmustafa.smartcompany;
-
-          import android.app.*;
-          import android.os.*;
-          import android.content.*;
-          import android.database.Cursor;
-          import android.database.sqlite.*;
-          import android.graphics.Color;
-          import android.print.PrintAttributes;
-          import android.print.PrintManager;
-          import android.view.*;
-          import android.webkit.WebView;
-          import android.widget.*;
-          import java.util.*;
-
-          public class MainActivity extends Activity {
-              DB db;
-              LinearLayout root, content;
-              TextView title, status;
-              int green = Color.rgb(11,93,59);
-
-              @Override public void onCreate(Bundle b) {
-                  super.onCreate(b);
-                  db = new DB(this);
-                  if (!trialAvailable()) showSubscriptionLock();
-                  else showLogin();
-              }
-
-              TextView tv(String s, int size) {
-                  TextView t = new TextView(this);
-                  t.setText(s); t.setTextSize(size); t.setPadding(18,14,18,14);
-                  return t;
-              }
-              Button btn(String s) {
-                  Button b = new Button(this); b.setText(s); b.setAllCaps(false);
-                  return b;
-              }
-              EditText input(String hint) {
-                  EditText e = new EditText(this); e.setHint(hint); e.setPadding(18,10,18,10);
-                  return e;
-              }
-
-              void base(String heading) {
-                  root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
-                  root.setBackgroundColor(Color.rgb(248,249,250));
-                  LinearLayout bar = new LinearLayout(this); bar.setGravity(Gravity.CENTER_VERTICAL);
-                  bar.setBackgroundColor(green);
-                  title = tv(heading,20); title.setTextColor(Color.WHITE);
-                  bar.addView(title,new LinearLayout.LayoutParams(0,LinearLayout.LayoutParams.WRAP_CONTENT,1));
-                  Button home=btn("الرئيسية"); home.setTextColor(Color.WHITE);
-                  home.setOnClickListener(v->dashboard());
-                  bar.addView(home);
-                  root.addView(bar);
-                  ScrollView sv=new ScrollView(this);
-                  content=new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL);
-                  sv.addView(content); root.addView(sv,new LinearLayout.LayoutParams(-1,0,1));
-                  status=tv("",13); root.addView(status);
-                  setContentView(root);
-              }
-
-
-              boolean trialAvailable() {
-                  android.content.SharedPreferences p = getSharedPreferences("license", MODE_PRIVATE);
-                  if (p.getBoolean("activated", false)) return true;
-                  long first = p.getLong("first_run", 0L);
-                  if (first == 0L) {
-                      first = System.currentTimeMillis();
-                      p.edit().putLong("first_run", first).apply();
-                  }
-                  long days = (System.currentTimeMillis() - first) / 86400000L;
-                  return days < 7L;
-              }
-
-              void showSubscriptionLock() {
-                  base("انتهاء التجربة");
-                  content.addView(tv("انتهت فترة التجربة المجانية لمدة 7 أيام.",22));
-                  content.addView(tv("لتفعيل النسخة التجارية، تواصل مع الدعم للحصول على رمز التفعيل.",16));
-                  EditText code = input("رمز التفعيل");
-                  content.addView(code);
-                  Button activate = btn("تفعيل الاشتراك");
-                  content.addView(activate);
-                  activate.setOnClickListener(v -> {
-                      String entered = code.getText().toString().trim();
-                      if (entered.equals("SMART-PAID-2026")) {
-                          getSharedPreferences("license", MODE_PRIVATE).edit().putBoolean("activated", true).apply();
-                          Toast.makeText(this, "تم تفعيل الاشتراك", Toast.LENGTH_LONG).show();
-                          dashboard();
-                      } else {
-                          Toast.makeText(this, "رمز التفعيل غير صحيح. تواصل مع الدعم.", Toast.LENGTH_LONG).show();
-                      }
-                  });
-                  Button wa = btn("طلب الاشتراك عبر واتساب");
-                  content.addView(wa);
-                  wa.setOnClickListener(v -> {
-                      Intent i = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://wa.me/249121851285?text="+android.net.Uri.encode("السلام عليكم، انتهت التجربة وأريد الاشتراك في شركة محمد مصطفي الذكية.")));
-                      try { startActivity(i); } catch(Exception e) {}
-                  });
-              }
-
-              void showLogin() {
-                  base("شركة محمد مصطفي الذكية");
-                  content.addView(tv("نظام المحاسبة والمخزون",24));
-                  content.addView(tv("تسجيل الدخول",18));
-                  EditText pass=input("كلمة المرور");
-                  pass.setInputType(0x81);
-                  content.addView(pass);
-                  Button login=btn("دخول"); content.addView(login);
-                  login.setOnClickListener(v->{
-                      if(pass.getText().toString().equals("1234")) dashboard();
-                      else Toast.makeText(this,"كلمة المرور غير صحيحة",Toast.LENGTH_SHORT).show();
-                  });
-                  Button wa=btn("مراسلة الدعم عبر واتساب"); content.addView(wa);
-                  wa.setOnClickListener(v->{
-                      Intent i=new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://wa.me/249121851285?text="+android.net.Uri.encode("السلام عليكم، أريد الاستفسار عن تطبيق المحاسبة.")));
-                      try { startActivity(i); } catch(Exception e){ Toast.makeText(this,"تعذر فتح واتساب",Toast.LENGTH_LONG).show(); }
-                  });
-                  Button msg=btn("مراسلة الدعم بالبريد"); content.addView(msg);
-                  msg.setOnClickListener(v->{
-                      Intent i=new Intent(Intent.ACTION_SEND);
-                      i.setType("message/rfc822");
-                      i.putExtra(Intent.EXTRA_EMAIL,new String[]{"awrad.m.m.m@hotmail.com"});
-                      i.putExtra(Intent.EXTRA_SUBJECT,"استفسار عن شركة محمد مصطفي الذكية");
-                      i.putExtra(Intent.EXTRA_TEXT,"السلام عليكم، أريد الاستفسار عن تطبيق المحاسبة.");
-                      try { startActivity(Intent.createChooser(i,"اختيار تطبيق البريد")); }
-                      catch(Exception e){ Toast.makeText(this,"لا يوجد تطبيق بريد مثبت",Toast.LENGTH_LONG).show(); }
-                  });
-              }
-
-              void dashboard() {
-                  base("لوحة التحكم");
-                  content.addView(tv("شركة محمد مصطفي الذكية",25));
-                  content.addView(tv("تطبيق محاسبة ومخزون متعدد الشركات",16));
-                  String[] names={"الشركات","الأصناف والمخزون","المبيعات","المشتريات","العملاء","الموردون","الموظفون","التقارير والطباعة","المراسلة"};
-                  for(String n:names){
-                      Button b=btn(n); content.addView(b);
-                      b.setOnClickListener(v->{
-                          if(n.equals("الشركات")) companies();
-                          else if(n.equals("الأصناف والمخزون")) products();
-                          else if(n.equals("المبيعات")) sale();
-                          else if(n.equals("المشتريات")) purchase();
-                          else if(n.equals("العملاء")) simpleTable("العملاء","customers");
-                          else if(n.equals("الموردون")) simpleTable("الموردون","suppliers");
-                          else if(n.equals("الموظفون")) simpleTable("الموظفون","employees");
-                          else if(n.equals("التقارير والطباعة")) reports();
-                          else showLogin();
-                      });
-                  }
-              }
-
-              void companies() {
-                  base("الشركات");
-                  EditText name=input("اسم الشركة"); content.addView(name);
-                  Button add=btn("إضافة شركة"); content.addView(add);
-                  add.setOnClickListener(v->{db.exec("INSERT INTO companies(name) VALUES(?)",name.getText().toString()); name.setText(""); loadCompanies();});
-                  loadCompanies();
-              }
-              void loadCompanies(){
-                  Cursor c=db.raw("SELECT id,name FROM companies ORDER BY id DESC");
-                  while(c.moveToNext()){
-                      long id=c.getLong(0); Button b=btn("اختيار: "+c.getString(1)); content.addView(b);
-                      b.setOnClickListener(v->{getPreferences(0).edit().putLong("company",id).apply(); Toast.makeText(this,"تم اختيار الشركة",Toast.LENGTH_SHORT).show(); dashboard();});
-                  } c.close();
-              }
-
-              void products() {
-                  base("الأصناف والمخزون");
-                  EditText n=input("اسم الصنف"); EditText q=input("الكمية الافتتاحية"); EditText p=input("سعر الوحدة");
-                  q.setInputType(2); p.setInputType(2);
-                  content.addView(n);content.addView(q);content.addView(p);
-                  Button add=btn("إضافة الصنف"); content.addView(add);
-                  add.setOnClickListener(v->{
-                      db.exec("INSERT INTO products(name,qty,price) VALUES(?,?,?)",n.getText().toString(),num(q),num(p));
-                      n.setText("");q.setText("");p.setText(""); loadProducts();
-                  });
-                  loadProducts();
-              }
-              void loadProducts(){
-                  Cursor c=db.raw("SELECT name,qty,price FROM products ORDER BY id DESC");
-                  while(c.moveToNext()) content.addView(tv(c.getString(0)+" | المخزون: "+c.getDouble(1)+" | السعر: "+c.getDouble(2),15));
-                  c.close();
-              }
-
-              double num(EditText e){ try{return Double.parseDouble(e.getText().toString());}catch(Exception x){return 0;} }
-
-              void sale(){ transaction("بيع","sales",-1); }
-              void purchase(){ transaction("شراء","purchases",1); }
-
-              void transaction(String label,String table,int direction){
-                  base(label);
-                  EditText product=input("اسم الصنف"); EditText qty=input("الكمية"); EditText price=input("السعر");
-                  content.addView(product);content.addView(qty);content.addView(price);
-                  Button save=btn("حفظ "+label); content.addView(save);
-                  save.setOnClickListener(v->{
-                      double q=num(qty), pr=num(price);
-                      Cursor c=db.raw("SELECT id,qty FROM products WHERE name=?",product.getText().toString());
-                      if(c.moveToFirst()){
-                          long id=c.getLong(0); double old=c.getDouble(1);
-                          double next=old+(direction*q);
-                          if(next<0){Toast.makeText(this,"الرصيد غير كافٍ",Toast.LENGTH_LONG).show();c.close();return;}
-                          db.exec("UPDATE products SET qty=? WHERE id=?",next,id);
-                          db.exec("INSERT INTO "+table+"(product,qty,price,total) VALUES(?,?,?,?)",product.getText().toString(),q,pr,q*pr);
-                          Toast.makeText(this,"تم الحفظ وتحديث المخزون",Toast.LENGTH_SHORT).show();
-                      } else Toast.makeText(this,"الصنف غير موجود",Toast.LENGTH_LONG).show();
-                      c.close();
-                  });
-              }
-
-              void simpleTable(String heading,String table){
-                  base(heading);
-                  EditText n=input("الاسم"); content.addView(n);
-                  Button add=btn("إضافة");content.addView(add);
-                  add.setOnClickListener(v->{db.exec("INSERT INTO "+table+"(name) VALUES(?)",n.getText().toString());n.setText("");});
-                  Cursor c=db.raw("SELECT name FROM "+table+" ORDER BY id DESC");
-                  while(c.moveToNext()) content.addView(tv("• "+c.getString(0),16)); c.close();
-              }
-
-              void reports(){
-                  base("التقارير");
-                  Cursor s=db.raw("SELECT COALESCE(SUM(total),0) FROM sales");
-                  Cursor p=db.raw("SELECT COALESCE(SUM(total),0) FROM purchases");
-                  double sv=s.moveToFirst()?s.getDouble(0):0, pv=p.moveToFirst()?p.getDouble(0):0;s.close();p.close();
-                  content.addView(tv("إجمالي المبيعات: "+sv,20));
-                  content.addView(tv("إجمالي المشتريات: "+pv,20));
-                  content.addView(tv("صافي الحركة: "+(sv-pv),20));
-                  content.addView(tv("توقيع المحاسب: ____________________",16));
-                  Button print=btn("طباعة التقرير A4");content.addView(print);
-                  print.setOnClickListener(v->printReport(sv,pv));
-              }
-
-              void printReport(double sales,double purchases){
-                  WebView w=new WebView(this);
-                  String html="<html dir='rtl'><body style='font-family:sans-serif;padding:30px'><h1>شركة محمد مصطفي الذكية</h1><h2>تقرير مالي</h2><p>إجمالي المبيعات: "+sales+"</p><p>إجمالي المشتريات: "+purchases+"</p><p>الصافي: "+(sales-purchases)+"</p><br><p>توقيع المحاسب: ____________________</p></body></html>";
-                  w.loadDataWithBaseURL(null,html,"text/html","UTF-8",null);
-                  w.setWebViewClient(new android.webkit.WebViewClient(){public void onPageFinished(WebView v,String u){
-                      PrintManager pm=(PrintManager)getSystemService(PRINT_SERVICE);
-                      pm.print("تقرير شركة محمد مصطفي الذكية",v.createPrintDocumentAdapter("تقرير"),new PrintAttributes.Builder().build());
-                  }});
-              }
-
-              @Override public void onBackPressed(){ dashboard(); }
-
-              static class DB extends SQLiteOpenHelper {
-                  DB(Context c){super(c,"smartcompany.db",null,1);}
-                  public void onCreate(SQLiteDatabase d){
-                      d.execSQL("CREATE TABLE companies(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT)");
-                      d.execSQL("CREATE TABLE products(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT,qty REAL,price REAL)");
-                      d.execSQL("CREATE TABLE sales(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL)");
-                      d.execSQL("CREATE TABLE purchases(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL)");
-                      d.execSQL("CREATE TABLE customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT)");
-                      d.execSQL("CREATE TABLE suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT)");
-                      d.execSQL("CREATE TABLE employees(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT)");
-                      d.execSQL("INSERT INTO companies(name) VALUES('الشركة الرئيسية')");
-                  }
-                  public void onUpgrade(SQLiteDatabase d,int o,int n){}
-                  void exec(String sql,Object... a){SQLiteStatement s=getWritableDatabase().compileStatement(sql);for(int i=0;i<a.length;i++){if(a[i] instanceof Number)s.bindDouble(i+1,((Number)a[i]).doubleValue());else s.bindString(i+1,String.valueOf(a[i]));}s.execute();}
-                  Cursor raw(String sql,String...a){return getReadableDatabase().rawQuery(sql,a);}
-              }
-          }
-          EOF
-
-      - name: Prepare release signing key
+      - name: Sign release when production key exists
         env:
           KEYSTORE_B64: ${{ secrets.SMARTCOMPANY_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.SMARTCOMPANY_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.SMARTCOMPANY_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.SMARTCOMPANY_KEY_PASSWORD }}
-        run: |
-          mkdir -p android-app/signing
-          if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
-            echo "$KEYSTORE_B64" | base64 --decode > android-app/signing/smartcompany-release.jks
-            printf '%s' "$KEYSTORE_PASSWORD" > android-app/signing/keystore-password.txt
-            printf '%s' "$KEY_ALIAS" > android-app/signing/key-alias.txt
-            printf '%s' "$KEY_PASSWORD" > android-app/signing/key-password.txt
-            echo "Using repository release signing key."
-          else
-            echo "No release signing secrets found. Creating a one-time bootstrap signing key."
-            KEYSTORE_PASSWORD="$(openssl rand -hex 24)"
-            KEY_PASSWORD="$KEYSTORE_PASSWORD"
-            KEY_ALIAS="smartcompany"
-            keytool -genkeypair -v               -keystore android-app/signing/smartcompany-release.jks               -storepass "$KEYSTORE_PASSWORD"               -keypass "$KEY_PASSWORD"               -alias "$KEY_ALIAS"               -keyalg RSA -keysize 2048 -validity 10000               -dname "CN=Smart Company,O=Mohammed Mustafa,C=SD"
-            printf '%s' "$KEYSTORE_PASSWORD" > android-app/signing/keystore-password.txt
-            printf '%s' "$KEY_ALIAS" > android-app/signing/key-alias.txt
-            printf '%s' "$KEY_PASSWORD" > android-app/signing/key-password.txt
-            {
-              echo "SMARTCOMPANY_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
-              echo "SMARTCOMPANY_KEY_ALIAS=$KEY_ALIAS"
-              echo "SMARTCOMPANY_KEY_PASSWORD=$KEY_PASSWORD"
-              echo "SMARTCOMPANY_KEYSTORE_BASE64<<EOF"
-              base64 -w 0 android-app/signing/smartcompany-release.jks
-              echo
-              echo "EOF"
-            } > android-app/smartcompany-signing-bootstrap.txt
-          fi
-
-      - name: Build commercial release artifacts
         working-directory: android-app
         run: |
-          gradle wrapper --gradle-version 8.9
-          ./gradlew clean assembleDebug assembleRelease bundleRelease
-          cp app/build/outputs/apk/debug/app-debug.apk smart-company-v1.3.0-debug.apk
-          cp app/build/outputs/apk/release/app-release-unsigned.apk smart-company-v1.3.0-unsigned.apk
-          cp app/build/outputs/bundle/release/app-release.aab smart-company-v1.3.0-unsigned.aab
-          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
-          "$APKSIGNER" sign --ks signing/smartcompany-release.jks --ks-key-alias "$(cat signing/key-alias.txt)" --ks-pass "pass:$(cat signing/keystore-password.txt)" --key-pass "pass:$(cat signing/key-password.txt)" --out smart-company-v1.3.0-release.apk smart-company-v1.3.0-unsigned.apk
-          "$APKSIGNER" verify --verbose smart-company-v1.3.0-release.apk
-          sha256sum smart-company-v1.3.0-release.apk > smart-company-v1.3.0-release.apk.sha256
-          sha256sum smart-company-v1.3.0-debug.apk > smart-company-v1.3.0-debug.apk.sha256
+          mkdir -p signing
+          if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo "$KEYSTORE_B64" | base64 --decode > signing/release.jks
+            apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+            "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out smart-company-v2.0.0-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
+            "$apksigner" verify --verbose smart-company-v2.0.0-release.apk
+          else
+            cp app/build/outputs/apk/release/app-release-unsigned.apk smart-company-v2.0.0-unsigned.apk
+          fi
+          cp app/build/outputs/apk/debug/app-debug.apk smart-company-v2.0.0-debug.apk
+          cp app/build/outputs/bundle/release/app-release.aab smart-company-v2.0.0.aab
+          sha256sum smart-company-v2.0.0-*.apk smart-company-v2.0.0.aab > smart-company-v2.0.0.sha256
 
-      - name: Upload commercial release package
+      - name: Upload 2.0 package
         uses: actions/upload-artifact@v4
         with:
-          name: smart-company-commercial-v1.3.0
+          name: smart-company-v2.0.0
           path: |
-            android-app/smart-company-v1.3.0-release.apk
-            android-app/smart-company-v1.3.0-release.apk.sha256
-            android-app/smart-company-v1.3.0-debug.apk
-            android-app/smart-company-v1.3.0-debug.apk.sha256
-            android-app/smart-company-v1.3.0-unsigned.apk
-            android-app/smart-company-v1.3.0-unsigned.aab
-            android-app/smartcompany-signing-bootstrap.txt
+            android-app/smart-company-v2.0.0-*.apk
+            android-app/smart-company-v2.0.0.aab
+            android-app/smart-company-v2.0.0.sha256
           if-no-files-found: error
           retention-days: 90
