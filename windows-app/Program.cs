@@ -139,10 +139,68 @@ sealed class MainForm : Form
     }
     void Transaction(bool purchase)
     {
-        using var f=new Form{Text=UiLanguage.T(purchase?"المشتريات":"المبيعات"),Width=650,Height=430,RightToLeft=UiLanguage.English?RightToLeft.No:RightToLeft.Yes,RightToLeftLayout=!UiLanguage.English};
-        var n=new TextBox{PlaceholderText=UiLanguage.T("اسم الصنف"),Dock=DockStyle.Top,Height=40};var q=new TextBox{PlaceholderText=UiLanguage.T("الكمية"),Dock=DockStyle.Top,Height=40};var p=new TextBox{PlaceholderText=UiLanguage.T("السعر"),Dock=DockStyle.Top,Height=40};var save=new Button{Text=UiLanguage.T("حفظ"),Dock=DockStyle.Top,Height=45};
-        save.Click+=(_,_)=>{if(!double.TryParse(q.Text,out var qty)||!double.TryParse(p.Text,out var price))return;using var c=C();using var check=c.CreateCommand();check.CommandText="SELECT qty FROM products WHERE name=$n OR barcode=$n";check.Parameters.AddWithValue("$n",n.Text.Trim());var o=check.ExecuteScalar();if(o is null){MessageBox.Show(UiLanguage.T("الصنف غير موجود."));return;}var next=Convert.ToDouble(o)+(purchase?qty:-qty);if(next<0){MessageBox.Show(UiLanguage.T("الرصيد غير كافٍ."));return;}using var u=c.CreateCommand();u.CommandText="UPDATE products SET qty=$q WHERE name=$n";u.Parameters.AddWithValue("$q",next);u.Parameters.AddWithValue("$n",n.Text);u.ExecuteNonQuery();using var ins=c.CreateCommand();ins.CommandText=$"INSERT INTO {(purchase?"purchases":"sales")}(product,qty,price,total) VALUES($n,$q,$p,$t)";ins.Parameters.AddWithValue("$n",n.Text);ins.Parameters.AddWithValue("$q",qty);ins.Parameters.AddWithValue("$p",price);ins.Parameters.AddWithValue("$t",qty*price);ins.ExecuteNonQuery();MessageBox.Show(UiLanguage.T("تم الحفظ وتحديث المخزون."));RefreshSummary();};
-        f.Controls.Add(save);f.Controls.Add(p);f.Controls.Add(q);f.Controls.Add(n);f.ShowDialog();
+        using var f = new Form { Text = UiLanguage.T(purchase ? "المشتريات" : "المبيعات"), Width = 650, Height = 430, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var n = new TextBox { PlaceholderText = UiLanguage.T("اسم الصنف أو الباركود"), Dock = DockStyle.Top, Height = 40 };
+        var q = new TextBox { PlaceholderText = UiLanguage.T("الكمية"), Dock = DockStyle.Top, Height = 40 };
+        var p = new TextBox { PlaceholderText = UiLanguage.T("السعر"), Dock = DockStyle.Top, Height = 40 };
+        var save = new Button { Text = UiLanguage.T("حفظ"), Dock = DockStyle.Top, Height = 45 };
+        save.Click += (_, _) =>
+        {
+            if (!double.TryParse(q.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var qty) ||
+                !double.TryParse(p.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var price) ||
+                qty <= 0 || price < 0 || string.IsNullOrWhiteSpace(n.Text))
+            {
+                MessageBox.Show(UiLanguage.T("أدخل صنفًا وكمية موجبة وسعرًا صحيحًا."));
+                return;
+            }
+            try
+            {
+                using var c = C();
+                using var tx = c.BeginTransaction();
+                using var check = c.CreateCommand();
+                check.Transaction = tx;
+                check.CommandText = "SELECT id, qty, name FROM products WHERE name=$n OR barcode=$n LIMIT 1";
+                check.Parameters.AddWithValue("$n", n.Text.Trim());
+                using var reader = check.ExecuteReader();
+                if (!reader.Read())
+                {
+                    MessageBox.Show(UiLanguage.T("الصنف غير موجود."));
+                    return;
+                }
+                var productId = reader.GetInt64(0);
+                var oldQty = reader.GetDouble(1);
+                var productName = reader.GetString(2);
+                reader.Close();
+                var next = oldQty + (purchase ? qty : -qty);
+                if (next < 0)
+                {
+                    MessageBox.Show(UiLanguage.T("الرصيد غير كافٍ."));
+                    return;
+                }
+                using var update = c.CreateCommand();
+                update.Transaction = tx;
+                update.CommandText = "UPDATE products SET qty=$q WHERE id=$id";
+                update.Parameters.AddWithValue("$q", next);
+                update.Parameters.AddWithValue("$id", productId);
+                update.ExecuteNonQuery();
+                using var insert = c.CreateCommand();
+                insert.Transaction = tx;
+                insert.CommandText = $"INSERT INTO {(purchase ? "purchases" : "sales")}(product,qty,price,total) VALUES($n,$q,$p,$t)";
+                insert.Parameters.AddWithValue("$n", productName);
+                insert.Parameters.AddWithValue("$q", qty);
+                insert.Parameters.AddWithValue("$p", price);
+                insert.Parameters.AddWithValue("$t", qty * price);
+                insert.ExecuteNonQuery();
+                tx.Commit();
+                MessageBox.Show(UiLanguage.T("تم الحفظ وتحديث المخزون."));
+                RefreshSummary();
+            }
+            catch (Exception)
+            {
+                MessageBox.Show(UiLanguage.T("تعذر حفظ العملية؛ لم تُعتمد العملية."));
+            }
+        };
+        f.Controls.Add(save); f.Controls.Add(p); f.Controls.Add(q); f.Controls.Add(n); f.ShowDialog();
     }
     void Simple(string table,string title)
     {
