@@ -69,9 +69,9 @@ sealed class MainForm : Form
     public MainForm()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!); InitDb();
-        Text = "شركة محمد مصطفي الذكية"; Width = 1050; Height = 720; StartPosition = FormStartPosition.CenterScreen;
+        Text = "شركة محمد مصطفي الذكية 2.0"; Width = 1050; Height = 720; StartPosition = FormStartPosition.CenterScreen;
         RightToLeft = RightToLeft.Yes; RightToLeftLayout = true;
-        var head = new Label { Text = "شركة محمد مصطفي الذكية", Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(18,55,42), ForeColor = Color.White, Font = new Font("Segoe UI", 23, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
+        var head = new Label { Text = "شركة محمد مصطفي الذكية 2.0", Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(18,55,42), ForeColor = Color.White, Font = new Font("Segoe UI", 23, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
         Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("الموظفون", () => Simple("employees","الموظفون"));
@@ -90,20 +90,22 @@ sealed class MainForm : Form
         using var c = C(); using var x = c.CreateCommand();
         x.CommandText = "CREATE TABLE IF NOT EXISTS products(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT,qty REAL,price REAL); CREATE TABLE IF NOT EXISTS sales(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL); CREATE TABLE IF NOT EXISTS purchases(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL); CREATE TABLE IF NOT EXISTS customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT); CREATE TABLE IF NOT EXISTS suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT); CREATE TABLE IF NOT EXISTS employees(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT);";
         x.ExecuteNonQuery();
+        try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE products ADD COLUMN barcode TEXT"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
+        using var index = c.CreateCommand(); index.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode) WHERE barcode IS NOT NULL AND barcode != ''"; index.ExecuteNonQuery();
     }
     void Products()
     {
         using var f = new Form { Text="الأصناف والمخزون", Width=700, Height=600, RightToLeft=RightToLeft.Yes, RightToLeftLayout=true };
-        var n=new TextBox{PlaceholderText="اسم الصنف",Dock=DockStyle.Top,Height=40}; var q=new TextBox{PlaceholderText="الكمية",Dock=DockStyle.Top,Height=40}; var p=new TextBox{PlaceholderText="السعر",Dock=DockStyle.Top,Height=40};
+        var n=new TextBox{PlaceholderText="اسم الصنف",Dock=DockStyle.Top,Height=40}; var barcode=new TextBox{PlaceholderText="الباركود (ماسح USB/Bluetooth أو إدخال يدوي)",Dock=DockStyle.Top,Height=40}; var q=new TextBox{PlaceholderText="الكمية",Dock=DockStyle.Top,Height=40}; var p=new TextBox{PlaceholderText="السعر",Dock=DockStyle.Top,Height=40};
         var add=new Button{Text="إضافة الصنف",Dock=DockStyle.Top,Height=45}; var list=new ListBox{Dock=DockStyle.Fill};
-        add.Click+=(_,_)=>{if(!double.TryParse(q.Text,out var qty)||!double.TryParse(p.Text,out var price))return;using var c=C();using var x=c.CreateCommand();x.CommandText="INSERT INTO products(name,qty,price) VALUES($n,$q,$p)";x.Parameters.AddWithValue("$n",n.Text);x.Parameters.AddWithValue("$q",qty);x.Parameters.AddWithValue("$p",price);x.ExecuteNonQuery();list.Items.Add(n.Text+" | المخزون "+qty+" | السعر "+price);n.Clear();q.Clear();p.Clear();RefreshSummary();};
-        f.Controls.Add(list);f.Controls.Add(add);f.Controls.Add(p);f.Controls.Add(q);f.Controls.Add(n);f.ShowDialog();
+        add.Click+=(_,_)=>{if(string.IsNullOrWhiteSpace(n.Text)||!double.TryParse(q.Text,out var qty)||!double.TryParse(p.Text,out var price)||qty<0||price<0){MessageBox.Show("أدخل اسمًا وكمية وسعرًا صحيحًا.");return;}try{using var c=C();using var x=c.CreateCommand();x.CommandText="INSERT INTO products(name,barcode,qty,price) VALUES($n,$b,$q,$p)";x.Parameters.AddWithValue("$n",n.Text.Trim());x.Parameters.AddWithValue("$b",string.IsNullOrWhiteSpace(barcode.Text)?DBNull.Value:barcode.Text.Trim());x.Parameters.AddWithValue("$q",qty);x.Parameters.AddWithValue("$p",price);x.ExecuteNonQuery();list.Items.Add(n.Text+" | باركود "+barcode.Text+" | المخزون "+qty+" | السعر "+price);n.Clear();barcode.Clear();q.Clear();p.Clear();RefreshSummary();}catch(SqliteException){MessageBox.Show("تعذر الحفظ: الاسم أو الباركود مستخدم مسبقًا.");}};
+        f.Controls.Add(list);f.Controls.Add(add);f.Controls.Add(p);f.Controls.Add(q);f.Controls.Add(barcode);f.Controls.Add(n);f.ShowDialog();
     }
     void Transaction(bool purchase)
     {
         using var f=new Form{Text=purchase?"المشتريات":"المبيعات",Width=650,Height=430,RightToLeft=RightToLeft.Yes,RightToLeftLayout=true};
         var n=new TextBox{PlaceholderText="اسم الصنف",Dock=DockStyle.Top,Height=40};var q=new TextBox{PlaceholderText="الكمية",Dock=DockStyle.Top,Height=40};var p=new TextBox{PlaceholderText="السعر",Dock=DockStyle.Top,Height=40};var save=new Button{Text="حفظ",Dock=DockStyle.Top,Height=45};
-        save.Click+=(_,_)=>{if(!double.TryParse(q.Text,out var qty)||!double.TryParse(p.Text,out var price))return;using var c=C();using var check=c.CreateCommand();check.CommandText="SELECT qty FROM products WHERE name=$n";check.Parameters.AddWithValue("$n",n.Text);var o=check.ExecuteScalar();if(o is null){MessageBox.Show("الصنف غير موجود.");return;}var next=Convert.ToDouble(o)+(purchase?qty:-qty);if(next<0){MessageBox.Show("الرصيد غير كافٍ.");return;}using var u=c.CreateCommand();u.CommandText="UPDATE products SET qty=$q WHERE name=$n";u.Parameters.AddWithValue("$q",next);u.Parameters.AddWithValue("$n",n.Text);u.ExecuteNonQuery();using var ins=c.CreateCommand();ins.CommandText=$"INSERT INTO {(purchase?"purchases":"sales")}(product,qty,price,total) VALUES($n,$q,$p,$t)";ins.Parameters.AddWithValue("$n",n.Text);ins.Parameters.AddWithValue("$q",qty);ins.Parameters.AddWithValue("$p",price);ins.Parameters.AddWithValue("$t",qty*price);ins.ExecuteNonQuery();MessageBox.Show("تم الحفظ وتحديث المخزون.");RefreshSummary();};
+        save.Click+=(_,_)=>{if(!double.TryParse(q.Text,out var qty)||!double.TryParse(p.Text,out var price))return;using var c=C();using var check=c.CreateCommand();check.CommandText="SELECT qty FROM products WHERE name=$n OR barcode=$n";check.Parameters.AddWithValue("$n",n.Text.Trim());var o=check.ExecuteScalar();if(o is null){MessageBox.Show("الصنف غير موجود.");return;}var next=Convert.ToDouble(o)+(purchase?qty:-qty);if(next<0){MessageBox.Show("الرصيد غير كافٍ.");return;}using var u=c.CreateCommand();u.CommandText="UPDATE products SET qty=$q WHERE name=$n";u.Parameters.AddWithValue("$q",next);u.Parameters.AddWithValue("$n",n.Text);u.ExecuteNonQuery();using var ins=c.CreateCommand();ins.CommandText=$"INSERT INTO {(purchase?"purchases":"sales")}(product,qty,price,total) VALUES($n,$q,$p,$t)";ins.Parameters.AddWithValue("$n",n.Text);ins.Parameters.AddWithValue("$q",qty);ins.Parameters.AddWithValue("$p",price);ins.Parameters.AddWithValue("$t",qty*price);ins.ExecuteNonQuery();MessageBox.Show("تم الحفظ وتحديث المخزون.");RefreshSummary();};
         f.Controls.Add(save);f.Controls.Add(p);f.Controls.Add(q);f.Controls.Add(n);f.ShowDialog();
     }
     void Simple(string table,string title)
