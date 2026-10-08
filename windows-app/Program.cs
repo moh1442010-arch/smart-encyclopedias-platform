@@ -78,7 +78,7 @@ sealed class SubscriptionForm : Form
     public SubscriptionForm(LicenseGate gate)
     {
         Text = UiLanguage.T("شركة محمد مصطفي الذكية - الاشتراك"); Width = 620; Height = 300;
-        StartPosition = FormStartPosition.CenterScreen; RightToLeft = RightToLeft.Yes; RightToLeftLayout = true;
+        StartPosition = FormStartPosition.CenterScreen; RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes; RightToLeftLayout = !UiLanguage.English;
         var title = new Label { Text = UiLanguage.T("انتهت التجربة المجانية لمدة 7 أيام"), Dock = DockStyle.Top, Height = 60, Font = new Font("Segoe UI", 18, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
         var code = new TextBox { PlaceholderText = UiLanguage.T("رمز التفعيل"), Dock = DockStyle.Top, Height = 38 };
         var activate = new Button { Text = UiLanguage.T("تفعيل الاشتراك"), Dock = DockStyle.Top, Height = 45 };
@@ -139,7 +139,7 @@ sealed class MainForm : Form
     }
     void Transaction(bool purchase)
     {
-        using var f=new Form{Text=UiLanguage.T(purchase?"المشتريات":"المبيعات"),Width=650,Height=430,RightToLeft=RightToLeft.Yes,RightToLeftLayout=true};
+        using var f=new Form{Text=UiLanguage.T(purchase?"المشتريات":"المبيعات"),Width=650,Height=430,RightToLeft=UiLanguage.English?RightToLeft.No:RightToLeft.Yes,RightToLeftLayout=!UiLanguage.English};
         var n=new TextBox{PlaceholderText=UiLanguage.T("اسم الصنف"),Dock=DockStyle.Top,Height=40};var q=new TextBox{PlaceholderText=UiLanguage.T("الكمية"),Dock=DockStyle.Top,Height=40};var p=new TextBox{PlaceholderText=UiLanguage.T("السعر"),Dock=DockStyle.Top,Height=40};var save=new Button{Text=UiLanguage.T("حفظ"),Dock=DockStyle.Top,Height=45};
         save.Click+=(_,_)=>{if(!double.TryParse(q.Text,out var qty)||!double.TryParse(p.Text,out var price))return;using var c=C();using var check=c.CreateCommand();check.CommandText="SELECT qty FROM products WHERE name=$n OR barcode=$n";check.Parameters.AddWithValue("$n",n.Text.Trim());var o=check.ExecuteScalar();if(o is null){MessageBox.Show(UiLanguage.T("الصنف غير موجود."));return;}var next=Convert.ToDouble(o)+(purchase?qty:-qty);if(next<0){MessageBox.Show(UiLanguage.T("الرصيد غير كافٍ."));return;}using var u=c.CreateCommand();u.CommandText="UPDATE products SET qty=$q WHERE name=$n";u.Parameters.AddWithValue("$q",next);u.Parameters.AddWithValue("$n",n.Text);u.ExecuteNonQuery();using var ins=c.CreateCommand();ins.CommandText=$"INSERT INTO {(purchase?"purchases":"sales")}(product,qty,price,total) VALUES($n,$q,$p,$t)";ins.Parameters.AddWithValue("$n",n.Text);ins.Parameters.AddWithValue("$q",qty);ins.Parameters.AddWithValue("$p",price);ins.Parameters.AddWithValue("$t",qty*price);ins.ExecuteNonQuery();MessageBox.Show(UiLanguage.T("تم الحفظ وتحديث المخزون."));RefreshSummary();};
         f.Controls.Add(save);f.Controls.Add(p);f.Controls.Add(q);f.Controls.Add(n);f.ShowDialog();
