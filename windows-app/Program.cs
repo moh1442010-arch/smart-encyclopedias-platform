@@ -25,7 +25,7 @@ static class UiLanguage
           new[]{"الرصيد غير كافٍ.","Insufficient stock."},new[]{"تم الحفظ وتحديث المخزون.","Saved and inventory updated."},new[]{"الاسم","Name"},new[]{"إضافة","Add"},
           new[]{"المبيعات:","Sales:"},new[]{"المشتريات:","Purchases:"},new[]{"الصافي:","Net:"},new[]{"صافي الحركة:","Net movement:"},new[]{"توقيع المحاسب:","Accountant signature:"},
           new[]{"انتهت التجربة المجانية لمدة 7 أيام","The 7-day free trial has ended"},new[]{"رمز التفعيل","Activation code"},new[]{"تفعيل الاشتراك","Activate subscription"},new[]{"التواصل عبر واتساب","Contact via WhatsApp"},
-          new[]{"تم تفعيل الاشتراك.","Subscription activated."},new[]{"رمز التفعيل غير صحيح.","Invalid activation code."},new[]{"التقرير المالي","Financial Report"}
+          new[]{"تم تفعيل الاشتراك.","Subscription activated."},new[]{"رمز التفعيل غير صحيح.","Invalid activation code."},new[]{"التقرير المالي","Financial Report"},new[]{"شركة محمد مصطفي الذكية - الاشتراك","Mohammed Mustafa Smart Company - Subscription"},new[]{"تم تفعيل الاشتراك.","Subscription activated."},new[]{"رمز التفعيل غير صحيح.","Invalid activation code."},new[]{"باركود","Barcode"},new[]{"المخزون","Stock"},new[]{"توقيع المحاسب:","Accountant signature:"},new[]{"صافي الحركة:","Net movement:"},new[]{"المبيعات:","Sales:"},new[]{"المشتريات:","Purchases:"},new[]{"الصافي:","Net:"},new[]{"اختيار اللغة / Language","Language: Arabic / English"}
         };
         string result=value;
         foreach(var pair in pairs) result=result.Replace(pair[0],pair[1]);
@@ -83,7 +83,7 @@ sealed class SubscriptionForm : Form
         var code = new TextBox { PlaceholderText = UiLanguage.T("رمز التفعيل"), Dock = DockStyle.Top, Height = 38 };
         var activate = new Button { Text = UiLanguage.T("تفعيل الاشتراك"), Dock = DockStyle.Top, Height = 45 };
         var support = new Button { Text = UiLanguage.T("التواصل عبر واتساب"), Dock = DockStyle.Top, Height = 45 };
-        activate.Click += (_, _) => { if (gate.Activate(code.Text)) { MessageBox.Show("تم تفعيل الاشتراك."); Close(); } else MessageBox.Show("رمز التفعيل غير صحيح."); };
+        activate.Click += (_, _) => { if (gate.Activate(code.Text)) { MessageBox.Show(UiLanguage.T("تم تفعيل الاشتراك.")); Close(); } else MessageBox.Show(UiLanguage.T("رمز التفعيل غير صحيح.")); };
         support.Click += (_, _) => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true });
         Controls.Add(support); Controls.Add(activate); Controls.Add(code); Controls.Add(title);
     }
@@ -151,10 +151,10 @@ sealed class MainForm : Form
     }
     void Reports()
     {
-        using var c=C();using var s=c.CreateCommand();s.CommandText="SELECT COALESCE(SUM(total),0) FROM sales";var sales=Convert.ToDouble(s.ExecuteScalar());using var p=c.CreateCommand();p.CommandText="SELECT COALESCE(SUM(total),0) FROM purchases";var purchases=Convert.ToDouble(p.ExecuteScalar());MessageBox.Show($"المبيعات: {sales:N2}\nالمشتريات: {purchases:N2}\nصافي الحركة: {(sales-purchases):N2}\n\nتوقيع المحاسب: ____________________","التقرير المالي");
+        using var c=C();using var s=c.CreateCommand();s.CommandText="SELECT COALESCE(SUM(total),0) FROM sales";var sales=Convert.ToDouble(s.ExecuteScalar());using var p=c.CreateCommand();p.CommandText="SELECT COALESCE(SUM(total),0) FROM purchases";var purchases=Convert.ToDouble(p.ExecuteScalar());MessageBox.Show(UiLanguage.T($"المبيعات: {sales:N2}\nالمشتريات: {purchases:N2}\nصافي الحركة: {(sales-purchases):N2}\n\nتوقيع المحاسب: ____________________"),UiLanguage.T("التقرير المالي"));
     }
     void RefreshSummary()
     {
-        using var c=C();using var s=c.CreateCommand();s.CommandText="SELECT COALESCE(SUM(total),0) FROM sales";var sales=Convert.ToDouble(s.ExecuteScalar());using var p=c.CreateCommand();p.CommandText="SELECT COALESCE(SUM(total),0) FROM purchases";var purchases=Convert.ToDouble(p.ExecuteScalar());summary.Text=$"المبيعات: {sales:N2}   |   المشتريات: {purchases:N2}   |   الصافي: {(sales-purchases):N2}";
+        using var c=C();using var s=c.CreateCommand();s.CommandText="SELECT COALESCE(SUM(total),0) FROM sales";var sales=Convert.ToDouble(s.ExecuteScalar());using var p=c.CreateCommand();p.CommandText="SELECT COALESCE(SUM(total),0) FROM purchases";var purchases=Convert.ToDouble(p.ExecuteScalar());summary.Text=UiLanguage.T($"المبيعات: {sales:N2}   |   المشتريات: {purchases:N2}   |   الصافي: {(sales-purchases):N2}");
     }
 }
