@@ -26,7 +26,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: platform-tools platforms;android-35 build-tools;35.0.0
+          packages: platform-tools platforms;android-36 build-tools;36.0.0
 
       - name: Install Gradle
         run: |
@@ -37,7 +37,7 @@ jobs:
       - name: Create native accounting app
         run: |
           mkdir -p android-app/app/src/main/java/com/mohammedmustafa/smartcompany
-          mkdir -p android-app/app/src/main/res/values
+          mkdir -p android-app/app/src/main/res/values android-app/app/src/main/res/drawable
 
           cat > android-app/settings.gradle <<'EOF'
           pluginManagement {
@@ -71,12 +71,12 @@ jobs:
 
           android {
               namespace 'com.mohammedmustafa.smartcompany'
-              compileSdk 35
+              compileSdk 36
 
               defaultConfig {
                   applicationId 'com.mohammedmustafa.smartcompany'
                   minSdk 23
-                  targetSdk 35
+                  targetSdk 36
                   versionCode 5
                   versionName '1.3.0'
               }
@@ -89,6 +89,8 @@ jobs:
               <application
                   android:allowBackup="true"
                   android:label="شركة محمد مصطفي الذكية"
+                  android:icon="@drawable/ic_smart_company"
+                  android:roundIcon="@drawable/ic_smart_company"
                   android:supportsRtl="true"
                   android:theme="@style/AppTheme">
                   <activity
@@ -102,6 +104,17 @@ jobs:
                   </activity>
               </application>
           </manifest>
+          EOF
+
+
+          cat > android-app/app/src/main/res/drawable/ic_smart_company.xml <<'EOF'
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp" android:height="108dp"
+              android:viewportWidth="108" android:viewportHeight="108">
+              <path android:fillColor="#12372A" android:pathData="M0,0h108v108h-108z"/>
+              <path android:fillColor="#D4AF37" android:pathData="M24,30h60v12h-60zM24,48h60v12h-60zM24,66h38v12h-38z"/>
+              <path android:fillColor="#FFFFFF" android:pathData="M68,66h16v12h-16z"/>
+          </vector>
           EOF
 
           cat > android-app/app/src/main/res/values/styles.xml <<'EOF'
@@ -140,7 +153,8 @@ jobs:
               @Override public void onCreate(Bundle b) {
                   super.onCreate(b);
                   db = new DB(this);
-                  showLogin();
+                  if (!trialAvailable()) showSubscriptionLock();
+                  else showLogin();
               }
 
               TextView tv(String s, int size) {
@@ -173,6 +187,45 @@ jobs:
                   sv.addView(content); root.addView(sv,new LinearLayout.LayoutParams(-1,0,1));
                   status=tv("",13); root.addView(status);
                   setContentView(root);
+              }
+
+
+              boolean trialAvailable() {
+                  android.content.SharedPreferences p = getSharedPreferences("license", MODE_PRIVATE);
+                  if (p.getBoolean("activated", false)) return true;
+                  long first = p.getLong("first_run", 0L);
+                  if (first == 0L) {
+                      first = System.currentTimeMillis();
+                      p.edit().putLong("first_run", first).apply();
+                  }
+                  long days = (System.currentTimeMillis() - first) / 86400000L;
+                  return days < 7L;
+              }
+
+              void showSubscriptionLock() {
+                  base("انتهاء التجربة");
+                  content.addView(tv("انتهت فترة التجربة المجانية لمدة 7 أيام.",22));
+                  content.addView(tv("لتفعيل النسخة التجارية، تواصل مع الدعم للحصول على رمز التفعيل.",16));
+                  EditText code = input("رمز التفعيل");
+                  content.addView(code);
+                  Button activate = btn("تفعيل الاشتراك");
+                  content.addView(activate);
+                  activate.setOnClickListener(v -> {
+                      String entered = code.getText().toString().trim();
+                      if (entered.equals("SMART-PAID-2026")) {
+                          getSharedPreferences("license", MODE_PRIVATE).edit().putBoolean("activated", true).apply();
+                          Toast.makeText(this, "تم تفعيل الاشتراك", Toast.LENGTH_LONG).show();
+                          dashboard();
+                      } else {
+                          Toast.makeText(this, "رمز التفعيل غير صحيح. تواصل مع الدعم.", Toast.LENGTH_LONG).show();
+                      }
+                  });
+                  Button wa = btn("طلب الاشتراك عبر واتساب");
+                  content.addView(wa);
+                  wa.setOnClickListener(v -> {
+                      Intent i = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://wa.me/249121851285?text="+android.net.Uri.encode("السلام عليكم، انتهت التجربة وأريد الاشتراك في شركة محمد مصطفي الذكية.")));
+                      try { startActivity(i); } catch(Exception e) {}
+                  });
               }
 
               void showLogin() {
@@ -378,7 +431,7 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk smart-company-v1.3.0-debug.apk
           cp app/build/outputs/apk/release/app-release-unsigned.apk smart-company-v1.3.0-unsigned.apk
           cp app/build/outputs/bundle/release/app-release.aab smart-company-v1.3.0-unsigned.aab
-          APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           "$APKSIGNER" sign --ks signing/smartcompany-release.jks --ks-key-alias "$(cat signing/key-alias.txt)" --ks-pass "pass:$(cat signing/keystore-password.txt)" --key-pass "pass:$(cat signing/key-password.txt)" --out smart-company-v1.3.0-release.apk smart-company-v1.3.0-unsigned.apk
           "$APKSIGNER" verify --verbose smart-company-v1.3.0-release.apk
           sha256sum smart-company-v1.3.0-release.apk > smart-company-v1.3.0-release.apk.sha256
