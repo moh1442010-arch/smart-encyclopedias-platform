@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Printing;
 
 namespace SmartCompany;
 
@@ -131,7 +132,7 @@ sealed class MainForm : Form
     }
     void Products()
     {
-        using var f = new Form { Text=UiLanguage.T("الأصناف والمخزون والباركود"), Width=700, Height=600, RightToLeft=RightToLeft.Yes, RightToLeftLayout=true };
+        using var f = new Form { Text=UiLanguage.T("الأصناف والمخزون والباركود"), Width=700, Height=600, RightToLeft=UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout=!UiLanguage.English };
         var n=new TextBox{PlaceholderText=UiLanguage.T("اسم الصنف"),Dock=DockStyle.Top,Height=40}; var barcode=new TextBox{PlaceholderText=UiLanguage.T("الباركود (ماسح USB/Bluetooth أو إدخال يدوي)"),Dock=DockStyle.Top,Height=40}; var q=new TextBox{PlaceholderText=UiLanguage.T("الكمية"),Dock=DockStyle.Top,Height=40}; var p=new TextBox{PlaceholderText=UiLanguage.T("السعر"),Dock=DockStyle.Top,Height=40};
         var add=new Button{Text=UiLanguage.T("إضافة الصنف"),Dock=DockStyle.Top,Height=45}; var list=new ListBox{Dock=DockStyle.Fill};
         add.Click+=(_,_)=>{if(string.IsNullOrWhiteSpace(n.Text)||!double.TryParse(q.Text,out var qty)||!double.TryParse(p.Text,out var price)||qty<0||price<0){MessageBox.Show(UiLanguage.T("أدخل اسمًا وكمية وسعرًا صحيحًا."));return;}try{using var c=C();using var x=c.CreateCommand();x.CommandText="INSERT INTO products(name,barcode,qty,price) VALUES($n,$b,$q,$p)";x.Parameters.AddWithValue("$n",n.Text.Trim());x.Parameters.AddWithValue("$b",string.IsNullOrWhiteSpace(barcode.Text)?DBNull.Value:barcode.Text.Trim());x.Parameters.AddWithValue("$q",qty);x.Parameters.AddWithValue("$p",price);x.ExecuteNonQuery();list.Items.Add(n.Text+" | باركود "+barcode.Text+" | المخزون "+qty+" | السعر "+price);n.Clear();barcode.Clear();q.Clear();p.Clear();RefreshSummary();}catch(SqliteException){MessageBox.Show(UiLanguage.T("تعذر الحفظ: الاسم أو الباركود مستخدم مسبقًا."));}};
@@ -204,12 +205,46 @@ sealed class MainForm : Form
     }
     void Simple(string table,string title)
     {
-        using var f=new Form{Text=UiLanguage.T(title),Width=650,Height=500,RightToLeft=RightToLeft.Yes,RightToLeftLayout=true};var n=new TextBox{PlaceholderText=UiLanguage.T("الاسم"),Dock=DockStyle.Top,Height=40};var add=new Button{Text=UiLanguage.T("إضافة"),Dock=DockStyle.Top,Height=45};var list=new ListBox{Dock=DockStyle.Fill};
+        using var f=new Form{Text=UiLanguage.T(title),Width=650,Height=500,RightToLeft=UiLanguage.English?RightToLeft.No:RightToLeft.Yes,RightToLeftLayout=!UiLanguage.English};var n=new TextBox{PlaceholderText=UiLanguage.T("الاسم"),Dock=DockStyle.Top,Height=40};var add=new Button{Text=UiLanguage.T("إضافة"),Dock=DockStyle.Top,Height=45};var list=new ListBox{Dock=DockStyle.Fill};
         add.Click+=(_,_)=>{using var c=C();using var x=c.CreateCommand();x.CommandText=$"INSERT INTO {table}(name) VALUES($n)";x.Parameters.AddWithValue("$n",n.Text);x.ExecuteNonQuery();list.Items.Add(n.Text);n.Clear();};f.Controls.Add(list);f.Controls.Add(add);f.Controls.Add(n);f.ShowDialog();
     }
     void Reports()
     {
-        using var c=C();using var s=c.CreateCommand();s.CommandText="SELECT COALESCE(SUM(total),0) FROM sales";var sales=Convert.ToDouble(s.ExecuteScalar());using var p=c.CreateCommand();p.CommandText="SELECT COALESCE(SUM(total),0) FROM purchases";var purchases=Convert.ToDouble(p.ExecuteScalar());MessageBox.Show(UiLanguage.T($"المبيعات: {sales:N2}\nالمشتريات: {purchases:N2}\nصافي الحركة: {(sales-purchases):N2}\n\nتوقيع المحاسب: ____________________"),UiLanguage.T("التقرير المالي"));
+        using var c = C();
+        using var s = c.CreateCommand(); s.CommandText = "SELECT COALESCE(SUM(total),0) FROM sales";
+        var sales = Convert.ToDouble(s.ExecuteScalar());
+        using var p = c.CreateCommand(); p.CommandText = "SELECT COALESCE(SUM(total),0) FROM purchases";
+        var purchases = Convert.ToDouble(p.ExecuteScalar());
+        var report = UiLanguage.T("التقرير المالي") + Environment.NewLine +
+            UiLanguage.T("المبيعات:") + " " + sales.ToString("N2") + Environment.NewLine +
+            UiLanguage.T("المشتريات:") + " " + purchases.ToString("N2") + Environment.NewLine +
+            UiLanguage.T("صافي الحركة:") + " " + (sales - purchases).ToString("N2") + Environment.NewLine + Environment.NewLine +
+            UiLanguage.T("توقيع المحاسب:") + " ____________________";
+        using var f = new Form { Text = UiLanguage.T("التقرير المالي"), Width = 760, Height = 520, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var preview = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill, Font = new Font("Segoe UI", 12), Text = report };
+        var actions = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 55, FlowDirection = UiLanguage.English ? FlowDirection.LeftToRight : FlowDirection.RightToLeft };
+        var print = new Button { Text = UiLanguage.T("طباعة التقرير"), Width = 180, Height = 40 };
+        var email = new Button { Text = UiLanguage.T("إرسال بالبريد الإلكتروني"), Width = 220, Height = 40 };
+        print.Click += (_, _) =>
+        {
+            using var document = new PrintDocument();
+            document.DocumentName = UiLanguage.T("التقرير المالي");
+            document.PrintPage += (_, e) =>
+            {
+                using var font = new Font("Segoe UI", 11);
+                e.Graphics.DrawString(report, font, Brushes.Black, new RectangleF(e.MarginBounds.Left, e.MarginBounds.Top, e.MarginBounds.Width, e.MarginBounds.Height));
+                e.HasMorePages = false;
+            };
+            using var dialog = new PrintDialog { Document = document, UseEXDialog = true };
+            if (dialog.ShowDialog(f) == DialogResult.OK) document.Print();
+        };
+        email.Click += (_, _) =>
+        {
+            var url = "mailto:?subject=" + Uri.EscapeDataString(UiLanguage.T("التقرير المالي")) + "&body=" + Uri.EscapeDataString(report);
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        };
+        actions.Controls.Add(print); actions.Controls.Add(email);
+        f.Controls.Add(preview); f.Controls.Add(actions); f.ShowDialog();
     }
     void RefreshSummary()
     {
