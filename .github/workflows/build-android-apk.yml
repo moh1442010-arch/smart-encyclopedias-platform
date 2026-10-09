@@ -59,10 +59,16 @@ jobs:
         working-directory: android-app
         run: |
           set -euo pipefail
-          test -n "$KEYSTORE_B64" || (echo "Missing production signing secret" && exit 1)
-          test -n "$KEYSTORE_PASSWORD" || (echo "Missing keystore password secret" && exit 1)
-          test -n "$KEY_ALIAS" || (echo "Missing key alias secret" && exit 1)
-          test -n "$KEY_PASSWORD" || (echo "Missing key password secret" && exit 1)
+          missing=()
+          test -n "$KEYSTORE_B64" || missing+=("SMARTCOMPANY_KEYSTORE_BASE64")
+          test -n "$KEYSTORE_PASSWORD" || missing+=("SMARTCOMPANY_KEYSTORE_PASSWORD")
+          test -n "$KEY_ALIAS" || missing+=("SMARTCOMPANY_KEY_ALIAS")
+          test -n "$KEY_PASSWORD" || missing+=("SMARTCOMPANY_KEY_PASSWORD")
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error title=Production signing not configured::Add these repository Actions secrets before creating a signed release: ${missing[*]}"
+            echo "No production-signed APK/AAB was created. Do not use an unsigned artifact as a commercial release."
+            exit 1
+          fi
           mkdir -p signing release
           echo "$KEYSTORE_B64" | base64 --decode > signing/release.jks
           apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
