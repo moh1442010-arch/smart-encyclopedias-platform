@@ -1,4 +1,4 @@
-name: Build Smart Company Accounting App 2.2.1
+name: Build Smart Company Accounting App 2.2.2
 
 on:
   workflow_dispatch:
@@ -52,45 +52,45 @@ jobs:
           if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
             echo "$KEYSTORE_B64" | base64 --decode > signing/release.jks
             apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
-            "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out smart-company-v2.2.1-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
-            "$apksigner" verify --verbose smart-company-v2.2.1-release.apk
+            "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out smart-company-v2.2.2-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
+            "$apksigner" verify --verbose smart-company-v2.2.2-release.apk
           else
-            cp app/build/outputs/apk/release/app-release-unsigned.apk smart-company-v2.2.1-unsigned.apk
+            cp app/build/outputs/apk/release/app-release-unsigned.apk smart-company-v2.2.2-unsigned.apk
           fi
-          cp app/build/outputs/apk/debug/app-debug.apk smart-company-v2.2.1-debug.apk
-          cp app/build/outputs/bundle/release/app-release.aab smart-company-v2.2.1.aab
-          sha256sum smart-company-v2.2.1-*.apk smart-company-v2.2.1.aab > smart-company-v2.2.1.sha256
+          cp app/build/outputs/apk/debug/app-debug.apk smart-company-v2.2.2-debug.apk
+          cp app/build/outputs/bundle/release/app-release.aab smart-company-v2.2.2.aab
+          sha256sum smart-company-v2.2.2-*.apk smart-company-v2.2.2.aab > smart-company-v2.2.2.sha256
 
       - name: Final package QA
         working-directory: android-app
         run: |
           set -euo pipefail
           build_tools="$ANDROID_HOME/build-tools/36.0.0"
-          debug_apk="smart-company-v2.2.1-debug.apk"
+          debug_apk="smart-company-v2.2.2-debug.apk"
           test -s "$debug_apk"
-          test -s "smart-company-v2.2.1.aab"
-          test -s "smart-company-v2.2.1.sha256"
+          test -s "smart-company-v2.2.2.aab"
+          test -s "smart-company-v2.2.2.sha256"
           "$build_tools/apksigner" verify --verbose "$debug_apk"
           "$build_tools/zipalign" -c -v 4 "$debug_apk"
           badging="$("$build_tools/aapt" dump badging "$debug_apk")"
-          echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='23' versionName='2.2.1'"
+          echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='24' versionName='2.2.2'"
           echo "$badging" | grep -F "application-label:'شركة محمد مصطفى الذكية'"
-          if [ -f "smart-company-v2.2.1-release.apk" ]; then
-            "$build_tools/apksigner" verify --verbose "smart-company-v2.2.1-release.apk"
-            "$build_tools/zipalign" -c -v 4 "smart-company-v2.2.1-release.apk"
+          if [ -f "smart-company-v2.2.2-release.apk" ]; then
+            "$build_tools/apksigner" verify --verbose "smart-company-v2.2.2-release.apk"
+            "$build_tools/zipalign" -c -v 4 "smart-company-v2.2.2-release.apk"
           else
-            test -s "smart-company-v2.2.1-unsigned.apk"
+            test -s "smart-company-v2.2.2-unsigned.apk"
             echo "Production release APK is unsigned; use the signed debug APK for device testing."
           fi
-          sha256sum --check smart-company-v2.2.1.sha256
+          sha256sum --check smart-company-v2.2.2.sha256
 
-      - name: Upload 2.2.1 package
+      - name: Upload 2.2.2 package
         uses: actions/upload-artifact@v4
         with:
-          name: smart-company-v2.2.1
+          name: smart-company-v2.2.2
           path: |
-            android-app/smart-company-v2.2.1-*.apk
-            android-app/smart-company-v2.2.1.aab
-            android-app/smart-company-v2.2.1.sha256
+            android-app/smart-company-v2.2.2-*.apk
+            android-app/smart-company-v2.2.2.aab
+            android-app/smart-company-v2.2.2.sha256
           if-no-files-found: error
           retention-days: 90
