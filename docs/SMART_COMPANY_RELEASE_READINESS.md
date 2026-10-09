@@ -1,6 +1,6 @@
 # Smart Company Accounting App — Release Readiness
 
-Current target release: **2.1.0 for Android and Windows**. The latest Android build has passed CI; the updated Windows build is being rechecked after recent code changes.
+Current target release: **2.2.0 for Android and Windows**. The 2.2.0 Android candidate adds an icon-grid dashboard, a shared home-navigation button, and a runtime balance check for transaction journal entries. CI compilation and real-device/accounting acceptance tests remain separate gates.
 
 ## Implemented in the current source tree
 
@@ -9,6 +9,8 @@ Current target release: **2.1.0 for Android and Windows**. The latest Android bu
 - Product inventory, manual or keyboard-style USB/Bluetooth barcode input, sales and purchases, customers and suppliers.
 - Cash expenses, bank accounts and movements, cheque register, employee records, monthly salary/advance/deduction calculations.
 - Financial summaries, trial balance, report printing/PDF through Android PrintManager, and sharing a report through an email app.
+- Icon-card dashboard and home-navigation action in the shared page template.
+- Runtime check that rejects transaction journal entries whose debit and credit totals differ by more than 0.005.
 - Database export and restore flow with SQLite integrity/table checks.
 - Windows desktop companion includes product inventory, sales/purchases, customers/suppliers, employee monthly salary/advance/deduction summaries, cash-expense tracking, report printing/email sharing, and SQLite backup/restore validation.
 
@@ -17,6 +19,12 @@ Current target release: **2.1.0 for Android and Windows**. The latest Android bu
 A successful CI build proves compilation and packaging only. It does **not** prove the app has been installed and exercised on a real phone or that accounting results are correct for every business scenario.
 
 The non-activatable seven-day Android lock was removed from this pre-release build so it cannot permanently lock the owner out before a real licensing service exists. **This is not a completed commercial licensing system.** Before paid public distribution, implement and test server-verified license issuance, renewal/revocation, offline grace policy, privacy terms, and customer support workflow. Do not ship a production signing key in the repository.
+
+## Release gates and required acceptance tests
+
+**Phase 3 — reliability and data protection:** test PIN behavior, invalid/duplicate values, over-selling, transaction rollback on failed journal balance, and backup/restore with a known data snapshot. Keep user data local unless a clearly described service requires otherwise.
+
+**Phase 4 — commercial readiness:** create and securely retain the owner's release signing key; sign and verify the production APK; define a license service before advertising paid activation; add privacy terms, EULA, support and update policy; and complete accountant-led reconciliation cases. A successful build is not a certification.
 
 ## Required device acceptance tests before selling
 
@@ -41,4 +49,4 @@ The non-activatable seven-day Android lock was removed from this pre-release bui
 
 ## Release artifact naming
 
-GitHub Actions uploads Android outputs as `smart-company-v2.1.0` and Windows output as `smart-company-windows-v2.1.0`. Check the newest run conclusion and artifact contents before sharing any package. Use the debug APK for the first controlled Android device test; do not distribute an unsigned release APK as a finished commercial product. Windows x64 publishing is self-contained, but direct public distribution should eventually use a trusted code-signing certificate or a managed store distribution route.
+GitHub Actions uploads Android outputs as `smart-company-v2.2.0` and Windows output as `smart-company-windows-v2.2.0`. Check the newest run conclusion and artifact contents before sharing any package. Use the debug APK for the first controlled Android device test; do not distribute an unsigned release APK as a finished commercial product. Windows x64 publishing is self-contained, but direct public distribution should eventually use a trusted code-signing certificate or a managed store distribution route.
