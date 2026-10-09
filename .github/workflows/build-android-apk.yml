@@ -1,4 +1,4 @@
-name: Build Smart Company Signed Android Release 2.3.0
+name: Build Smart Company Signed Android Release 2.3.1
 
 concurrency:
   group: smart-company-android-release
@@ -66,26 +66,26 @@ jobs:
           mkdir -p signing release
           echo "$KEYSTORE_B64" | base64 --decode > signing/release.jks
           apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
-          "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out release/SmartCompany-2.3.0-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
-          cp app/build/outputs/bundle/release/app-release.aab release/SmartCompany-2.3.0-release.aab
-          jarsigner -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" release/SmartCompany-2.3.0-release.aab "$KEY_ALIAS"
-          "$apksigner" verify --verbose release/SmartCompany-2.3.0-release.apk
-          jarsigner -verify -verbose release/SmartCompany-2.3.0-release.aab
-          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 release/SmartCompany-2.3.0-release.apk
-          sha256sum release/SmartCompany-2.3.0-release.apk release/SmartCompany-2.3.0-release.aab > release/SHA256SUMS.txt
+          "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out release/SmartCompany-2.3.1-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
+          cp app/build/outputs/bundle/release/app-release.aab release/SmartCompany-2.3.1-release.aab
+          jarsigner -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" release/SmartCompany-2.3.1-release.aab "$KEY_ALIAS"
+          "$apksigner" verify --verbose release/SmartCompany-2.3.1-release.apk
+          jarsigner -verify -verbose release/SmartCompany-2.3.1-release.aab
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 release/SmartCompany-2.3.1-release.apk
+          sha256sum release/SmartCompany-2.3.1-release.apk release/SmartCompany-2.3.1-release.aab > release/SHA256SUMS.txt
 
       - name: Final release QA
         working-directory: android-app
         run: |
           set -euo pipefail
           build_tools="$ANDROID_HOME/build-tools/36.0.0"
-          apk="release/SmartCompany-2.3.0-release.apk"
-          aab="release/SmartCompany-2.3.0-release.aab"
+          apk="release/SmartCompany-2.3.1-release.apk"
+          aab="release/SmartCompany-2.3.1-release.aab"
           test -s "$apk"
           test -s "$aab"
           test -s "release/SHA256SUMS.txt"
           badging="$("$build_tools/aapt" dump badging "$apk")"
-          echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='32' versionName='2.3.0'"
+          echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='33' versionName='2.3.1'"
           echo "$badging" | grep -F "application-label:'شركة محمد مصطفى الذكية'"
           permissions="$("$build_tools/aapt" dump permissions "$apk")"
           if echo "$permissions" | grep -q "android.permission.INTERNET"; then echo "Unexpected INTERNET permission"; exit 1; fi
@@ -96,10 +96,10 @@ jobs:
       - name: Upload signed release artifacts only
         uses: actions/upload-artifact@v4
         with:
-          name: smart-company-android-signed-release-v2.3.0
+          name: smart-company-android-signed-release-v2.3.1
           path: |
-            android-app/release/SmartCompany-2.3.0-release.apk
-            android-app/release/SmartCompany-2.3.0-release.aab
+            android-app/release/SmartCompany-2.3.1-release.apk
+            android-app/release/SmartCompany-2.3.1-release.aab
             android-app/release/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 90
