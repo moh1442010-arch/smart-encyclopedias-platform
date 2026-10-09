@@ -54,9 +54,9 @@ sealed class MainForm : Form
     public MainForm()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!); InitDb();
-        Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.1.0"); Width = 1050; Height = 720; StartPosition = FormStartPosition.CenterScreen;
+        Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.3"); Width = 1050; Height = 720; StartPosition = FormStartPosition.CenterScreen;
         RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes; RightToLeftLayout = !UiLanguage.English;
-        var head = new Label { Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.1.0"), Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(18,55,42), ForeColor = Color.White, Font = new Font("Segoe UI", 23, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
+        var head = new Label { Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.3 — نسخة تجريبية"), Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(11,31,58), ForeColor = Color.FromArgb(212,175,55), Font = new Font("Segoe UI", 22, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
         Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
@@ -199,7 +199,7 @@ sealed class MainForm : Form
         {
             using var dialog = new SaveFileDialog { Filter = "SQLite database (*.db)|*.db", FileName = "SmartCompany-backup.db" };
             if (dialog.ShowDialog(f) != DialogResult.OK) return;
-            try { using (C()) { } File.Copy(dbPath, dialog.FileName, true); MessageBox.Show(UiLanguage.T("تم تصدير النسخة الاحتياطية.")); }
+            try { using var source = C(); using var destination = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = dialog.FileName }.ToString()); destination.Open(); source.BackupDatabase(destination); MessageBox.Show(UiLanguage.T("تم تصدير النسخة الاحتياطية.")); }
             catch (Exception) { MessageBox.Show(UiLanguage.T("تعذر تصدير النسخة الاحتياطية.")); }
         };
         restore.Click += (_, _) =>
@@ -216,7 +216,7 @@ sealed class MainForm : Form
                     using var tables = source.CreateCommand(); tables.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('products','sales','purchases')";
                     if (Convert.ToInt32(tables.ExecuteScalar()) != 3) throw new InvalidDataException();
                 }
-                File.Copy(dialog.FileName, dbPath, true); InitDb(); RefreshSummary(); MessageBox.Show(UiLanguage.T("تمت الاستعادة. راجع الأرصدة والتقارير."));
+                using (var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = dialog.FileName, Mode = SqliteOpenMode.ReadOnly }.ToString()))\n                using (var destination = C()) { source.Open(); source.BackupDatabase(destination); }\n                InitDb(); RefreshSummary(); MessageBox.Show(UiLanguage.T("تمت الاستعادة. راجع الأرصدة والتقارير."));
             }
             catch (Exception) { MessageBox.Show(UiLanguage.T("فشلت الاستعادة: الملف غير صالح أو غير متوافق.")); }
         };
