@@ -1,4 +1,4 @@
-name: Build Smart Company Accounting App 2.1.0
+name: Build Smart Company Accounting App 2.2.0
 
 on:
   workflow_dispatch:
@@ -52,22 +52,22 @@ jobs:
           if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
             echo "$KEYSTORE_B64" | base64 --decode > signing/release.jks
             apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
-            "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out smart-company-v2.1.0-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
-            "$apksigner" verify --verbose smart-company-v2.1.0-release.apk
+            "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out smart-company-v2.2.0-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
+            "$apksigner" verify --verbose smart-company-v2.2.0-release.apk
           else
-            cp app/build/outputs/apk/release/app-release-unsigned.apk smart-company-v2.1.0-unsigned.apk
+            cp app/build/outputs/apk/release/app-release-unsigned.apk smart-company-v2.2.0-unsigned.apk
           fi
-          cp app/build/outputs/apk/debug/app-debug.apk smart-company-v2.1.0-debug.apk
-          cp app/build/outputs/bundle/release/app-release.aab smart-company-v2.1.0.aab
-          sha256sum smart-company-v2.1.0-*.apk smart-company-v2.1.0.aab > smart-company-v2.1.0.sha256
+          cp app/build/outputs/apk/debug/app-debug.apk smart-company-v2.2.0-debug.apk
+          cp app/build/outputs/bundle/release/app-release.aab smart-company-v2.2.0.aab
+          sha256sum smart-company-v2.2.0-*.apk smart-company-v2.2.0.aab > smart-company-v2.2.0.sha256
 
-      - name: Upload 2.1.0 package
+      - name: Upload 2.2.0 package
         uses: actions/upload-artifact@v4
         with:
-          name: smart-company-v2.1.0
+          name: smart-company-v2.2.0
           path: |
-            android-app/smart-company-v2.1.0-*.apk
-            android-app/smart-company-v2.1.0.aab
-            android-app/smart-company-v2.1.0.sha256
+            android-app/smart-company-v2.2.0-*.apk
+            android-app/smart-company-v2.2.0.aab
+            android-app/smart-company-v2.2.0.sha256
           if-no-files-found: error
           retention-days: 90
