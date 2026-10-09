@@ -38,12 +38,17 @@ jobs:
           unzip -q gradle-8.9-bin.zip
           echo "$PWD/gradle-8.9/bin" >> "$GITHUB_PATH"
 
+      - name: Generate Gradle wrapper
+        working-directory: android-app
+        run: gradle wrapper --gradle-version 8.9
+
+      - name: Automated database integrity tests
+        working-directory: android-app
+        run: ./gradlew testDebugUnitTest
+
       - name: Build release only
         working-directory: android-app
-        run: |
-          gradle wrapper --gradle-version 8.9
-          ./gradlew testDebugUnitTest
-          ./gradlew clean assembleRelease bundleRelease
+        run: ./gradlew clean assembleRelease bundleRelease
 
       - name: Sign release APK and App Bundle
         env:
