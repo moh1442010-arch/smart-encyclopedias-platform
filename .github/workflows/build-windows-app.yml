@@ -1,4 +1,4 @@
-name: Build Smart Company Windows App 2.1.0
+name: Build Smart Company Windows App 2.2.3
 
 on:
   workflow_dispatch:
@@ -13,25 +13,28 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
-      - name: Create icon
+
+      - name: Create application icon
         shell: powershell
         run: |
           Add-Type -AssemblyName System.Drawing
           $bmp = New-Object System.Drawing.Bitmap 256,256
           $g = [System.Drawing.Graphics]::FromImage($bmp)
-          $g.Clear([System.Drawing.Color]::FromArgb(18,55,42))
+          $g.Clear([System.Drawing.Color]::FromArgb(11,31,58))
           $gold = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(212,175,55))
-          $g.FillRectangle($gold,50,55,156,28)
-          $g.FillRectangle($gold,50,100,156,28)
-          $g.FillRectangle($gold,50,145,95,28)
-          $g.FillRectangle($gold,160,145,46,28)
+          $g.FillRectangle($gold,48,48,160,28)
+          $g.FillRectangle($gold,48,94,160,28)
+          $g.FillRectangle($gold,48,140,100,28)
+          $g.FillRectangle($gold,164,140,44,28)
           $g.Dispose()
           $icon = [System.Drawing.Icon]::FromHandle($bmp.GetHicon())
           $stream = New-Object System.IO.FileStream("$PWD/windows-app/smartcompany.ico",[System.IO.FileMode]::Create)
@@ -39,21 +42,36 @@ jobs:
           $stream.Close()
           $icon.Dispose()
           $bmp.Dispose()
-      - name: Restore
+
+      - name: Restore dependencies
         working-directory: windows-app
-        run: dotnet restore
-      - name: Publish Windows x64
+        run: dotnet restore SmartCompany.csproj
+
+      - name: Build Release
         working-directory: windows-app
-        run: dotnet publish SmartCompany.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None
-      - name: Package
+        run: dotnet build SmartCompany.csproj -c Release --no-restore -p:Version=2.2.3
+
+      - name: Publish self-contained Windows x64
+        working-directory: windows-app
+        run: dotnet publish SmartCompany.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:Version=2.2.3
+
+      - name: Package and verify
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
-          Copy-Item windows-app/bin/Release/net8.0-windows/win-x64/publish/SmartCompany.exe release/SmartCompany-Windows-x64.exe
-          Set-Content release/README.txt "Smart Company Accounting 2.1.0 | Windows x64 | Pre-release candidate; real commercial licensing is not integrated. Supports manual and USB/Bluetooth keyboard-style barcode entry."
+          $exe = "windows-app/bin/Release/net8.0-windows/win-x64/publish/SmartCompany.exe"
+          if (!(Test-Path $exe)) { throw "Published executable was not found." }
+          if ((Get-Item $exe).Length -lt 1000000) { throw "Published executable is unexpectedly small." }
+          Copy-Item $exe release/SmartCompany-Windows-2.2.3-x64.exe
+          Set-Content release/README.txt "شركة محمد مصطفى الذكية - Windows x64 - v2.2.3. نسخة ما قبل الإصدار التجاري. التقارير الحالية تشغيلية أولية وليست قوائم مالية معتمدة. اختبر على نسخة احتياطية فقط."
+          Compress-Archive -Path release/SmartCompany-Windows-2.2.3-x64.exe,release/README.txt -DestinationPath release/SmartCompany-Windows-2.2.3-x64.zip -Force
+          Get-FileHash release/SmartCompany-Windows-2.2.3-x64.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  SmartCompany-Windows-2.2.3-x64.exe" } | Set-Content release/SHA256SUMS.txt
+          Get-Item release/SmartCompany-Windows-2.2.3-x64.exe,release/SmartCompany-Windows-2.2.3-x64.zip,release/SHA256SUMS.txt | Format-Table Name,Length
+
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
-          name: smart-company-windows-v2.1.0
+          name: smart-company-windows-v2.2.3
           path: release/*
+          if-no-files-found: error
           retention-days: 90
