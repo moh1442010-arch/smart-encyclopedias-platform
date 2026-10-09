@@ -49,7 +49,7 @@ public class MainActivity extends Activity{
    TextView icon=t(items[i][0],29);icon.setGravity(Gravity.CENTER);icon.setPadding(0,0,0,3);card.addView(icon,new LinearLayout.LayoutParams(-1,-2));
    TextView label=t(title,16);label.setGravity(Gravity.CENTER);label.setTextColor(green);card.addView(label,new LinearLayout.LayoutParams(-1,-2));
    TextView detail=t(items[i][2],12);detail.setGravity(Gravity.CENTER);detail.setTextColor(Color.DKGRAY);card.addView(detail,new LinearLayout.LayoutParams(-1,-2));
-   LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-1,1f);lp.setMargins(6,6,6,6);row.addView(card,lp);card.setOnClickListener(v->openSection(title));
+   LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(6,6,6,6);row.addView(card,lp);card.setOnClickListener(v->openSection(title));
   }
  }
  void openSection(String n){switch(n){case"الفواتير والمبيعات":invoice(false);break;case"المشتريات":invoice(true);break;case"الأصناف والمخزون":products();break;case"العملاء":party("customers","العملاء");break;case"الموردون":party("suppliers","الموردون");break;case"الصندوق والمصروفات":cash();break;case"الحسابات البنكية":banks();break;case"سجل الشيكات":checks();break;case"الموظفون":employees();break;case"التقارير والتحليل":reports();break;case"النسخ الاحتياطي":backup();break;default:open("https://wa.me/249121851285");}}
