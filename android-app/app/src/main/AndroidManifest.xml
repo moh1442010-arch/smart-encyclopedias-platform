@@ -1,5 +1,4 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
- <uses-permission android:name="android.permission.INTERNET"/>
  <application android:allowBackup="false" android:label="شركة محمد مصطفى الذكية" android:icon="@drawable/ic_smart_company" android:roundIcon="@drawable/ic_smart_company" android:supportsRtl="true" android:theme="@style/AppTheme">
   <activity android:name=".MainActivity" android:screenOrientation="portrait" android:exported="true">
    <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
