@@ -87,3 +87,24 @@ Reference benchmark pages:
 3. Before relying on it for real books, test every posting path against expected journal entries and reconcile trial balance, inventory valuation, profit, cash and bank balances with an accountant.
 4. Before paid distribution, configure a securely retained owner-controlled signing key, verify the signed APK, add privacy/EULA/support/update documents, and implement a real license service only if paid activation is part of the offer.
 5. Prioritize payment-method accounting, customer/supplier statements, invoice numbering and multi-line/return workflows before feature expansion or cosmetic work.
+
+## Owner-approved product roadmap — 2026-10-09
+
+The owner approved the quality and market-value proposals. Implementation must be staged and tested; approval does not mean every proposed capability is already implemented.
+
+### Execution order
+- **Gate A — Build and artifact verification:** verify the latest build, artifact contents, package ID, version, SHA-256 hashes, and whether the release APK is signed. A successful CI build alone is not release approval.
+- **Gate B — Core accounting correctness:** verify transaction atomicity and balanced journal entries; correct allocation of payments to cash/bank/receivables; customer/supplier statements; invoice numbering; multi-line invoices; returns; and reconciliation of inventory, cost of goods sold, profit, cash and bank.
+- **Gate C — Data protection and recoverability:** test backup/restore, invalid/corrupt backup handling, PIN migration, permissions, and audit trail. Do not promise encryption or access controls until implemented and verified.
+- **Gate D — Commercial release:** create and safely retain the owner's signing key, sign and verify the release APK, document privacy/terms/support/update process, and implement server-verified licensing only if paid activation is offered.
+- **Gate E — Controlled pilot:** use test data first, then a small supervised pilot with explicit backup and support instructions; gather defects before wider distribution.
+
+### Prioritization rules
+1. Correctness and protection of customer records outrank new features and visual polish.
+2. No feature may be advertised as available until implementation and acceptance tests pass.
+3. Advanced features (AI assistant, camera OCR/barcode, multi-branch/multi-warehouse, cloud sync, POS and multi-currency) remain later phases; design for them without destabilizing the core accounting model.
+4. Do not install or use this candidate as the sole source of real accounting records until Gates A–D are passed.
+5. Record each defect with severity, reproduction steps, fix commit, and retest result.
+
+### Current build checkpoint
+Build workflow run 49 (commit b66b0e88d7a0f18529b456ffc304cbc4285b78ed) completed successfully and produced artifact smart-company-v2.2.0. This confirms compilation/package generation only. The workflow permits an unsigned release artifact when production signing secrets are absent; inspect the artifact contents and signing state before any release decision. No manual device/accounting acceptance test is implied by CI success.
