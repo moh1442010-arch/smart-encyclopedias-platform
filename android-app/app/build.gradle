@@ -6,7 +6,7 @@ android {
   applicationId 'com.mohammedmustafa.smartcompany'
   minSdk 23
   targetSdk 36
-  versionCode 26
-  versionName '2.2.4'
+  versionCode 27
+  versionName '2.2.5'
  }
 }
