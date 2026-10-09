@@ -134,7 +134,7 @@ public class MainActivity extends Activity{
   while(c.moveToNext())content.addView(t(c.getString(0)+" — "+c.getString(1)+" | الرصيد: "+fmt(c.getDouble(2)),15));c.close();
  }
  void checks(){
-  page("سجل الشيكات");content.addView(t("سجل الشيكات الواردة والصادرة ومواعيد استحقاقها",16));
+  page("سجل الشيكات");content.addView(t("تنبيه: حفظ الشيك وتغيير حالته يسجلان بياناته فقط؛ لا يُنشأ قيد محاسبي تلقائي عند التحصيل أو الصرف حتى تتم تسوية معتمدة.",15));content.addView(t("سجل الشيكات الواردة والصادرة ومواعيد استحقاقها",16));
   Spinner direction=new Spinner(this);direction.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{tr("شيك وارد"),tr("شيك صادر")}));content.addView(direction);
   EditText number=e("رقم الشيك"),bank=e("اسم البنك"),party=e("اسم العميل أو المستفيد"),amount=e("قيمة الشيك"),issue=e("تاريخ الإصدار YYYY-MM-DD"),due=e("تاريخ الاستحقاق YYYY-MM-DD");
   amount.setInputType(8194);for(EditText x:new EditText[]{number,bank,party,amount,issue,due})content.addView(x);
@@ -147,7 +147,7 @@ public class MainActivity extends Activity{
  }
  void employees(){
   page("الموظفون والرواتب");
-  content.addView(t("إضافة موظف واحتساب الراتب والسلف والخصومات الشهرية",16));
+  content.addView(t("إضافة موظف واحتساب الراتب والسلف والخصومات الشهرية. السلف الجديدة تُرحّل إلى الأستاذ العام؛ الخصومات والرواتب المستحقة تحتاج إلى دورة اعتماد وترحيل مستقلة.",15));
   EditText name=e("اسم الموظف"),job=e("المسمى الوظيفي"),salary=e("الراتب الشهري");salary.setInputType(8194);
   content.addView(name);content.addView(job);content.addView(salary);
   Button add=b("إضافة موظف");content.addView(add);
