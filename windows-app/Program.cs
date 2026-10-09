@@ -59,7 +59,7 @@ sealed class MainForm : Form
         var head = new Label { Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.1.0"), Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(18,55,42), ForeColor = Color.White, Font = new Font("Segoe UI", 23, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
-        Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("الموظفون والرواتب", Employees);
+        Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
         Add("التقارير المالية", Reports); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true }));
         Add("اختيار اللغة / Language", ToggleLanguage);
         RefreshSummary();
@@ -80,7 +80,7 @@ sealed class MainForm : Form
     void InitDb()
     {
         using var c = C(); using var x = c.CreateCommand();
-        x.CommandText = "CREATE TABLE IF NOT EXISTS products(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,qty REAL NOT NULL DEFAULT 0,price REAL NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS sales(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS purchases(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS employees(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,job_title TEXT NOT NULL DEFAULT '',salary REAL NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS payroll_events(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,kind TEXT NOT NULL,amount REAL NOT NULL,note TEXT,period_month TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);";
+        x.CommandText = "CREATE TABLE IF NOT EXISTS products(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,qty REAL NOT NULL DEFAULT 0,price REAL NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS sales(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS purchases(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS employees(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,job_title TEXT NOT NULL DEFAULT '',salary REAL NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS payroll_events(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,kind TEXT NOT NULL,amount REAL NOT NULL,note TEXT,period_month TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS expenses(id INTEGER PRIMARY KEY AUTOINCREMENT,description TEXT NOT NULL,amount REAL NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);";
         x.ExecuteNonQuery();
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE products ADD COLUMN barcode TEXT"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE employees ADD COLUMN job_title TEXT NOT NULL DEFAULT ''"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
@@ -161,6 +161,67 @@ sealed class MainForm : Form
         };
         f.Controls.Add(save); f.Controls.Add(p); f.Controls.Add(q); f.Controls.Add(n); f.ShowDialog();
     }
+    void CashExpense()
+    {
+        using var f = new Form { Text = UiLanguage.T("المصروفات"), Width = 650, Height = 480, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var description = new TextBox { PlaceholderText = UiLanguage.T("البيان"), Dock = DockStyle.Top, Height = 40 };
+        var amount = new TextBox { PlaceholderText = UiLanguage.T("المبلغ"), Dock = DockStyle.Top, Height = 40 };
+        var save = new Button { Text = UiLanguage.T("تسجيل مصروف"), Dock = DockStyle.Top, Height = 45 };
+        var list = new ListBox { Dock = DockStyle.Fill };
+        void Reload()
+        {
+            list.Items.Clear();
+            using var c = C(); using var q = c.CreateCommand();
+            q.CommandText = "SELECT description,amount,created_at FROM expenses ORDER BY id DESC LIMIT 100";
+            using var r = q.ExecuteReader();
+            while (r.Read()) list.Items.Add(r.GetString(0) + " | " + r.GetDouble(1).ToString("N2") + " | " + r.GetString(2));
+        }
+        save.Click += (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(description.Text) || !double.TryParse(amount.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var value) || value <= 0)
+            { MessageBox.Show(UiLanguage.T("أدخل بيانًا ومبلغًا موجبًا صحيحًا.")); return; }
+            using var c = C(); using var q = c.CreateCommand();
+            q.CommandText = "INSERT INTO expenses(description,amount) VALUES($d,$a)";
+            q.Parameters.AddWithValue("$d", description.Text.Trim()); q.Parameters.AddWithValue("$a", value); q.ExecuteNonQuery();
+            description.Clear(); amount.Clear(); Reload(); RefreshSummary();
+        };
+        f.Controls.Add(list); f.Controls.Add(save); f.Controls.Add(amount); f.Controls.Add(description);
+        Reload(); f.ShowDialog();
+    }
+
+    void BackupRestore()
+    {
+        using var f = new Form { Text = UiLanguage.T("النسخ الاحتياطي والاستعادة"), Width = 620, Height = 280, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var export = new Button { Text = UiLanguage.T("تصدير نسخة احتياطية"), Dock = DockStyle.Top, Height = 55 };
+        var restore = new Button { Text = UiLanguage.T("استعادة نسخة احتياطية"), Dock = DockStyle.Top, Height = 55 };
+        export.Click += (_, _) =>
+        {
+            using var dialog = new SaveFileDialog { Filter = "SQLite database (*.db)|*.db", FileName = "SmartCompany-backup.db" };
+            if (dialog.ShowDialog(f) != DialogResult.OK) return;
+            try { using (C()) { } File.Copy(dbPath, dialog.FileName, true); MessageBox.Show(UiLanguage.T("تم تصدير النسخة الاحتياطية.")); }
+            catch (Exception) { MessageBox.Show(UiLanguage.T("تعذر تصدير النسخة الاحتياطية.")); }
+        };
+        restore.Click += (_, _) =>
+        {
+            if (MessageBox.Show(UiLanguage.T("ستستبدل الاستعادة بيانات الشركة الحالية. أنشئ نسخة احتياطية أولًا. هل تريد المتابعة؟"), UiLanguage.T("تأكيد الاستعادة"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            using var dialog = new OpenFileDialog { Filter = "SQLite database (*.db)|*.db|All files (*.*)|*.*" };
+            if (dialog.ShowDialog(f) != DialogResult.OK) return;
+            try
+            {
+                using (var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = dialog.FileName, Mode = SqliteOpenMode.ReadOnly }.ToString()))
+                {
+                    source.Open(); using var check = source.CreateCommand(); check.CommandText = "PRAGMA integrity_check";
+                    if (!string.Equals(Convert.ToString(check.ExecuteScalar()), "ok", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException();
+                    using var tables = source.CreateCommand(); tables.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('products','sales','purchases')";
+                    if (Convert.ToInt32(tables.ExecuteScalar()) != 3) throw new InvalidDataException();
+                }
+                File.Copy(dialog.FileName, dbPath, true); InitDb(); RefreshSummary(); MessageBox.Show(UiLanguage.T("تمت الاستعادة. راجع الأرصدة والتقارير."));
+            }
+            catch (Exception) { MessageBox.Show(UiLanguage.T("فشلت الاستعادة: الملف غير صالح أو غير متوافق.")); }
+        };
+        f.Controls.Add(restore); f.Controls.Add(export); f.ShowDialog();
+    }
+
     void Employees()
     {
         using var f = new Form { Text = UiLanguage.T("الموظفون والرواتب"), Width = 820, Height = 650, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
