@@ -180,6 +180,7 @@ public class MainActivity extends Activity{
     try{
      java.text.SimpleDateFormat sdf=new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US);sdf.setLenient(false);
      String a=from.getText().toString().trim(),z=to.getText().toString().trim();
+     if((!a.isEmpty()&&!a.matches("\\d{4}-\\d{2}-\\d{2}"))||(!z.isEmpty()&&!z.matches("\\d{4}-\\d{2}-\\d{2}")))throw new IllegalArgumentException();
      long start=0,end=Long.MAX_VALUE;
      if(!a.isEmpty()){java.util.Date d=sdf.parse(a);if(d==null)throw new IllegalArgumentException();start=d.getTime();}
      if(!z.isEmpty()){java.util.Date d=sdf.parse(z);if(d==null)throw new IllegalArgumentException();java.util.Calendar cal=java.util.Calendar.getInstance();cal.setTime(d);cal.add(java.util.Calendar.DAY_OF_MONTH,1);end=cal.getTimeInMillis()-1;}
