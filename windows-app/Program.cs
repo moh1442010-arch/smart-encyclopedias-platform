@@ -18,7 +18,7 @@ static class UiLanguage
         if (!English || string.IsNullOrEmpty(value)) return value;
         string[][] pairs = {
           new[]{"شركة محمد مصطفى الذكية","Mohammed Mustafa Smart Company"},
-          new[]{"الموظفون والرواتب","Employees & Payroll"},new[]{"اسم الموظف","Employee name"},new[]{"المسمى الوظيفي","Job title"},new[]{"الراتب الشهري","Monthly salary"},new[]{"إضافة موظف","Add employee"},new[]{"حفظ حركة الراتب","Save payroll event"},new[]{"سلفة","Advance"},new[]{"خصم","Deduction"},new[]{"المبلغ","Amount"},new[]{"البيان","Description"},new[]{"السلف","Advances"},new[]{"الخصومات","Deductions"},new[]{"صافي المستحق","Net payable"},new[]{"أدخل اسمًا وراتبًا صحيحًا.","Enter a valid name and salary."},new[]{"اختر موظفًا وأدخل مبلغًا صحيحًا.","Choose an employee and enter a valid amount."},new[]{"الأصناف والمخزون والباركود","Products, Inventory & Barcode"},new[]{"الأصناف والمخزون","Products & Inventory"},
+          new[]{"الموظفون والرواتب","Employees & Payroll"},new[]{"المصروفات","Expenses"},new[]{"النسخ الاحتياطي والاستعادة","Backup & Restore"},new[]{"تسجيل مصروف","Record expense"},new[]{"تصدير نسخة احتياطية","Export backup"},new[]{"استعادة نسخة احتياطية","Restore backup"},new[]{"تم تصدير النسخة الاحتياطية.","Backup exported."},new[]{"تعذر تصدير النسخة الاحتياطية.","Could not export backup."},new[]{"ستستبدل الاستعادة بيانات الشركة الحالية. أنشئ نسخة احتياطية أولًا. هل تريد المتابعة؟","Restore will replace current company data. Back up first. Continue?"},new[]{"تأكيد الاستعادة","Confirm restore"},new[]{"تمت الاستعادة. راجع الأرصدة والتقارير.","Restore complete. Review balances and reports."},new[]{"فشلت الاستعادة: الملف غير صالح أو غير متوافق.","Restore failed: file is invalid or incompatible."},new[]{"أدخل بيانًا ومبلغًا موجبًا صحيحًا.","Enter a description and a positive amount."},new[]{"إجمالي المصروفات:","Total expenses:"},new[]{"صافي الحركة بعد المصروفات:","Net movement after expenses:"},new[]{"اسم الموظف","Employee name"},new[]{"المسمى الوظيفي","Job title"},new[]{"الراتب الشهري","Monthly salary"},new[]{"إضافة موظف","Add employee"},new[]{"حفظ حركة الراتب","Save payroll event"},new[]{"سلفة","Advance"},new[]{"خصم","Deduction"},new[]{"المبلغ","Amount"},new[]{"البيان","Description"},new[]{"السلف","Advances"},new[]{"الخصومات","Deductions"},new[]{"صافي المستحق","Net payable"},new[]{"أدخل اسمًا وراتبًا صحيحًا.","Enter a valid name and salary."},new[]{"اختر موظفًا وأدخل مبلغًا صحيحًا.","Choose an employee and enter a valid amount."},new[]{"الأصناف والمخزون والباركود","Products, Inventory & Barcode"},new[]{"الأصناف والمخزون","Products & Inventory"},
           new[]{"المبيعات","Sales"},new[]{"المشتريات","Purchases"},new[]{"العملاء","Customers"},new[]{"الموردون","Suppliers"},new[]{"الموظفون","Employees"},new[]{"التقارير المالية","Financial Reports"},
           new[]{"الدعم عبر واتساب","WhatsApp Support"},new[]{"اختيار اللغة / Language","Language: العربية / English"},new[]{"اسم الصنف أو الباركود","Product name or barcode"},new[]{"طباعة التقرير","Print report"},new[]{"إرسال بالبريد الإلكتروني","Send by email"},new[]{"التقرير المالي","Financial Report"},new[]{"المبيعات:","Sales:"},new[]{"المشتريات:","Purchases:"},new[]{"صافي الحركة:","Net movement:"},new[]{"توقيع المحاسب:","Accountant signature:"},new[]{"اسم الصنف","Product name"},
           new[]{"الباركود (ماسح USB/Bluetooth أو إدخال يدوي)","Barcode (USB/Bluetooth scanner or manual entry)"},new[]{"الكمية","Quantity"},new[]{"السعر","Price"},new[]{"إضافة الصنف","Add product"},
@@ -290,10 +290,13 @@ sealed class MainForm : Form
         var sales = Convert.ToDouble(s.ExecuteScalar());
         using var p = c.CreateCommand(); p.CommandText = "SELECT COALESCE(SUM(total),0) FROM purchases";
         var purchases = Convert.ToDouble(p.ExecuteScalar());
+        using var ex = c.CreateCommand(); ex.CommandText = "SELECT COALESCE(SUM(amount),0) FROM expenses";
+        var expenses = Convert.ToDouble(ex.ExecuteScalar());
         var report = UiLanguage.T("التقرير المالي") + Environment.NewLine +
             UiLanguage.T("المبيعات:") + " " + sales.ToString("N2") + Environment.NewLine +
             UiLanguage.T("المشتريات:") + " " + purchases.ToString("N2") + Environment.NewLine +
-            UiLanguage.T("صافي الحركة:") + " " + (sales - purchases).ToString("N2") + Environment.NewLine + Environment.NewLine +
+            UiLanguage.T("إجمالي المصروفات:") + " " + expenses.ToString("N2") + Environment.NewLine +
+            UiLanguage.T("صافي الحركة بعد المصروفات:") + " " + (sales - purchases - expenses).ToString("N2") + Environment.NewLine + Environment.NewLine +
             UiLanguage.T("توقيع المحاسب:") + " ____________________";
         using var f = new Form { Text = UiLanguage.T("التقرير المالي"), Width = 760, Height = 520, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
         var preview = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill, Font = new Font("Segoe UI", 12), Text = report };
@@ -323,6 +326,6 @@ sealed class MainForm : Form
     }
     void RefreshSummary()
     {
-        using var c=C();using var s=c.CreateCommand();s.CommandText="SELECT COALESCE(SUM(total),0) FROM sales";var sales=Convert.ToDouble(s.ExecuteScalar());using var p=c.CreateCommand();p.CommandText="SELECT COALESCE(SUM(total),0) FROM purchases";var purchases=Convert.ToDouble(p.ExecuteScalar());summary.Text=UiLanguage.T($"المبيعات: {sales:N2}   |   المشتريات: {purchases:N2}   |   الصافي: {(sales-purchases):N2}");
+        using var c=C();using var s=c.CreateCommand();s.CommandText="SELECT COALESCE(SUM(total),0) FROM sales";var sales=Convert.ToDouble(s.ExecuteScalar());using var p=c.CreateCommand();p.CommandText="SELECT COALESCE(SUM(total),0) FROM purchases";var purchases=Convert.ToDouble(p.ExecuteScalar());using var ex=c.CreateCommand();ex.CommandText="SELECT COALESCE(SUM(amount),0) FROM expenses";var expenses=Convert.ToDouble(ex.ExecuteScalar());summary.Text=UiLanguage.T($"المبيعات: {sales:N2}   |   المشتريات: {purchases:N2}   |   المصروفات: {expenses:N2}   |   صافي الحركة: {(sales-purchases-expenses):N2}");
     }
 }
