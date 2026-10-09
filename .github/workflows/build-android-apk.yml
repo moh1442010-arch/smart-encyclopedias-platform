@@ -1,5 +1,9 @@
 name: Build Smart Company Signed Android Release 2.2.6
 
+concurrency:
+  group: smart-company-android-release
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
