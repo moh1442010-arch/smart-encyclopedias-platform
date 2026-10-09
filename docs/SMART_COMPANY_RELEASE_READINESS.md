@@ -50,3 +50,40 @@ The non-activatable seven-day Android lock was removed from this pre-release bui
 ## Release artifact naming
 
 GitHub Actions uploads Android outputs as `smart-company-v2.2.0` and Windows output as `smart-company-windows-v2.2.0`. Check the newest run conclusion and artifact contents before sharing any package. Use the debug APK for the first controlled Android device test; do not distribute an unsigned release APK as a finished commercial product. Windows x64 publishing is self-contained, but direct public distribution should eventually use a trusted code-signing certificate or a managed store distribution route.
+
+
+## Independent market and product-gap review — 2026-10-09
+
+This is a product-readiness benchmark, not a claim that the current app equals or exceeds established products.
+
+| Capability seen in current market offerings | Current candidate status | Release decision |
+|---|---|---|
+| Arabic-first, simple mobile workflow | Present in basic form | Validate readability on target devices |
+| Offline/local data use | Local SQLite data | Keep backup and recovery testing mandatory |
+| Multi-line invoices, quotes, credit notes and returns | Not complete; current invoice flow handles one product line | P0 before positioning as a complete business-accounting system |
+| Customer and supplier statements and aging of receivables/payables | Basic party names and invoice balances only | P0 |
+| Payment methods and settlement allocation to cash/bank/accounts | Invoice settlement currently posts paid amounts to generic cash | P0; expose payment method and post to the correct account |
+| Full financial statements (income statement, balance sheet, cash-flow statement) | Reports and trial-balance totals are basic | P0; accountant-reviewed reconciliation required |
+| Role-based staff permissions and audit trail for edits/deletions | Not implemented | P0 before multi-user/company deployment |
+| Multi-warehouse/branch, multi-currency, POS | Not implemented | P1/P2 according to target customer |
+| Receipt OCR, camera barcode scanning, automated bank feeds/reconciliation | Not implemented | P2; do not advertise as available |
+| Secure licensing, update policy, privacy terms and support process | No server-verified licensing; release signing key not configured | Blocking for paid public distribution |
+| Windows feature parity | Incomplete relative to Android | Do not market as a fully equivalent cross-platform suite |
+
+### Competitive lessons to adopt
+
+Established products advertise invoice and payment automation, receipt capture/OCR, bank reconciliation, inventory alerts, activity/audit trails, role-based access, multi-device synchronization, and wider reporting/integration ecosystems. Arabic-market products also compete on branches, warehouses, POS, payroll, multi-currency and local workflows. The current candidate's credible near-term positioning is narrower: **Arabic-first, locally stored starter accounting for controlled pilot use**, with transparent limits—not “the most complete” or “better than all competitors.”
+
+Reference benchmark pages:
+- Zoho Books feature overview: https://www.zoho.com/us/books/small-business-accounting-software/
+- Xero mobile accounting overview: https://www.xero.com/us/accounting-software/xero-accounting-mobile-app/
+- Arabic accounting/inventory benchmark: https://play.google.com/store/apps/details?id=net.ssdsoft.ssdmobile
+- Wafeq feature overview: https://www.wafeq.com/en
+
+### Release gates added by this review
+
+1. Do not call the product commercially ready on a successful build alone.
+2. Before installation, confirm the newest CI run passes and inspect the exact artifact name, version, package ID, and signing status.
+3. Before relying on it for real books, test every posting path against expected journal entries and reconcile trial balance, inventory valuation, profit, cash and bank balances with an accountant.
+4. Before paid distribution, configure a securely retained owner-controlled signing key, verify the signed APK, add privacy/EULA/support/update documents, and implement a real license service only if paid activation is part of the offer.
+5. Prioritize payment-method accounting, customer/supplier statements, invoice numbering and multi-line/return workflows before feature expansion or cosmetic work.
