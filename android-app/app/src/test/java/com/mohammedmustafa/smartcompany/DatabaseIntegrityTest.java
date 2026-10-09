@@ -115,6 +115,57 @@ public class DatabaseIntegrityTest {
         }
     }
 
+
+    @Test
+    public void upgradeFromVersionEightPreservesRowsAndAddsNewColumns() {
+        helper.close();
+        context.deleteDatabase("smartcompany2.db");
+        java.io.File file = context.getDatabasePath("smartcompany2.db");
+        java.io.File parent = file.getParentFile();
+        if (parent != null) parent.mkdirs();
+
+        SQLiteDatabase old = SQLiteDatabase.openOrCreateDatabase(file, null);
+        old.execSQL("CREATE TABLE products(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT UNIQUE,qty REAL NOT NULL DEFAULT 0,sale_price REAL NOT NULL DEFAULT 0,cost REAL NOT NULL DEFAULT 0,reorder REAL NOT NULL DEFAULT 0)");
+        old.execSQL("CREATE TABLE customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT)");
+        old.execSQL("INSERT INTO customers(name) VALUES('عميل قديم')");
+        old.execSQL("CREATE TABLE suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT)");
+        old.execSQL("CREATE TABLE employees(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT)");
+        old.execSQL("CREATE TABLE payroll_events(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,kind TEXT NOT NULL,amount REAL NOT NULL,note TEXT,period_month TEXT NOT NULL,created_at INTEGER)");
+        old.execSQL("CREATE TABLE transactions(id INTEGER PRIMARY KEY AUTOINCREMENT,type TEXT NOT NULL,party TEXT,total REAL NOT NULL,paid REAL NOT NULL DEFAULT 0,remaining REAL NOT NULL DEFAULT 0,created_at INTEGER)");
+        old.execSQL("CREATE TABLE journal_entries(id INTEGER PRIMARY KEY AUTOINCREMENT,transaction_id INTEGER,created_at INTEGER)");
+        old.execSQL("CREATE TABLE journal_lines(id INTEGER PRIMARY KEY AUTOINCREMENT,journal_entry_id INTEGER,account_id INTEGER,debit REAL NOT NULL DEFAULT 0,credit REAL NOT NULL DEFAULT 0)");
+        old.setVersion(8);
+        old.close();
+
+        helper = new MainActivity.DB(context);
+        database = helper.getWritableDatabase();
+
+        assertTrue(columnExists("customers", "credit_limit"));
+        assertTrue(columnExists("transactions", "invoice_no"));
+        assertTrue(columnExists("transactions", "customer_id"));
+        assertTrue(columnExists("products", "barcode"));
+        assertTrue(columnExists("journal_entries", "description"));
+        Cursor preserved = database.rawQuery(
+                "SELECT name FROM customers WHERE name='عميل قديم'", null);
+        try {
+            assertTrue("Existing customer row must survive schema migration", preserved.moveToFirst());
+        } finally {
+            preserved.close();
+        }
+    }
+
+    private boolean columnExists(String table, String column) {
+        Cursor c = database.rawQuery("PRAGMA table_info(" + table + ")", null);
+        try {
+            while (c.moveToNext()) {
+                if (column.equals(c.getString(1))) return true;
+            }
+            return false;
+        } finally {
+            c.close();
+        }
+    }
+
     private boolean tableExists(String name) {
         Cursor c = database.rawQuery(
                 "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
