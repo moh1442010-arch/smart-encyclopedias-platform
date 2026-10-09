@@ -34,7 +34,7 @@ jobs:
           unzip -q gradle-8.9-bin.zip
           echo "$PWD/gradle-8.9/bin" >> "$GITHUB_PATH"
 
-      - name: Build debug and release
+      - name: Build release only
         working-directory: android-app
         run: |
           gradle wrapper --gradle-version 8.9
@@ -84,7 +84,7 @@ jobs:
           fi
           sha256sum --check smart-company-v2.2.3.sha256
 
-      - name: Upload 2.2.3 package
+      - name: Upload signed release package
         uses: actions/upload-artifact@v4
         with:
           name: smart-company-v2.2.3
