@@ -157,6 +157,62 @@ sealed class MainForm : Form
         };
         f.Controls.Add(save); f.Controls.Add(p); f.Controls.Add(q); f.Controls.Add(n); f.ShowDialog();
     }
+    void Employees()
+    {
+        using var f = new Form { Text = UiLanguage.T("الموظفون والرواتب"), Width = 820, Height = 650, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var name = new TextBox { PlaceholderText = UiLanguage.T("اسم الموظف"), Dock = DockStyle.Top, Height = 38 };
+        var job = new TextBox { PlaceholderText = UiLanguage.T("المسمى الوظيفي"), Dock = DockStyle.Top, Height = 38 };
+        var salary = new TextBox { PlaceholderText = UiLanguage.T("الراتب الشهري"), Dock = DockStyle.Top, Height = 38 };
+        var add = new Button { Text = UiLanguage.T("إضافة موظف"), Dock = DockStyle.Top, Height = 42 };
+        var person = new ComboBox { Dock = DockStyle.Top, DropDownStyle = ComboBoxStyle.DropDownList, Height = 38 };
+        var kind = new ComboBox { Dock = DockStyle.Top, DropDownStyle = ComboBoxStyle.DropDownList, Height = 38 };
+        kind.Items.Add(UiLanguage.T("سلفة")); kind.Items.Add(UiLanguage.T("خصم")); kind.SelectedIndex = 0;
+        var amount = new TextBox { PlaceholderText = UiLanguage.T("المبلغ"), Dock = DockStyle.Top, Height = 38 };
+        var note = new TextBox { PlaceholderText = UiLanguage.T("البيان"), Dock = DockStyle.Top, Height = 38 };
+        var saveEvent = new Button { Text = UiLanguage.T("حفظ حركة الراتب"), Dock = DockStyle.Top, Height = 42 };
+        var list = new ListBox { Dock = DockStyle.Fill };
+        var month = DateTime.Now.ToString("yyyy-MM");
+        var ids = new List<long>();
+        void Reload()
+        {
+            person.Items.Clear(); ids.Clear(); list.Items.Clear();
+            using var c = C();
+            using var q = c.CreateCommand();
+            q.CommandText = "SELECT e.id,e.name,COALESCE(e.job_title,''),COALESCE(e.salary,0),COALESCE(SUM(CASE WHEN p.kind='ADVANCE' AND p.period_month=$m THEN p.amount ELSE 0 END),0),COALESCE(SUM(CASE WHEN p.kind='DEDUCTION' AND p.period_month=$m THEN p.amount ELSE 0 END),0) FROM employees e LEFT JOIN payroll_events p ON p.employee_id=e.id GROUP BY e.id ORDER BY e.name";
+            q.Parameters.AddWithValue("$m", month);
+            using var r = q.ExecuteReader();
+            while (r.Read())
+            {
+                ids.Add(r.GetInt64(0));
+                person.Items.Add(r.GetString(1) + " — " + r.GetString(2));
+                var baseSalary = r.GetDouble(3); var advances = r.GetDouble(4); var deductions = r.GetDouble(5);
+                list.Items.Add(r.GetString(1) + " | " + UiLanguage.T("الراتب الشهري") + ": " + baseSalary.ToString("N2") + " | " + UiLanguage.T("السلف") + ": " + advances.ToString("N2") + " | " + UiLanguage.T("الخصومات") + ": " + deductions.ToString("N2") + " | " + UiLanguage.T("صافي المستحق") + ": " + Math.Max(0, baseSalary - advances - deductions).ToString("N2"));
+            }
+            if (person.Items.Count > 0 && person.SelectedIndex < 0) person.SelectedIndex = 0;
+        }
+        add.Click += (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(name.Text) || !double.TryParse(salary.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var value) || value < 0)
+            { MessageBox.Show(UiLanguage.T("أدخل اسمًا وراتبًا صحيحًا.")); return; }
+            using var c = C(); using var q = c.CreateCommand();
+            q.CommandText = "INSERT INTO employees(name,job_title,salary) VALUES($n,$j,$s)";
+            q.Parameters.AddWithValue("$n", name.Text.Trim()); q.Parameters.AddWithValue("$j", job.Text.Trim()); q.Parameters.AddWithValue("$s", value);
+            q.ExecuteNonQuery(); name.Clear(); job.Clear(); salary.Clear(); Reload();
+        };
+        saveEvent.Click += (_, _) =>
+        {
+            if (person.SelectedIndex < 0 || !double.TryParse(amount.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var value) || value <= 0)
+            { MessageBox.Show(UiLanguage.T("اختر موظفًا وأدخل مبلغًا صحيحًا.")); return; }
+            using var c = C(); using var q = c.CreateCommand();
+            q.CommandText = "INSERT INTO payroll_events(employee_id,kind,amount,note,period_month) VALUES($id,$k,$a,$n,$m)";
+            q.Parameters.AddWithValue("$id", ids[person.SelectedIndex]); q.Parameters.AddWithValue("$k", kind.SelectedIndex == 0 ? "ADVANCE" : "DEDUCTION");
+            q.Parameters.AddWithValue("$a", value); q.Parameters.AddWithValue("$n", note.Text.Trim()); q.Parameters.AddWithValue("$m", month);
+            q.ExecuteNonQuery(); amount.Clear(); note.Clear(); Reload();
+        };
+        f.Controls.Add(list); f.Controls.Add(saveEvent); f.Controls.Add(note); f.Controls.Add(amount); f.Controls.Add(kind); f.Controls.Add(person); f.Controls.Add(add); f.Controls.Add(salary); f.Controls.Add(job); f.Controls.Add(name);
+        Reload(); f.ShowDialog();
+    }
+
     void Simple(string table,string title)
     {
         using var f=new Form{Text=UiLanguage.T(title),Width=650,Height=500,RightToLeft=UiLanguage.English?RightToLeft.No:RightToLeft.Yes,RightToLeftLayout=!UiLanguage.English};var n=new TextBox{PlaceholderText=UiLanguage.T("الاسم"),Dock=DockStyle.Top,Height=40};var add=new Button{Text=UiLanguage.T("إضافة"),Dock=DockStyle.Top,Height=45};var list=new ListBox{Dock=DockStyle.Fill};
