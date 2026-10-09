@@ -108,3 +108,28 @@ The owner approved the quality and market-value proposals. Implementation must b
 
 ### Current build checkpoint
 Build workflow run 49 (commit b66b0e88d7a0f18529b456ffc304cbc4285b78ed) completed successfully and produced artifact smart-company-v2.2.0. This confirms compilation/package generation only. The workflow permits an unsigned release artifact when production signing secrets are absent; inspect the artifact contents and signing state before any release decision. No manual device/accounting acceptance test is implied by CI success.
+
+## Brand identity, visual design, and accounting accuracy — owner priority
+
+The owner explicitly confirms two first-class product requirements: (1) a consistent, professional identity and polished design, because the interface is the product's first impression; and (2) accounting accuracy as a non-negotiable acceptance criterion.
+
+### Brand and design acceptance criteria
+- Use one coherent visual system across every screen: typography, spacing, colors, card styles, icons, button hierarchy, field labels, validation messages, and navigation.
+- Preserve clear Arabic RTL layout and readable Arabic numerals/amounts on common Android screen sizes, including lower-end phones.
+- Give the app a recognizable professional identity for شركة محمد مصطفى الذكية: consistent app name, launcher icon, splash/entry screen, dashboard, invoice/receipt layouts, and support/contact surfaces.
+- Make the interface polished but restrained: strong hierarchy, high contrast, no clipped text, no overcrowded cards, no decorative elements that obscure accounting data.
+- Provide clear empty, loading, success, warning, validation-error, and destructive-action states; confirm before cancellation or irreversible actions.
+- Use a consistent print/share/export design for invoices and reports. Visual polish must not alter amounts, rounding, dates, or transaction meaning.
+- Check every screen at narrow and larger widths, with long Arabic names and large currency values. No screen is approved based on the dashboard alone.
+
+### Accounting accuracy acceptance criteria
+- Each business transaction must save atomically: either all required records and journal lines are committed, or none are.
+- Verify each transaction's journal entries and ensure total debits equal total credits within the defined currency precision.
+- Test sales, purchases, partial/full payments, unpaid balances, expenses, cash movements, bank movements, returns, and inventory cost changes against manually calculated expected results.
+- Reconcile the general ledger, trial balance, customer/supplier balances, inventory quantities and valuation, cost of goods sold, profit, cash, and bank balances.
+- Reject invalid negative/zero quantities or amounts where not permitted; validate decimal input, discounts, duplicate invoice numbers, missing parties/items, and insufficient stock according to the configured policy.
+- Test backup and restore on a separate test dataset; verify restored records and balances before approving the flow.
+- Have an accountant review the expected journal entries and reconciliation results before real business use.
+
+### Release rule
+Brand/design review and accounting validation are separate mandatory gates. Passing one does not compensate for failing the other. No public commercial-release claim until both pass alongside signing, security, and device acceptance tests.
