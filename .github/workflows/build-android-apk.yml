@@ -42,6 +42,7 @@ jobs:
         working-directory: android-app
         run: |
           gradle wrapper --gradle-version 8.9
+          ./gradlew testDebugUnitTest
           ./gradlew clean assembleRelease bundleRelease
 
       - name: Sign release APK and App Bundle
