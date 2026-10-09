@@ -61,7 +61,7 @@ jobs:
           cp app/build/outputs/bundle/release/app-release.aab smart-company-v2.1.0.aab
           sha256sum smart-company-v2.1.0-*.apk smart-company-v2.1.0.aab > smart-company-v2.1.0.sha256
 
-      - name: Upload 2.0 package
+      - name: Upload 2.1.0 package
         uses: actions/upload-artifact@v4
         with:
           name: smart-company-v2.1.0
