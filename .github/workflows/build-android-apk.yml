@@ -1,4 +1,4 @@
-name: Build Smart Company Accounting App 2.2.3
+name: Build Smart Company Signed Android Release 2.2.4
 
 on:
   workflow_dispatch:
@@ -38,7 +38,7 @@ jobs:
         working-directory: android-app
         run: |
           gradle wrapper --gradle-version 8.9
-          ./gradlew clean assembleDebug assembleRelease bundleRelease
+          ./gradlew clean assembleRelease bundleRelease
 
       - name: Sign release APK and App Bundle
         env:
