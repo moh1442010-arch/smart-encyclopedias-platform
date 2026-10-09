@@ -40,7 +40,7 @@ jobs:
           gradle wrapper --gradle-version 8.9
           ./gradlew clean assembleDebug assembleRelease bundleRelease
 
-      - name: Sign release when production key exists
+      - name: Sign release APK and App Bundle
         env:
           KEYSTORE_B64: ${{ secrets.SMARTCOMPANY_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.SMARTCOMPANY_KEYSTORE_PASSWORD }}
@@ -48,49 +48,48 @@ jobs:
           KEY_PASSWORD: ${{ secrets.SMARTCOMPANY_KEY_PASSWORD }}
         working-directory: android-app
         run: |
-          mkdir -p signing
-          if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
-            echo "$KEYSTORE_B64" | base64 --decode > signing/release.jks
-            apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
-            "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out smart-company-v2.2.3-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
-            "$apksigner" verify --verbose smart-company-v2.2.3-release.apk
-          else
-            cp app/build/outputs/apk/release/app-release-unsigned.apk smart-company-v2.2.3-unsigned.apk
-          fi
-          cp app/build/outputs/apk/debug/app-debug.apk smart-company-v2.2.3-debug.apk
-          cp app/build/outputs/bundle/release/app-release.aab smart-company-v2.2.3.aab
-          sha256sum smart-company-v2.2.3-*.apk smart-company-v2.2.3.aab > smart-company-v2.2.3.sha256
+          set -euo pipefail
+          test -n "$KEYSTORE_B64" || (echo "Missing production signing secret" && exit 1)
+          test -n "$KEYSTORE_PASSWORD" || (echo "Missing keystore password secret" && exit 1)
+          test -n "$KEY_ALIAS" || (echo "Missing key alias secret" && exit 1)
+          test -n "$KEY_PASSWORD" || (echo "Missing key password secret" && exit 1)
+          mkdir -p signing release
+          echo "$KEYSTORE_B64" | base64 --decode > signing/release.jks
+          apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out release/SmartCompany-2.2.4-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
+          cp app/build/outputs/bundle/release/app-release.aab release/SmartCompany-2.2.4-release.aab
+          jarsigner -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" release/SmartCompany-2.2.4-release.aab "$KEY_ALIAS"
+          "$apksigner" verify --verbose release/SmartCompany-2.2.4-release.apk
+          jarsigner -verify -verbose release/SmartCompany-2.2.4-release.aab
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 release/SmartCompany-2.2.4-release.apk
+          sha256sum release/SmartCompany-2.2.4-release.apk release/SmartCompany-2.2.4-release.aab > release/SHA256SUMS.txt
 
-      - name: Final package QA
+      - name: Final release QA
         working-directory: android-app
         run: |
           set -euo pipefail
           build_tools="$ANDROID_HOME/build-tools/36.0.0"
-          debug_apk="smart-company-v2.2.3-debug.apk"
-          test -s "$debug_apk"
-          test -s "smart-company-v2.2.3.aab"
-          test -s "smart-company-v2.2.3.sha256"
-          "$build_tools/apksigner" verify --verbose "$debug_apk"
-          "$build_tools/zipalign" -c -v 4 "$debug_apk"
-          badging="$("$build_tools/aapt" dump badging "$debug_apk")"
-          echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='25' versionName='2.2.3'"
+          apk="release/SmartCompany-2.2.4-release.apk"
+          aab="release/SmartCompany-2.2.4-release.aab"
+          test -s "$apk"
+          test -s "$aab"
+          test -s "release/SHA256SUMS.txt"
+          badging="$("$build_tools/aapt" dump badging "$apk")"
+          echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='26' versionName='2.2.4'"
           echo "$badging" | grep -F "application-label:'شركة محمد مصطفى الذكية'"
-          if [ -f "smart-company-v2.2.3-release.apk" ]; then
-            "$build_tools/apksigner" verify --verbose "smart-company-v2.2.3-release.apk"
-            "$build_tools/zipalign" -c -v 4 "smart-company-v2.2.3-release.apk"
-          else
-            test -s "smart-company-v2.2.3-unsigned.apk"
-            echo "Production release APK is unsigned; use the signed debug APK for device testing."
-          fi
-          sha256sum --check smart-company-v2.2.3.sha256
+          permissions="$("$build_tools/aapt" dump permissions "$apk")"
+          if echo "$permissions" | grep -q "android.permission.INTERNET"; then echo "Unexpected INTERNET permission"; exit 1; fi
+          "$build_tools/apksigner" verify --verbose "$apk"
+          jarsigner -verify -verbose "$aab"
+          (cd release && sha256sum --check SHA256SUMS.txt)
 
-      - name: Upload signed release package
+      - name: Upload signed release artifacts only
         uses: actions/upload-artifact@v4
         with:
-          name: smart-company-v2.2.3
+          name: smart-company-android-signed-release-v2.2.4
           path: |
-            android-app/smart-company-v2.2.3-*.apk
-            android-app/smart-company-v2.2.3.aab
-            android-app/smart-company-v2.2.3.sha256
+            android-app/release/SmartCompany-2.2.4-release.apk
+            android-app/release/SmartCompany-2.2.4-release.aab
+            android-app/release/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 90
