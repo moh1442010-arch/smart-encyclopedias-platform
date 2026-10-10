@@ -49,6 +49,7 @@ public class DatabaseIntegrityTest {
         assertTrue(accountExists("1010"));
         assertTrue(accountExists("1100"));
         assertTrue(accountExists("2100"));
+        assertTrue(accountExists("3100"));
         assertTrue(accountExists("4000"));
     }
 
