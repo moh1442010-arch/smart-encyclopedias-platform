@@ -70,7 +70,20 @@ jobs:
             exit 1
           fi
           mkdir -p signing release
-          echo "$KEYSTORE_B64" | base64 --decode > signing/release.jks
+          # Normalize clipboard-added whitespace without printing secret material.
+          KEYSTORE_B64_CLEAN="$(printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]')"
+          if [[ ! "$KEYSTORE_B64_CLEAN" =~ ^[A-Za-z0-9+/]+={0,2}$ ]] || (( ${#KEYSTORE_B64_CLEAN} % 4 != 0 )); then
+            echo "::error title=Invalid keystore Base64::SMARTCOMPANY_KEYSTORE_BASE64 contains invalid characters or has an invalid length. Re-create the secret from the complete base64 file."
+            exit 1
+          fi
+          if ! printf '%s' "$KEYSTORE_B64_CLEAN" | base64 --decode > signing/release.jks || ! test -s signing/release.jks; then
+            echo "::error title=Keystore decode failed::The keystore secret could not be decoded. Replace SMARTCOMPANY_KEYSTORE_BASE64 with the complete file contents."
+            exit 1
+          fi
+          if ! keytool -list -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::error title=Keystore validation failed::The keystore, password, or alias could not be validated. Check the four repository secrets; never print their values."
+            exit 1
+          fi
           apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out release/SmartCompany-2.3.1-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
           cp app/build/outputs/bundle/release/app-release.aab release/SmartCompany-2.3.1-release.aab
