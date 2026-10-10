@@ -155,6 +155,71 @@ public class DatabaseIntegrityTest {
         }
     }
 
+    @Test
+    public void mainAccountsQueriesReturnLedgerBalancesAndEntries() {
+        long cash = accountId("1010");
+        long sales = accountId("4000");
+        ContentValues entry = new ContentValues();
+        entry.put("created_at", System.currentTimeMillis());
+        entry.put("description", "اختبار ربط الحسابات الرئيسية");
+        long journalId = database.insertOrThrow("journal_entries", null, entry);
+
+        ContentValues debit = new ContentValues();
+        debit.put("journal_entry_id", journalId);
+        debit.put("account_id", cash);
+        debit.put("debit", 75.0);
+        debit.put("credit", 0.0);
+        database.insertOrThrow("journal_lines", null, debit);
+
+        ContentValues credit = new ContentValues();
+        credit.put("journal_entry_id", journalId);
+        credit.put("account_id", sales);
+        credit.put("debit", 0.0);
+        credit.put("credit", 75.0);
+        database.insertOrThrow("journal_lines", null, credit);
+
+        Cursor accounts = database.rawQuery(
+                "SELECT a.id,a.code,a.name,a.type,COALESCE(SUM(l.debit),0),COALESCE(SUM(l.credit),0) " +
+                "FROM accounts a LEFT JOIN journal_lines l ON l.account_id=a.id " +
+                "GROUP BY a.id,a.code,a.name,a.type ORDER BY a.code", null);
+        boolean foundCash = false;
+        try {
+            while (accounts.moveToNext()) {
+                if ("1010".equals(accounts.getString(1))) {
+                    foundCash = true;
+                    assertEquals(75.0, accounts.getDouble(4), 0.000001);
+                    assertEquals(0.0, accounts.getDouble(5), 0.000001);
+                }
+            }
+        } finally {
+            accounts.close();
+        }
+        assertTrue("Main accounts screen must list the cash account", foundCash);
+
+        Cursor ledger = database.rawQuery(
+                "SELECT j.id,j.created_at,j.description,j.transaction_id,l.debit,l.credit " +
+                "FROM journal_lines l JOIN journal_entries j ON j.id=l.journal_entry_id " +
+                "WHERE l.account_id=? ORDER BY j.created_at DESC,j.id DESC,l.id DESC",
+                new String[]{String.valueOf(cash)});
+        try {
+            assertTrue("Account ledger must show the posted journal", ledger.moveToFirst());
+            assertEquals(journalId, ledger.getLong(0));
+            assertEquals("اختبار ربط الحسابات الرئيسية", ledger.getString(2));
+            assertEquals(75.0, ledger.getDouble(4), 0.000001);
+        } finally {
+            ledger.close();
+        }
+
+        Cursor totals = database.rawQuery(
+                "SELECT COALESCE(SUM(debit),0),COALESCE(SUM(credit),0) FROM journal_lines", null);
+        try {
+            assertTrue(totals.moveToFirst());
+            assertEquals(totals.getDouble(0), totals.getDouble(1), 0.000001);
+        } finally {
+            totals.close();
+        }
+    }
+
     private boolean columnExists(String table, String column) {
         Cursor c = database.rawQuery("PRAGMA table_info(" + table + ")", null);
         try {
