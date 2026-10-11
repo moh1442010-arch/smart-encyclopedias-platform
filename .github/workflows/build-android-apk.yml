@@ -1,4 +1,4 @@
-name: Build Smart Company Signed Android Release 2.3.1
+name: Build Smart Company Signed Android Release 2.3.1 - Signing Validation
 
 concurrency:
   group: smart-company-android-release
