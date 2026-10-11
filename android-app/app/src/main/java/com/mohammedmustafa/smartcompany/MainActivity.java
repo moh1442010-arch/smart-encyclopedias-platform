@@ -21,6 +21,21 @@ public class MainActivity extends Activity{
  TextView t(String s,int z){TextView v=new TextView(this);v.setText(tr(s));v.setTextSize(z);v.setPadding(18,14,18,14);return v;}
  Button b(String s){Button x=new Button(this);x.setText(tr(s));x.setAllCaps(false);return x;}
  EditText e(String h){EditText x=new EditText(this);x.setHint(tr(h));x.setPadding(18,8,18,8);return x;}
+ void attachDatePicker(EditText field){
+  field.setFocusable(false);field.setClickable(true);field.setLongClickable(true);
+  field.setOnClickListener(v->{
+   java.util.Calendar cal=java.util.Calendar.getInstance();
+   String current=field.getText().toString().trim();
+   if(current.matches("\\d{4}-\\d{2}-\\d{2}"))try{
+    java.text.SimpleDateFormat sdf=new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US);sdf.setLenient(false);
+    java.util.Date d=sdf.parse(current);if(d!=null)cal.setTime(d);
+   }catch(Exception ignored){}
+   new android.app.DatePickerDialog(this,(picker,year,month,day)->
+    field.setText(String.format(Locale.US,"%04d-%02d-%02d",year,month+1,day)),
+    cal.get(java.util.Calendar.YEAR),cal.get(java.util.Calendar.MONTH),cal.get(java.util.Calendar.DAY_OF_MONTH)).show();
+  });
+  field.setOnLongClickListener(v->{field.setText("");return true;});
+ }
  void page(String h){LinearLayout r=new LinearLayout(this);r.setOrientation(LinearLayout.VERTICAL);r.setBackgroundColor(Color.rgb(248,249,250));LinearLayout bar=new LinearLayout(this);bar.setGravity(Gravity.CENTER_VERTICAL);bar.setPadding(8,4,8,4);bar.setBackgroundColor(green);TextView q=t(h,20);q.setTextColor(Color.WHITE);bar.addView(q,new LinearLayout.LayoutParams(0,-2,1));Button home=b("⬅ الرجوع للقائمة الرئيسية");home.setTextColor(Color.rgb(11,31,58));home.setTextSize(14);home.setAllCaps(false);home.setBackgroundColor(Color.rgb(212,175,55));home.setPadding(12,8,12,8);home.setOnClickListener(v->dashboard());bar.addView(home);r.addView(bar);ScrollView s=new ScrollView(this);content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);s.addView(content);r.addView(s,new LinearLayout.LayoutParams(-1,0,1));Button homeBottom=b("⬅ الرجوع إلى القائمة الرئيسية");homeBottom.setTextSize(18);homeBottom.setTextColor(Color.rgb(11,31,58));homeBottom.setAllCaps(false);homeBottom.setTypeface(null,1);homeBottom.setBackgroundColor(Color.rgb(212,175,55));homeBottom.setMinHeight((int)(58*getResources().getDisplayMetrics().density));homeBottom.setOnClickListener(v->dashboard());LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,-2);hp.setMargins(12,8,12,10);r.addView(homeBottom,hp);setContentView(r);}
  boolean trial(){android.content.SharedPreferences p=getSharedPreferences("trial",0);long f=p.getLong("first",0);if(f==0){f=System.currentTimeMillis();p.edit().putLong("first",f).apply();}return System.currentTimeMillis()-f<7L*86400000L;}
  void lock(String msg){page("الاشتراك");content.addView(t(msg,20));Button w=b("التواصل مع الدعم");content.addView(w);w.setOnClickListener(v->support());content.addView(t("ملاحظة: لا يوجد نظام ترخيص تجاري متصل بخادم حتى الآن؛ لا تشترِ أو توزّع التطبيق على أنه يتضمن تفعيلًا مدفوعًا.",14));}
@@ -251,8 +266,8 @@ public class MainActivity extends Activity{
  void reports(){
    page("التقارير والتحليل");
    content.addView(t("اختر الفترة بالتنسيق YYYY-MM-DD. اترك الحقلين فارغين لعرض كل السجل. النتائج أولية وليست قوائم مالية معتمدة لأن بعض حركات البنوك والرواتب والشيكات لم تكتمل ترحيلاتها.",14));
-   EditText from=e("من تاريخ YYYY-MM-DD (اختياري)"),to=e("إلى تاريخ YYYY-MM-DD (اختياري)");
-   from.setInputType(1);to.setInputType(1);content.addView(from);content.addView(to);
+   EditText from=e("من تاريخ — اضغط لاختيار التاريخ، واضغط مطولًا للمسح"),to=e("إلى تاريخ — اضغط لاختيار التاريخ، واضغط مطولًا للمسح");
+   attachDatePicker(from);attachDatePicker(to);content.addView(from);content.addView(to);
    Button apply=b("عرض التقرير للفترة");content.addView(apply);
    apply.setOnClickListener(v->{
     try{
