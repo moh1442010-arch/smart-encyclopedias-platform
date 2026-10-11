@@ -34,25 +34,27 @@ public class MainActivity extends Activity{
   TextView heading=t("مركز إدارة النشاط",24);heading.setTextColor(green);content.addView(heading);
   TextView summaryBox=t(summary(),15);summaryBox.setBackgroundColor(Color.rgb(232,242,236));content.addView(summaryBox);
   String[][] items={
-   {"🧾","الفواتير والمبيعات","إنشاء فواتير البيع وتحصيل المبالغ"},{"🛒","المشتريات","فواتير الشراء وتحديث تكلفة المخزون"},
-   {"📦","الأصناف والمخزون","الأرصدة والأسعار والباركود"},{"👥","العملاء","سجل العملاء"},
-   {"🏭","الموردون","سجل الموردين"},{"💵","الصندوق والمصروفات","تسجيل المصروفات النقدية"},
-   {"🏦","الحسابات البنكية","الأرصدة والإيداعات والسحوبات"},{"🧾","سجل الشيكات","الشيكات الواردة والصادرة"},
-   {"👔","الموظفون","الرواتب والسلف والخصومات"},{"📒","القيود اليدوية","إنشاء قيود يومية متوازنة"},{"📊","التقارير والتحليل","النتائج المالية وميزان المراجعة"},{"📚","الحسابات الرئيسية","دليل الحسابات والأرصدة ودفتر الأستاذ"},
-   {"🔐","النسخ الاحتياطي","تصدير البيانات واستعادتها"},{"⚙️","إعدادات الشركة","الاسم والعملة والضريبة وترقيم الفواتير"},{"💬","الدعم","التواصل مع فريق الدعم"}
+   {"🧾","نقطة البيع والمبيعات","إنشاء فواتير البيع وتحصيل المبالغ"},{"🛒","المشتريات","فواتير الشراء وتحديث تكلفة المخزون"},
+   {"📦","الأصناف والمخزون","الأرصدة والأسعار وحركات المخزون"},{"👥","العملاء والموردون","العملاء والموردون والأرصدة"},
+   {"💳","الخزينة والشيكات","الصندوق والبنوك والشيكات والتحصيلات"},{"📚","المحاسبة والتقارير","دليل الحسابات والقيود ودفتر الأستاذ والتقارير"},
+   {"👔","الموظفون والرواتب","الموظفون والرواتب والسلف والخصومات"},{"⚙️","أدوات النظام","النسخ الاحتياطي وإعدادات الشركة والدعم"}
   };
   LinearLayout row=null;
   for(int i=0;i<items.length;i++){
    if(i%2==0){row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);content.addView(row,new LinearLayout.LayoutParams(-1,-2));}
    final String title=items[i][1];
    LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setGravity(Gravity.CENTER);card.setPadding(8,14,8,14);card.setBackgroundColor(Color.WHITE);card.setElevation(3f);
-   TextView icon=t(items[i][0],29);icon.setGravity(Gravity.CENTER);icon.setPadding(0,0,0,3);card.addView(icon,new LinearLayout.LayoutParams(-1,-2));
+   TextView icon=t(items[i][0],27);icon.setGravity(Gravity.CENTER);icon.setPadding(0,0,0,3);card.addView(icon,new LinearLayout.LayoutParams(-1,-2));
    TextView label=t(title,16);label.setGravity(Gravity.CENTER);label.setTextColor(green);card.addView(label,new LinearLayout.LayoutParams(-1,-2));
    TextView detail=t(items[i][2],12);detail.setGravity(Gravity.CENTER);detail.setTextColor(Color.DKGRAY);card.addView(detail,new LinearLayout.LayoutParams(-1,-2));
    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(6,6,6,6);row.addView(card,lp);card.setOnClickListener(v->openSection(title));
   }
  }
-  void mainAccounts(){
+ void groupMenu(String title,String[][] links){
+  page(title);content.addView(t("اختر الوظيفة المطلوبة",16));
+  for(String[] link:links){Button go=b(link[0]);go.setTextSize(17);content.addView(go,new LinearLayout.LayoutParams(-1,-2));go.setOnClickListener(v->openSection(link[1]));}
+ }
+ void mainAccounts(){
   page("الحسابات الرئيسية");
   content.addView(t("دليل الحسابات والأرصدة",22));
   content.addView(t("الحسابات الرئيسية تجمع أرصدة القيود المحاسبية المرحّلة من وحدات البرنامج. أي حركة غير مرحّلة محاسبيًا لن تظهر هنا.",14));
@@ -104,7 +106,18 @@ public class MainActivity extends Activity{
    toast(ok?"تم حفظ إعدادات الشركة":"تعذر حفظ الإعدادات");
   });
  }
- void openSection(String n){switch(n){case"الفواتير والمبيعات":invoice(false);break;case"المشتريات":invoice(true);break;case"الأصناف والمخزون":products();break;case"العملاء":party("customers","العملاء");break;case"الموردون":party("suppliers","الموردون");break;case"الصندوق والمصروفات":cash();break;case"الحسابات البنكية":banks();break;case"سجل الشيكات":checks();break;case"الموظفون":employees();break;case"القيود اليدوية":manualJournal();break;case"التقارير والتحليل":reports();break;case"الحسابات الرئيسية":mainAccounts();break;case"النسخ الاحتياطي":backup();break;case"إعدادات الشركة":companySettings();break;case"الدعم":support();break;default:support();}}
+ void openSection(String n){switch(n){
+ case"نقطة البيع والمبيعات":case"الفواتير والمبيعات":invoice(false);break;
+ case"المشتريات":invoice(true);break;case"الأصناف والمخزون":products();break;
+ case"العملاء والموردون":groupMenu(n,new String[][]{{"العملاء","العملاء"},{"الموردون","الموردون"}});break;
+ case"العملاء":party("customers","العملاء");break;case"الموردون":party("suppliers","الموردون");break;
+ case"الخزينة والشيكات":groupMenu(n,new String[][]{{"الصندوق والمصروفات","الصندوق والمصروفات"},{"الحسابات البنكية","الحسابات البنكية"},{"سجل الشيكات","سجل الشيكات"}});break;
+ case"الصندوق والمصروفات":cash();break;case"الحسابات البنكية":banks();break;case"سجل الشيكات":checks();break;
+ case"المحاسبة والتقارير":groupMenu(n,new String[][]{{"الحسابات الرئيسية ودفتر الأستاذ","الحسابات الرئيسية"},{"القيود اليدوية","القيود اليدوية"},{"التقارير والتحليل","التقارير والتحليل"}});break;
+ case"القيود اليدوية":manualJournal();break;case"التقارير والتحليل":reports();break;case"الحسابات الرئيسية":mainAccounts();break;
+ case"الموظفون والرواتب":case"الموظفون":employees();break;
+ case"أدوات النظام":groupMenu(n,new String[][]{{"النسخ الاحتياطي والاستعادة","النسخ الاحتياطي"},{"إعدادات الشركة","إعدادات الشركة"},{"الدعم","الدعم"}});break;
+ case"النسخ الاحتياطي":backup();break;case"إعدادات الشركة":companySettings();break;case"الدعم":support();break;default:support();}}
   void support(){page("الدعم");content.addView(t("راسلنا عبر واتساب أو البريد الإلكتروني. لا ترسل كلمات المرور أو بياناتك المالية السرية.",16));content.addView(t("رقم الدعم: +249 121 851 285",16));Button wa=b("الدعم عبر واتساب");content.addView(wa);wa.setOnClickListener(v->open("https://wa.me/249121851285"));content.addView(t("البريد الإلكتروني: moh1442010@gmail.com",16));Button mail=b("الدعم عبر البريد الإلكتروني");content.addView(mail);mail.setOnClickListener(v->{try{Intent i=new Intent(Intent.ACTION_SENDTO,android.net.Uri.parse("mailto:moh1442010@gmail.com"));i.putExtra(Intent.EXTRA_SUBJECT,"دعم تطبيق شركة محمد مصطفى الذكية");startActivity(i);}catch(Exception ex){toast("تعذر فتح تطبيق البريد الإلكتروني");}});}
  String summary(){Cursor c=db.q("SELECT COALESCE(SUM(CASE WHEN type='SALE' THEN total ELSE 0 END),0),COALESCE(SUM(CASE WHEN type='PURCHASE' THEN total ELSE 0 END),0),COALESCE(SUM(CASE WHEN type='EXPENSE' THEN total ELSE 0 END),0) FROM transactions");double s=0,p=0,x=0;if(c.moveToFirst()){s=c.getDouble(0);p=c.getDouble(1);x=c.getDouble(2);}c.close();return tr("المبيعات: ") +fmt(s)+tr(" | المشتريات: ")+fmt(p)+tr(" | المصروفات: ")+fmt(x);}
  void products(){page("الأصناف والمخزون والباركود");EditText n=e("اسم الصنف"),barcode=e("الباركود (امسح بالماسح أو اكتب الرقم)"),q=e("الرصيد الافتتاحي"),p=e("سعر البيع"),c=e("تكلفة الوحدة"),r=e("حد إعادة الطلب");for(EditText x:new EditText[]{n,barcode,q,p,c,r}){if(x==n)x.setInputType(1);else if(x==barcode)x.setInputType(2);else x.setInputType(8194);content.addView(x);}content.addView(t("يمكن استخدام ماسح USB/Bluetooth الذي يكتب الأرقام كلوحة مفاتيح؛ الكاميرا غير مضافة بعد.",13));Button add=b("إضافة الصنف");content.addView(add);add.setOnClickListener(v->{String name=n.getText().toString().trim(),code=barcode.getText().toString().trim();if(name.isEmpty()||!validNumber(q,false)||!validNumber(p,false)||!validNumber(c,false)||!validNumber(r,false)){toast("أدخل اسم الصنف وأرقامًا صحيحة للرصيد والأسعار وحد إعادة الطلب");return;}double opening=num(q),salePrice=num(p),unitCost=num(c),reorder=num(r);if(opening<0||salePrice<0||unitCost<0||reorder<0){toast("لا يُسمح بقيم سالبة في الرصيد أو الأسعار أو حد إعادة الطلب");return;}if(opening>0&&unitCost<=0){toast("أدخل تكلفة موجبة للرصيد الافتتاحي حتى يمكن ترحيله محاسبيًا");return;}SQLiteDatabase sq=db.getWritableDatabase();sq.beginTransaction();try{ContentValues pv=new ContentValues();pv.put("name",name);pv.put("barcode",code.isEmpty()?null:code);pv.put("qty",opening);pv.put("sale_price",salePrice);pv.put("cost",unitCost);pv.put("reorder",reorder);sq.insertOrThrow("products",null,pv);if(opening>0){long inventory=accountId(sq,"1200"),openingBalances=accountId(sq,"3100");if(inventory==0||openingBalances==0)throw new IllegalStateException("Missing opening stock ledger account");double value=opening*unitCost;if(Double.isNaN(value)||Double.isInfinite(value))throw new IllegalArgumentException("Opening stock value is not finite");long je=journal(sq);line(sq,je,inventory,value,0);line(sq,je,openingBalances,0,value);assertBalanced(sq,je);}sq.setTransactionSuccessful();toast("تم حفظ الصنف وترحيل رصيده الافتتاحي إن وُجد");products();}catch(Exception ex){toast("تعذر الحفظ: تحقق من عدم تكرار الاسم أو الباركود وصحة الرصيد والتكلفة");}finally{sq.endTransaction();}});Cursor z=db.q("SELECT name,barcode,qty,sale_price,cost,reorder FROM products ORDER BY id DESC");while(z.moveToNext())content.addView(t(z.getString(0)+" | باركود "+(z.getString(1)==null?"—":z.getString(1))+" | رصيد "+z.getDouble(2)+" | بيع "+fmt(z.getDouble(3))+" | تكلفة "+fmt(z.getDouble(4))+(z.getDouble(2)<=z.getDouble(5)?" | ⚠ إعادة طلب":""),15));z.close();}
