@@ -70,14 +70,23 @@ jobs:
             exit 1
           fi
           mkdir -p signing release
-          # Normalize clipboard-added whitespace without printing secret material.
-          KEYSTORE_B64_CLEAN="$(printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]')"
-          if [[ ! "$KEYSTORE_B64_CLEAN" =~ ^[A-Za-z0-9+/]+={0,2}$ ]] || (( ${#KEYSTORE_B64_CLEAN} % 4 != 0 )); then
-            echo "::error title=Invalid keystore Base64::SMARTCOMPANY_KEYSTORE_BASE64 contains invalid characters or has an invalid length. Re-create the secret from the complete base64 file."
+          # Normalize common phone clipboard artifacts without exposing the secret.
+          # Accept standard or URL-safe Base64; strip whitespace and surrounding quotes.
+          KEYSTORE_B64_CLEAN="$(printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' | sed "s/^[\"']//; s/[\"']$//" | tr '_-' '/+')"
+          # Remove accidental non-Base64 clipboard characters. keytool validates the decoded key below.
+          KEYSTORE_B64_CLEAN="$(printf '%s' "$KEYSTORE_B64_CLEAN" | tr -cd 'A-Za-z0-9+/=')"
+          if [ -z "$KEYSTORE_B64_CLEAN" ]; then
+            echo "::error title=Empty keystore Base64::The signing secret is empty after normalization; GitHub did not provide a usable value to this workflow."
             exit 1
           fi
-          if ! printf '%s' "$KEYSTORE_B64_CLEAN" | base64 --decode > signing/release.jks || ! test -s signing/release.jks; then
-            echo "::error title=Keystore decode failed::The keystore secret could not be decoded. Replace SMARTCOMPANY_KEYSTORE_BASE64 with the complete file contents."
+          # Restore omitted padding only when Base64 length makes that unambiguous.
+          case $((${#KEYSTORE_B64_CLEAN} % 4)) in
+            2) KEYSTORE_B64_CLEAN="${KEYSTORE_B64_CLEAN}==" ;;
+            3) KEYSTORE_B64_CLEAN="${KEYSTORE_B64_CLEAN}=" ;;
+            1) echo "::error title=Invalid Base64 length::The signing secret appears truncated or corrupted; keystore validation was not attempted."; exit 1 ;;
+          esac
+          if ! printf '%s' "$KEYSTORE_B64_CLEAN" | base64 --decode > signing/release.jks 2>/dev/null || ! test -s signing/release.jks; then
+            echo "::error title=Keystore decode failed::The signing secret is still not valid Base64. No secret contents were logged."
             exit 1
           fi
           if ! keytool -list -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
