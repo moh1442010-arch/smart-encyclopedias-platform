@@ -89,6 +89,10 @@ jobs:
             echo "::error title=Keystore decode failed::The signing secret is still not valid Base64. No secret contents were logged."
             exit 1
           fi
+          # Safe diagnostic: compare this hash with the local keystore file hash.
+          # This does not print or expose the keystore contents or any password.
+          echo "Decoded keystore SHA-256 fingerprint:"
+          sha256sum signing/release.jks | awk '{print $1}'
           # Validate the store password separately so the failure is actionable.
           if ! keytool -list -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" >/dev/null 2>&1; then
             echo "::error title=Keystore password rejected::Base64 decoded successfully, but SMARTCOMPANY_KEYSTORE_PASSWORD does not unlock this keystore. The alias was not checked."
