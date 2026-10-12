@@ -89,9 +89,23 @@ jobs:
             echo "::error title=Keystore decode failed::The signing secret is still not valid Base64. No secret contents were logged."
             exit 1
           fi
-          if ! keytool -list -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
-            echo "::error title=Keystore validation failed::The keystore, password, or alias could not be validated. Check the four repository secrets; never print their values."
+          # Validate the store password separately so the failure is actionable.
+          if ! keytool -list -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" >/dev/null 2>&1; then
+            echo "::error title=Keystore password rejected::Base64 decoded successfully, but SMARTCOMPANY_KEYSTORE_PASSWORD does not unlock this keystore. The alias was not checked."
             exit 1
+          fi
+          # If the configured alias is wrong, auto-correct only when the keystore contains
+          # exactly one private-key entry. Alias names are safe to report; passwords never are.
+          if ! keytool -list -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
+            aliases="$(keytool -list -v -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | awk -F': ' '/^Alias name: / {a=$2} /^Entry type: PrivateKeyEntry/ {if (a != "") print a; a=""}')"
+            count="$(printf '%s\n' "$aliases" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
+            if [ "$count" = "1" ]; then
+              KEY_ALIAS="$(printf '%s\n' "$aliases" | sed -n '1p')"
+              echo "Configured alias did not match; safely selected the only private-key alias in the keystore."
+            else
+              echo "::error title=Keystore alias mismatch::The store password is correct, but SMARTCOMPANY_KEY_ALIAS did not match a key. The keystore contains $count private-key entries; no alias was guessed."
+              exit 1
+            fi
           fi
           apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out release/SmartCompany-2.3.1-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
