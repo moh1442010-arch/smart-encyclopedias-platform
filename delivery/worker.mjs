@@ -378,11 +378,11 @@ async function listAppLicenses(request, env) {
   ).all();
   const counts = await env.DB.prepare(
     `SELECT COUNT(*) AS total,
-            SUM(CASE WHEN status='active' AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP) THEN 1 ELSE 0 END) AS active
+            SUM(CASE WHEN status='active' AND (expires_at IS NULL OR julianday(expires_at) > julianday('now')) THEN 1 ELSE 0 END) AS active
      FROM app_licenses`
   ).first();
   const trials = await env.DB.prepare(
-    "SELECT COUNT(*) AS total, SUM(CASE WHEN expires_at > CURRENT_TIMESTAMP THEN 1 ELSE 0 END) AS active FROM app_trials"
+    "SELECT COUNT(*) AS total, SUM(CASE WHEN julianday(expires_at) > julianday('now') THEN 1 ELSE 0 END) AS active FROM app_trials"
   ).first();
   return json({
     ok: true,
