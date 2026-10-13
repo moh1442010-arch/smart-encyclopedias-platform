@@ -10,6 +10,18 @@ API base URL: `https://smart-encyclopedias-delivery.moh1442010.workers.dev`
 - `POST /api/app-license/activate` — requires `x-app-device-id` and JSON `{"activationCode":"SC-..." }`. Binds a valid license to one Android ID.
 - `POST /api/app-license/admin/create` — owner-only. Requires header `x-admin-key: <LICENSE_ADMIN_KEY>` and JSON `approved: true`, `plan` (`basic|pro|business|enterprise`), `termType` (`perpetual|monthly|annual`), and `customerName`. Optional fields: `licenseId`, `customerEmail`, `orderId`, `approvedBy`. The response includes the activation code once; only its SHA-256 hash is stored.
 
+## Owner dashboard and license administration
+
+Static owner dashboard: `https://moh1442010-arch.github.io/smart-encyclopedias-platform/smart-company-admin.html`
+
+The page asks for `LICENSE_ADMIN_KEY` at runtime; the key is not embedded in the HTML and must never be committed or sent to customers. The protected API now includes:
+
+- `GET /api/app-license/admin/list` — lists up to 500 app licenses with limited administrative metadata and summary counts for licenses/trials. Requires `x-admin-key`.
+- `POST /api/app-license/admin/status` — changes a license to `active`, `suspended`, or `revoked`. Requires `x-admin-key`. This changes access status only; it does not delete customer data.
+- Existing `POST /api/app-license/admin/create` — creates a license after explicit owner confirmation of payment. The activation code is returned once; only its hash is stored.
+
+The dashboard does not verify Bankak receipts automatically, and it is not a payment gateway. The owner must independently confirm the payment before creating a license. Do not use a public/shared device for the dashboard; close the page when finished and never save the admin key in the browser.
+
 ## Issuing a license
 1. Confirm payment outside the app and record the order reference.
 2. Call the admin endpoint from a private trusted environment. Never place `LICENSE_ADMIN_KEY` in the Android app, website JavaScript, a public file, or a message to a buyer.
