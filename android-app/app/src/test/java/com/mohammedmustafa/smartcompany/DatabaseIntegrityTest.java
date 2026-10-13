@@ -126,9 +126,12 @@ public class DatabaseIntegrityTest {
         long expenseId;
         database.beginTransaction();
         try {
-            saleId = activity.postJournal(database, 101L, "SALE", 100.00, 60.00, 40.00, 30.00);
-            purchaseId = activity.postJournal(database, 102L, "PURCHASE", 80.00, 20.00, 60.00, 0.00);
-            expenseId = activity.postJournal(database, 103L, "EXPENSE", 10.00, 10.00, 0.00, 0.00);
+            activity.postJournal(database, 101L, "SALE", 100.00, 60.00, 40.00, 30.00);
+            activity.postJournal(database, 102L, "PURCHASE", 80.00, 20.00, 60.00, 0.00);
+            activity.postJournal(database, 103L, "EXPENSE", 10.00, 10.00, 0.00, 0.00);
+            saleId = journalIdForTransaction(101L);
+            purchaseId = journalIdForTransaction(102L);
+            expenseId = journalIdForTransaction(103L);
 
             assertJournalBalanced(saleId);
             assertJournalBalanced(purchaseId);
@@ -144,6 +147,18 @@ public class DatabaseIntegrityTest {
             database.setTransactionSuccessful();
         } finally {
             database.endTransaction();
+        }
+    }
+
+    private long journalIdForTransaction(long transactionId) {
+        Cursor c = database.rawQuery(
+                "SELECT id FROM journal_entries WHERE transaction_id=? ORDER BY id DESC LIMIT 1",
+                new String[]{String.valueOf(transactionId)});
+        try {
+            assertTrue("Journal should be created for transaction " + transactionId, c.moveToFirst());
+            return c.getLong(0);
+        } finally {
+            c.close();
         }
     }
 
