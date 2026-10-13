@@ -367,6 +367,51 @@ async function createAppLicense(request, env) {
   }, 201, env);
 }
 
+async function listAppLicenses(request, env) {
+  if (!isAdmin(request, env)) return json({ ok: false, error: "unauthorized" }, 401, env);
+  await ensureAppLicenseTables(env);
+  const rows = await env.DB.prepare(
+    `SELECT id, plan, term_type, customer_name, customer_email, order_id,
+            status, starts_at, expires_at, created_at, updated_at,
+            CASE WHEN device_hash IS NULL THEN 0 ELSE 1 END AS device_bound
+     FROM app_licenses ORDER BY created_at DESC LIMIT 500`
+  ).all();
+  const counts = await env.DB.prepare(
+    `SELECT COUNT(*) AS total,
+            SUM(CASE WHEN status='active' AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP) THEN 1 ELSE 0 END) AS active
+     FROM app_licenses`
+  ).first();
+  const trials = await env.DB.prepare(
+    "SELECT COUNT(*) AS total, SUM(CASE WHEN expires_at > CURRENT_TIMESTAMP THEN 1 ELSE 0 END) AS active FROM app_trials"
+  ).first();
+  return json({
+    ok: true,
+    summary: {
+      licenses: Number(counts?.total || 0),
+      activeLicenses: Number(counts?.active || 0),
+      trials: Number(trials?.total || 0),
+      activeTrials: Number(trials?.active || 0)
+    },
+    licenses: rows.results || []
+  }, 200, env);
+}
+
+async function changeAppLicenseStatus(request, env) {
+  if (!isAdmin(request, env)) return json({ ok: false, error: "unauthorized" }, 401, env);
+  const body = await request.json().catch(() => null);
+  const id = String(body?.licenseId || "").trim();
+  const status = String(body?.status || "").trim().toLowerCase();
+  if (!/^[A-Z0-9_-]{6,80}$/i.test(id) || !["active", "suspended", "revoked"].includes(status)) {
+    return json({ ok: false, error: "invalid_license_id_or_status" }, 400, env);
+  }
+  await ensureAppLicenseTables(env);
+  const result = await env.DB.prepare(
+    "UPDATE app_licenses SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+  ).bind(status, id).run();
+  if (!result.meta?.changes) return json({ ok: false, error: "license_not_found" }, 404, env);
+  return json({ ok: true, licenseId: id, status, dataPreserved: true }, 200, env);
+}
+
 async function info(request, env, token) {
   const row = await lookup(token, env);
 
@@ -673,6 +718,14 @@ export default {
 
       if (url.pathname === "/api/app-license/admin/create" && request.method === "POST") {
         return createAppLicense(request, env);
+      }
+
+      if (url.pathname === "/api/app-license/admin/list" && request.method === "GET") {
+        return listAppLicenses(request, env);
+      }
+
+      if (url.pathname === "/api/app-license/admin/status" && request.method === "POST") {
+        return changeAppLicenseStatus(request, env);
       }
 
       if (url.pathname === "/api/license/create" && request.method === "POST") {
