@@ -9,6 +9,7 @@ on:
   push:
     paths:
       - "android-app/**"
+      - ".github/workflows/build-android-apk.yml"
 
 permissions:
   contents: read
@@ -66,8 +67,8 @@ jobs:
       - name: Sign release APK and App Bundle
         env:
           KEYSTORE_PASSWORD: ${{ secrets.SMARTCOMPANY_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.SMARTCOMPANY_KEY_ALIAS || 'smartcompany-release' }}
-          KEY_PASSWORD: ${{ secrets.SMARTCOMPANY_KEY_PASSWORD || secrets.SMARTCOMPANY_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: smartcompany-release
+          KEY_PASSWORD: ${{ secrets.SMARTCOMPANY_KEYSTORE_PASSWORD }}
         working-directory: android-app
         run: |
           set -euo pipefail
