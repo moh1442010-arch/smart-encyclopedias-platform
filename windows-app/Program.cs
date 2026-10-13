@@ -95,12 +95,14 @@ sealed class MainForm : Form
             ledger.CommandText = @"CREATE TABLE IF NOT EXISTS gl_accounts(id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT NOT NULL UNIQUE,name TEXT NOT NULL UNIQUE,kind TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS gl_entries(id INTEGER PRIMARY KEY AUTOINCREMENT,source_type TEXT NOT NULL,source_id INTEGER NOT NULL,memo TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(source_type,source_id));
 CREATE TABLE IF NOT EXISTS gl_lines(id INTEGER PRIMARY KEY AUTOINCREMENT,entry_id INTEGER NOT NULL REFERENCES gl_entries(id),account_id INTEGER NOT NULL REFERENCES gl_accounts(id),debit REAL NOT NULL DEFAULT 0,credit REAL NOT NULL DEFAULT 0,CHECK(debit>=0 AND credit>=0 AND NOT(debit>0 AND credit>0)));
-INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1100','Accounts Receivable','ASSET'),('1200','Inventory','ASSET'),('2000','Accounts Payable','LIABILITY'),('2100','Salaries Payable','LIABILITY'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE'),('6200','Salaries Expense','EXPENSE');";
+INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1100','Accounts Receivable','ASSET'),('1200','Inventory','ASSET'),('2000','Accounts Payable','LIABILITY'),('2100','Salaries Payable','LIABILITY'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE'),('6200','Salaries Expense','EXPENSE'),('1300','Employee Advances','ASSET'),('6300','Payroll Deductions','EXPENSE');";
             ledger.ExecuteNonQuery();
         }
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE employees ADD COLUMN job_title TEXT NOT NULL DEFAULT ''"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE employees ADD COLUMN salary REAL NOT NULL DEFAULT 0"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
         try { using var migration = c.CreateCommand(); migration.CommandText = "CREATE TABLE IF NOT EXISTS payroll_events(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,kind TEXT NOT NULL,amount REAL NOT NULL,note TEXT,period_month TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
+// Additive register: existing payroll data is retained and duplicate monthly accruals are blocked.
+using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF NOT EXISTS payroll_runs(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,period_month TEXT NOT NULL,base_salary REAL NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(employee_id,period_month))"; payroll.ExecuteNonQuery(); }
         try { using var indexName = c.CreateCommand(); indexName.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS idx_products_name ON products(name COLLATE NOCASE)"; indexName.ExecuteNonQuery(); } catch (SqliteException) { }
         using var index = c.CreateCommand(); index.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode) WHERE barcode IS NOT NULL AND barcode != ''"; index.ExecuteNonQuery();
     }
@@ -315,6 +317,7 @@ INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET')
         var amount = new TextBox { PlaceholderText = UiLanguage.T("المبلغ"), Dock = DockStyle.Top, Height = 38 };
         var note = new TextBox { PlaceholderText = UiLanguage.T("البيان"), Dock = DockStyle.Top, Height = 38 };
         var saveEvent = new Button { Text = UiLanguage.T("حفظ حركة الراتب"), Dock = DockStyle.Top, Height = 42 };
+        var accrue = new Button { Text = UiLanguage.T("ترحيل استحقاق رواتب الشهر إلى الأستاذ"), Dock = DockStyle.Top, Height = 42 };
         var list = new ListBox { Dock = DockStyle.Fill };
         var month = DateTime.Now.ToString("yyyy-MM");
         var ids = new List<long>();
@@ -352,9 +355,34 @@ INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET')
             q.CommandText = "INSERT INTO payroll_events(employee_id,kind,amount,note,period_month) VALUES($id,$k,$a,$n,$m)";
             q.Parameters.AddWithValue("$id", ids[person.SelectedIndex]); q.Parameters.AddWithValue("$k", kind.SelectedIndex == 0 ? "ADVANCE" : "DEDUCTION");
             q.Parameters.AddWithValue("$a", value); q.Parameters.AddWithValue("$n", note.Text.Trim()); q.Parameters.AddWithValue("$m", month);
-            q.ExecuteNonQuery(); amount.Clear(); note.Clear(); Reload();
+            using var tx = c.BeginTransaction(); q.Transaction = tx; q.ExecuteNonQuery();
+            var eventId = LastId(c, tx);
+            if (kind.SelectedIndex == 0) PostEntry(c, tx, "PAYROLL_ADVANCE", eventId, "Employee advance: " + (person.SelectedItem?.ToString() ?? ""), new (string Account, double Debit, double Credit)[] { ("Employee Advances", value, 0d), ("Cash", 0d, value) });
+            // Generic deductions remain recorded but unposted until their nature/accounting counterpart is explicitly classified.
+            tx.Commit(); amount.Clear(); note.Clear(); Reload(); RefreshSummary();
         };
-        f.Controls.Add(list); f.Controls.Add(saveEvent); f.Controls.Add(note); f.Controls.Add(amount); f.Controls.Add(kind); f.Controls.Add(person); f.Controls.Add(add); f.Controls.Add(salary); f.Controls.Add(job); f.Controls.Add(name);
+        accrue.Click += (_, _) =>
+        {
+            using var c = C(); using var tx = c.BeginTransaction();
+            try
+            {
+                using var employees = c.CreateCommand(); employees.Transaction = tx; employees.CommandText = "SELECT id,name,salary FROM employees ORDER BY id";
+                using var reader = employees.ExecuteReader(); var rows = new List<(long Id,string Name,double Salary)>();
+                while(reader.Read()) rows.Add((reader.GetInt64(0),reader.GetString(1),reader.GetDouble(2))); reader.Close();
+                int posted = 0;
+                foreach(var employee in rows)
+                {
+                    if(employee.Salary <= 0) continue;
+                    using var run = c.CreateCommand(); run.Transaction = tx; run.CommandText = "INSERT OR IGNORE INTO payroll_runs(employee_id,period_month,base_salary) VALUES($e,$m,$s)"; run.Parameters.AddWithValue("$e",employee.Id); run.Parameters.AddWithValue("$m",month); run.Parameters.AddWithValue("$s",employee.Salary);
+                    if(run.ExecuteNonQuery()==0) continue;
+                    var runId = LastId(c, tx);
+                    PostEntry(c, tx, "PAYROLL_ACCRUAL", runId, "Monthly salary accrual: " + employee.Name + " / " + month, new (string Account, double Debit, double Credit)[] { ("Salaries Expense", employee.Salary, 0d), ("Salaries Payable", 0d, employee.Salary) }); posted++;
+                }
+                tx.Commit(); MessageBox.Show(UiLanguage.T("تم ترحيل استحقاق الرواتب الجديدة لهذا الشهر: ") + posted); Reload(); RefreshSummary();
+            }
+            catch(Exception) { tx.Rollback(); MessageBox.Show(UiLanguage.T("تعذر ترحيل الرواتب؛ أُلغي الترحيل بالكامل.")); }
+        };
+        f.Controls.Add(list); f.Controls.Add(accrue); f.Controls.Add(saveEvent); f.Controls.Add(note); f.Controls.Add(amount); f.Controls.Add(kind); f.Controls.Add(person); f.Controls.Add(add); f.Controls.Add(salary); f.Controls.Add(job); f.Controls.Add(name);
         Reload(); f.ShowDialog();
     }
 
