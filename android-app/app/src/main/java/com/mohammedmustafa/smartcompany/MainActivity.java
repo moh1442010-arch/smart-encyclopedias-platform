@@ -142,6 +142,9 @@ public class MainActivity extends Activity{
   EditText company=e("اسم الشركة أو النشاط");company.setInputType(1);content.addView(company);
   EditText contact=e("رقم واتساب للتواصل");contact.setInputType(3);content.addView(contact);
   EditText notes=e("تفاصيل الخدمة المطلوبة أو عدد المستخدمين والفروع");notes.setMinLines(2);notes.setGravity(Gravity.TOP);content.addView(notes);
+  content.addView(t("فريق الدعم",19));
+  content.addView(t("واتساب الدعم: +249121851285",15));
+  content.addView(t("البريد الإلكتروني: moh1442010@gmail.com",15));
   content.addView(t("الدفع في السودان عبر بنكك",19));
   content.addView(t("رقم الحساب: 1882224",22));
   Button copy=b("نسخ رقم حساب بنكك");content.addView(copy);copy.setOnClickListener(v->{((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Bankak account","1882224"));toast("تم نسخ رقم حساب بنكك");});
@@ -151,7 +154,7 @@ public class MainActivity extends Activity{
   content.addView(t("الأسعار المعروضة سابقًا أسعار اختبار وليست نهائية. تأكد من السعر النهائي ومدة الخدمة مع الدعم قبل التحويل. إرسال الطلب لا يعني تفعيل الاشتراك تلقائيًا.",14));
   Button send=b("إرسال طلب الاشتراك والشعار/الإيصال");content.addView(send);send.setOnClickListener(v->{
    if(company.getText().toString().trim().isEmpty()){toast("أدخل اسم الشركة أو النشاط أولًا");return;}
-   String message="طلب خدمة — شركة محمد مصطفى الذكية / المحاسب الذكي\nالشركة: "+company.getText().toString().trim()+"\nالباقة: "+tier.getSelectedItem().toString()+"\nالمدة: "+period.getSelectedItem().toString()+"\nرقم التواصل: "+contact.getText().toString().trim()+"\nالتفاصيل: "+notes.getText().toString().trim()+"\nبنكك: 1882224\nيرجى مراجعة الطلب والتحويل قبل تفعيل الترخيص.";
+   String message="طلب خدمة — شركة محمد مصطفى الذكية / المحاسب الذكي\nالشركة: "+company.getText().toString().trim()+"\nالباقة: "+tier.getSelectedItem().toString()+"\nالمدة: "+period.getSelectedItem().toString()+"\nرقم تواصل العميل: "+contact.getText().toString().trim()+"\nالتفاصيل: "+notes.getText().toString().trim()+"\nبنكك: 1882224\nدعم واتساب: +249121851285\nالبريد: moh1442010@gmail.com\nيرجى مراجعة الطلب والتحويل قبل تفعيل الترخيص.";
    ArrayList<android.net.Uri> files=new ArrayList<>();if(planLogoUri!=null)files.add(planLogoUri);if(planReceiptUri!=null)files.add(planReceiptUri);
    try{Intent share;if(files.isEmpty()){share=new Intent(Intent.ACTION_SEND);share.setType("text/plain");share.putExtra(Intent.EXTRA_TEXT,message);}else{share=new Intent(Intent.ACTION_SEND_MULTIPLE);share.setType("image/*");share.putExtra(Intent.EXTRA_TEXT,message);share.putParcelableArrayListExtra(Intent.EXTRA_STREAM,files);share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);android.content.ClipData clip=android.content.ClipData.newUri(getContentResolver(), "مرفقات طلب الاشتراك", files.get(0));for(int j=1;j<files.size();j++)clip.addItem(new android.content.ClipData.Item(files.get(j)));share.setClipData(clip);}startActivity(Intent.createChooser(share,tr("إرسال الطلب عبر تطبيق مناسب")));}catch(Exception ex){toast("تعذر فتح تطبيق الإرسال؛ حاول البريد أو واتساب يدويًا");}
   });
