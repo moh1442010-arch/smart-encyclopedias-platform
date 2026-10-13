@@ -94,7 +94,11 @@ jobs:
           echo "Decoded keystore SHA-256 fingerprint:"
           sha256sum signing/release.jks | awk '{print $1}'
           # Validate the store password separately so the failure is actionable.
-          if ! keytool -list -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" >/dev/null 2>&1; then
+          if ! keytool -          echo "b64 chars: ${#KEYSTORE_B64_CLEAN} raw: ${#KEYSTORE_B64}"
+          echo "decoded bytes: $(wc -c < signing/release.jks)"
+          echo "store pass length: ${#KEYSTORE_PASSWORD}"
+          if ! kt_out="$(keytool -list -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" 2>&1)"; then
+            echo "keytool: $(printf '%s' "$kt_out" | head -n 2)"
             echo "::error title=Keystore password rejected::Base64 decoded successfully, but SMARTCOMPANY_KEYSTORE_PASSWORD does not unlock this keystore. The alias was not checked."
             exit 1
           fi
