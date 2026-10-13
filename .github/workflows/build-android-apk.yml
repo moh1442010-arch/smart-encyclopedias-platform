@@ -9,7 +9,6 @@ on:
   push:
     paths:
       - "android-app/**"
-      - ".github/workflows/build-android-apk.yml"
 
 permissions:
   contents: read
@@ -66,73 +65,46 @@ jobs:
 
       - name: Sign release APK and App Bundle
         env:
-          KEYSTORE_B64: ${{ secrets.SMARTCOMPANY_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.SMARTCOMPANY_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.SMARTCOMPANY_KEY_ALIAS || 'smartcompany-release' }}
           KEY_PASSWORD: ${{ secrets.SMARTCOMPANY_KEY_PASSWORD || secrets.SMARTCOMPANY_KEYSTORE_PASSWORD }}
         working-directory: android-app
         run: |
           set -euo pipefail
-          missing=()
-          test -n "$KEYSTORE_B64" || missing+=("SMARTCOMPANY_KEYSTORE_BASE64")
-          test -n "$KEYSTORE_PASSWORD" || missing+=("SMARTCOMPANY_KEYSTORE_PASSWORD")
-          test -n "$KEY_ALIAS" || missing+=("SMARTCOMPANY_KEY_ALIAS")
-          if [ "${#missing[@]}" -gt 0 ]; then
-            echo "::error title=Production signing not configured::Add these repository Actions secrets before creating a signed release: ${missing[*]}"
-            echo "No production-signed APK/AAB was created. Do not use an unsigned artifact as a commercial release."
+          if [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::error title=Signing password missing::Add SMARTCOMPANY_KEYSTORE_PASSWORD as a repository Actions secret. No signed release was created."
+            exit 1
+          fi
+          ENCRYPTED_KEY="../.github/signing/smartcompany-release.jks.gpg"
+          if [ ! -s "$ENCRYPTED_KEY" ]; then
+            echo "::error title=Encrypted signing key missing::Run Initialize Smart Company Release Signing Key once first. It must save .github/signing/smartcompany-release.jks.gpg before building a signed release."
             exit 1
           fi
           mkdir -p signing release
-          # Normalize common phone clipboard artifacts without exposing the secret.
-          # Accept standard or URL-safe Base64; strip whitespace and surrounding quotes.
-          KEYSTORE_B64_CLEAN="$(printf '%s' "$KEYSTORE_B64" | tr -d '[:space:]' | sed "s/^[\"']//; s/[\"']$//" | tr '_-' '/+')"
-          # Remove accidental non-Base64 clipboard characters. keytool validates the decoded key below.
-          KEYSTORE_B64_CLEAN="$(printf '%s' "$KEYSTORE_B64_CLEAN" | tr -cd 'A-Za-z0-9+/=')"
-          if [ -z "$KEYSTORE_B64_CLEAN" ]; then
-            echo "::error title=Empty keystore Base64::The signing secret is empty after normalization; GitHub did not provide a usable value to this workflow."
+          # Decrypt directly from the repository's AES-256-encrypted key file.
+          # The password is passed via stdin and is never printed.
+          if ! printf '%s' "$KEYSTORE_PASSWORD" | gpg --quiet --batch --yes --pinentry-mode loopback \
+              --passphrase-fd 0 --decrypt "$ENCRYPTED_KEY" > signing/release.jks; then
+            rm -f signing/release.jks
+            echo "::error title=Signing key decryption failed::The password did not unlock the saved encrypted key, or the encrypted file is invalid. No secret values were printed."
             exit 1
           fi
-          # Restore omitted padding only when Base64 length makes that unambiguous.
-          case $((${#KEYSTORE_B64_CLEAN} % 4)) in
-            2) KEYSTORE_B64_CLEAN="${KEYSTORE_B64_CLEAN}==" ;;
-            3) KEYSTORE_B64_CLEAN="${KEYSTORE_B64_CLEAN}=" ;;
-            1) echo "::error title=Invalid Base64 length::The signing secret appears truncated or corrupted; keystore validation was not attempted."; exit 1 ;;
-          esac
-          if ! printf '%s' "$KEYSTORE_B64_CLEAN" | base64 --decode > signing/release.jks 2>/dev/null || ! test -s signing/release.jks; then
-            echo "::error title=Keystore decode failed::The signing secret is still not valid Base64. No secret contents were logged."
+          if [ ! -s signing/release.jks ]; then
+            echo "::error title=Empty signing key::The decrypted keystore is empty."
             exit 1
           fi
-          # Safe diagnostic: compare this hash with the local keystore file hash.
-          # This does not print or expose the keystore contents or any password.
-          echo "Decoded keystore SHA-256 fingerprint:"
-          sha256sum signing/release.jks | awk '{print $1}'
-          # Validate the store password separately so the failure is actionable.
-          echo "b64 chars: ${#KEYSTORE_B64_CLEAN} raw: ${#KEYSTORE_B64}"
-          echo "decoded bytes: $(wc -c < signing/release.jks)"
-          echo "store pass length: ${#KEYSTORE_PASSWORD}"
-          if ! kt_out="$(keytool -list -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" 2>&1)"; then
-            echo "keytool: $(printf '%s' "$kt_out" | head -n 2)"
-            if printf '%s' "$kt_out" | grep -Eqi 'Unrecognized keystore format|Invalid keystore format|Keystore was tampered with, or password was incorrect'; then
-              if printf '%s' "$kt_out" | grep -Eqi 'Unrecognized keystore format|Invalid keystore format'; then
-                echo "::error title=Invalid keystore file::Base64 decoded, but the resulting file is not a recognized Java keystore. Recreate SMARTCOMPANY_KEYSTORE_BASE64 from the original valid keystore file; do not change passwords yet."
-              else
-                echo "::error title=Keystore password rejected::The keystore format was recognized, but the store password may be incorrect. Verify SMARTCOMPANY_KEYSTORE_PASSWORD locally without sharing it."
-              fi
-            else
-              echo "::error title=Keystore validation failed::keytool could not validate the keystore. Review the keytool error above; no password or keystore contents were printed."
-            fi
+          if ! keytool -list -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" >/dev/null 2>&1; then
+            echo "::error title=Keystore validation failed::The encrypted file decrypted, but the password or keystore format did not validate. No secret values were printed."
             exit 1
           fi
-          # If the configured alias is wrong, auto-correct only when the keystore contains
-          # exactly one private-key entry. Alias names are safe to report; passwords never are.
           if ! keytool -list -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
             aliases="$(keytool -list -v -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | awk -F': ' '/^Alias name: / {a=$2} /^Entry type: PrivateKeyEntry/ {if (a != "") print a; a=""}')"
             count="$(printf '%s\n' "$aliases" | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' ')"
             if [ "$count" = "1" ]; then
               KEY_ALIAS="$(printf '%s\n' "$aliases" | sed -n '1p')"
-              echo "Configured alias did not match; safely selected the only private-key alias in the keystore."
+              echo "Configured alias did not match; selected the only private-key alias in the keystore."
             else
-              echo "::error title=Keystore alias mismatch::The store password is correct, but SMARTCOMPANY_KEY_ALIAS did not match a key. The keystore contains $count private-key entries; no alias was guessed."
+              echo "::error title=Keystore alias mismatch::SMARTCOMPANY_KEY_ALIAS did not match a key and the keystore contains $count private-key entries."
               exit 1
             fi
           fi
