@@ -17,7 +17,71 @@ public class MainActivity extends Activity{
  }
  void toggleLanguage(){boolean next=!english();getSharedPreferences("settings",0).edit().putBoolean("english",next).apply();if(authenticated)dashboard();else login();}
  Button languageButton(){Button x=b(english()?"العربية":"ENGLISH");x.setOnClickListener(v->toggleLanguage());return x;}
- public void onCreate(Bundle b){super.onCreate(b);db=new DB(this);login();}
+ public void onCreate(Bundle b){super.onCreate(b);db=new DB(this);checkCommercialAccess();}
+
+ static final String LICENSE_API="https://smart-encyclopedias-delivery.moh1442010.workers.dev";
+ static final long OFFLINE_GRACE_MS=72L*60L*60L*1000L;
+ String appDeviceId(){String id=android.provider.Settings.Secure.getString(getContentResolver(),android.provider.Settings.Secure.ANDROID_ID);return id==null?"":id;}
+ void checkCommercialAccess(){
+  new Thread(()->{
+   boolean allowed=false; String mode=""; String error="";
+   try{
+    java.net.HttpURLConnection c=(java.net.HttpURLConnection)new java.net.URL(LICENSE_API+"/api/app-license/status").openConnection();
+    c.setRequestMethod("GET");c.setConnectTimeout(7000);c.setReadTimeout(7000);c.setRequestProperty("x-app-device-id",appDeviceId());
+    int code=c.getResponseCode();java.io.InputStream in=code>=200&&code<300?c.getInputStream():c.getErrorStream();
+    java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();byte[] buf=new byte[2048];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);in.close();
+    org.json.JSONObject d=new org.json.JSONObject(out.toString("UTF-8"));
+    if(code>=200&&code<300&&d.optBoolean("ok")){
+     mode=d.optString("mode","");long expiry=0;try{expiry=java.time.Instant.parse(d.optString("expiresAt","")).toEpochMilli();}catch(Exception ignored){}
+     allowed=("licensed".equals(mode)||("trial".equals(mode)&&expiry>System.currentTimeMillis()));
+     getSharedPreferences("commercial_license",0).edit().putString("mode",mode).putLong("expires_at",expiry).putLong("last_verified_at",System.currentTimeMillis()).putString("license_id",d.optString("licenseId","")).apply();
+     if(!allowed)error="انتهت التجربة المجانية. أدخل رمز الترخيص التجاري للمتابعة.";
+    }else error="تعذر التحقق من الترخيص. حاول مرة أخرى.";
+    c.disconnect();
+   }catch(Exception ex){
+    android.content.SharedPreferences p=getSharedPreferences("commercial_license",0);
+    long expiry=p.getLong("expires_at",0),verified=p.getLong("last_verified_at",0);
+    allowed=expiry>System.currentTimeMillis()&&verified>0&&System.currentTimeMillis()-verified<=OFFLINE_GRACE_MS;
+    error=allowed?"":"يلزم الاتصال بالإنترنت للتحقق من الترخيص أول مرة أو بعد انتهاء مهلة العمل دون اتصال.";
+   }
+   final boolean ok=allowed;final String message=error;
+   runOnUiThread(()->{if(ok)login();else licensePage(message);});
+  }).start();
+ }
+ void licensePage(String message){
+  page("الترخيص التجاري");content.addView(languageButton());content.addView(t("تفعيل المحاسب الذكي",24));
+  content.addView(t(message==null?"تحقق من الترخيص أو أدخل رمز التفعيل الذي حصلت عليه بعد اعتماد الشراء.":message,15));
+  EditText code=e("رمز التفعيل التجاري");code.setSingleLine(true);content.addView(code);
+  Button activate=b("تفعيل الترخيص");content.addView(activate);activate.setOnClickListener(v->{
+   String activation=code.getText().toString().trim().toUpperCase(Locale.ROOT);
+   if(activation.length()<12){toast("أدخل رمز تفعيل صحيحًا");return;}
+   activate.setEnabled(false);
+   new Thread(()->{
+    String resultMessage="تعذر الاتصال بخادم الترخيص.";
+    boolean ok=false;
+    try{
+     java.net.HttpURLConnection c=(java.net.HttpURLConnection)new java.net.URL(LICENSE_API+"/api/app-license/activate").openConnection();
+     c.setRequestMethod("POST");c.setConnectTimeout(8000);c.setReadTimeout(8000);c.setDoOutput(true);
+     c.setRequestProperty("Content-Type","application/json; charset=utf-8");c.setRequestProperty("x-app-device-id",appDeviceId());
+     org.json.JSONObject body=new org.json.JSONObject();body.put("activationCode",activation);
+     try(java.io.OutputStream os=c.getOutputStream()){os.write(body.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));}
+     int status=c.getResponseCode();java.io.InputStream in=status>=200&&status<300?c.getInputStream():c.getErrorStream();
+     java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();byte[] buf=new byte[2048];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);in.close();
+     org.json.JSONObject d=new org.json.JSONObject(out.toString("UTF-8"));
+     if(status>=200&&status<300&&d.optBoolean("ok")){
+      long expiry=0;try{expiry=java.time.Instant.parse(d.optString("expiresAt","")).toEpochMilli();}catch(Exception ignored){}
+      getSharedPreferences("commercial_license",0).edit().putString("mode","licensed").putLong("expires_at",expiry).putLong("last_verified_at",System.currentTimeMillis()).putString("license_id",d.optString("licenseId","")).apply();ok=true;
+     }else resultMessage="تعذر التفعيل: "+d.optString("error","تحقق من الرمز وحالته.");
+     c.disconnect();
+    }catch(Exception ex){}
+    final boolean activated=ok;final String msg=resultMessage;
+    runOnUiThread(()->{activate.setEnabled(true);if(activated){toast("تم تفعيل الترخيص بنجاح");login();}else{toast(msg);}});
+   }).start();
+  });
+  Button retry=b("إعادة التحقق من الترخيص");content.addView(retry);retry.setOnClickListener(v->checkCommercialAccess());
+  Button contact=b("التواصل مع الدعم");content.addView(contact);contact.setOnClickListener(v->support());
+  content.addView(t("لا تحذف بيانات الشركة عند انتهاء التجربة أو الترخيص. يجب أن تبقى بياناتك قابلة للتصدير.",14));
+ }
  TextView t(String s,int z){TextView v=new TextView(this);v.setText(tr(s));v.setTextSize(z);v.setPadding(18,14,18,14);return v;}
  Button b(String s){Button x=new Button(this);x.setText(tr(s));x.setAllCaps(false);return x;}
  EditText e(String h){EditText x=new EditText(this);x.setHint(tr(h));x.setPadding(18,8,18,8);return x;}
