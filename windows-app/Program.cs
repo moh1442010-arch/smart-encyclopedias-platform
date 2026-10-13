@@ -59,7 +59,7 @@ sealed class MainForm : Form
         var head = new Label { Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.3 — نسخة تجريبية"), Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(11,31,58), ForeColor = Color.FromArgb(212,175,55), Font = new Font("Segoe UI", 22, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
-        Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
+        Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
         Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("التقارير المالية", Reports); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
         Add("اختيار اللغة / Language", ToggleLanguage);
         RefreshSummary();
@@ -101,8 +101,9 @@ INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET')
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE employees ADD COLUMN job_title TEXT NOT NULL DEFAULT ''"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE employees ADD COLUMN salary REAL NOT NULL DEFAULT 0"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
         try { using var migration = c.CreateCommand(); migration.CommandText = "CREATE TABLE IF NOT EXISTS payroll_events(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,kind TEXT NOT NULL,amount REAL NOT NULL,note TEXT,period_month TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
-// Additive register: existing payroll data is retained and duplicate monthly accruals are blocked.
+// Additive registers preserve historical rows and support explicit settlement documents.
 using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF NOT EXISTS payroll_runs(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,period_month TEXT NOT NULL,base_salary REAL NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(employee_id,period_month))"; payroll.ExecuteNonQuery(); }
+        using (var settlements = c.CreateCommand()) { settlements.CommandText = "CREATE TABLE IF NOT EXISTS customer_receipts(id INTEGER PRIMARY KEY AUTOINCREMENT,customer_id INTEGER NOT NULL,amount REAL NOT NULL CHECK(amount>0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS supplier_payments(id INTEGER PRIMARY KEY AUTOINCREMENT,supplier_id INTEGER NOT NULL,amount REAL NOT NULL CHECK(amount>0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);"; settlements.ExecuteNonQuery(); }
         try { using var indexName = c.CreateCommand(); indexName.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS idx_products_name ON products(name COLLATE NOCASE)"; indexName.ExecuteNonQuery(); } catch (SqliteException) { }
         using var index = c.CreateCommand(); index.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode) WHERE barcode IS NOT NULL AND barcode != ''"; index.ExecuteNonQuery();
     }
@@ -302,6 +303,55 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
             catch (Exception) { MessageBox.Show(UiLanguage.T("فشلت الاستعادة: الملف غير صالح أو غير متوافق.")); }
         };
         f.Controls.Add(restore); f.Controls.Add(export); f.ShowDialog();
+    }
+
+    void ReceiptPayment(bool supplierPayment)
+    {
+        var table = supplierPayment ? "suppliers" : "customers";
+        var title = supplierPayment ? "سداد الموردين" : "تحصيلات العملاء";
+        using var f = new Form { Text = UiLanguage.T(title), Width = 680, Height = 500, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var party = new ComboBox { Dock = DockStyle.Top, Height = 40, DropDownStyle = ComboBoxStyle.DropDownList };
+        var ids = new List<long>();
+        var amount = new TextBox { PlaceholderText = UiLanguage.T("المبلغ"), Dock = DockStyle.Top, Height = 40 };
+        var note = new TextBox { PlaceholderText = UiLanguage.T("البيان / مرجع الفاتورة"), Dock = DockStyle.Top, Height = 40 };
+        var save = new Button { Text = UiLanguage.T(supplierPayment ? "حفظ سداد المورد" : "حفظ تحصيل العميل"), Dock = DockStyle.Top, Height = 45 };
+        var list = new ListBox { Dock = DockStyle.Fill };
+        using (var c = C()) using (var q = c.CreateCommand())
+        {
+            q.CommandText = $"SELECT id,name FROM {table} ORDER BY name";
+            using var reader = q.ExecuteReader();
+            while(reader.Read()) { ids.Add(reader.GetInt64(0)); party.Items.Add(reader.GetString(1)); }
+        }
+        void Reload()
+        {
+            list.Items.Clear();
+            using var c = C(); using var q = c.CreateCommand();
+            q.CommandText = supplierPayment
+                ? @"SELECT s.name,COALESCE((SELECT SUM(p.total) FROM purchases p WHERE p.supplier_id=s.id AND p.payment_mode='CREDIT'),0)-COALESCE((SELECT SUM(x.amount) FROM supplier_payments x WHERE x.supplier_id=s.id),0) FROM suppliers s ORDER BY s.name"
+                : @"SELECT s.name,COALESCE((SELECT SUM(p.total) FROM sales p WHERE p.customer_id=s.id AND p.payment_mode='CREDIT'),0)-COALESCE((SELECT SUM(x.amount) FROM customer_receipts x WHERE x.customer_id=s.id),0) FROM customers s ORDER BY s.name";
+            using var reader=q.ExecuteReader();
+            while(reader.Read()) list.Items.Add(reader.GetString(0)+" | "+UiLanguage.T("الرصيد")+": "+reader.GetDouble(1).ToString("N2"));
+        }
+        save.Click += (_, _) =>
+        {
+            if(party.SelectedIndex<0 || !double.TryParse(amount.Text,System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.CurrentCulture,out var value) || value<=0)
+            { MessageBox.Show(UiLanguage.T("اختر العميل أو المورد وأدخل مبلغًا موجبًا صحيحًا.")); return; }
+            try
+            {
+                using var c=C(); using var tx=c.BeginTransaction();
+                using var q=c.CreateCommand(); q.Transaction=tx;
+                q.CommandText=supplierPayment ? "INSERT INTO supplier_payments(supplier_id,amount,note) VALUES($id,$a,$n)" : "INSERT INTO customer_receipts(customer_id,amount,note) VALUES($id,$a,$n)";
+                q.Parameters.AddWithValue("$id",ids[party.SelectedIndex]); q.Parameters.AddWithValue("$a",value); q.Parameters.AddWithValue("$n",note.Text.Trim()); q.ExecuteNonQuery();
+                var id=LastId(c,tx);
+                if(supplierPayment) PostEntry(c,tx,"SUPPLIER_PAYMENT",id,"Supplier payment: "+party.SelectedItem,new (string Account,double Debit,double Credit)[]{("Accounts Payable",value,0d),("Cash",0d,value)});
+                else PostEntry(c,tx,"CUSTOMER_RECEIPT",id,"Customer receipt: "+party.SelectedItem,new (string Account,double Debit,double Credit)[]{("Cash",value,0d),("Accounts Receivable",0d,value)});
+                tx.Commit(); amount.Clear(); note.Clear(); Reload(); RefreshSummary();
+                MessageBox.Show(UiLanguage.T("تم تسجيل الحركة وترحيلها محاسبيًا."));
+            }
+            catch(Exception) { MessageBox.Show(UiLanguage.T("تعذر تسجيل الحركة؛ لم تُعتمد العملية.")); }
+        };
+        f.Controls.Add(list); f.Controls.Add(save); f.Controls.Add(note); f.Controls.Add(amount); f.Controls.Add(party);
+        Reload(); f.ShowDialog();
     }
 
     void Employees()
