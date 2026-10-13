@@ -82,6 +82,11 @@ sealed class MainForm : Form
         using var c = C(); using var x = c.CreateCommand();
         x.CommandText = "CREATE TABLE IF NOT EXISTS products(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,qty REAL NOT NULL DEFAULT 0,price REAL NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS sales(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS purchases(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS employees(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,job_title TEXT NOT NULL DEFAULT '',salary REAL NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS payroll_events(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,kind TEXT NOT NULL,amount REAL NOT NULL,note TEXT,period_month TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS expenses(id INTEGER PRIMARY KEY AUTOINCREMENT,description TEXT NOT NULL,amount REAL NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);";
         x.ExecuteNonQuery();
+        // Additive schema migrations; never drop or rewrite existing transaction rows.
+        try { using var m = c.CreateCommand(); m.CommandText = "ALTER TABLE sales ADD COLUMN customer_id INTEGER"; m.ExecuteNonQuery(); } catch (SqliteException) { }
+        try { using var m = c.CreateCommand(); m.CommandText = "ALTER TABLE sales ADD COLUMN payment_mode TEXT NOT NULL DEFAULT 'CASH'"; m.ExecuteNonQuery(); } catch (SqliteException) { }
+        try { using var m = c.CreateCommand(); m.CommandText = "ALTER TABLE purchases ADD COLUMN supplier_id INTEGER"; m.ExecuteNonQuery(); } catch (SqliteException) { }
+        try { using var m = c.CreateCommand(); m.CommandText = "ALTER TABLE purchases ADD COLUMN payment_mode TEXT NOT NULL DEFAULT 'CASH'"; m.ExecuteNonQuery(); } catch (SqliteException) { }
         // Additive, non-destructive schema changes preserve existing customer data and transactions.
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE products ADD COLUMN barcode TEXT"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE products ADD COLUMN unit_cost REAL NOT NULL DEFAULT 0"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
@@ -109,11 +114,35 @@ INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET')
     }
     void Transaction(bool purchase)
     {
-        using var f = new Form { Text = UiLanguage.T(purchase ? "المشتريات" : "المبيعات"), Width = 650, Height = 430, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        using var f = new Form { Text = UiLanguage.T(purchase ? "المشتريات" : "المبيعات"), Width = 680, Height = 520, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
         var n = new TextBox { PlaceholderText = UiLanguage.T("اسم الصنف أو الباركود"), Dock = DockStyle.Top, Height = 40 };
         var q = new TextBox { PlaceholderText = UiLanguage.T("الكمية"), Dock = DockStyle.Top, Height = 40 };
         var p = new TextBox { PlaceholderText = UiLanguage.T("السعر"), Dock = DockStyle.Top, Height = 40 };
+        var paymentMode = new ComboBox { Dock = DockStyle.Top, Height = 40, DropDownStyle = ComboBoxStyle.DropDownList };
+        paymentMode.Items.Add(UiLanguage.English ? "Cash" : "نقدي");
+        paymentMode.Items.Add(UiLanguage.English ? "On account (credit)" : "آجل");
+        paymentMode.SelectedIndex = 0;
+        var party = new ComboBox { Dock = DockStyle.Top, Height = 40, DropDownStyle = ComboBoxStyle.DropDownList, Visible = false };
+        var partyIds = new List<long>();
+        var partyLabel = new Label { Text = UiLanguage.English ? (purchase ? "Supplier (required for credit)" : "Customer (required for credit)") : (purchase ? "المورد (مطلوب للشراء الآجل)" : "العميل (مطلوب للبيع الآجل)"), Dock = DockStyle.Top, Height = 28, Visible = false };
         var save = new Button { Text = UiLanguage.T("حفظ"), Dock = DockStyle.Top, Height = 45 };
+
+        using (var c = C())
+        using (var load = c.CreateCommand())
+        {
+            load.CommandText = purchase ? "SELECT id,name FROM suppliers ORDER BY name" : "SELECT id,name FROM customers ORDER BY name";
+            using var reader = load.ExecuteReader();
+            while (reader.Read())
+            {
+                partyIds.Add(reader.GetInt64(0));
+                party.Items.Add(reader.GetString(1));
+            }
+        }
+        paymentMode.SelectedIndexChanged += (_, _) =>
+        {
+            var credit = paymentMode.SelectedIndex == 1;
+            party.Visible = credit; partyLabel.Visible = credit;
+        };
         save.Click += (_, _) =>
         {
             if (!double.TryParse(q.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var qty) ||
@@ -121,6 +150,12 @@ INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET')
                 qty <= 0 || price < 0 || string.IsNullOrWhiteSpace(n.Text))
             {
                 MessageBox.Show(UiLanguage.T("أدخل صنفًا وكمية موجبة وسعرًا صحيحًا."));
+                return;
+            }
+            var isCredit = paymentMode.SelectedIndex == 1;
+            if (isCredit && party.SelectedIndex < 0)
+            {
+                MessageBox.Show(UiLanguage.English ? "Add/select a customer or supplier before saving a credit transaction." : "أضف واختر العميل أو المورد قبل حفظ العملية الآجلة.");
                 return;
             }
             try
@@ -156,34 +191,52 @@ INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET')
                 update.Parameters.AddWithValue("$cost", nextUnitCost);
                 update.Parameters.AddWithValue("$id", productId);
                 update.ExecuteNonQuery();
+
+                var partyId = isCredit ? partyIds[party.SelectedIndex] : (long?)null;
+                var partyName = isCredit ? party.SelectedItem?.ToString() ?? "" : "";
                 using var insert = c.CreateCommand();
                 insert.Transaction = tx;
-                insert.CommandText = $"INSERT INTO {(purchase ? "purchases" : "sales")}(product,qty,price,total) VALUES($n,$q,$p,$t)";
+                insert.CommandText = purchase
+                    ? "INSERT INTO purchases(product,qty,price,total,supplier_id,payment_mode) VALUES($n,$q,$p,$t,$party,$mode)"
+                    : "INSERT INTO sales(product,qty,price,total,customer_id,payment_mode) VALUES($n,$q,$p,$t,$party,$mode)";
                 insert.Parameters.AddWithValue("$n", productName);
                 insert.Parameters.AddWithValue("$q", qty);
                 insert.Parameters.AddWithValue("$p", price);
                 insert.Parameters.AddWithValue("$t", qty * price);
+                insert.Parameters.AddWithValue("$party", partyId.HasValue ? partyId.Value : DBNull.Value);
+                insert.Parameters.AddWithValue("$mode", isCredit ? "CREDIT" : "CASH");
                 insert.ExecuteNonQuery();
                 var transactionId = LastId(c, tx);
                 var total = qty * price;
                 if (purchase)
-                    PostEntry(c, tx, "PURCHASE", transactionId, "Cash purchase: " + productName, new (string Account, double Debit, double Credit)[] { ("Inventory", total, 0d), ("Cash", 0d, total) });
+                {
+                    var creditAccount = isCredit ? "Accounts Payable" : "Cash";
+                    PostEntry(c, tx, "PURCHASE", transactionId,
+                        (isCredit ? "Credit purchase from " : "Cash purchase: ") + productName + (isCredit ? " — " + partyName : ""),
+                        new (string Account, double Debit, double Credit)[] { ("Inventory", total, 0d), (creditAccount, 0d, total) });
+                }
                 else
                 {
                     var cogs = qty * oldUnitCost;
-                    PostEntry(c, tx, "SALE", transactionId, "Cash sale: " + productName, new (string Account, double Debit, double Credit)[] { ("Cash", total, 0d), ("Sales Revenue", 0d, total), ("Cost of Goods Sold", cogs, 0d), ("Inventory", 0d, cogs) });
+                    var debitAccount = isCredit ? "Accounts Receivable" : "Cash";
+                    PostEntry(c, tx, "SALE", transactionId,
+                        (isCredit ? "Credit sale to " : "Cash sale: ") + productName + (isCredit ? " — " + partyName : ""),
+                        new (string Account, double Debit, double Credit)[] { (debitAccount, total, 0d), ("Sales Revenue", 0d, total), ("Cost of Goods Sold", cogs, 0d), ("Inventory", 0d, cogs) });
                 }
                 tx.Commit();
                 MessageBox.Show(UiLanguage.T("تم الحفظ وتحديث المخزون."));
                 RefreshSummary();
+                f.Close();
             }
             catch (Exception)
             {
                 MessageBox.Show(UiLanguage.T("تعذر حفظ العملية؛ لم تُعتمد العملية."));
             }
         };
-        f.Controls.Add(save); f.Controls.Add(p); f.Controls.Add(q); f.Controls.Add(n); f.ShowDialog();
+        f.Controls.Add(save); f.Controls.Add(party); f.Controls.Add(partyLabel); f.Controls.Add(paymentMode); f.Controls.Add(p); f.Controls.Add(q); f.Controls.Add(n);
+        f.ShowDialog();
     }
+
     void CashExpense()
     {
         using var f = new Form { Text = UiLanguage.T("المصروفات"), Width = 650, Height = 480, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
