@@ -150,6 +150,23 @@ public class DatabaseIntegrityTest {
         }
     }
 
+    @Test
+    public void partiallyUnpaidExpenseCreditsCashAndPayableAndBalances() {
+        MainActivity activity = new MainActivity();
+        database.beginTransaction();
+        try {
+            activity.postJournal(database, 104L, "EXPENSE", 25.00, 15.00, 10.00, 0.00);
+            long journalId = journalIdForTransaction(104L);
+            assertJournalBalanced(journalId);
+            assertAccountTotals("6000", 25.00, 0.00);
+            assertAccountTotals("1010", 0.00, 15.00);
+            assertAccountTotals("2100", 0.00, 10.00);
+            database.setTransactionSuccessful();
+        } finally {
+            database.endTransaction();
+        }
+    }
+
     private long journalIdForTransaction(long transactionId) {
         Cursor c = database.rawQuery(
                 "SELECT id FROM journal_entries WHERE transaction_id=? ORDER BY id DESC LIMIT 1",
