@@ -20,8 +20,12 @@ jobs:
           STORE_PASSWORD: ${{ secrets.SMARTCOMPANY_KEYSTORE_PASSWORD }}
         run: |
           set -euo pipefail
+          if [ -z "${STORE_PASSWORD}" ]; then
+            echo "::error title=Signing secret is empty or unavailable::Open Settings > Secrets and variables > Actions > Secrets (not Variables). Create or update the repository secret with the exact name SMARTCOMPANY_KEYSTORE_PASSWORD, then rerun this workflow."
+            exit 1
+          fi
           if [ "${#STORE_PASSWORD}" -lt 16 ]; then
-            echo "::error title=Signing password missing or too short::Create SMARTCOMPANY_KEYSTORE_PASSWORD as a repository Actions secret with a unique password of at least 16 characters, then rerun this workflow."
+            echo "::error title=Signing password is too short::SMARTCOMPANY_KEYSTORE_PASSWORD is available, but it has fewer than 16 characters. Update it to a unique password of at least 16 characters, then rerun this workflow."
             exit 1
           fi
 
