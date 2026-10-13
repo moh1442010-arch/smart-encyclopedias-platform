@@ -2,7 +2,7 @@ name: Build Smart Company Signed Android Release 2.3.1 - Signing Validation
 
 concurrency:
   group: smart-company-android-release
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 on:
   workflow_dispatch:
@@ -135,7 +135,7 @@ jobs:
           if echo "$permissions" | grep -q "android.permission.INTERNET"; then echo "Unexpected INTERNET permission"; exit 1; fi
           "$build_tools/apksigner" verify --verbose "$apk"
           jarsigner -verify -verbose "$aab"
-          (cd release && sha256sum --check SHA256SUMS.txt)
+          sha256sum --check release/SHA256SUMS.txt
 
       - name: Upload signed release artifacts only
         uses: actions/upload-artifact@v4
