@@ -1,0 +1,50 @@
+name: Initialize Smart Company Release Signing Key
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  initialize-signing-key:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the new keystore password secret
+        env:
+          STORE_PASSWORD: ${{ secrets.SMARTCOMPANY_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ "${#STORE_PASSWORD}" -lt 16 ]; then
+            echo "::error title=Signing password missing or too short::Create SMARTCOMPANY_KEYSTORE_PASSWORD in repository Actions secrets with a unique password of at least 16 characters, then rerun this workflow."
+            exit 1
+          fi
+
+      - name: Generate a new release keystore
+        env:
+          STORE_PASSWORD: ${{ secrets.SMARTCOMPANY_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p signing-export
+          keytool -genkeypair -v \
+            -keystore signing-export/smartcompany-release.jks \
+            -storetype JKS \
+            -storepass "$STORE_PASSWORD" \
+            -keypass "$STORE_PASSWORD" \
+            -alias smartcompany-release \
+            -keyalg RSA -keysize 3072 -validity 10000 \
+            -dname "CN=Smart Company Release, OU=Android, O=Smart Company, L=Khartoum, ST=Khartoum, C=SD"
+          keytool -list -keystore signing-export/smartcompany-release.jks \
+            -storepass "$STORE_PASSWORD" -alias smartcompany-release >/dev/null
+          base64 -w 0 signing-export/smartcompany-release.jks > signing-export/SMARTCOMPANY_KEYSTORE_BASE64.txt
+          printf '\n' >> signing-export/SMARTCOMPANY_KEYSTORE_BASE64.txt
+          echo "Signing keystore generated and validated. Password and keystore contents were not printed."
+          sha256sum signing-export/smartcompany-release.jks | awk '{print "Keystore SHA-256: " $1}'
+
+      - name: Export keystore payload briefly for owner to save
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartcompany-signing-bootstrap-ONE-TIME
+          path: signing-export/SMARTCOMPANY_KEYSTORE_BASE64.txt
+          if-no-files-found: error
+          retention-days: 1
