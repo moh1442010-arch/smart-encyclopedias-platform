@@ -167,6 +167,39 @@ public class DatabaseIntegrityTest {
         }
     }
 
+    @Test
+    public void journalPostingRejectsMismatchedAmountsBeforeWritingAnything() {
+        MainActivity activity = new MainActivity();
+        Cursor before = database.rawQuery("SELECT COUNT(*) FROM journal_entries", null);
+        int countBefore;
+        try { assertTrue(before.moveToFirst()); countBefore = before.getInt(0); }
+        finally { before.close(); }
+
+        try {
+            activity.postJournal(database, 105L, "EXPENSE", 25.00, 15.00, 9.00, 0.00);
+            fail("Mismatched total, paid and remaining amounts must be rejected");
+        } catch (IllegalArgumentException expected) {
+            // Expected: 25 != 15 + 9.
+        }
+
+        Cursor after = database.rawQuery("SELECT COUNT(*) FROM journal_entries", null);
+        try {
+            assertTrue(after.moveToFirst());
+            assertEquals(countBefore, after.getInt(0));
+        } finally { after.close(); }
+    }
+
+    @Test
+    public void journalPostingRejectsNegativeAmounts() {
+        MainActivity activity = new MainActivity();
+        try {
+            activity.postJournal(database, 106L, "EXPENSE", 10.00, 15.00, -5.00, 0.00);
+            fail("Negative remaining amount must be rejected");
+        } catch (IllegalArgumentException expected) {
+            // Expected.
+        }
+    }
+
     private long journalIdForTransaction(long transactionId) {
         Cursor c = database.rawQuery(
                 "SELECT id FROM journal_entries WHERE transaction_id=? ORDER BY id DESC LIMIT 1",
