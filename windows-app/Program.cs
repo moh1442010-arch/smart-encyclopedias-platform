@@ -82,7 +82,17 @@ sealed class MainForm : Form
         using var c = C(); using var x = c.CreateCommand();
         x.CommandText = "CREATE TABLE IF NOT EXISTS products(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,qty REAL NOT NULL DEFAULT 0,price REAL NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS sales(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS purchases(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS employees(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,job_title TEXT NOT NULL DEFAULT '',salary REAL NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS payroll_events(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,kind TEXT NOT NULL,amount REAL NOT NULL,note TEXT,period_month TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS expenses(id INTEGER PRIMARY KEY AUTOINCREMENT,description TEXT NOT NULL,amount REAL NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);";
         x.ExecuteNonQuery();
+        // Additive, non-destructive schema changes preserve existing customer data and transactions.
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE products ADD COLUMN barcode TEXT"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
+        try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE products ADD COLUMN unit_cost REAL NOT NULL DEFAULT 0"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
+        using (var ledger = c.CreateCommand())
+        {
+            ledger.CommandText = @"CREATE TABLE IF NOT EXISTS gl_accounts(id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT NOT NULL UNIQUE,name TEXT NOT NULL UNIQUE,kind TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS gl_entries(id INTEGER PRIMARY KEY AUTOINCREMENT,source_type TEXT NOT NULL,source_id INTEGER NOT NULL,memo TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(source_type,source_id));
+CREATE TABLE IF NOT EXISTS gl_lines(id INTEGER PRIMARY KEY AUTOINCREMENT,entry_id INTEGER NOT NULL REFERENCES gl_entries(id),account_id INTEGER NOT NULL REFERENCES gl_accounts(id),debit REAL NOT NULL DEFAULT 0,credit REAL NOT NULL DEFAULT 0,CHECK(debit>=0 AND credit>=0 AND NOT(debit>0 AND credit>0)));
+INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1200','Inventory','ASSET'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE');";
+            ledger.ExecuteNonQuery();
+        }
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE employees ADD COLUMN job_title TEXT NOT NULL DEFAULT ''"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE employees ADD COLUMN salary REAL NOT NULL DEFAULT 0"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
         try { using var migration = c.CreateCommand(); migration.CommandText = "CREATE TABLE IF NOT EXISTS payroll_events(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,kind TEXT NOT NULL,amount REAL NOT NULL,note TEXT,period_month TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
@@ -92,10 +102,10 @@ sealed class MainForm : Form
     void Products()
     {
         using var f = new Form { Text=UiLanguage.T("الأصناف والمخزون والباركود"), Width=700, Height=600, RightToLeft=UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout=!UiLanguage.English };
-        var n=new TextBox{PlaceholderText=UiLanguage.T("اسم الصنف"),Dock=DockStyle.Top,Height=40}; var barcode=new TextBox{PlaceholderText=UiLanguage.T("الباركود (ماسح USB/Bluetooth أو إدخال يدوي)"),Dock=DockStyle.Top,Height=40}; var q=new TextBox{PlaceholderText=UiLanguage.T("الكمية"),Dock=DockStyle.Top,Height=40}; var p=new TextBox{PlaceholderText=UiLanguage.T("السعر"),Dock=DockStyle.Top,Height=40};
+        var n=new TextBox{PlaceholderText=UiLanguage.T("اسم الصنف"),Dock=DockStyle.Top,Height=40}; var barcode=new TextBox{PlaceholderText=UiLanguage.T("الباركود (ماسح USB/Bluetooth أو إدخال يدوي)"),Dock=DockStyle.Top,Height=40}; var q=new TextBox{PlaceholderText=UiLanguage.T("الكمية"),Dock=DockStyle.Top,Height=40}; var p=new TextBox{PlaceholderText=UiLanguage.T("سعر البيع"),Dock=DockStyle.Top,Height=40}; var cost=new TextBox{PlaceholderText=UiLanguage.T("تكلفة الوحدة الافتتاحية"),Dock=DockStyle.Top,Height=40};
         var add=new Button{Text=UiLanguage.T("إضافة الصنف"),Dock=DockStyle.Top,Height=45}; var list=new ListBox{Dock=DockStyle.Fill};
-        add.Click+=(_,_)=>{if(string.IsNullOrWhiteSpace(n.Text)||!double.TryParse(q.Text,out var qty)||!double.TryParse(p.Text,out var price)||qty<0||price<0){MessageBox.Show(UiLanguage.T("أدخل اسمًا وكمية وسعرًا صحيحًا."));return;}try{using var c=C();using var x=c.CreateCommand();x.CommandText="INSERT INTO products(name,barcode,qty,price) VALUES($n,$b,$q,$p)";x.Parameters.AddWithValue("$n",n.Text.Trim());x.Parameters.AddWithValue("$b",string.IsNullOrWhiteSpace(barcode.Text)?DBNull.Value:barcode.Text.Trim());x.Parameters.AddWithValue("$q",qty);x.Parameters.AddWithValue("$p",price);x.ExecuteNonQuery();list.Items.Add(n.Text+" | باركود "+barcode.Text+" | المخزون "+qty+" | السعر "+price);n.Clear();barcode.Clear();q.Clear();p.Clear();RefreshSummary();}catch(SqliteException){MessageBox.Show(UiLanguage.T("تعذر الحفظ: الاسم أو الباركود مستخدم مسبقًا."));}};
-        f.Controls.Add(list);f.Controls.Add(add);f.Controls.Add(p);f.Controls.Add(q);f.Controls.Add(barcode);f.Controls.Add(n);f.ShowDialog();
+        add.Click+=(_,_)=>{if(string.IsNullOrWhiteSpace(n.Text)||!double.TryParse(q.Text,System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.CurrentCulture,out var qty)||!double.TryParse(p.Text,System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.CurrentCulture,out var price)||!double.TryParse(cost.Text,System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.CurrentCulture,out var unitCost)||qty<0||price<0||unitCost<0){MessageBox.Show(UiLanguage.T("أدخل اسمًا وكمية وسعرًا وتكلفة صحيحة."));return;}try{using var c=C();using var tx=c.BeginTransaction();using var x=c.CreateCommand();x.Transaction=tx;x.CommandText="INSERT INTO products(name,barcode,qty,price,unit_cost) VALUES($n,$b,$q,$p,$cost)";x.Parameters.AddWithValue("$n",n.Text.Trim());x.Parameters.AddWithValue("$b",string.IsNullOrWhiteSpace(barcode.Text)?DBNull.Value:barcode.Text.Trim());x.Parameters.AddWithValue("$q",qty);x.Parameters.AddWithValue("$p",price);x.Parameters.AddWithValue("$cost",unitCost);x.ExecuteNonQuery();var id=c.LastInsertRowId;if(qty>0&&unitCost>0)PostEntry(c,tx,"OPENING_STOCK",id,"Opening inventory: "+n.Text.Trim(),("Inventory",qty*unitCost,0),("Opening Equity",0,qty*unitCost));tx.Commit();list.Items.Add(n.Text+" | باركود "+barcode.Text+" | المخزون "+qty+" | السعر "+price);n.Clear();barcode.Clear();q.Clear();p.Clear();cost.Clear();RefreshSummary();}catch(SqliteException){MessageBox.Show(UiLanguage.T("تعذر الحفظ: الاسم أو الباركود مستخدم مسبقًا."));}};
+        f.Controls.Add(list);f.Controls.Add(add);f.Controls.Add(cost);f.Controls.Add(p);f.Controls.Add(q);f.Controls.Add(barcode);f.Controls.Add(n);f.ShowDialog();
     }
     void Transaction(bool purchase)
     {
@@ -119,7 +129,7 @@ sealed class MainForm : Form
                 using var tx = c.BeginTransaction();
                 using var check = c.CreateCommand();
                 check.Transaction = tx;
-                check.CommandText = "SELECT id, qty, name FROM products WHERE name=$n OR barcode=$n LIMIT 1";
+                check.CommandText = "SELECT id, qty, name, COALESCE(unit_cost,0) FROM products WHERE name=$n OR barcode=$n LIMIT 1";
                 check.Parameters.AddWithValue("$n", n.Text.Trim());
                 using var reader = check.ExecuteReader();
                 if (!reader.Read())
@@ -130,6 +140,7 @@ sealed class MainForm : Form
                 var productId = reader.GetInt64(0);
                 var oldQty = reader.GetDouble(1);
                 var productName = reader.GetString(2);
+                var oldUnitCost = reader.GetDouble(3);
                 reader.Close();
                 var next = oldQty + (purchase ? qty : -qty);
                 if (next < 0)
@@ -139,8 +150,10 @@ sealed class MainForm : Form
                 }
                 using var update = c.CreateCommand();
                 update.Transaction = tx;
-                update.CommandText = "UPDATE products SET qty=$q WHERE id=$id";
+                var nextUnitCost = purchase && next > 0 ? ((oldQty * oldUnitCost) + (qty * price)) / next : oldUnitCost;
+                update.CommandText = "UPDATE products SET qty=$q, unit_cost=$cost WHERE id=$id";
                 update.Parameters.AddWithValue("$q", next);
+                update.Parameters.AddWithValue("$cost", nextUnitCost);
                 update.Parameters.AddWithValue("$id", productId);
                 update.ExecuteNonQuery();
                 using var insert = c.CreateCommand();
@@ -151,6 +164,15 @@ sealed class MainForm : Form
                 insert.Parameters.AddWithValue("$p", price);
                 insert.Parameters.AddWithValue("$t", qty * price);
                 insert.ExecuteNonQuery();
+                var transactionId = c.LastInsertRowId;
+                var total = qty * price;
+                if (purchase)
+                    PostEntry(c, tx, "PURCHASE", transactionId, "Cash purchase: " + productName, ("Inventory", total, 0), ("Cash", 0, total));
+                else
+                {
+                    var cogs = qty * oldUnitCost;
+                    PostEntry(c, tx, "SALE", transactionId, "Cash sale: " + productName, ("Cash", total, 0), ("Sales Revenue", 0, total), ("Cost of Goods Sold", cogs, 0), ("Inventory", 0, cogs));
+                }
                 tx.Commit();
                 MessageBox.Show(UiLanguage.T("تم الحفظ وتحديث المخزون."));
                 RefreshSummary();
@@ -181,9 +203,11 @@ sealed class MainForm : Form
         {
             if (string.IsNullOrWhiteSpace(description.Text) || !double.TryParse(amount.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var value) || value <= 0)
             { MessageBox.Show(UiLanguage.T("أدخل بيانًا ومبلغًا موجبًا صحيحًا.")); return; }
-            using var c = C(); using var q = c.CreateCommand();
-            q.CommandText = "INSERT INTO expenses(description,amount) VALUES($d,$a)";
+            using var c = C(); using var tx = c.BeginTransaction(); using var q = c.CreateCommand();
+            q.Transaction = tx; q.CommandText = "INSERT INTO expenses(description,amount) VALUES($d,$a)";
             q.Parameters.AddWithValue("$d", description.Text.Trim()); q.Parameters.AddWithValue("$a", value); q.ExecuteNonQuery();
+            PostEntry(c, tx, "EXPENSE", c.LastInsertRowId, "Cash expense: " + description.Text.Trim(), ("Operating Expense", value, 0), ("Cash", 0, value));
+            tx.Commit();
             description.Clear(); amount.Clear(); Reload(); RefreshSummary();
         };
         f.Controls.Add(list); f.Controls.Add(save); f.Controls.Add(amount); f.Controls.Add(description);
@@ -327,6 +351,28 @@ sealed class MainForm : Form
         actions.Controls.Add(print); actions.Controls.Add(email);
         f.Controls.Add(preview); f.Controls.Add(actions); f.ShowDialog();
     }
+    void PostEntry(SqliteConnection c, SqliteTransaction tx, string sourceType, long sourceId, string memo, params (string Account, double Debit, double Credit)[] lines)
+    {
+        var debit = lines.Sum(x => x.Debit);
+        var credit = lines.Sum(x => x.Credit);
+        if (lines.Length < 2 || Math.Abs(debit - credit) > 0.005 || lines.Any(x => x.Debit < 0 || x.Credit < 0 || (x.Debit > 0 && x.Credit > 0)))
+            throw new InvalidOperationException("Unbalanced or invalid journal entry.");
+        using var header = c.CreateCommand(); header.Transaction = tx;
+        header.CommandText = "INSERT INTO gl_entries(source_type,source_id,memo) VALUES($s,$id,$m)";
+        header.Parameters.AddWithValue("$s", sourceType); header.Parameters.AddWithValue("$id", sourceId); header.Parameters.AddWithValue("$m", memo);
+        header.ExecuteNonQuery(); var entryId = c.LastInsertRowId;
+        foreach (var line in lines)
+        {
+            using var account = c.CreateCommand(); account.Transaction = tx;
+            account.CommandText = "SELECT id FROM gl_accounts WHERE name=$n"; account.Parameters.AddWithValue("$n", line.Account);
+            var accountId = Convert.ToInt64(account.ExecuteScalar() ?? throw new InvalidOperationException("Ledger account missing."));
+            using var detail = c.CreateCommand(); detail.Transaction = tx;
+            detail.CommandText = "INSERT INTO gl_lines(entry_id,account_id,debit,credit) VALUES($e,$a,$d,$c)";
+            detail.Parameters.AddWithValue("$e", entryId); detail.Parameters.AddWithValue("$a", accountId);
+            detail.Parameters.AddWithValue("$d", line.Debit); detail.Parameters.AddWithValue("$c", line.Credit); detail.ExecuteNonQuery();
+        }
+    }
+
     void RefreshSummary()
     {
         using var c=C();using var s=c.CreateCommand();s.CommandText="SELECT COALESCE(SUM(total),0) FROM sales";var sales=Convert.ToDouble(s.ExecuteScalar());using var p=c.CreateCommand();p.CommandText="SELECT COALESCE(SUM(total),0) FROM purchases";var purchases=Convert.ToDouble(p.ExecuteScalar());using var ex=c.CreateCommand();ex.CommandText="SELECT COALESCE(SUM(amount),0) FROM expenses";var expenses=Convert.ToDouble(ex.ExecuteScalar());summary.Text=UiLanguage.T($"المبيعات: {sales:N2}   |   المشتريات: {purchases:N2}   |   المصروفات: {expenses:N2}   |   صافي الحركة: {(sales-purchases-expenses):N2}");
