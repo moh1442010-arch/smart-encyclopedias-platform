@@ -339,6 +339,21 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
             try
             {
                 using var c=C(); using var tx=c.BeginTransaction();
+                using (var balance = c.CreateCommand())
+                {
+                    balance.Transaction = tx;
+                    balance.CommandText = supplierPayment
+                        ? "SELECT COALESCE((SELECT SUM(total) FROM purchases WHERE supplier_id=$id AND payment_mode='CREDIT'),0)-COALESCE((SELECT SUM(amount) FROM supplier_payments WHERE supplier_id=$id),0)"
+                        : "SELECT COALESCE((SELECT SUM(total) FROM sales WHERE customer_id=$id AND payment_mode='CREDIT'),0)-COALESCE((SELECT SUM(amount) FROM customer_receipts WHERE customer_id=$id),0)";
+                    balance.Parameters.AddWithValue("$id",ids[party.SelectedIndex]);
+                    var outstanding = Convert.ToDouble(balance.ExecuteScalar());
+                    if(value > Math.Max(0d,outstanding) + 0.005d)
+                    {
+                        tx.Rollback();
+                        MessageBox.Show(UiLanguage.T("المبلغ أكبر من الرصيد الآجل المتبقي. راجع الرصيد قبل الحفظ."));
+                        return;
+                    }
+                }
                 using var q=c.CreateCommand(); q.Transaction=tx;
                 q.CommandText=supplierPayment ? "INSERT INTO supplier_payments(supplier_id,amount,note) VALUES($id,$a,$n)" : "INSERT INTO customer_receipts(customer_id,amount,note) VALUES($id,$a,$n)";
                 q.Parameters.AddWithValue("$id",ids[party.SelectedIndex]); q.Parameters.AddWithValue("$a",value); q.Parameters.AddWithValue("$n",note.Text.Trim()); q.ExecuteNonQuery();
