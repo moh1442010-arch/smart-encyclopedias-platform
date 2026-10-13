@@ -132,7 +132,7 @@ jobs:
           echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='33' versionName='2.3.1'"
           echo "$badging" | grep -F "application-label:'شركة محمد مصطفى الذكية'"
           permissions="$("$build_tools/aapt" dump permissions "$apk")"
-          if echo "$permissions" | grep -q "android.permission.INTERNET"; then echo "Unexpected INTERNET permission"; exit 1; fi
+          echo "$permissions" | grep -q "android.permission.INTERNET" || { echo "Required INTERNET permission for server-side commercial licensing is missing"; exit 1; }
           "$build_tools/apksigner" verify --verbose "$apk"
           jarsigner -verify -verbose "$aab"
           sha256sum --check release/SHA256SUMS.txt
