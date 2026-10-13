@@ -206,7 +206,7 @@ INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET')
             using var c = C(); using var tx = c.BeginTransaction(); using var q = c.CreateCommand();
             q.Transaction = tx; q.CommandText = "INSERT INTO expenses(description,amount) VALUES($d,$a)";
             q.Parameters.AddWithValue("$d", description.Text.Trim()); q.Parameters.AddWithValue("$a", value); q.ExecuteNonQuery();
-            PostEntry(c, tx, "EXPENSE", LastId(c, tx), "Cash expense: " + description.Text.Trim(), ("Operating Expense", value, 0), ("Cash", 0, value));
+            PostEntry(c, tx, "EXPENSE", LastId(c, tx), "Cash expense: " + description.Text.Trim(), new (string Account, double Debit, double Credit)[] { ("Operating Expense", value, 0d), ("Cash", 0d, value) });
             tx.Commit();
             description.Clear(); amount.Clear(); Reload(); RefreshSummary();
         };
