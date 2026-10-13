@@ -60,7 +60,7 @@ sealed class MainForm : Form
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
         Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
-        Add("التقارير المالية", Reports); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
+        Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("التقارير المالية", Reports); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
         Add("اختيار اللغة / Language", ToggleLanguage);
         RefreshSummary();
     }
@@ -90,7 +90,7 @@ sealed class MainForm : Form
             ledger.CommandText = @"CREATE TABLE IF NOT EXISTS gl_accounts(id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT NOT NULL UNIQUE,name TEXT NOT NULL UNIQUE,kind TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS gl_entries(id INTEGER PRIMARY KEY AUTOINCREMENT,source_type TEXT NOT NULL,source_id INTEGER NOT NULL,memo TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(source_type,source_id));
 CREATE TABLE IF NOT EXISTS gl_lines(id INTEGER PRIMARY KEY AUTOINCREMENT,entry_id INTEGER NOT NULL REFERENCES gl_entries(id),account_id INTEGER NOT NULL REFERENCES gl_accounts(id),debit REAL NOT NULL DEFAULT 0,credit REAL NOT NULL DEFAULT 0,CHECK(debit>=0 AND credit>=0 AND NOT(debit>0 AND credit>0)));
-INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1200','Inventory','ASSET'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE');";
+INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1100','Accounts Receivable','ASSET'),('1200','Inventory','ASSET'),('2000','Accounts Payable','LIABILITY'),('2100','Salaries Payable','LIABILITY'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE'),('6200','Salaries Expense','EXPENSE');";
             ledger.ExecuteNonQuery();
         }
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE employees ADD COLUMN job_title TEXT NOT NULL DEFAULT ''"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
@@ -310,6 +310,53 @@ INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET')
         using var f=new Form{Text=UiLanguage.T(title),Width=650,Height=500,RightToLeft=UiLanguage.English?RightToLeft.No:RightToLeft.Yes,RightToLeftLayout=!UiLanguage.English};var n=new TextBox{PlaceholderText=UiLanguage.T("الاسم"),Dock=DockStyle.Top,Height=40};var add=new Button{Text=UiLanguage.T("إضافة"),Dock=DockStyle.Top,Height=45};var list=new ListBox{Dock=DockStyle.Fill};
         add.Click+=(_,_)=>{using var c=C();using var x=c.CreateCommand();x.CommandText=$"INSERT INTO {table}(name) VALUES($n)";x.Parameters.AddWithValue("$n",n.Text);x.ExecuteNonQuery();list.Items.Add(n.Text);n.Clear();};f.Controls.Add(list);f.Controls.Add(add);f.Controls.Add(n);f.ShowDialog();
     }
+    void LedgerReports()
+    {
+        using var c = C();
+        var rows = new List<string>();
+        double totalDebit = 0, totalCredit = 0;
+        using (var q = c.CreateCommand())
+        {
+            q.CommandText = @"SELECT a.code,a.name,a.kind,
+COALESCE(SUM(l.debit),0),COALESCE(SUM(l.credit),0)
+FROM gl_accounts a
+LEFT JOIN gl_lines l ON l.account_id=a.id
+GROUP BY a.id,a.code,a.name,a.kind
+ORDER BY a.code";
+            using var r = q.ExecuteReader();
+            while (r.Read())
+            {
+                var debit = r.GetDouble(3);
+                var credit = r.GetDouble(4);
+                totalDebit += debit;
+                totalCredit += credit;
+                rows.Add($"{r.GetString(0)} | {r.GetString(1)} ({r.GetString(2)}) | مدين: {debit:N2} | دائن: {credit:N2}");
+            }
+        }
+        int missingSales, missingPurchases, missingExpenses;
+        using (var q = c.CreateCommand())
+        {
+            q.CommandText = @"SELECT
+(SELECT COUNT(*) FROM sales s LEFT JOIN gl_entries g ON g.source_type='SALE' AND g.source_id=s.id WHERE g.id IS NULL),
+(SELECT COUNT(*) FROM purchases p LEFT JOIN gl_entries g ON g.source_type='PURCHASE' AND g.source_id=p.id WHERE g.id IS NULL),
+(SELECT COUNT(*) FROM expenses e LEFT JOIN gl_entries g ON g.source_type='EXPENSE' AND g.source_id=e.id WHERE g.id IS NULL)";
+            using var r = q.ExecuteReader();
+            r.Read();
+            missingSales = r.GetInt32(0); missingPurchases = r.GetInt32(1); missingExpenses = r.GetInt32(2);
+        }
+        var balanced = Math.Abs(totalDebit - totalCredit) <= 0.005;
+        var report = "دفتر الأستاذ العام — ميزان المراجعة" + Environment.NewLine
+            + $"إجمالي المدين: {totalDebit:N2} | إجمالي الدائن: {totalCredit:N2}" + Environment.NewLine
+            + $"حالة التوازن: {(balanced ? "متوازن حسابيًا" : "غير متوازن — يتطلب التحقيق")}" + Environment.NewLine + Environment.NewLine
+            + $"عمليات بلا قيد: مبيعات {missingSales} | مشتريات {missingPurchases} | مصروفات {missingExpenses}" + Environment.NewLine
+            + "تنبيه: قد تشمل الأعداد سجلات تاريخية سابقة لإنشاء دفتر الأستاذ؛ لا تعتمد التقرير حتى تسوية كل الفروقات." + Environment.NewLine + Environment.NewLine
+            + string.Join(Environment.NewLine, rows);
+        using var f = new Form { Text = "دفتر الأستاذ وميزان المراجعة", Width = 900, Height = 650, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var preview = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both, WordWrap = false, Dock = DockStyle.Fill, Font = new Font("Consolas", 11), Text = report };
+        f.Controls.Add(preview);
+        f.ShowDialog();
+    }
+
     void Reports()
     {
         using var c = C();
