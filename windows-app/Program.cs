@@ -104,7 +104,7 @@ INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET')
         using var f = new Form { Text=UiLanguage.T("الأصناف والمخزون والباركود"), Width=700, Height=600, RightToLeft=UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout=!UiLanguage.English };
         var n=new TextBox{PlaceholderText=UiLanguage.T("اسم الصنف"),Dock=DockStyle.Top,Height=40}; var barcode=new TextBox{PlaceholderText=UiLanguage.T("الباركود (ماسح USB/Bluetooth أو إدخال يدوي)"),Dock=DockStyle.Top,Height=40}; var q=new TextBox{PlaceholderText=UiLanguage.T("الكمية"),Dock=DockStyle.Top,Height=40}; var p=new TextBox{PlaceholderText=UiLanguage.T("سعر البيع"),Dock=DockStyle.Top,Height=40}; var cost=new TextBox{PlaceholderText=UiLanguage.T("تكلفة الوحدة الافتتاحية"),Dock=DockStyle.Top,Height=40};
         var add=new Button{Text=UiLanguage.T("إضافة الصنف"),Dock=DockStyle.Top,Height=45}; var list=new ListBox{Dock=DockStyle.Fill};
-        add.Click+=(_,_)=>{if(string.IsNullOrWhiteSpace(n.Text)||!double.TryParse(q.Text,System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.CurrentCulture,out var qty)||!double.TryParse(p.Text,System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.CurrentCulture,out var price)||!double.TryParse(cost.Text,System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.CurrentCulture,out var unitCost)||qty<0||price<0||unitCost<0){MessageBox.Show(UiLanguage.T("أدخل اسمًا وكمية وسعرًا وتكلفة صحيحة."));return;}try{using var c=C();using var tx=c.BeginTransaction();using var x=c.CreateCommand();x.Transaction=tx;x.CommandText="INSERT INTO products(name,barcode,qty,price,unit_cost) VALUES($n,$b,$q,$p,$cost)";x.Parameters.AddWithValue("$n",n.Text.Trim());x.Parameters.AddWithValue("$b",string.IsNullOrWhiteSpace(barcode.Text)?DBNull.Value:barcode.Text.Trim());x.Parameters.AddWithValue("$q",qty);x.Parameters.AddWithValue("$p",price);x.Parameters.AddWithValue("$cost",unitCost);x.ExecuteNonQuery();var id=c.LastInsertRowId;if(qty>0&&unitCost>0)PostEntry(c,tx,"OPENING_STOCK",id,"Opening inventory: "+n.Text.Trim(),("Inventory",qty*unitCost,0),("Opening Equity",0,qty*unitCost));tx.Commit();list.Items.Add(n.Text+" | باركود "+barcode.Text+" | المخزون "+qty+" | السعر "+price);n.Clear();barcode.Clear();q.Clear();p.Clear();cost.Clear();RefreshSummary();}catch(SqliteException){MessageBox.Show(UiLanguage.T("تعذر الحفظ: الاسم أو الباركود مستخدم مسبقًا."));}};
+        add.Click+=(_,_)=>{if(string.IsNullOrWhiteSpace(n.Text)||!double.TryParse(q.Text,System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.CurrentCulture,out var qty)||!double.TryParse(p.Text,System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.CurrentCulture,out var price)||!double.TryParse(cost.Text,System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.CurrentCulture,out var unitCost)||qty<0||price<0||unitCost<0){MessageBox.Show(UiLanguage.T("أدخل اسمًا وكمية وسعرًا وتكلفة صحيحة."));return;}try{using var c=C();using var tx=c.BeginTransaction();using var x=c.CreateCommand();x.Transaction=tx;x.CommandText="INSERT INTO products(name,barcode,qty,price,unit_cost) VALUES($n,$b,$q,$p,$cost)";x.Parameters.AddWithValue("$n",n.Text.Trim());x.Parameters.AddWithValue("$b",string.IsNullOrWhiteSpace(barcode.Text)?DBNull.Value:barcode.Text.Trim());x.Parameters.AddWithValue("$q",qty);x.Parameters.AddWithValue("$p",price);x.Parameters.AddWithValue("$cost",unitCost);x.ExecuteNonQuery();var id=LastId(c, tx);if(qty>0&&unitCost>0)PostEntry(c,tx,"OPENING_STOCK",id,"Opening inventory: "+n.Text.Trim(),new (string Account, double Debit, double Credit)[] { ("Inventory",qty*unitCost,0d), ("Opening Equity",0d,qty*unitCost) });tx.Commit();list.Items.Add(n.Text+" | باركود "+barcode.Text+" | المخزون "+qty+" | السعر "+price);n.Clear();barcode.Clear();q.Clear();p.Clear();cost.Clear();RefreshSummary();}catch(SqliteException){MessageBox.Show(UiLanguage.T("تعذر الحفظ: الاسم أو الباركود مستخدم مسبقًا."));}};
         f.Controls.Add(list);f.Controls.Add(add);f.Controls.Add(cost);f.Controls.Add(p);f.Controls.Add(q);f.Controls.Add(barcode);f.Controls.Add(n);f.ShowDialog();
     }
     void Transaction(bool purchase)
@@ -164,14 +164,14 @@ INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET')
                 insert.Parameters.AddWithValue("$p", price);
                 insert.Parameters.AddWithValue("$t", qty * price);
                 insert.ExecuteNonQuery();
-                var transactionId = c.LastInsertRowId;
+                var transactionId = LastId(c, tx);
                 var total = qty * price;
                 if (purchase)
-                    PostEntry(c, tx, "PURCHASE", transactionId, "Cash purchase: " + productName, ("Inventory", total, 0), ("Cash", 0, total));
+                    PostEntry(c, tx, "PURCHASE", transactionId, "Cash purchase: " + productName, new (string Account, double Debit, double Credit)[] { ("Inventory", total, 0d), ("Cash", 0d, total) });
                 else
                 {
                     var cogs = qty * oldUnitCost;
-                    PostEntry(c, tx, "SALE", transactionId, "Cash sale: " + productName, ("Cash", total, 0), ("Sales Revenue", 0, total), ("Cost of Goods Sold", cogs, 0), ("Inventory", 0, cogs));
+                    PostEntry(c, tx, "SALE", transactionId, "Cash sale: " + productName, new (string Account, double Debit, double Credit)[] { ("Cash", total, 0d), ("Sales Revenue", 0d, total), ("Cost of Goods Sold", cogs, 0d), ("Inventory", 0d, cogs) });
                 }
                 tx.Commit();
                 MessageBox.Show(UiLanguage.T("تم الحفظ وتحديث المخزون."));
@@ -206,7 +206,7 @@ INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET')
             using var c = C(); using var tx = c.BeginTransaction(); using var q = c.CreateCommand();
             q.Transaction = tx; q.CommandText = "INSERT INTO expenses(description,amount) VALUES($d,$a)";
             q.Parameters.AddWithValue("$d", description.Text.Trim()); q.Parameters.AddWithValue("$a", value); q.ExecuteNonQuery();
-            PostEntry(c, tx, "EXPENSE", c.LastInsertRowId, "Cash expense: " + description.Text.Trim(), ("Operating Expense", value, 0), ("Cash", 0, value));
+            PostEntry(c, tx, "EXPENSE", LastId(c, tx), "Cash expense: " + description.Text.Trim(), ("Operating Expense", value, 0), ("Cash", 0, value));
             tx.Commit();
             description.Clear(); amount.Clear(); Reload(); RefreshSummary();
         };
@@ -398,6 +398,12 @@ ORDER BY a.code";
         actions.Controls.Add(print); actions.Controls.Add(email);
         f.Controls.Add(preview); f.Controls.Add(actions); f.ShowDialog();
     }
+    long LastId(SqliteConnection c, SqliteTransaction tx)
+    {
+        using var q = c.CreateCommand(); q.Transaction = tx; q.CommandText = "SELECT last_insert_rowid()";
+        return Convert.ToInt64(q.ExecuteScalar());
+    }
+
     void PostEntry(SqliteConnection c, SqliteTransaction tx, string sourceType, long sourceId, string memo, params (string Account, double Debit, double Credit)[] lines)
     {
         var debit = lines.Sum(x => x.Debit);
@@ -407,7 +413,7 @@ ORDER BY a.code";
         using var header = c.CreateCommand(); header.Transaction = tx;
         header.CommandText = "INSERT INTO gl_entries(source_type,source_id,memo) VALUES($s,$id,$m)";
         header.Parameters.AddWithValue("$s", sourceType); header.Parameters.AddWithValue("$id", sourceId); header.Parameters.AddWithValue("$m", memo);
-        header.ExecuteNonQuery(); var entryId = c.LastInsertRowId;
+        header.ExecuteNonQuery(); var entryId = LastId(c, tx);
         foreach (var line in lines)
         {
             using var account = c.CreateCommand(); account.Transaction = tx;
