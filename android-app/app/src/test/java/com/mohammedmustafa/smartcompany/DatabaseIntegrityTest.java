@@ -200,6 +200,62 @@ public class DatabaseIntegrityTest {
         }
     }
 
+    @Test
+    public void journalPostingRejectsNonFiniteAmountsBeforeWritingAnything() {
+        MainActivity activity = new MainActivity();
+        int beforeCount = journalEntryCount();
+
+        try {
+            activity.postJournal(database, 107L, "EXPENSE", Double.NaN, 0.0, 0.0, 0.0);
+            fail("NaN total must be rejected");
+        } catch (IllegalArgumentException expected) {
+            // Expected.
+        }
+
+        try {
+            activity.postJournal(database, 108L, "EXPENSE", 10.0, Double.POSITIVE_INFINITY, 0.0, 0.0);
+            fail("Infinite paid amount must be rejected");
+        } catch (IllegalArgumentException expected) {
+            // Expected.
+        }
+
+        try {
+            activity.postJournal(database, 109L, "SALE", 10.0, 10.0, 0.0, Double.NaN);
+            fail("NaN cost of goods sold must be rejected");
+        } catch (IllegalArgumentException expected) {
+            // Expected.
+        }
+
+        assertEquals("Invalid non-finite amounts must not create journal entries",
+                beforeCount, journalEntryCount());
+    }
+
+    @Test
+    public void journalPostingRejectsUnsupportedTransactionTypeBeforeWritingAnything() {
+        MainActivity activity = new MainActivity();
+        int beforeCount = journalEntryCount();
+
+        try {
+            activity.postJournal(database, 110L, "REFUND", 10.0, 10.0, 0.0, 0.0);
+            fail("Unsupported journal type must be rejected");
+        } catch (IllegalArgumentException expected) {
+            // Expected.
+        }
+
+        assertEquals("Unsupported transaction type must not create journal entries",
+                beforeCount, journalEntryCount());
+    }
+
+    private int journalEntryCount() {
+        Cursor c = database.rawQuery("SELECT COUNT(*) FROM journal_entries", null);
+        try {
+            assertTrue(c.moveToFirst());
+            return c.getInt(0);
+        } finally {
+            c.close();
+        }
+    }
+
     private long journalIdForTransaction(long transactionId) {
         Cursor c = database.rawQuery(
                 "SELECT id FROM journal_entries WHERE transaction_id=? ORDER BY id DESC LIMIT 1",
