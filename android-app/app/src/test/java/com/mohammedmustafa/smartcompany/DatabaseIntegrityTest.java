@@ -118,6 +118,62 @@ public class DatabaseIntegrityTest {
 
 
     @Test
+    public void salesPurchasesAndExpensesPostBalancedAccountingEntries() {
+        // Exercise the application's real posting routine, not only hand-built test rows.
+        MainActivity activity = new MainActivity();
+        long saleId;
+        long purchaseId;
+        long expenseId;
+        database.beginTransaction();
+        try {
+            saleId = activity.postJournal(database, 101L, "SALE", 100.00, 60.00, 40.00, 30.00);
+            purchaseId = activity.postJournal(database, 102L, "PURCHASE", 80.00, 20.00, 60.00, 0.00);
+            expenseId = activity.postJournal(database, 103L, "EXPENSE", 10.00, 10.00, 0.00, 0.00);
+
+            assertJournalBalanced(saleId);
+            assertJournalBalanced(purchaseId);
+            assertJournalBalanced(expenseId);
+
+            assertAccountTotals("1010", 60.00, 30.00);
+            assertAccountTotals("1100", 40.00, 0.00);
+            assertAccountTotals("1200", 80.00, 30.00);
+            assertAccountTotals("2100", 0.00, 60.00);
+            assertAccountTotals("4000", 0.00, 100.00);
+            assertAccountTotals("5100", 30.00, 0.00);
+            assertAccountTotals("6000", 10.00, 0.00);
+            database.setTransactionSuccessful();
+        } finally {
+            database.endTransaction();
+        }
+    }
+
+    private void assertJournalBalanced(long journalId) {
+        Cursor c = database.rawQuery(
+                "SELECT COALESCE(SUM(debit),0),COALESCE(SUM(credit),0) FROM journal_lines WHERE journal_entry_id=?",
+                new String[]{String.valueOf(journalId)});
+        try {
+            assertTrue(c.moveToFirst());
+            assertEquals("Journal entry must balance: " + journalId, c.getDouble(0), c.getDouble(1), 0.000001);
+        } finally {
+            c.close();
+        }
+    }
+
+    private void assertAccountTotals(String code, double expectedDebit, double expectedCredit) {
+        Cursor c = database.rawQuery(
+                "SELECT COALESCE(SUM(l.debit),0),COALESCE(SUM(l.credit),0) " +
+                "FROM journal_lines l JOIN accounts a ON a.id=l.account_id WHERE a.code=?",
+                new String[]{code});
+        try {
+            assertTrue(c.moveToFirst());
+            assertEquals("Debit total for account " + code, expectedDebit, c.getDouble(0), 0.000001);
+            assertEquals("Credit total for account " + code, expectedCredit, c.getDouble(1), 0.000001);
+        } finally {
+            c.close();
+        }
+    }
+
+    @Test
     public void upgradeFromVersionEightPreservesRowsAndAddsNewColumns() {
         helper.close();
         context.deleteDatabase("smartcompany2.db");
