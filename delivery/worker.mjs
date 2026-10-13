@@ -213,6 +213,160 @@ async function createLicense(request, env) {
   }, 201, env);
 }
 
+
+async function ensureAppLicenseTables(env) {
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS app_licenses (
+      id TEXT PRIMARY KEY,
+      license_code_hash TEXT NOT NULL UNIQUE,
+      plan TEXT NOT NULL,
+      term_type TEXT NOT NULL,
+      customer_name TEXT NOT NULL,
+      customer_email TEXT,
+      order_id TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      device_hash TEXT UNIQUE,
+      starts_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      expires_at TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      approved_by TEXT NOT NULL
+    )
+  `).run();
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS app_trials (
+      device_hash TEXT PRIMARY KEY,
+      started_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `).run();
+}
+
+function appDeviceId(request) {
+  return String(request.headers.get("x-app-device-id") || "").trim();
+}
+
+async function appDeviceHash(request) {
+  const id = appDeviceId(request);
+  if (!id || id.length < 8 || id.length > 256) return null;
+  return sha256("smart-company-app-v1:" + id);
+}
+
+function appLicenseActive(row) {
+  return Boolean(row && row.status === "active" &&
+    (!row.expires_at || new Date(row.expires_at).getTime() > Date.now()));
+}
+
+async function appLicenseStatus(request, env) {
+  const deviceHash = await appDeviceHash(request);
+  if (!deviceHash) return json({ ok: false, error: "device_id_required" }, 400, env);
+  await ensureAppLicenseTables(env);
+
+  const license = await env.DB.prepare(
+    "SELECT id, plan, term_type, status, starts_at, expires_at FROM app_licenses WHERE device_hash = ?"
+  ).bind(deviceHash).first();
+
+  if (appLicenseActive(license)) {
+    return json({
+      ok: true, mode: "licensed", licenseId: license.id, plan: license.plan,
+      termType: license.term_type, expiresAt: license.expires_at, serverTime: new Date().toISOString()
+    }, 200, env);
+  }
+
+  let trial = await env.DB.prepare(
+    "SELECT started_at, expires_at FROM app_trials WHERE device_hash = ?"
+  ).bind(deviceHash).first();
+
+  if (!trial) {
+    const startedAt = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 7 * 86400000).toISOString();
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO app_trials (device_hash, started_at, expires_at) VALUES (?, ?, ?)"
+    ).bind(deviceHash, startedAt, expiresAt).run();
+    trial = await env.DB.prepare(
+      "SELECT started_at, expires_at FROM app_trials WHERE device_hash = ?"
+    ).bind(deviceHash).first();
+  }
+
+  const active = new Date(trial.expires_at).getTime() > Date.now();
+  return json({
+    ok: true, mode: active ? "trial" : "expired", trialStartedAt: trial.started_at,
+    expiresAt: trial.expires_at, remainingMs: Math.max(0, new Date(trial.expires_at).getTime() - Date.now()),
+    serverTime: new Date().toISOString()
+  }, 200, env);
+}
+
+async function activateAppLicense(request, env) {
+  const deviceHash = await appDeviceHash(request);
+  if (!deviceHash) return json({ ok: false, error: "device_id_required" }, 400, env);
+  const body = await request.json().catch(() => null);
+  const code = String(body && body.activationCode || "").trim().toUpperCase();
+  if (!/^[A-Z0-9-]{12,64}$/.test(code)) {
+    return json({ ok: false, error: "invalid_activation_code" }, 400, env);
+  }
+  await ensureAppLicenseTables(env);
+  const codeHash = await sha256(code);
+  const license = await env.DB.prepare(
+    "SELECT id, plan, term_type, status, device_hash, starts_at, expires_at FROM app_licenses WHERE license_code_hash = ?"
+  ).bind(codeHash).first();
+
+  if (!license || license.status !== "active" ||
+      (license.expires_at && new Date(license.expires_at).getTime() <= Date.now())) {
+    return json({ ok: false, error: "license_invalid_or_expired" }, 403, env);
+  }
+  if (license.device_hash && license.device_hash !== deviceHash) {
+    return json({ ok: false, error: "license_bound_to_another_device" }, 403, env);
+  }
+  if (!license.device_hash) {
+    const result = await env.DB.prepare(
+      "UPDATE app_licenses SET device_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND device_hash IS NULL AND status = 'active'"
+    ).bind(deviceHash, license.id).run();
+    if (!result.meta?.changes) {
+      const fresh = await env.DB.prepare("SELECT device_hash FROM app_licenses WHERE id = ?").bind(license.id).first();
+      if (!fresh || fresh.device_hash !== deviceHash) return json({ ok: false, error: "license_bound_to_another_device" }, 403, env);
+    }
+  }
+  return json({
+    ok: true, mode: "licensed", licenseId: license.id, plan: license.plan,
+    termType: license.term_type, expiresAt: license.expires_at, serverTime: new Date().toISOString()
+  }, 200, env);
+}
+
+async function createAppLicense(request, env) {
+  if (!isAdmin(request, env)) return json({ ok: false, error: "unauthorized" }, 401, env);
+  const body = await request.json().catch(() => null);
+  const plan = String(body && body.plan || "").toLowerCase();
+  const termType = String(body && body.termType || "").toLowerCase();
+  const customerName = String(body && body.customerName || "").trim().slice(0, 160);
+  const approvedBy = String(body && body.approvedBy || "owner").trim().slice(0, 120);
+  if (!body || body.approved !== true || !/^(basic|pro|business|enterprise)$/.test(plan) ||
+      !/^(perpetual|monthly|annual)$/.test(termType) || customerName.length < 2) {
+    return json({ ok: false, error: "explicit_payment_approval_and_valid_plan_required" }, 400, env);
+  }
+  await ensureAppLicenseTables(env);
+  const id = String(body.licenseId || ("SC-" + crypto.randomUUID().replaceAll("-", "").slice(0, 16))).toUpperCase();
+  if (!/^[A-Z0-9_-]{6,80}$/.test(id)) return json({ ok: false, error: "invalid_license_id" }, 400, env);
+  const activationCode = ("SC-" + crypto.randomUUID() + "-" + crypto.randomUUID().slice(0, 8)).toUpperCase();
+  const codeHash = await sha256(activationCode);
+  let expiresAt = null;
+  if (termType === "monthly") expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
+  if (termType === "annual") expiresAt = new Date(Date.now() + 365 * 86400000).toISOString();
+  try {
+    await env.DB.prepare(
+      "INSERT INTO app_licenses (id, license_code_hash, plan, term_type, customer_name, customer_email, order_id, expires_at, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(id, codeHash, plan, termType, customerName,
+      String(body.customerEmail || "").trim().toLowerCase() || null,
+      String(body.orderId || "").trim() || null, expiresAt, approvedBy).run();
+  } catch (e) {
+    return json({ ok: false, error: "license_create_failed" }, 409, env);
+  }
+  return json({
+    ok: true, licenseId: id, activationCode, plan, termType, expiresAt,
+    paymentApproved: true, note: "Show this code to the buyer once; only its hash is stored."
+  }, 201, env);
+}
+
 async function info(request, env, token) {
   const row = await lookup(token, env);
 
@@ -507,6 +661,18 @@ export default {
 
       if (url.pathname === "/admin/upload-book" && request.method === "GET") {
         return uploadPage();
+      }
+
+      if (url.pathname === "/api/app-license/status" && request.method === "GET") {
+        return appLicenseStatus(request, env);
+      }
+
+      if (url.pathname === "/api/app-license/activate" && request.method === "POST") {
+        return activateAppLicense(request, env);
+      }
+
+      if (url.pathname === "/api/app-license/admin/create" && request.method === "POST") {
+        return createAppLicense(request, env);
       }
 
       if (url.pathname === "/api/license/create" && request.method === "POST") {
