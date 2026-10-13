@@ -50,6 +50,20 @@ jobs:
         working-directory: android-app
         run: ./gradlew clean assembleRelease bundleRelease
 
+      # A fresh-install test APK is signed with Android's automatically generated debug key.
+      # It is for device testing only, never for commercial distribution.
+      - name: Build clean-install test APK
+        working-directory: android-app
+        run: ./gradlew assembleDebug
+
+      - name: Upload clean-install test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: smart-company-2.3.1-clean-install-test-debug
+          path: android-app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Sign release APK and App Bundle
         env:
           KEYSTORE_B64: ${{ secrets.SMARTCOMPANY_KEYSTORE_BASE64 }}
