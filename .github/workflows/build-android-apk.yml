@@ -99,7 +99,15 @@ jobs:
           echo "store pass length: ${#KEYSTORE_PASSWORD}"
           if ! kt_out="$(keytool -list -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" 2>&1)"; then
             echo "keytool: $(printf '%s' "$kt_out" | head -n 2)"
-            echo "::error title=Keystore password rejected::Base64 decoded successfully, but SMARTCOMPANY_KEYSTORE_PASSWORD does not unlock this keystore. The alias was not checked."
+            if printf '%s' "$kt_out" | grep -Eqi 'Unrecognized keystore format|Invalid keystore format|Keystore was tampered with, or password was incorrect'; then
+              if printf '%s' "$kt_out" | grep -Eqi 'Unrecognized keystore format|Invalid keystore format'; then
+                echo "::error title=Invalid keystore file::Base64 decoded, but the resulting file is not a recognized Java keystore. Recreate SMARTCOMPANY_KEYSTORE_BASE64 from the original valid keystore file; do not change passwords yet."
+              else
+                echo "::error title=Keystore password rejected::The keystore format was recognized, but the store password may be incorrect. Verify SMARTCOMPANY_KEYSTORE_PASSWORD locally without sharing it."
+              fi
+            else
+              echo "::error title=Keystore validation failed::keytool could not validate the keystore. Review the keytool error above; no password or keystore contents were printed."
+            fi
             exit 1
           fi
           # If the configured alias is wrong, auto-correct only when the keystore contains
