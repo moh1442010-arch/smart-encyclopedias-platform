@@ -47,6 +47,7 @@ public class MainActivity extends Activity{
  void dashboard(){
   page("لوحة التحكم");content.setPadding(10,10,10,16);content.addView(languageButton());
   TextView heading=t("مركز إدارة النشاط",24);heading.setTextColor(green);content.addView(heading);
+  Button plansButton=b("💼 الباقات والأسعار");plansButton.setTextSize(18);content.addView(plansButton,new LinearLayout.LayoutParams(-1,-2));plansButton.setOnClickListener(v->plansPage());
   TextView summaryBox=t(summary(),15);summaryBox.setBackgroundColor(Color.rgb(232,242,236));content.addView(summaryBox);
   String[][] items={
    {"🧾","نقطة البيع والمبيعات","إنشاء فواتير البيع وتحصيل المبالغ"},{"🛒","المشتريات","فواتير الشراء وتحديث تكلفة المخزون"},
@@ -64,6 +65,32 @@ public class MainActivity extends Activity{
    TextView detail=t(items[i][2],12);detail.setGravity(Gravity.CENTER);detail.setTextColor(Color.DKGRAY);card.addView(detail,new LinearLayout.LayoutParams(-1,-2));
    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(6,6,6,6);row.addView(card,lp);card.setOnClickListener(v->openSection(title));
   }
+ }
+ void plansPage(){
+  page("الباقات والأسعار");
+  content.addView(t("اختر طريقة الشراء التي تناسب نشاطك",21));
+  content.addView(t("تجربة مجانية لمدة 7 أيام — للتقييم فقط. بعد انتهائها تُقفل الوظائف المدفوعة، ولا ينبغي حذف بيانات الشركة أو منع تصديرها.",15));
+  content.addView(t("1) الترخيص الدائم",19));
+  content.addView(t("دفعة واحدة لاستخدام النسخة المحددة وقت الشراء. لا يشمل المزايا الجديدة المستقبلية أو الخدمات السحابية إلا إذا نص الترخيص على ذلك. تُعلن سياسة إصلاحات الأمان والتوافق بوضوح.",14));
+  content.addView(t("2) الاشتراك الشهري",19));
+  content.addView(t("يشمل مزايا الباقة والتحديثات والدعم المحدد طوال مدة الاشتراك. يمكن إيقاف الوظائف المدفوعة عند الانتهاء، مع الحفاظ على البيانات وإتاحة تصديرها.",14));
+  content.addView(t("3) الاشتراك السنوي",19));
+  content.addView(t("يشمل مزايا الاشتراك الشهري لمدة سنة كاملة، مع سعر سنوي مخفض مقارنة بالدفع الشهري عند اعتماد قائمة الأسعار النهائية.",14));
+  content.addView(t("مستويات المنتج",20));
+  content.addView(t("Basic — إدارة المبيعات والمشتريات والمخزون والعملاء والموردين والتقارير الأساسية.",15));
+  content.addView(t("Pro — مزايا Basic وتقارير ووظائف محاسبية موسعة بعد اختبارها واعتمادها.",15));
+  content.addView(t("Business — احتياجات أوسع للمستخدمين والصلاحيات والفروع عند اكتمال تنفيذها.",15));
+  content.addView(t("Enterprise — عرض مخصص للشركات الكبيرة بحسب المستخدمين والفروع والتكاملات والدعم.",15));
+  content.addView(t("أسعار اختبار أولية (ليست أسعارًا نهائية)",19));
+  content.addView(t("السودان — Basic: دائم 150,000 ج.س | شهري 15,000 ج.س | سنوي 150,000 ج.س",14));
+  content.addView(t("السودان — Pro: دائم 300,000 ج.س | شهري 30,000 ج.س | سنوي 300,000 ج.س",14));
+  content.addView(t("السودان — Business: دائم 600,000 ج.س | شهري 60,000 ج.س | سنوي 600,000 ج.س",14));
+  content.addView(t("السعودية — Basic: دائم 399 ر.س | شهري 29 ر.س | سنوي 290 ر.س",14));
+  content.addView(t("السعودية — Pro: دائم 799 ر.س | شهري 59 ر.س | سنوي 590 ر.س",14));
+  content.addView(t("السعودية — Business: دائم 1,499 ر.س | شهري 119 ر.س | سنوي 1,190 ر.س",14));
+  content.addView(t("مصر والعراق وبقية الدول: الأسعار المحلية لم تعتمد بعد، ولن تُحسب بتحويل آلي للعملة.",14));
+  content.addView(t("مهم: هذه الشاشة تعرض هيكل الباقات والأسعار المقترحة فقط. الشراء والتفعيل والتجديد الآلي غير متاحين بعد؛ لا تدفع مقابل اشتراك من داخل هذا الإصدار.",15));
+  Button supportButton=b("الاستفسار عن الباقات");content.addView(supportButton);supportButton.setOnClickListener(v->support());
  }
  void groupMenu(String title,String[][] links){
   page(title);content.addView(t("اختر الوظيفة المطلوبة",16));
