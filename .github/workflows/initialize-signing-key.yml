@@ -4,47 +4,59 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   initialize-signing-key:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
       - name: Require the new keystore password secret
         env:
           STORE_PASSWORD: ${{ secrets.SMARTCOMPANY_KEYSTORE_PASSWORD }}
         run: |
           set -euo pipefail
           if [ "${#STORE_PASSWORD}" -lt 16 ]; then
-            echo "::error title=Signing password missing or too short::Create SMARTCOMPANY_KEYSTORE_PASSWORD in repository Actions secrets with a unique password of at least 16 characters, then rerun this workflow."
+            echo "::error title=Signing password missing or too short::Create SMARTCOMPANY_KEYSTORE_PASSWORD as a repository Actions secret with a unique password of at least 16 characters, then rerun this workflow."
             exit 1
           fi
 
-      - name: Generate a new release keystore
+      - name: Refuse to overwrite an existing release key
+        run: |
+          set -euo pipefail
+          if [ -e .github/signing/smartcompany-release.jks.gpg ]; then
+            echo "::error title=Signing key already exists::An encrypted release key is already saved in the repository. Refusing to replace it because changing the signing key can prevent app updates."
+            exit 1
+          fi
+
+      - name: Generate, validate, encrypt, and save the release key
         env:
           STORE_PASSWORD: ${{ secrets.SMARTCOMPANY_KEYSTORE_PASSWORD }}
         run: |
           set -euo pipefail
-          mkdir -p signing-export
-          keytool -genkeypair -v \
-            -keystore signing-export/smartcompany-release.jks \
-            -storetype JKS \
-            -storepass "$STORE_PASSWORD" \
-            -keypass "$STORE_PASSWORD" \
-            -alias smartcompany-release \
-            -keyalg RSA -keysize 3072 -validity 10000 \
-            -dname "CN=Smart Company Release, OU=Android, O=Smart Company, L=Khartoum, ST=Khartoum, C=SD"
-          keytool -list -keystore signing-export/smartcompany-release.jks \
-            -storepass "$STORE_PASSWORD" -alias smartcompany-release >/dev/null
-          base64 -w 0 signing-export/smartcompany-release.jks > signing-export/SMARTCOMPANY_KEYSTORE_BASE64.txt
-          printf '\n' >> signing-export/SMARTCOMPANY_KEYSTORE_BASE64.txt
-          echo "Signing keystore generated and validated. Password and keystore contents were not printed."
-          sha256sum signing-export/smartcompany-release.jks | awk '{print "Keystore SHA-256: " $1}'
+          mkdir -p signing-export .github/signing
+          umask 077
+          keytool -genkeypair             -keystore signing-export/smartcompany-release.jks             -storetype JKS             -storepass "$STORE_PASSWORD"             -keypass "$STORE_PASSWORD"             -alias smartcompany-release             -keyalg RSA -keysize 3072 -validity 10000             -dname "CN=Smart Company Release, OU=Android, O=Smart Company, L=Khartoum, ST=Khartoum, C=SD"
+          keytool -list -keystore signing-export/smartcompany-release.jks             -storepass "$STORE_PASSWORD" -alias smartcompany-release >/dev/null
+          printf '%s' "$STORE_PASSWORD" | gpg --batch --yes --pinentry-mode loopback             --passphrase-fd 0 --symmetric --cipher-algo AES256             --output .github/signing/smartcompany-release.jks.gpg             signing-export/smartcompany-release.jks
+          # Verify that the encrypted copy decrypts and matches the original.
+          printf '%s' "$STORE_PASSWORD" | gpg --quiet --batch --yes --pinentry-mode loopback             --passphrase-fd 0 --decrypt .github/signing/smartcompany-release.jks.gpg             > signing-export/roundtrip.jks
+          cmp signing-export/smartcompany-release.jks signing-export/roundtrip.jks
+          keytool -list -keystore signing-export/roundtrip.jks             -storepass "$STORE_PASSWORD" -alias smartcompany-release >/dev/null
+          echo "Encrypted release keystore generated, decrypted, and validated. No key or password was printed."
+          sha256sum signing-export/smartcompany-release.jks | awk '{print "Local validation SHA-256: " $1}'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/signing/smartcompany-release.jks.gpg
+          git commit -m "Save encrypted Smart Company release signing key"
+          git push
+          echo "Encrypted keystore saved to the repository. The plaintext keystore remained on the temporary runner only."
 
-      - name: Export keystore payload briefly for owner to save
-        uses: actions/upload-artifact@v4
-        with:
-          name: smartcompany-signing-bootstrap-ONE-TIME
-          path: signing-export/SMARTCOMPANY_KEYSTORE_BASE64.txt
-          if-no-files-found: error
-          retention-days: 1
+      - name: Remove temporary plaintext key
+        if: always()
+        run: |
+          rm -rf signing-export
