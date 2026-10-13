@@ -47,6 +47,13 @@ public class MainActivitySecurityValidationTest {
     }
 
     @Test
+    public void freshInstallDoesNotCreateAUniversalDefaultPin() {
+        SharedPreferences prefs = activity.getSharedPreferences("security", Context.MODE_PRIVATE);
+        assertFalse("Fresh install must not silently enable a known default PIN", prefs.contains("pin"));
+        assertFalse("Fresh install must wait for the user to create a PIN", prefs.contains("pin_hash"));
+    }
+
+    @Test
     public void pinIsSaltedAndVerifiedWithoutStoringPlaintext() {
         SharedPreferences prefs = activity.getSharedPreferences("test-security", Context.MODE_PRIVATE);
         prefs.edit().clear().commit();
