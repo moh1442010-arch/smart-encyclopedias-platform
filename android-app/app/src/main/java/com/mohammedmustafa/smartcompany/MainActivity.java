@@ -21,6 +21,7 @@ public class MainActivity extends Activity{
 
  static final String LICENSE_API="https://smart-encyclopedias-delivery.moh1442010.workers.dev";
  static final long OFFLINE_GRACE_MS=72L*60L*60L*1000L;
+ long parseLicenseTime(String value){try{java.text.SimpleDateFormat f=new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",Locale.US);f.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));java.util.Date d=f.parse(value);return d==null?0:d.getTime();}catch(Exception e){try{java.text.SimpleDateFormat f=new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'",Locale.US);f.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));java.util.Date d=f.parse(value);return d==null?0:d.getTime();}catch(Exception ignored){return 0;}}}
  String appDeviceId(){String id=android.provider.Settings.Secure.getString(getContentResolver(),android.provider.Settings.Secure.ANDROID_ID);return id==null?"":id;}
  void checkCommercialAccess(){
   new Thread(()->{
@@ -32,7 +33,7 @@ public class MainActivity extends Activity{
     java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();byte[] buf=new byte[2048];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);in.close();
     org.json.JSONObject d=new org.json.JSONObject(out.toString("UTF-8"));
     if(code>=200&&code<300&&d.optBoolean("ok")){
-     mode=d.optString("mode","");long expiry=0;try{expiry=java.time.Instant.parse(d.optString("expiresAt","")).toEpochMilli();}catch(Exception ignored){}
+     mode=d.optString("mode","");long expiry=0;try{expiry=parseLicenseTime(d.optString("expiresAt",""));}catch(Exception ignored){}
      allowed=("licensed".equals(mode)||("trial".equals(mode)&&expiry>System.currentTimeMillis()));
      getSharedPreferences("commercial_license",0).edit().putString("mode",mode).putLong("expires_at",expiry).putLong("last_verified_at",System.currentTimeMillis()).putString("license_id",d.optString("licenseId","")).apply();
      if(!allowed)error="انتهت التجربة المجانية. أدخل رمز الترخيص التجاري للمتابعة.";
@@ -69,7 +70,7 @@ public class MainActivity extends Activity{
      java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();byte[] buf=new byte[2048];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);in.close();
      org.json.JSONObject d=new org.json.JSONObject(out.toString("UTF-8"));
      if(status>=200&&status<300&&d.optBoolean("ok")){
-      long expiry=0;try{expiry=java.time.Instant.parse(d.optString("expiresAt","")).toEpochMilli();}catch(Exception ignored){}
+      long expiry=0;try{expiry=parseLicenseTime(d.optString("expiresAt",""));}catch(Exception ignored){}
       getSharedPreferences("commercial_license",0).edit().putString("mode","licensed").putLong("expires_at",expiry).putLong("last_verified_at",System.currentTimeMillis()).putString("license_id",d.optString("licenseId","")).apply();ok=true;
      }else resultMessage="تعذر التفعيل: "+d.optString("error","تحقق من الرمز وحالته.");
      c.disconnect();
@@ -109,6 +110,7 @@ public class MainActivity extends Activity{
  String pinHash(String pin,byte[] salt)throws Exception{javax.crypto.spec.PBEKeySpec spec=new javax.crypto.spec.PBEKeySpec(pin.toCharArray(),salt,120000,256);try{return android.util.Base64.encodeToString(javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1").generateSecret(spec).getEncoded(),android.util.Base64.NO_WRAP);}finally{spec.clearPassword();}}
  String pinHash(String pin,String salt)throws Exception{return pinHash(pin,android.util.Base64.decode(salt,android.util.Base64.NO_WRAP));}
  void dashboard(){
+  android.content.SharedPreferences lic=getSharedPreferences("commercial_license",0);long licenseExpiry=lic.getLong("expires_at",0);if("trial".equals(lic.getString("mode",""))&&licenseExpiry>0&&licenseExpiry<=System.currentTimeMillis()){licensePage("انتهت التجربة المجانية. أدخل رمز الترخيص التجاري للمتابعة.");return;}
   page("لوحة التحكم");content.setPadding(10,10,10,16);content.addView(languageButton());
   TextView heading=t("مركز إدارة النشاط",24);heading.setTextColor(green);content.addView(heading);
   Button plansButton=b("💼 الباقات والأسعار");plansButton.setTextSize(18);content.addView(plansButton,new LinearLayout.LayoutParams(-1,-2));plansButton.setOnClickListener(v->plansPage());
