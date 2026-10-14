@@ -60,9 +60,72 @@ sealed class MainForm : Form
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
         Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("المرتجعات", Returns); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
-        Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("التقارير المالية", Reports); Add("الدفع والتحويل البنكي", PaymentDetails); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
+        Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("التقارير المالية", Reports); Add("الباقات والأسعار", SubscriptionPlans); Add("الدفع والتحويل البنكي", PaymentDetails); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
         Add("اختيار اللغة / Language", ToggleLanguage);
         RefreshSummary();
+    }
+
+    void SubscriptionPlans()
+    {
+        using var f = new Form { Text = UiLanguage.T("باقات وأسعار المحاسب الذكي"), Width = 820, Height = 760, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var panel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(18) };
+        f.Controls.Add(panel);
+        void LabelText(string text, int height = 32, int size = 12) => panel.Controls.Add(new Label { Text = UiLanguage.T(text), Width = 740, Height = height, Font = new Font("Segoe UI", size, FontStyle.Regular), TextAlign = ContentAlignment.MiddleCenter });
+        LabelText("باقات المحاسب الذكي — اختر السوق والباقة والمدة", 44, 17);
+        LabelText("السودان — الجنيه السوداني (ج.س)", 34, 14);
+        LabelText("Basic: دائم 150,000 | شهري 15,000 | سنوي 150,000 ج.س");
+        LabelText("Pro: دائم 300,000 | شهري 30,000 | سنوي 300,000 ج.س");
+        LabelText("Business: دائم 600,000 | شهري 60,000 | سنوي 600,000 ج.س");
+        LabelText("السعودية — الريال السعودي (ر.س)", 34, 14);
+        LabelText("Basic: دائم 399 | شهري 29 | سنوي 290 ر.س");
+        LabelText("Pro: دائم 799 | شهري 59 | سنوي 590 ر.س");
+        LabelText("Business: دائم 1,499 | شهري 119 | سنوي 1,190 ر.س");
+        LabelText("السعر بالدولار غير معتمد هنا؛ اطلب عرض السعر من الدعم.", 38, 11);
+        var market = new ComboBox { Width = 720, DropDownStyle = ComboBoxStyle.DropDownList };
+        market.Items.AddRange(new object[] { "السودان — جنيه سوداني (بنكك)", "السعودية — ريال سعودي", "الدفع بالدولار الأمريكي — اطلب السعر" }); market.SelectedIndex = 0;
+        var tier = new ComboBox { Width = 720, DropDownStyle = ComboBoxStyle.DropDownList };
+        tier.Items.AddRange(new object[] { "Basic", "Pro", "Business", "Enterprise — عرض مخصص" }); tier.SelectedIndex = 0;
+        var period = new ComboBox { Width = 720, DropDownStyle = ComboBoxStyle.DropDownList };
+        period.Items.AddRange(new object[] { "ترخيص دائم", "اشتراك شهري", "اشتراك سنوي" }); period.SelectedIndex = 0;
+        LabelText("بلد/عملة الدفع");
+        panel.Controls.Add(market);
+        LabelText("الباقة");
+        panel.Controls.Add(tier);
+        LabelText("مدة الترخيص/الاشتراك");
+        panel.Controls.Add(period);
+        var price = new Label { Width = 740, Height = 42, Font = new Font("Segoe UI", 16, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
+        panel.Controls.Add(price);
+        string PriceText()
+        {
+            int p = tier.SelectedIndex, d = period.SelectedIndex;
+            if (p == 3) return "عرض سعر مخصص — تواصل مع الدعم";
+            if (market.SelectedIndex == 2) return "السعر بالدولار غير محدد — اطلب السعر من الدعم";
+            string[][] sdg = { new[] { "150,000", "15,000", "150,000" }, new[] { "300,000", "30,000", "300,000" }, new[] { "600,000", "60,000", "600,000" } };
+            string[][] sar = { new[] { "399", "29", "290" }, new[] { "799", "59", "590" }, new[] { "1,499", "119", "1,190" } };
+            return market.SelectedIndex == 0 ? sdg[p][d] + " ج.س" : sar[p][d] + " ر.س";
+        }
+        void UpdatePrice(object? sender, EventArgs e) => price.Text = UiLanguage.T("السعر المختار: ") + PriceText();
+        market.SelectedIndexChanged += UpdatePrice; tier.SelectedIndexChanged += UpdatePrice; period.SelectedIndexChanged += UpdatePrice; UpdatePrice(this, EventArgs.Empty);
+        var company = new TextBox { Width = 720, PlaceholderText = UiLanguage.T("اسم الشركة أو النشاط") }; panel.Controls.Add(company);
+        var contact = new TextBox { Width = 720, PlaceholderText = UiLanguage.T("رقم واتساب للتواصل") }; panel.Controls.Add(contact);
+        var notes = new TextBox { Width = 720, Height = 55, Multiline = true, PlaceholderText = UiLanguage.T("تفاصيل الخدمة المطلوبة أو عدد المستخدمين والفروع") }; panel.Controls.Add(notes);
+        var bankak = new Button { Text = UiLanguage.T("📋 نسخ رقم حساب بنكك: 1882224"), Width = 720, Height = 38 };
+        bankak.Click += (_, _) => { try { Clipboard.SetText("1882224"); MessageBox.Show(UiLanguage.T("تم نسخ رقم حساب بنكك.")); } catch { MessageBox.Show(UiLanguage.T("تعذر النسخ.")); } }; panel.Controls.Add(bankak);
+        const string iban = "SD8504018822240001";
+        var ibanLabel = new Label { Text = "IBAN: " + iban + " — تحقق من البنك أن الحساب يستقبل التحويل بالدولار قبل الإرسال.", Width = 740, Height = 48, TextAlign = ContentAlignment.MiddleCenter };
+        panel.Controls.Add(ibanLabel);
+        var copyIban = new Button { Text = UiLanguage.T("📋 نسخ رقم IBAN"), Width = 720, Height = 38 };
+        copyIban.Click += (_, _) => { try { Clipboard.SetText(iban); MessageBox.Show(UiLanguage.T("تم نسخ رقم IBAN.")); } catch { MessageBox.Show(UiLanguage.T("تعذر النسخ.")); } }; panel.Controls.Add(copyIban);
+        var send = new Button { Text = UiLanguage.T("💬 اختيار الباقة وإرسال إشعار عبر واتساب"), Width = 720, Height = 44 };
+        send.Click += (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(company.Text)) { MessageBox.Show(UiLanguage.T("أدخل اسم الشركة أو النشاط أولًا")); return; }
+            var message = "السلام عليكم، أريد طلب باقة من المحاسب الذكي.\nالشركة: " + company.Text.Trim() + "\nالسوق/العملة: " + market.SelectedItem + "\nالباقة: " + tier.SelectedItem + "\nالمدة: " + period.SelectedItem + "\nالسعر المعروض: " + PriceText() + "\nرقم تواصل العميل: " + contact.Text.Trim() + "\nالتفاصيل: " + notes.Text.Trim() + "\nبنكك: 1882224\nIBAN: " + iban + "\nيرجى تأكيد السعر النهائي وبيانات المستفيد والتحويل قبل التفعيل.";
+            var url = "https://wa.me/249121851285?text=" + Uri.EscapeDataString(message);
+            try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch { MessageBox.Show(UiLanguage.T("تعذر فتح واتساب؛ أرسل الطلب يدويًا.")); }
+        }; panel.Controls.Add(send);
+        LabelText("إرسال الطلب لا يفعّل الترخيص تلقائيًا؛ يجب تأكيد الدفع يدويًا.", 42, 11);
+        f.ShowDialog(this);
     }
 
     void PaymentDetails()
