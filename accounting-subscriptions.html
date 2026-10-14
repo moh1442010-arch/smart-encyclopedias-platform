@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="باقات وأسعار تطبيق المحاسب الذكي لشركة محمد مصطفى الذكية — اختر الباقة والمدة والعملة وأرسل طلبك عبر واتساب.">
+<title>باقات وأسعار المحاسب الذكي</title>
+<style>
+:root{--navy:#0b1f3a;--gold:#d4af37;--bg:#f5f7fb;--ink:#18263a;--muted:#5d6b7d;--line:#dce3ec}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;line-height:1.65}
+header{background:linear-gradient(135deg,#0b1f3a,#173b65);color:#fff;padding:32px 18px;text-align:center;border-bottom:5px solid var(--gold)}header h1{margin:0 0 8px;font-size:clamp(25px,5vw,38px)}header p{margin:0;color:#e7edf6}
+main{max-width:1000px;margin:24px auto;padding:0 14px 42px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;margin:16px 0;box-shadow:0 8px 26px #0b1f3a0a}
+h2{margin:0 0 14px;color:var(--navy);font-size:22px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:560px}th,td{padding:12px 10px;border-bottom:1px solid var(--line);text-align:center}th{background:var(--navy);color:white}tbody tr:nth-child(even){background:#f8fafc}td:first-child{font-weight:750}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}label{display:block;font-weight:700;margin-bottom:5px}select,input,textarea{font:inherit;width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:11px;background:#fff;color:var(--ink)}textarea{min-height:76px;resize:vertical}.price{background:#fff9e5;border:1px solid #ead27b;border-radius:12px;padding:15px;text-align:center;font-size:24px;font-weight:800;color:var(--navy);margin:18px 0}
+button,.button{display:inline-flex;justify-content:center;align-items:center;gap:8px;border:0;border-radius:10px;padding:12px 16px;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}
+.primary{background:#146c43;color:white}.secondary{background:var(--navy);color:white}.gold{background:var(--gold);color:#17243a}.btnrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.payment{background:#f8fafc;border:1px solid var(--line);padding:14px;border-radius:12px;margin-top:12px;overflow-wrap:anywhere}.account{font-size:20px;font-weight:800;letter-spacing:.4px;direction:ltr;display:inline-block}.note{color:var(--muted);font-size:14px}.warning{border-right:4px solid #d97706;background:#fff7ed;padding:12px 14px;border-radius:8px}.download{display:flex;flex-wrap:wrap;gap:10px}.download a{flex:1;min-width:200px}.footer{text-align:center;color:var(--muted);font-size:13px;padding:10px}
+@media(max-width:600px){.card{padding:15px}th,td{padding:9px 7px}.btnrow button,.btnrow .button{width:100%}}
+</style>
+</head>
+<body>
+<header><h1>المحاسب الذكي</h1><p>باقات وأسعار شركة محمد مصطفى الذكية — اختر ما يناسب نشاطك من الجوال أو الكمبيوتر</p></header>
+<main>
+<section class="card"><h2>🇸🇩 السودان — الجنيه السوداني (ج.س)</h2><div class="table-wrap"><table><thead><tr><th>الباقة</th><th>ترخيص دائم</th><th>شهري</th><th>سنوي</th></tr></thead><tbody>
+<tr><td>Basic</td><td>150,000 ج.س</td><td>15,000 ج.س</td><td>150,000 ج.س</td></tr>
+<tr><td>Pro</td><td>300,000 ج.س</td><td>30,000 ج.س</td><td>300,000 ج.س</td></tr>
+<tr><td>Business</td><td>600,000 ج.س</td><td>60,000 ج.س</td><td>600,000 ج.س</td></tr>
+</tbody></table></div></section>
+<section class="card"><h2>🇸🇦 السعودية — الريال السعودي (ر.س)</h2><div class="table-wrap"><table><thead><tr><th>الباقة</th><th>ترخيص دائم</th><th>شهري</th><th>سنوي</th></tr></thead><tbody>
+<tr><td>Basic</td><td>399 ر.س</td><td>29 ر.س</td><td>290 ر.س</td></tr>
+<tr><td>Pro</td><td>799 ر.س</td><td>59 ر.س</td><td>590 ر.س</td></tr>
+<tr><td>Business</td><td>1,499 ر.س</td><td>119 ر.س</td><td>1,190 ر.س</td></tr>
+</tbody></table></div></section>
+<section class="card"><h2>اختر الباقة وأرسل طلب الاشتراك</h2>
+<div class="controls">
+<div><label for="market">الدولة / العملة</label><select id="market"><option value="sdg">السودان — جنيه سوداني (بنكك)</option><option value="sar">السعودية — ريال سعودي</option><option value="usd">الدفع بالدولار الأمريكي (اطلب السعر)</option></select></div>
+<div><label for="tier">الباقة</label><select id="tier"><option>Basic</option><option>Pro</option><option>Business</option><option>Enterprise — عرض مخصص</option></select></div>
+<div><label for="period">مدة الترخيص</label><select id="period"><option value="perpetual">ترخيص دائم</option><option value="monthly">اشتراك شهري</option><option value="annual">اشتراك سنوي</option></select></div>
+<div><label for="company">اسم الشركة / النشاط</label><input id="company" placeholder="اكتب اسم الشركة"></div>
+<div><label for="phone">رقم واتساب للتواصل</label><input id="phone" inputmode="tel" placeholder="مفتاح الدولة ورقم الهاتف"></div>
+<div><label for="notes">تفاصيل إضافية</label><textarea id="notes" placeholder="عدد المستخدمين أو الفروع أو احتياجات التخصيص"></textarea></div>
+</div>
+<div class="price" id="price">السعر المختار: 150,000 ج.س</div>
+<p class="note">الأسعار بالدولار غير محددة في هذه القائمة، ولا يجري تحويل الأسعار آليًا بين العملات. اطلب عرض سعر بالدولار من الدعم.</p>
+<div class="btnrow"><button class="primary" id="whatsapp">💬 إرسال طلب الاشتراك عبر واتساب</button><button class="secondary" id="copyBankak">📋 نسخ رقم حساب بنكك</button><button class="secondary" id="copyIban">📋 نسخ IBAN</button></div>
+<div class="payment"><div><strong>الدفع في السودان عبر بنكك</strong></div><span class="account" id="bankak">1882224</span><div><strong>IBAN المتاح:</strong> <span class="account" id="iban">SD8504018822240001</span></div><p class="note">قبل إرسال أي تحويل بالدولار، تحقّق مع البنك من اسم المستفيد والعملة وأن هذا الحساب يستقبل تحويلات USD، ومن الرسوم البنكية. لا ترسل كلمات مرور أو رموز تحقق.</p></div>
+<p class="warning">مهم: إرسال الطلب أو إشعار التحويل لا يفعّل الترخيص تلقائيًا. تتم مراجعة الطلب وتأكيد وصول المبلغ يدويًا قبل إصدار التفعيل. أرفق إيصال التحويل في محادثة واتساب بعد فتحها.</p>
+</section>
+<section class="card"><h2>تنزيل التطبيق</h2><p class="note">روابط تنزيل أحدث الملفات تظهر بعد نجاح البناء. قد يطلب GitHub تسجيل الدخول للوصول إلى ملف Artifacts.</p><div class="download"><a class="button gold" href="https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/workflows/build-android-apk.yml">تنزيل نسخة Android</a><a class="button gold" href="https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/workflows/build-windows-app.yml">تنزيل نسخة Windows</a></div></section>
+<div class="footer">شركة محمد مصطفى الذكية · الدعم: <a href="https://wa.me/249121851285">واتساب +249121851285</a> · <a href="mailto:moh1442010@gmail.com">moh1442010@gmail.com</a></div>
+</main>
+<script>
+const prices={sdg:{Basic:["150,000","15,000","150,000"],Pro:["300,000","30,000","300,000"],Business:["600,000","60,000","600,000"]},sar:{Basic:["399","29","290"],Pro:["799","59","590"],Business:["1,499","119","1,190"]}};
+const $=id=>document.getElementById(id);
+function currentPrice(){const m=$("market").value,t=$("tier").value,p=$("period").value;const d={perpetual:0,monthly:1,annual:2}[p];if(t.startsWith("Enterprise"))return "عرض سعر مخصص — تواصل مع الدعم";if(m==="usd")return "السعر بالدولار غير محدد — اطلب عرض سعر";return prices[m][t][d]+(m==="sdg"?" ج.س":" ر.س")}
+function update(){ $("price").textContent="السعر المختار: "+currentPrice(); }
+["market","tier","period"].forEach(id=>$(id).addEventListener("change",update));
+async function copyText(value,label){try{await navigator.clipboard.writeText(value);alert("تم نسخ "+label)}catch(e){const t=document.createElement("textarea");t.value=value;document.body.appendChild(t);t.select();document.execCommand("copy");t.remove();alert("تم نسخ "+label)}}
+$("copyBankak").addEventListener("click",()=>copyText("1882224","رقم حساب بنكك"));
+$("copyIban").addEventListener("click",()=>copyText("SD8504018822240001","IBAN"));
+$("whatsapp").addEventListener("click",()=>{const company=$("company").value.trim();if(!company){alert("يرجى إدخال اسم الشركة أو النشاط أولًا");$("company").focus();return}const msg="السلام عليكم، أريد طلب باقة من المحاسب الذكي.\nالشركة: "+company+"\nالدولة/العملة: "+$("market").selectedOptions[0].text+"\nالباقة: "+$("tier").value+"\nالمدة: "+$("period").selectedOptions[0].text+"\nالسعر المعروض: "+currentPrice()+"\nرقم التواصل: "+$("phone").value.trim()+"\nالتفاصيل: "+$("notes").value.trim()+"\nبنكك: 1882224\nIBAN: SD8504018822240001\nيرجى تأكيد السعر وبيانات المستفيد قبل التحويل والتفعيل.";location.href="https://wa.me/249121851285?text="+encodeURIComponent(msg)});
+update();
+</script>
+</body></html>
