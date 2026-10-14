@@ -730,7 +730,7 @@ ORDER BY a.code";
         }
         int missingSales, missingPurchases, missingExpenses, missingOpeningStock;
         int missingReceipts, missingSupplierPayments, missingPayrollEvents, missingPayrollAccruals;
-        int missingSalesReturns, missingPurchaseReturns;
+        int missingSalesReturns, missingPurchaseReturns, missingPayrollSettlements, unpostedDeductions;
         int unbalancedEntries, orphanLines, invalidLines;
         using (var q = c.CreateCommand())
         {
@@ -762,6 +762,16 @@ ORDER BY a.code";
             missingSalesReturns = r.GetInt32(0);
             missingPurchaseReturns = r.GetInt32(1);
         }
+        using (var q = c.CreateCommand())
+        {
+            q.CommandText = @"SELECT
+(SELECT COUNT(*) FROM payroll_settlements p LEFT JOIN gl_entries g ON g.source_type='PAYROLL_SETTLEMENT' AND g.source_id=p.id WHERE g.id IS NULL),
+(SELECT COUNT(*) FROM payroll_events WHERE kind='DEDUCTION')";
+            using var r = q.ExecuteReader();
+            r.Read();
+            missingPayrollSettlements = r.GetInt32(0);
+            unpostedDeductions = r.GetInt32(1);
+        }
         var balanced = Math.Abs(totalDebit - totalCredit) <= 0.005;
         var report = "دفتر الأستاذ العام — ميزان المراجعة التشخيصي" + Environment.NewLine
             + $"إجمالي المدين: {totalDebit:N2} | إجمالي الدائن: {totalCredit:N2}" + Environment.NewLine
@@ -770,7 +780,8 @@ ORDER BY a.code";
             + $"عمليات بلا قيد: مبيعات {missingSales} | مشتريات {missingPurchases} | مصروفات {missingExpenses} | مخزون افتتاحي {missingOpeningStock}" + Environment.NewLine
             + $"تحصيلات عملاء بلا قيد: {missingReceipts} | سداد موردين بلا قيد: {missingSupplierPayments}" + Environment.NewLine
             + $"مرتجعات مبيعات بلا قيد: {missingSalesReturns} | مرتجعات مشتريات بلا قيد: {missingPurchaseReturns}" + Environment.NewLine
-            + $"سلف موظفين بلا قيد: {missingPayrollEvents} | استحقاقات رواتب بلا قيد: {missingPayrollAccruals}" + Environment.NewLine + Environment.NewLine
+            + $"سلف موظفين بلا قيد: {missingPayrollEvents} | استحقاقات رواتب بلا قيد: {missingPayrollAccruals}" + Environment.NewLine
+            + $"تسويات رواتب بلا قيد: {missingPayrollSettlements} | خصومات رواتب غير مصنفة وغير مرحلة: {unpostedDeductions}" + Environment.NewLine + Environment.NewLine
             + "تنبيه: الأعداد قد تشمل سجلات تاريخية سبقت دفتر الأستاذ. الخصومات العامة والمرتجعات والتسويات والإقفال ليست مكتملة؛ لا تعتمد التقرير كقوائم مالية معتمدة." + Environment.NewLine + Environment.NewLine
             + string.Join(Environment.NewLine, rows);
         using var f = new Form { Text = "دفتر الأستاذ وميزان المراجعة", Width = 900, Height = 650, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
