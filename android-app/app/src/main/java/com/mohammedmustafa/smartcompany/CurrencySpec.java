@@ -21,9 +21,10 @@ public final class CurrencySpec {
         }
         // Zero-decimal CFA franc (Central African currency zone).
         values.put("XAF", 0);
+        values.put("DJF", 0);
         // Two-decimal currencies relevant to the initial regional scope.
         for (String code : new String[]{
-                "AED", "DZD", "EGP", "EUR", "ILS", "LBP", "MAD", "MRU",
+                "AED", "DZD", "EGP", "EUR", "ILS", "LBP", "MAD", "MRU", "SOS",
                 "QAR", "SAR", "SDG", "SSP", "SYP", "USD", "YER"
         }) {
             values.put(code, 2);
