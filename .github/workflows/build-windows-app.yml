@@ -1,4 +1,4 @@
-name: Build Smart Company Windows App 2.2.6
+name: Build Smart Company Windows App 2.2.7
 
 on:
   workflow_dispatch:
@@ -49,11 +49,11 @@ jobs:
 
       - name: Build Release
         working-directory: windows-app
-        run: dotnet build SmartCompany.csproj -c Release --no-restore -p:Version=2.2.6
+        run: dotnet build SmartCompany.csproj -c Release --no-restore -p:Version=2.2.7
 
       - name: Publish self-contained Windows x64
         working-directory: windows-app
-        run: dotnet publish SmartCompany.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:Version=2.2.6
+        run: dotnet publish SmartCompany.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:Version=2.2.7
 
       - name: Package and verify
         shell: powershell
@@ -62,16 +62,16 @@ jobs:
           $exe = "windows-app/bin/Release/net8.0-windows/win-x64/publish/SmartCompany.exe"
           if (!(Test-Path $exe)) { throw "Published executable was not found." }
           if ((Get-Item $exe).Length -lt 1000000) { throw "Published executable is unexpectedly small." }
-          Copy-Item $exe release/SmartCompany-Windows-2.2.6-x64.exe
-          Set-Content release/README.txt "Smart Company Windows x64 - v2.2.6. Pre-commercial build. Operational reports are preliminary and are not approved financial statements. Test only with a backup." -Encoding utf8
-          Compress-Archive -Path release/SmartCompany-Windows-2.2.6-x64.exe,release/README.txt -DestinationPath release/SmartCompany-Windows-2.2.6-x64.zip -Force
-          Get-FileHash release/SmartCompany-Windows-2.2.6-x64.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  SmartCompany-Windows-2.2.6-x64.exe" } | Set-Content release/SHA256SUMS.txt
-          Get-Item release/SmartCompany-Windows-2.2.6-x64.exe,release/SmartCompany-Windows-2.2.6-x64.zip,release/SHA256SUMS.txt | Format-Table Name,Length
+          Copy-Item $exe release/SmartCompany-Windows-2.2.7-x64.exe
+          Set-Content release/README.txt "Smart Company Windows x64 - v2.2.7. Pre-commercial build. Operational reports are preliminary and are not approved financial statements. Test only with a backup." -Encoding utf8
+          Compress-Archive -Path release/SmartCompany-Windows-2.2.7-x64.exe,release/README.txt -DestinationPath release/SmartCompany-Windows-2.2.7-x64.zip -Force
+          Get-FileHash release/SmartCompany-Windows-2.2.7-x64.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  SmartCompany-Windows-2.2.7-x64.exe" } | Set-Content release/SHA256SUMS.txt
+          Get-Item release/SmartCompany-Windows-2.2.7-x64.exe,release/SmartCompany-Windows-2.2.7-x64.zip,release/SHA256SUMS.txt | Format-Table Name,Length
 
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
-          name: smart-company-windows-v2.2.6
+          name: smart-company-windows-v2.2.7
           path: release/*
           if-no-files-found: error
           retention-days: 90
