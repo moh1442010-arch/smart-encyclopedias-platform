@@ -53,6 +53,39 @@ public class DatabaseIntegrityTest {
         assertTrue(accountExists("4000"));
     }
 
+
+    @Test
+    public void returnCanBeRecordedOnlyOnceForOriginalInvoice() {
+        assertTrue(columnExists("transactions", "original_transaction_id"));
+        assertTrue(accountExists("4100"));
+        ContentValues original = new ContentValues();
+        original.put("type", "SALE");
+        original.put("party", "عميل اختبار");
+        original.put("total", 100.0);
+        original.put("paid", 100.0);
+        original.put("remaining", 0.0);
+        original.put("created_at", System.currentTimeMillis());
+        original.put("invoice_no", "TEST-ORIGINAL-1");
+        long originalId = database.insertOrThrow("transactions", null, original);
+
+        ContentValues returned = new ContentValues();
+        returned.put("type", "SALE_RETURN");
+        returned.put("party", "عميل اختبار");
+        returned.put("total", 100.0);
+        returned.put("paid", 100.0);
+        returned.put("remaining", 0.0);
+        returned.put("created_at", System.currentTimeMillis());
+        returned.put("original_transaction_id", originalId);
+        database.insertOrThrow("transactions", null, returned);
+
+        try {
+            database.insertOrThrow("transactions", null, returned);
+            fail("A second return for the same original invoice must be rejected");
+        } catch (android.database.SQLException expected) {
+            // The partial unique index enforces one full return per original invoice.
+        }
+    }
+
     @Test
     public void manualJournalDescriptionColumnIsWritable() {
         ContentValues entry = new ContentValues();
