@@ -232,6 +232,7 @@ public class MainActivity extends Activity{
    double rate;
    try{rate=Double.parseDouble(taxText.isEmpty()?"0":taxText);}catch(Exception ex){toast("تحقق من نسبة الضريبة");return;}
    if(company.isEmpty()||cur.isEmpty()||pre.isEmpty()||Double.isNaN(rate)||Double.isInfinite(rate)||rate<0||rate>100){toast("بيانات غير صحيحة: أكمل الاسم والبادئة، والضريبة بين 0 و100");return;}
+   if(rate>0){toast("محرك احتساب الضريبة غير منفذ بعد؛ اترك النسبة صفرًا حتى اعتماد حساب الضريبة والفاتورة.");return;}
    if(!cur.equals(savedCurrency)){
     Cursor used=db.q("SELECT (SELECT COUNT(*) FROM transactions)+(SELECT COUNT(*) FROM products)+(SELECT COUNT(*) FROM journal_entries)");
     long count=used.moveToFirst()?used.getLong(0):0;used.close();
