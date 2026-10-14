@@ -454,6 +454,57 @@ public class DatabaseIntegrityTest {
         }
     }
 
+    @Test
+    public void grossProfitReportOffsetsSalesReturns() {
+        long now = System.currentTimeMillis();
+        ContentValues sale = new ContentValues();
+        sale.put("type", "SALE");
+        sale.put("party", "عميل اختبار");
+        sale.put("total", 100.0);
+        sale.put("paid", 100.0);
+        sale.put("remaining", 0.0);
+        sale.put("created_at", now);
+        long saleId = database.insertOrThrow("transactions", null, sale);
+
+        ContentValues returned = new ContentValues();
+        returned.put("type", "SALE_RETURN");
+        returned.put("party", "عميل اختبار");
+        returned.put("total", 100.0);
+        returned.put("paid", 100.0);
+        returned.put("remaining", 0.0);
+        returned.put("created_at", now);
+        returned.put("original_transaction_id", saleId);
+        long returnId = database.insertOrThrow("transactions", null, returned);
+
+        insertInvoiceItem(saleId, 100.0, 60.0);
+        insertInvoiceItem(returnId, 100.0, 60.0);
+
+        Cursor c = database.rawQuery(
+                "SELECT COALESCE(SUM(CASE WHEN t.type='SALE_RETURN' " +
+                "THEN -((i.price-i.cost)*i.qty-i.discount) " +
+                "ELSE ((i.price-i.cost)*i.qty-i.discount) END),0) " +
+                "FROM invoice_items i JOIN transactions t ON t.id=i.transaction_id " +
+                "WHERE t.type IN ('SALE','SALE_RETURN') AND t.created_at BETWEEN ? AND ?",
+                new String[]{String.valueOf(now - 1000), String.valueOf(now + 1000)});
+        try {
+            assertTrue(c.moveToFirst());
+            assertEquals("A fully returned sale must not inflate gross profit", 0.0, c.getDouble(0), 0.000001);
+        } finally {
+            c.close();
+        }
+    }
+
+    private void insertInvoiceItem(long transactionId, double price, double cost) {
+        ContentValues item = new ContentValues();
+        item.put("transaction_id", transactionId);
+        item.put("product_id", 1L);
+        item.put("qty", 1.0);
+        item.put("price", price);
+        item.put("cost", cost);
+        item.put("discount", 0.0);
+        database.insertOrThrow("invoice_items", null, item);
+    }
+
     private boolean columnExists(String table, String column) {
         Cursor c = database.rawQuery("PRAGMA table_info(" + table + ")", null);
         try {
