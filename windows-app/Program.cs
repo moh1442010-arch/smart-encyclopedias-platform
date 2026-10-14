@@ -17,7 +17,7 @@ static class UiLanguage
     {
         if (!English || string.IsNullOrEmpty(value)) return value;
         string[][] pairs = {
-          new[]{"شركة محمد مصطفى الذكية","Mohammed Mustafa Smart Company"},new[]{"ملخص تشغيلي أولي — ليس قائمة دخل معتمدة","Preliminary operational summary — not an approved income statement"},new[]{"تنبيه: الفرق الحسابي ليس صافي الربح. دفتر الأستاذ يرحّل العمليات الجديدة المدعومة، لكن السجلات التاريخية والخصومات العامة وتسوية الرواتب والتسويات والإقفال تحتاج إلى مراجعة قبل اعتماد القوائم.","Notice: arithmetic movement is not net profit. The ledger posts supported new transactions, but legacy history, generic deductions, payroll settlement, adjustments, and closing entries require review before financial statements can be relied on."},
+          new[]{"شركة محمد مصطفى الذكية","Mohammed Mustafa Smart Company"},new[]{"الباقات والأسعار","Plans & Pricing"},new[]{"ملخص تشغيلي أولي — ليس قائمة دخل معتمدة","Preliminary operational summary — not an approved income statement"},new[]{"تنبيه: الفرق الحسابي ليس صافي الربح. دفتر الأستاذ يرحّل العمليات الجديدة المدعومة، لكن السجلات التاريخية والخصومات العامة وتسوية الرواتب والتسويات والإقفال تحتاج إلى مراجعة قبل اعتماد القوائم.","Notice: arithmetic movement is not net profit. The ledger posts supported new transactions, but legacy history, generic deductions, payroll settlement, adjustments, and closing entries require review before financial statements can be relied on."},
           new[]{"الموظفون والرواتب","Employees & Payroll"},new[]{"المصروفات","Expenses"},new[]{"النسخ الاحتياطي والاستعادة","Backup & Restore"},new[]{"تسجيل مصروف","Record expense"},new[]{"تصدير نسخة احتياطية","Export backup"},new[]{"استعادة نسخة احتياطية","Restore backup"},new[]{"تم تصدير النسخة الاحتياطية.","Backup exported."},new[]{"تعذر تصدير النسخة الاحتياطية.","Could not export backup."},new[]{"ستستبدل الاستعادة بيانات الشركة الحالية. أنشئ نسخة احتياطية أولًا. هل تريد المتابعة؟","Restore will replace current company data. Back up first. Continue?"},new[]{"تأكيد الاستعادة","Confirm restore"},new[]{"تمت الاستعادة. راجع الأرصدة والتقارير.","Restore complete. Review balances and reports."},new[]{"فشلت الاستعادة: الملف غير صالح أو غير متوافق.","Restore failed: file is invalid or incompatible."},new[]{"أدخل بيانًا ومبلغًا موجبًا صحيحًا.","Enter a description and a positive amount."},new[]{"إجمالي المصروفات:","Total expenses:"},new[]{"صافي الحركة بعد المصروفات:","Net movement after expenses:"},new[]{"اسم الموظف","Employee name"},new[]{"المسمى الوظيفي","Job title"},new[]{"الراتب الشهري","Monthly salary"},new[]{"إضافة موظف","Add employee"},new[]{"حفظ حركة الراتب","Save payroll event"},new[]{"سلفة","Advance"},new[]{"خصم","Deduction"},new[]{"المبلغ","Amount"},new[]{"البيان","Description"},new[]{"السلف","Advances"},new[]{"الخصومات","Deductions"},new[]{"صافي المستحق","Net payable"},new[]{"أدخل اسمًا وراتبًا صحيحًا.","Enter a valid name and salary."},new[]{"اختر موظفًا وأدخل مبلغًا صحيحًا.","Choose an employee and enter a valid amount."},new[]{"الأصناف والمخزون والباركود","Products, Inventory & Barcode"},new[]{"الأصناف والمخزون","Products & Inventory"},
           new[]{"المبيعات","Sales"},new[]{"المشتريات","Purchases"},new[]{"العملاء","Customers"},new[]{"الموردون","Suppliers"},new[]{"الموظفون","Employees"},new[]{"التقارير المالية","Financial Reports"},
           new[]{"الدعم عبر واتساب","WhatsApp Support"},new[]{"الدعم عبر البريد الإلكتروني","Email Support"},new[]{"اختيار اللغة / Language","Language: العربية / English"},new[]{"اسم الصنف أو الباركود","Product name or barcode"},new[]{"طباعة التقرير","Print report"},new[]{"إرسال بالبريد الإلكتروني","Send by email"},new[]{"التقرير المالي","Financial Report"},new[]{"المبيعات:","Sales:"},new[]{"المشتريات:","Purchases:"},new[]{"صافي الحركة:","Net movement:"},new[]{"توقيع المحاسب:","Accountant signature:"},new[]{"اسم الصنف","Product name"},
@@ -54,15 +54,34 @@ sealed class MainForm : Form
     public MainForm()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!); InitDb();
-        Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.3"); Width = 1050; Height = 720; StartPosition = FormStartPosition.CenterScreen;
+        Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.5"); Width = 1050; Height = 720; StartPosition = FormStartPosition.CenterScreen;
         RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes; RightToLeftLayout = !UiLanguage.English;
-        var head = new Label { Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.3 — نسخة تجريبية"), Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(11,31,58), ForeColor = Color.FromArgb(212,175,55), Font = new Font("Segoe UI", 22, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
+        var head = new Label { Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.5 — نسخة تجريبية"), Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(11,31,58), ForeColor = Color.FromArgb(212,175,55), Font = new Font("Segoe UI", 22, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
         Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("المرتجعات", Returns); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
         Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("التقارير المالية", Reports); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
+        Add("الباقات والأسعار", Pricing);
         Add("اختيار اللغة / Language", ToggleLanguage);
         RefreshSummary();
+    }
+
+    void Pricing()
+    {
+        var text = UiLanguage.English
+            ? "Smart Accountant — proposed launch prices\n\n" +
+              "Android (perpetual license, one device): SDG 120,000 for first 200, then SDG 150,000 | International: $16 then $19 | Saudi Arabia: SAR 59.\n\n" +
+              "Windows x64 (perpetual license, one device): SDG 180,000 for first 200, then SDG 220,000 | International: $24 then $29 | Saudi Arabia: SAR 89.\n\n" +
+              "Android + Windows bundle: SDG 250,000 for first 200 bundles, then SDG 320,000 | International: $34 then $42 | Saudi Arabia: SAR 129.\n\n" +
+              "These prices cover the specified release only, not future features or cloud services. Monthly/annual subscriptions and automatic activation are not available. This build is not yet commercially approved; confirm release availability and price with support before payment.\n\n" +
+              "Market reference: Zoho Books Professional is SAR 129/month or SAR 90/month billed annually in Saudi Arabia; UAE pricing is AED 129/month or AED 90/month billed annually. Competitor scope and cloud services differ, so this is not a like-for-like comparison."
+            : "المحاسب الذكي — أسعار الإطلاق المقترحة\n\n" +
+              "أندرويد (ترخيص دائم لجهاز واحد): 120,000 ج.س لأول 200 ترخيص، ثم 150,000 ج.س | دوليًا: 16 دولارًا ثم 19 دولارًا | السعودية: 59 ر.س.\n\n" +
+              "ويندوز x64 (ترخيص دائم لجهاز واحد): 180,000 ج.س لأول 200 ترخيص، ثم 220,000 ج.س | دوليًا: 24 دولارًا ثم 29 دولارًا | السعودية: 89 ر.س.\n\n" +
+              "حزمة أندرويد + ويندوز: 250,000 ج.س لأول 200 حزمة، ثم 320,000 ج.س | دوليًا: 34 دولارًا ثم 42 دولارًا | السعودية: 129 ر.س.\n\n" +
+              "هذه أسعار ترخيص دائم للإصدار المحدد، ولا تشمل مزايا مستقبلية أو خدمات سحابية. لا تتوفر اشتراكات شهرية/سنوية أو تفعيل آلي داخل التطبيق. النسخة الحالية قبل الاعتماد التجاري؛ أكد توفر الإصدار والسعر مع الدعم قبل أي دفع.\n\n" +
+              "مرجع السوق: Zoho Books Professional في السعودية 129 ر.س شهريًا أو 90 ر.س/شهر عند الدفع السنوي؛ وخطته الإماراتية 129 درهمًا شهريًا أو 90 درهمًا/شهر سنويًا. نطاق المنافسين والخدمات السحابية مختلف، لذا المقارنة مرجعية وليست تطابقًا مباشرًا.";
+        MessageBox.Show(text, UiLanguage.T("الباقات والأسعار"), MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     void ToggleLanguage()
@@ -97,7 +116,7 @@ sealed class MainForm : Form
             ledger.CommandText = @"CREATE TABLE IF NOT EXISTS gl_accounts(id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT NOT NULL UNIQUE,name TEXT NOT NULL UNIQUE,kind TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS gl_entries(id INTEGER PRIMARY KEY AUTOINCREMENT,source_type TEXT NOT NULL,source_id INTEGER NOT NULL,memo TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(source_type,source_id));
 CREATE TABLE IF NOT EXISTS gl_lines(id INTEGER PRIMARY KEY AUTOINCREMENT,entry_id INTEGER NOT NULL REFERENCES gl_entries(id),account_id INTEGER NOT NULL REFERENCES gl_accounts(id),debit REAL NOT NULL DEFAULT 0,credit REAL NOT NULL DEFAULT 0,CHECK(debit>=0 AND credit>=0 AND NOT(debit>0 AND credit>0)));
-INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1100','Accounts Receivable','ASSET'),('1200','Inventory','ASSET'),('2000','Accounts Payable','LIABILITY'),('2100','Salaries Payable','LIABILITY'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE'),('6200','Salaries Expense','EXPENSE'),('1300','Employee Advances','ASSET'),('6300','Payroll Deductions','EXPENSE'),('4100','Sales Returns','CONTRA_REVENUE'),('4200','Purchase Return Gain','OTHER_INCOME'),('6400','Purchase Return Loss','EXPENSE');";
+INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1100','Accounts Receivable','ASSET'),('1200','Inventory','ASSET'),('2000','Accounts Payable','LIABILITY'),('2100','Salaries Payable','LIABILITY'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE'),('6200','Salaries Expense','EXPENSE'),('1300','Employee Advances','ASSET'),('6300','Payroll Deductions','EXPENSE'),('2200','Payroll Deductions Payable','LIABILITY'),('4100','Sales Returns','CONTRA_REVENUE'),('4200','Purchase Return Gain','OTHER_INCOME'),('6400','Purchase Return Loss','EXPENSE');";
             ledger.ExecuteNonQuery();
         }
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE employees ADD COLUMN job_title TEXT NOT NULL DEFAULT ''"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
@@ -611,15 +630,53 @@ FROM customers s ORDER BY s.name";
         {
             if (person.SelectedIndex < 0 || !double.TryParse(amount.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var value) || value <= 0)
             { MessageBox.Show(UiLanguage.T("اختر موظفًا وأدخل مبلغًا صحيحًا.")); return; }
-            using var c = C(); using var q = c.CreateCommand();
-            q.CommandText = "INSERT INTO payroll_events(employee_id,kind,amount,note,period_month) VALUES($id,$k,$a,$n,$m)";
-            q.Parameters.AddWithValue("$id", ids[person.SelectedIndex]); q.Parameters.AddWithValue("$k", kind.SelectedIndex == 0 ? "ADVANCE" : "DEDUCTION");
-            q.Parameters.AddWithValue("$a", value); q.Parameters.AddWithValue("$n", note.Text.Trim()); q.Parameters.AddWithValue("$m", month);
-            using var tx = c.BeginTransaction(); q.Transaction = tx; q.ExecuteNonQuery();
-            var eventId = LastId(c, tx);
-            if (kind.SelectedIndex == 0) PostEntry(c, tx, "PAYROLL_ADVANCE", eventId, "Employee advance: " + (person.SelectedItem?.ToString() ?? ""), new (string Account, double Debit, double Credit)[] { ("Employee Advances", value, 0d), ("Cash", 0d, value) });
-            // Generic deductions remain recorded but unposted until their nature/accounting counterpart is explicitly classified.
-            tx.Commit(); amount.Clear(); note.Clear(); Reload(); RefreshSummary();
+            using var c = C(); using var tx = c.BeginTransaction();
+            try
+            {
+                using (var settled = c.CreateCommand())
+                {
+                    settled.Transaction = tx;
+                    settled.CommandText = "SELECT COUNT(*) FROM payroll_settlements WHERE employee_id=$e AND period_month=$m";
+                    settled.Parameters.AddWithValue("$e", ids[person.SelectedIndex]); settled.Parameters.AddWithValue("$m", month);
+                    if (Convert.ToInt32(settled.ExecuteScalar()) > 0)
+                        throw new InvalidOperationException("تمت تسوية راتب هذا الشهر؛ لا يمكن إضافة حركة بأثر رجعي.");
+                }
+                if (kind.SelectedIndex == 1)
+                {
+                    using var accrued = c.CreateCommand(); accrued.Transaction = tx;
+                    accrued.CommandText = "SELECT COUNT(*) FROM payroll_runs WHERE employee_id=$e AND period_month=$m";
+                    accrued.Parameters.AddWithValue("$e", ids[person.SelectedIndex]); accrued.Parameters.AddWithValue("$m", month);
+                    if (Convert.ToInt32(accrued.ExecuteScalar()) == 0)
+                        throw new InvalidOperationException("يجب ترحيل استحقاق الراتب قبل تسجيل الخصم.");
+                    using var totals = c.CreateCommand(); totals.Transaction = tx;
+                    totals.CommandText = "SELECT r.base_salary,COALESCE((SELECT SUM(amount) FROM payroll_events WHERE employee_id=$e AND period_month=$m AND kind='DEDUCTION'),0),COALESCE((SELECT SUM(amount) FROM payroll_events WHERE employee_id=$e AND period_month=$m AND kind='ADVANCE'),0) FROM payroll_runs r WHERE r.employee_id=$e AND r.period_month=$m";
+                    totals.Parameters.AddWithValue("$e", ids[person.SelectedIndex]); totals.Parameters.AddWithValue("$m", month);
+                    double salary, priorDeductions, priorAdvances;
+                    using (var rr = totals.ExecuteReader())
+                    {
+                        if (!rr.Read()) throw new InvalidOperationException("لم يُعثر على استحقاق الراتب.");
+                        salary = rr.GetDouble(0); priorDeductions = rr.GetDouble(1); priorAdvances = rr.GetDouble(2);
+                    }
+                    if (value + priorDeductions + priorAdvances > salary + 0.005)
+                        throw new InvalidOperationException("لا يمكن تسجيل خصم يتجاوز الراتب المتبقي بعد الخصومات السابقة.");
+                }
+                using var q = c.CreateCommand(); q.Transaction = tx;
+                q.CommandText = "INSERT INTO payroll_events(employee_id,kind,amount,note,period_month) VALUES($id,$k,$a,$n,$m)";
+                q.Parameters.AddWithValue("$id", ids[person.SelectedIndex]); q.Parameters.AddWithValue("$k", kind.SelectedIndex == 0 ? "ADVANCE" : "DEDUCTION");
+                q.Parameters.AddWithValue("$a", value); q.Parameters.AddWithValue("$n", note.Text.Trim()); q.Parameters.AddWithValue("$m", month);
+                q.ExecuteNonQuery();
+                var eventId = LastId(c, tx);
+                if (kind.SelectedIndex == 0)
+                    PostEntry(c, tx, "PAYROLL_ADVANCE", eventId, "Employee advance: " + (person.SelectedItem?.ToString() ?? ""), new (string Account, double Debit, double Credit)[] { ("Employee Advances", value, 0d), ("Cash", 0d, value) });
+                else
+                    PostEntry(c, tx, "PAYROLL_DEDUCTION", eventId, "Payroll deduction withheld: " + (person.SelectedItem?.ToString() ?? ""), new (string Account, double Debit, double Credit)[] { ("Salaries Payable", value, 0d), ("Payroll Deductions Payable", 0d, value) });
+                tx.Commit(); amount.Clear(); note.Clear(); Reload(); RefreshSummary();
+            }
+            catch (Exception ex)
+            {
+                tx.Rollback();
+                MessageBox.Show(UiLanguage.T("تعذر حفظ حركة الراتب؛ لم تُعتمد أي تغييرات. ") + ex.Message);
+            }
         };
         accrue.Click += (_, _) =>
         {
@@ -676,11 +733,10 @@ FROM customers s ORDER BY s.name";
                     q.Parameters.AddWithValue("$e", employeeId); q.Parameters.AddWithValue("$m", month);
                     using var reader = q.ExecuteReader(); reader.Read(); advances = reader.GetDouble(0); deductions = reader.GetDouble(1);
                 }
-                if (deductions > 0.005)
-                    throw new InvalidOperationException("توجد خصومات غير مصنفة محاسبيًا. لا يمكن صرف الراتب حتى تحديد حساب الخصم وطريقة ترحيله.");
-                if (advances > baseSalary + 0.005)
-                    throw new InvalidOperationException("السلف تتجاوز الراتب المستحق. راجع السجل قبل التسوية.");
-                var cashPaid = Math.Max(0d, baseSalary - advances);
+                if (advances + deductions > baseSalary + 0.005)
+                    throw new InvalidOperationException("مجموع السلف والخصومات يتجاوز الراتب المستحق.");
+                var payableAfterDeduction = Math.Max(0d, baseSalary - deductions);
+                var cashPaid = Math.Max(0d, baseSalary - advances - deductions);
                 using (var insert = c.CreateCommand())
                 {
                     insert.Transaction = tx;
@@ -693,7 +749,7 @@ FROM customers s ORDER BY s.name";
                 var settlementId = LastId(c, tx);
                 var lines = new List<(string Account, double Debit, double Credit)>
                 {
-                    ("Salaries Payable", baseSalary, 0d)
+                    ("Salaries Payable", payableAfterDeduction, 0d)
                 };
                 if (advances > 0.005) lines.Add(("Employee Advances", 0d, advances));
                 if (cashPaid > 0.005) lines.Add(("Cash", 0d, cashPaid));
@@ -741,7 +797,7 @@ ORDER BY a.code";
             }
         }
         int missingSales, missingPurchases, missingExpenses, missingOpeningStock;
-        int missingReceipts, missingSupplierPayments, missingPayrollEvents, missingPayrollAccruals;
+        int missingReceipts, missingSupplierPayments, missingPayrollEvents, missingPayrollDeductions, missingPayrollAccruals;
         int missingSalesReturns, missingPurchaseReturns, missingPayrollSettlements, unpostedDeductions;
         int unbalancedEntries, orphanLines, invalidLines;
         using (var q = c.CreateCommand())
@@ -754,6 +810,7 @@ ORDER BY a.code";
 (SELECT COUNT(*) FROM customer_receipts x LEFT JOIN gl_entries g ON g.source_type='CUSTOMER_RECEIPT' AND g.source_id=x.id WHERE g.id IS NULL),
 (SELECT COUNT(*) FROM supplier_payments x LEFT JOIN gl_entries g ON g.source_type='SUPPLIER_PAYMENT' AND g.source_id=x.id WHERE g.id IS NULL),
 (SELECT COUNT(*) FROM payroll_events x LEFT JOIN gl_entries g ON g.source_type='PAYROLL_ADVANCE' AND g.source_id=x.id WHERE x.kind='ADVANCE' AND g.id IS NULL),
+(SELECT COUNT(*) FROM payroll_events x LEFT JOIN gl_entries g ON g.source_type='PAYROLL_DEDUCTION' AND g.source_id=x.id WHERE x.kind='DEDUCTION' AND g.id IS NULL),
 (SELECT COUNT(*) FROM payroll_runs x LEFT JOIN gl_entries g ON g.source_type='PAYROLL_ACCRUAL' AND g.source_id=x.id WHERE g.id IS NULL),
 (SELECT COUNT(*) FROM (SELECT e.id FROM gl_entries e LEFT JOIN gl_lines l ON l.entry_id=e.id GROUP BY e.id HAVING ABS(COALESCE(SUM(l.debit),0)-COALESCE(SUM(l.credit),0))>0.005)),
 (SELECT COUNT(*) FROM gl_lines l LEFT JOIN gl_entries e ON e.id=l.entry_id WHERE e.id IS NULL),
@@ -761,8 +818,8 @@ ORDER BY a.code";
             using var r = q.ExecuteReader();
             r.Read();
             missingSales = r.GetInt32(0); missingPurchases = r.GetInt32(1); missingExpenses = r.GetInt32(2); missingOpeningStock = r.GetInt32(3);
-            missingReceipts = r.GetInt32(4); missingSupplierPayments = r.GetInt32(5); missingPayrollEvents = r.GetInt32(6); missingPayrollAccruals = r.GetInt32(7);
-            unbalancedEntries = r.GetInt32(8); orphanLines = r.GetInt32(9); invalidLines = r.GetInt32(10);
+            missingReceipts = r.GetInt32(4); missingSupplierPayments = r.GetInt32(5); missingPayrollEvents = r.GetInt32(6); missingPayrollDeductions = r.GetInt32(7); missingPayrollAccruals = r.GetInt32(8);
+            unbalancedEntries = r.GetInt32(9); orphanLines = r.GetInt32(10); invalidLines = r.GetInt32(11);
         }
         using (var q = c.CreateCommand())
         {
@@ -778,7 +835,7 @@ ORDER BY a.code";
         {
             q.CommandText = @"SELECT
 (SELECT COUNT(*) FROM payroll_settlements p LEFT JOIN gl_entries g ON g.source_type='PAYROLL_SETTLEMENT' AND g.source_id=p.id WHERE g.id IS NULL),
-(SELECT COUNT(*) FROM payroll_events WHERE kind='DEDUCTION')";
+(SELECT COUNT(*) FROM payroll_events x LEFT JOIN gl_entries g ON g.source_type='PAYROLL_DEDUCTION' AND g.source_id=x.id WHERE x.kind='DEDUCTION' AND g.id IS NULL)";
             using var r = q.ExecuteReader();
             r.Read();
             missingPayrollSettlements = r.GetInt32(0);
@@ -807,8 +864,8 @@ FROM gl_lines l JOIN gl_accounts a ON a.id=l.account_id WHERE a.name='Inventory'
             + $"تحصيلات عملاء بلا قيد: {missingReceipts} | سداد موردين بلا قيد: {missingSupplierPayments}" + Environment.NewLine
             + $"مرتجعات مبيعات بلا قيد: {missingSalesReturns} | مرتجعات مشتريات بلا قيد: {missingPurchaseReturns}" + Environment.NewLine
             + $"سلف موظفين بلا قيد: {missingPayrollEvents} | استحقاقات رواتب بلا قيد: {missingPayrollAccruals}" + Environment.NewLine
-            + $"تسويات رواتب بلا قيد: {missingPayrollSettlements} | خصومات رواتب غير مصنفة وغير مرحلة: {unpostedDeductions}" + Environment.NewLine + Environment.NewLine
-            + "تنبيه: الأعداد قد تشمل سجلات تاريخية سبقت دفتر الأستاذ. الخصومات العامة والمرتجعات والتسويات والإقفال ليست مكتملة؛ لا تعتمد التقرير كقوائم مالية معتمدة." + Environment.NewLine + Environment.NewLine
+            + $"تسويات رواتب بلا قيد: {missingPayrollSettlements} | خصومات رواتب بلا قيد: {unpostedDeductions}" + Environment.NewLine + Environment.NewLine
+            + "تنبيه: قد تشمل الأعداد سجلات تاريخية سبقت دفتر الأستاذ. لا تُرحّل السجلات القديمة تلقائيًا؛ راجعها يدويًا. لا تعتمد التقرير كقوائم مالية معتمدة قبل اكتمال اختبارات مستقلة." + Environment.NewLine + Environment.NewLine
             + string.Join(Environment.NewLine, rows);
         using var f = new Form { Text = "دفتر الأستاذ وميزان المراجعة", Width = 900, Height = 650, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
         var preview = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both, WordWrap = false, Dock = DockStyle.Fill, Font = new Font("Consolas", 11), Text = report };
