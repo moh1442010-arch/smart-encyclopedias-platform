@@ -808,7 +808,7 @@ FROM gl_lines l JOIN gl_accounts a ON a.id=l.account_id WHERE a.name='Inventory'
             + $"مرتجعات مبيعات بلا قيد: {missingSalesReturns} | مرتجعات مشتريات بلا قيد: {missingPurchaseReturns}" + Environment.NewLine
             + $"سلف موظفين بلا قيد: {missingPayrollEvents} | استحقاقات رواتب بلا قيد: {missingPayrollAccruals}" + Environment.NewLine
             + $"تسويات رواتب بلا قيد: {missingPayrollSettlements} | خصومات رواتب غير مصنفة وغير مرحلة: {unpostedDeductions}" + Environment.NewLine + Environment.NewLine
-            + "تنبيه: الأعداد قد تشمل سجلات تاريخية سبقت دفتر الأستاذ. الخصومات العامة والمرتجعات والتسويات والإقفال ليست مكتملة؛ لا تعتمد التقرير كقوائم مالية معتمدة." + Environment.NewLine + Environment.NewLine
+            + "تنبيه: قد تشمل الأعداد سجلات تاريخية سبقت دفتر الأستاذ. لا تُرحّل السجلات القديمة تلقائيًا؛ راجعها يدويًا. لا تعتمد التقرير كقوائم مالية معتمدة قبل اكتمال اختبارات مستقلة." + Environment.NewLine + Environment.NewLine
             + string.Join(Environment.NewLine, rows);
         using var f = new Form { Text = "دفتر الأستاذ وميزان المراجعة", Width = 900, Height = 650, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
         var preview = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both, WordWrap = false, Dock = DockStyle.Fill, Font = new Font("Consolas", 11), Text = report };
