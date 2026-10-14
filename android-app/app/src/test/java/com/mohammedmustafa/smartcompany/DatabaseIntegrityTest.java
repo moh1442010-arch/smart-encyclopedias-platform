@@ -53,6 +53,39 @@ public class DatabaseIntegrityTest {
         assertTrue(accountExists("4000"));
     }
 
+
+    @Test
+    public void returnCanBeRecordedOnlyOnceForOriginalInvoice() {
+        assertTrue(columnExists("transactions", "original_transaction_id"));
+        assertTrue(accountExists("4100"));
+        ContentValues original = new ContentValues();
+        original.put("type", "SALE");
+        original.put("party", "عميل اختبار");
+        original.put("total", 100.0);
+        original.put("paid", 100.0);
+        original.put("remaining", 0.0);
+        original.put("created_at", System.currentTimeMillis());
+        original.put("invoice_no", "TEST-ORIGINAL-1");
+        long originalId = database.insertOrThrow("transactions", null, original);
+
+        ContentValues returned = new ContentValues();
+        returned.put("type", "SALE_RETURN");
+        returned.put("party", "عميل اختبار");
+        returned.put("total", 100.0);
+        returned.put("paid", 100.0);
+        returned.put("remaining", 0.0);
+        returned.put("created_at", System.currentTimeMillis());
+        returned.put("original_transaction_id", originalId);
+        database.insertOrThrow("transactions", null, returned);
+
+        try {
+            database.insertOrThrow("transactions", null, returned);
+            fail("A second return for the same original invoice must be rejected");
+        } catch (android.database.SQLException expected) {
+            // The partial unique index enforces one full return per original invoice.
+        }
+    }
+
     @Test
     public void manualJournalDescriptionColumnIsWritable() {
         ContentValues entry = new ContentValues();
@@ -246,6 +279,30 @@ public class DatabaseIntegrityTest {
                 beforeCount, journalEntryCount());
     }
 
+    @Test
+    public void postingTheSameTransactionTwiceIsRejectedWithoutDuplicateLedgerRows() {
+        MainActivity activity = new MainActivity();
+        database.beginTransaction();
+        try {
+            activity.postJournal(database, 111L, "SALE", 100.00, 100.00, 0.00, 60.00);
+            int afterFirstPost = journalEntryCount();
+
+            try {
+                activity.postJournal(database, 111L, "SALE", 100.00, 100.00, 0.00, 60.00);
+                fail("A transaction must not be posted to the ledger twice");
+            } catch (IllegalStateException expected) {
+                assertTrue(expected.getMessage().contains("already has a journal entry"));
+            }
+
+            assertEquals("Duplicate posting must not create another journal entry",
+                    afterFirstPost, journalEntryCount());
+            assertJournalBalanced(journalIdForTransaction(111L));
+            database.setTransactionSuccessful();
+        } finally {
+            database.endTransaction();
+        }
+    }
+
     private int journalEntryCount() {
         Cursor c = database.rawQuery("SELECT COUNT(*) FROM journal_entries", null);
         try {
@@ -395,6 +452,57 @@ public class DatabaseIntegrityTest {
         } finally {
             totals.close();
         }
+    }
+
+    @Test
+    public void grossProfitReportOffsetsSalesReturns() {
+        long now = System.currentTimeMillis();
+        ContentValues sale = new ContentValues();
+        sale.put("type", "SALE");
+        sale.put("party", "عميل اختبار");
+        sale.put("total", 100.0);
+        sale.put("paid", 100.0);
+        sale.put("remaining", 0.0);
+        sale.put("created_at", now);
+        long saleId = database.insertOrThrow("transactions", null, sale);
+
+        ContentValues returned = new ContentValues();
+        returned.put("type", "SALE_RETURN");
+        returned.put("party", "عميل اختبار");
+        returned.put("total", 100.0);
+        returned.put("paid", 100.0);
+        returned.put("remaining", 0.0);
+        returned.put("created_at", now);
+        returned.put("original_transaction_id", saleId);
+        long returnId = database.insertOrThrow("transactions", null, returned);
+
+        insertInvoiceItem(saleId, 100.0, 60.0);
+        insertInvoiceItem(returnId, 100.0, 60.0);
+
+        Cursor c = database.rawQuery(
+                "SELECT COALESCE(SUM(CASE WHEN t.type='SALE_RETURN' " +
+                "THEN -((i.price-i.cost)*i.qty-i.discount) " +
+                "ELSE ((i.price-i.cost)*i.qty-i.discount) END),0) " +
+                "FROM invoice_items i JOIN transactions t ON t.id=i.transaction_id " +
+                "WHERE t.type IN ('SALE','SALE_RETURN') AND t.created_at BETWEEN ? AND ?",
+                new String[]{String.valueOf(now - 1000), String.valueOf(now + 1000)});
+        try {
+            assertTrue(c.moveToFirst());
+            assertEquals("A fully returned sale must not inflate gross profit", 0.0, c.getDouble(0), 0.000001);
+        } finally {
+            c.close();
+        }
+    }
+
+    private void insertInvoiceItem(long transactionId, double price, double cost) {
+        ContentValues item = new ContentValues();
+        item.put("transaction_id", transactionId);
+        item.put("product_id", 1L);
+        item.put("qty", 1.0);
+        item.put("price", price);
+        item.put("cost", cost);
+        item.put("discount", 0.0);
+        database.insertOrThrow("invoice_items", null, item);
     }
 
     private boolean columnExists(String table, String column) {
