@@ -430,7 +430,7 @@ public class MainActivity extends Activity{
    String[] args={String.valueOf(start),String.valueOf(end)};
    Cursor c=db.q("SELECT type,COALESCE(SUM(total),0),COALESCE(SUM(paid),0),COALESCE(SUM(remaining),0) FROM transactions WHERE created_at BETWEEN ? AND ? GROUP BY type ORDER BY type",args);
    while(c.moveToNext())content.addView(t(c.getString(0)+" | الإجمالي "+fmt(c.getDouble(1))+" | المدفوع "+fmt(c.getDouble(2))+" | المتبقي "+fmt(c.getDouble(3)),17));c.close();
-   Cursor p=db.q("SELECT COALESCE(SUM((i.price-i.cost)*i.qty-i.discount),0) FROM invoice_items i JOIN transactions t ON t.id=i.transaction_id WHERE t.type='SALE' AND t.created_at BETWEEN ? AND ?",args);double gp=p.moveToFirst()?p.getDouble(0):0;p.close();
+   Cursor p=db.q("SELECT COALESCE(SUM(CASE WHEN t.type='SALE_RETURN' THEN -((i.price-i.cost)*i.qty-i.discount) ELSE ((i.price-i.cost)*i.qty-i.discount) END),0) FROM invoice_items i JOIN transactions t ON t.id=i.transaction_id WHERE t.type IN ('SALE','SALE_RETURN') AND t.created_at BETWEEN ? AND ?",args);double gp=p.moveToFirst()?p.getDouble(0):0;p.close();
    Cursor ex=db.q("SELECT COALESCE(SUM(total),0) FROM transactions WHERE type='EXPENSE' AND created_at BETWEEN ? AND ?",args);double expense=ex.moveToFirst()?ex.getDouble(0):0;ex.close();
    content.addView(t("مجمل الربح التقديري: "+fmt(gp),20));content.addView(t("تقدير تشغيلي أولي بعد المصروفات: "+fmt(gp-expense),20));
    Button tb=b("ميزان المراجعة");content.addView(tb);tb.setOnClickListener(v->trialBalance());
@@ -441,7 +441,7 @@ public class MainActivity extends Activity{
    StringBuilder out=new StringBuilder(tr("الفترة")).append(": ").append(period).append("\n");
    Cursor c=db.q("SELECT type,COALESCE(SUM(total),0),COALESCE(SUM(paid),0),COALESCE(SUM(remaining),0) FROM transactions WHERE created_at BETWEEN ? AND ? GROUP BY type ORDER BY type",String.valueOf(start),String.valueOf(end));
    while(c.moveToNext())out.append(c.getString(0)).append(" | ").append(tr("الإجمالي")).append(": ").append(fmt(c.getDouble(1))).append(" | ").append(tr("المدفوع")).append(": ").append(fmt(c.getDouble(2))).append(" | ").append(tr("المتبقي")).append(": ").append(fmt(c.getDouble(3))).append("\n");c.close();
-   Cursor p=db.q("SELECT COALESCE(SUM((i.price-i.cost)*i.qty-i.discount),0) FROM invoice_items i JOIN transactions t ON t.id=i.transaction_id WHERE t.type='SALE' AND t.created_at BETWEEN ? AND ?",String.valueOf(start),String.valueOf(end));double gp=p.moveToFirst()?p.getDouble(0):0;p.close();
+   Cursor p=db.q("SELECT COALESCE(SUM(CASE WHEN t.type='SALE_RETURN' THEN -((i.price-i.cost)*i.qty-i.discount) ELSE ((i.price-i.cost)*i.qty-i.discount) END),0) FROM invoice_items i JOIN transactions t ON t.id=i.transaction_id WHERE t.type IN ('SALE','SALE_RETURN') AND t.created_at BETWEEN ? AND ?",String.valueOf(start),String.valueOf(end));double gp=p.moveToFirst()?p.getDouble(0):0;p.close();
    Cursor ex=db.q("SELECT COALESCE(SUM(total),0) FROM transactions WHERE type='EXPENSE' AND created_at BETWEEN ? AND ?",String.valueOf(start),String.valueOf(end));double expense=ex.moveToFirst()?ex.getDouble(0):0;ex.close();
    out.append(tr("مجمل الربح التقديري")).append(": ").append(fmt(gp)).append("\n").append(tr("تقدير تشغيلي أولي")).append(": ").append(fmt(gp-expense)).append("\n").append(tr("تنبيه: النتائج أولية وليست قوائم مالية معتمدة."));
    return out.toString();
