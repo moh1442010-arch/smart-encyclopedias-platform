@@ -785,9 +785,23 @@ ORDER BY a.code";
             unpostedDeductions = r.GetInt32(1);
         }
         var balanced = Math.Abs(totalDebit - totalCredit) <= 0.005;
+        double inventoryBookValue, inventoryLedgerValue;
+        using (var q = c.CreateCommand())
+        {
+            q.CommandText = "SELECT COALESCE(SUM(qty * COALESCE(unit_cost,0)),0) FROM products";
+            inventoryBookValue = Convert.ToDouble(q.ExecuteScalar());
+        }
+        using (var q = c.CreateCommand())
+        {
+            q.CommandText = @"SELECT COALESCE(SUM(l.debit-l.credit),0)
+FROM gl_lines l JOIN gl_accounts a ON a.id=l.account_id WHERE a.name='Inventory'";
+            inventoryLedgerValue = Convert.ToDouble(q.ExecuteScalar());
+        }
+        var inventoryDifference = inventoryBookValue - inventoryLedgerValue;
         var report = "دفتر الأستاذ العام — ميزان المراجعة التشخيصي" + Environment.NewLine
             + $"إجمالي المدين: {totalDebit:N2} | إجمالي الدائن: {totalCredit:N2}" + Environment.NewLine
             + $"حالة التوازن الإجمالي: {(balanced ? "متوازن إجمالًا فقط" : "غير متوازن — يتطلب التحقيق")}" + Environment.NewLine
+            + $"مطابقة قيمة المخزون: قيمة بطاقة المخزون {inventoryBookValue:N2} | رصيد حساب المخزون {inventoryLedgerValue:N2} | الفرق {inventoryDifference:N2}" + Environment.NewLine
             + $"قيود غير متوازنة: {unbalancedEntries} | أسطر يتيمة: {orphanLines} | أسطر غير صالحة: {invalidLines}" + Environment.NewLine + Environment.NewLine
             + $"عمليات بلا قيد: مبيعات {missingSales} | مشتريات {missingPurchases} | مصروفات {missingExpenses} | مخزون افتتاحي {missingOpeningStock}" + Environment.NewLine
             + $"تحصيلات عملاء بلا قيد: {missingReceipts} | سداد موردين بلا قيد: {missingSupplierPayments}" + Environment.NewLine
