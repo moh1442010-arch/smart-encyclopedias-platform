@@ -430,6 +430,10 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
                     using var tables = source.CreateCommand(); tables.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('products','sales','purchases')";
                     if (Convert.ToInt32(tables.ExecuteScalar()) != 3) throw new InvalidDataException();
                 }
+                // Preserve a verified point-in-time copy before replacing live data. The backup stays beside the local database.
+                var safetyBackupPath = dbPath + ".pre-restore-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".bak";
+                using (var live = C())
+                using (var safety = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = safetyBackupPath }.ToString())) { safety.Open(); live.BackupDatabase(safety); }
                 using (var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = dialog.FileName, Mode = SqliteOpenMode.ReadOnly }.ToString()))
                 using (var destination = C()) { source.Open(); source.BackupDatabase(destination); }
                 InitDb(); RefreshSummary(); MessageBox.Show(UiLanguage.T("تمت الاستعادة. راجع الأرصدة والتقارير."));
