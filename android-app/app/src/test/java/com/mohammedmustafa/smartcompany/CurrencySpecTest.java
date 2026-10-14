@@ -13,6 +13,9 @@ public class CurrencySpecTest {
         assertEquals(3, CurrencySpec.of("JOD").getFractionDigits());
         assertEquals(3, CurrencySpec.of("TND").getFractionDigits());
         assertEquals(0, CurrencySpec.of("XAF").getFractionDigits());
+        assertEquals(0, CurrencySpec.of("DJF").getFractionDigits());
+        assertEquals(2, CurrencySpec.of("MRU").getFractionDigits());
+        assertEquals(2, CurrencySpec.of("SOS").getFractionDigits());
     }
 
     @Test public void currencyCodeIsNormalized() {
@@ -29,6 +32,7 @@ public class CurrencySpecTest {
     @Test public void zeroDecimalCurrencyDoesNotInventFractionalUnits() {
         CurrencySpec xaf = CurrencySpec.of("XAF");
         assertEquals(123L, xaf.toMinorUnits("123.4"));
+        assertEquals(124L, xaf.toMinorUnits("123.5"));
         assertEquals(new BigDecimal("123"), xaf.fromMinorUnits(123L));
     }
 
