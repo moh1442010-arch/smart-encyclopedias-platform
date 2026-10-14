@@ -134,31 +134,61 @@ public class MainActivity extends Activity{
  }
  void plansPage(){
   page("الباقات والأسعار");
-  content.addView(t("اختر طريقة الشراء التي تناسب نشاطك",21));
-  content.addView(t("تجربة مجانية لمدة 7 أيام — للتقييم فقط. لا تُحذف بيانات الشركة عند انتهاء الترخيص.",15));
-  content.addView(t("مستويات الخدمة",20));
-  Spinner tier=new Spinner(this);String[] tiers={"Basic","Pro","Business","Enterprise — عرض مخصص"};tier.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,tiers));content.addView(t("نوع الخدمة / الباقة",15));content.addView(tier);
-  Spinner period=new Spinner(this);String[] periods={"اشتراك شهري","اشتراك سنوي","ترخيص دائم"};period.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,periods));content.addView(t("مدة الاشتراك",15));content.addView(period);
+  content.addView(t("باقات المحاسب الذكي — اختر الدولة والباقة ومدة الترخيص",21));
+  content.addView(t("تجربة مجانية لمدة 7 أيام للتقييم. الأسعار أدناه هي الأسعار التي طلبت عرضها؛ تأكد من السعر وبيانات المستفيد قبل الدفع. إرسال الإشعار لا يفعّل الترخيص تلقائيًا.",14));
+  content.addView(t("🇸🇩 السودان — الجنيه السوداني (ج.س)",18));
+  content.addView(t("Basic: دائم 150,000 | شهري 15,000 | سنوي 150,000 ج.س",15));
+  content.addView(t("Pro: دائم 300,000 | شهري 30,000 | سنوي 300,000 ج.س",15));
+  content.addView(t("Business: دائم 600,000 | شهري 60,000 | سنوي 600,000 ج.س",15));
+  content.addView(t("🇸🇦 السعودية — الريال السعودي (ر.س)",18));
+  content.addView(t("Basic: دائم 399 | شهري 29 | سنوي 290 ر.س",15));
+  content.addView(t("Pro: دائم 799 | شهري 59 | سنوي 590 ر.س",15));
+  content.addView(t("Business: دائم 1,499 | شهري 119 | سنوي 1,190 ر.س",15));
+  Spinner market=new Spinner(this);
+  String[] markets={"السودان — جنيه سوداني (بنكك)","السعودية — ريال سعودي","الدفع بالدولار الأمريكي — اطلب السعر"};
+  market.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,markets));
+  content.addView(t("بلد/عملة الدفع",15));content.addView(market);
+  Spinner tier=new Spinner(this);String[] tiers={"Basic","Pro","Business","Enterprise — عرض مخصص"};
+  tier.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,tiers));
+  content.addView(t("الباقة",15));content.addView(tier);
+  Spinner period=new Spinner(this);String[] periods={"ترخيص دائم","اشتراك شهري","اشتراك سنوي"};
+  period.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,periods));
+  content.addView(t("مدة الترخيص/الاشتراك",15));content.addView(period);
+  TextView selectedPrice=t("السعر المختار: 150,000 ج.س",21);selectedPrice.setTextColor(green);content.addView(selectedPrice);
+  Runnable updatePrice=()->{
+   String m=String.valueOf(market.getSelectedItem()),p=String.valueOf(tier.getSelectedItem()),d=String.valueOf(period.getSelectedItem());
+   String price="السعر غير محدد — تواصل مع الدعم لعرض سعر بالدولار.";
+   if(p.equals("Enterprise — عرض مخصص"))price="عرض سعر مخصص — تواصل مع الدعم.";
+   else if(m.startsWith("السودان")){
+    String[][] prices={{"150,000","15,000","150,000"},{"300,000","30,000","300,000"},{"600,000","60,000","600,000"}};
+    int pi=p.equals("Basic")?0:p.equals("Pro")?1:2;int di=d.equals("ترخيص دائم")?0:d.equals("اشتراك شهري")?1:2;
+    price=prices[pi][di]+" ج.س";
+   }else if(m.startsWith("السعودية")){
+    String[][] prices={{"399","29","290"},{"799","59","590"},{"1,499","119","1,190"}};
+    int pi=p.equals("Basic")?0:p.equals("Pro")?1:2;int di=d.equals("ترخيص دائم")?0:d.equals("اشتراك شهري")?1:2;
+    price=prices[pi][di]+" ر.س";
+   }
+   selectedPrice.setText("السعر المختار: "+price);
+  };
+  android.widget.AdapterView.OnItemSelectedListener priceListener=new android.widget.AdapterView.OnItemSelectedListener(){public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){updatePrice.run();}public void onNothingSelected(android.widget.AdapterView<?> parent){}};
+  market.setOnItemSelectedListener(priceListener);tier.setOnItemSelectedListener(priceListener);period.setOnItemSelectedListener(priceListener);
   EditText company=e("اسم الشركة أو النشاط");company.setInputType(1);content.addView(company);
   EditText contact=e("رقم واتساب للتواصل");contact.setInputType(3);content.addView(contact);
   EditText notes=e("تفاصيل الخدمة المطلوبة أو عدد المستخدمين والفروع");notes.setMinLines(2);notes.setGravity(Gravity.TOP);content.addView(notes);
-  content.addView(t("فريق الدعم",19));
-  content.addView(t("واتساب الدعم: +249121851285",15));
-  content.addView(t("البريد الإلكتروني: moh1442010@gmail.com",15));
-  content.addView(t("الدفع في السودان عبر بنكك",19));
-  content.addView(t("رقم الحساب: 1882224",22));
-  Button copy=b("نسخ رقم حساب بنكك");content.addView(copy);copy.setOnClickListener(v->{((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Bankak account","1882224"));toast("تم نسخ رقم حساب بنكك");});
-  content.addView(t("بعد التحويل، أرفق إيصال الدفع. يمكنك أيضًا إرفاق شعار الشركة إذا طلبت تخصيص الفواتير أو إعداد التطبيق باسم نشاطك.",14));
-  Button logo=b("اختيار شعار الشركة (اختياري)");content.addView(logo);logo.setOnClickListener(v->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("image/*");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,902);});
+  content.addView(t("الدفع والتحويل",19));
+  content.addView(t("بنكك — رقم الحساب: 1882224",18));
+  Button copyBankak=b("📋 نسخ رقم حساب بنكك");content.addView(copyBankak);copyBankak.setOnClickListener(v->{((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Bankak account","1882224"));toast("تم نسخ رقم حساب بنكك");});
+  content.addView(t("IBAN المتاح: SD8504018822240001 — تحقّق من البنك أن الحساب يستقبل التحويل بالدولار الأمريكي قبل الإرسال.",14));
+  Button copyIban=b("📋 نسخ رقم IBAN");content.addView(copyIban);copyIban.setOnClickListener(v->{((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("IBAN","SD8504018822240001"));toast("تم نسخ رقم IBAN");});
+  content.addView(t("بعد التحويل، أرفق إيصال الدفع برسالة واتساب. لن يتم التفعيل إلا بعد مراجعة الطلب وتأكيد وصول المبلغ.",14));
   Button receipt=b("اختيار إيصال التحويل");content.addView(receipt);receipt.setOnClickListener(v->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("image/*");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,903);});
-  content.addView(t("الأسعار المعروضة سابقًا أسعار اختبار وليست نهائية. تأكد من السعر النهائي ومدة الخدمة مع الدعم قبل التحويل. إرسال الطلب لا يعني تفعيل الاشتراك تلقائيًا.",14));
-  Button send=b("إرسال طلب الاشتراك والشعار/الإيصال");content.addView(send);send.setOnClickListener(v->{
+  Button send=b("💬 اختيار الباقة وإرسال إشعار عبر واتساب");content.addView(send);send.setOnClickListener(v->{
+   String m=String.valueOf(market.getSelectedItem()),p=String.valueOf(tier.getSelectedItem()),d=String.valueOf(period.getSelectedItem()),price=selectedPrice.getText().toString();
    if(company.getText().toString().trim().isEmpty()){toast("أدخل اسم الشركة أو النشاط أولًا");return;}
-   String message="طلب خدمة — شركة محمد مصطفى الذكية / المحاسب الذكي\nالشركة: "+company.getText().toString().trim()+"\nالباقة: "+tier.getSelectedItem().toString()+"\nالمدة: "+period.getSelectedItem().toString()+"\nرقم تواصل العميل: "+contact.getText().toString().trim()+"\nالتفاصيل: "+notes.getText().toString().trim()+"\nبنكك: 1882224\nدعم واتساب: +249121851285\nالبريد: moh1442010@gmail.com\nيرجى مراجعة الطلب والتحويل قبل تفعيل الترخيص.";
-   ArrayList<android.net.Uri> files=new ArrayList<>();if(planLogoUri!=null)files.add(planLogoUri);if(planReceiptUri!=null)files.add(planReceiptUri);
-   try{Intent share;if(files.isEmpty()){share=new Intent(Intent.ACTION_SEND);share.setType("text/plain");share.putExtra(Intent.EXTRA_TEXT,message);}else{share=new Intent(Intent.ACTION_SEND_MULTIPLE);share.setType("image/*");share.putExtra(Intent.EXTRA_TEXT,message);share.putParcelableArrayListExtra(Intent.EXTRA_STREAM,files);share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);android.content.ClipData clip=android.content.ClipData.newUri(getContentResolver(), "مرفقات طلب الاشتراك", files.get(0));for(int j=1;j<files.size();j++)clip.addItem(new android.content.ClipData.Item(files.get(j)));share.setClipData(clip);}startActivity(Intent.createChooser(share,tr("إرسال الطلب عبر تطبيق مناسب")));}catch(Exception ex){toast("تعذر فتح تطبيق الإرسال؛ حاول البريد أو واتساب يدويًا");}
+   String message="السلام عليكم، أريد طلب باقة من المحاسب الذكي.\nالشركة: "+company.getText().toString().trim()+"\nالسوق/العملة: "+m+"\nالباقة: "+p+"\nالمدة: "+d+"\nالسعر المعروض: "+price+"\nرقم تواصل العميل: "+contact.getText().toString().trim()+"\nالتفاصيل: "+notes.getText().toString().trim()+"\nبنكك: 1882224\nIBAN: SD8504018822240001\nيرجى تأكيد السعر النهائي وبيانات المستفيد والتحويل قبل التفعيل.";
+   open("https://wa.me/249121851285?text="+android.net.Uri.encode(message));
   });
-  Button supportButton=b("الاستفسار عن الباقات");content.addView(supportButton);supportButton.setOnClickListener(v->support());
+  Button supportButton=b("التواصل مع الدعم عبر واتساب");content.addView(supportButton);supportButton.setOnClickListener(v->support());
  }
  void groupMenu(String title,String[][] links){
   page(title);content.addView(t("اختر الوظيفة المطلوبة",16));
