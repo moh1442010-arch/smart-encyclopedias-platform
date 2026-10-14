@@ -105,6 +105,8 @@ INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET')
         try { using var migration = c.CreateCommand(); migration.CommandText = "CREATE TABLE IF NOT EXISTS payroll_events(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,kind TEXT NOT NULL,amount REAL NOT NULL,note TEXT,period_month TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
 // Additive registers preserve historical rows and support explicit settlement documents.
 using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF NOT EXISTS payroll_runs(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,period_month TEXT NOT NULL,base_salary REAL NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(employee_id,period_month))"; payroll.ExecuteNonQuery(); }
+        // Explicit payroll settlements are additive and unique per employee/month; historical data remains untouched.
+        using (var payrollSettlement = c.CreateCommand()) { payrollSettlement.CommandText = "CREATE TABLE IF NOT EXISTS payroll_settlements(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,period_month TEXT NOT NULL,base_salary REAL NOT NULL,advance_offset REAL NOT NULL,cash_paid REAL NOT NULL,note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(employee_id,period_month))"; payrollSettlement.ExecuteNonQuery(); }
         using (var settlements = c.CreateCommand()) { settlements.CommandText = "CREATE TABLE IF NOT EXISTS customer_receipts(id INTEGER PRIMARY KEY AUTOINCREMENT,customer_id INTEGER NOT NULL,amount REAL NOT NULL CHECK(amount>0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS supplier_payments(id INTEGER PRIMARY KEY AUTOINCREMENT,supplier_id INTEGER NOT NULL,amount REAL NOT NULL CHECK(amount>0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);"; settlements.ExecuteNonQuery(); }
         // Additive return registers; original sales/purchases are retained for auditability.
         using (var returns = c.CreateCommand()) { returns.CommandText = "CREATE TABLE IF NOT EXISTS sales_returns(id INTEGER PRIMARY KEY AUTOINCREMENT,sale_id INTEGER NOT NULL,product TEXT NOT NULL,qty REAL NOT NULL CHECK(qty>0),unit_price REAL NOT NULL CHECK(unit_price>=0),unit_cost REAL NOT NULL CHECK(unit_cost>=0),total REAL NOT NULL CHECK(total>=0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS purchase_returns(id INTEGER PRIMARY KEY AUTOINCREMENT,purchase_id INTEGER NOT NULL,product TEXT NOT NULL,qty REAL NOT NULL CHECK(qty>0),unit_price REAL NOT NULL CHECK(unit_price>=0),total REAL NOT NULL CHECK(total>=0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);"; returns.ExecuteNonQuery(); }
@@ -533,6 +535,7 @@ FROM customers s ORDER BY s.name";
         var note = new TextBox { PlaceholderText = UiLanguage.T("البيان"), Dock = DockStyle.Top, Height = 38 };
         var saveEvent = new Button { Text = UiLanguage.T("حفظ حركة الراتب"), Dock = DockStyle.Top, Height = 42 };
         var accrue = new Button { Text = UiLanguage.T("ترحيل استحقاق رواتب الشهر إلى الأستاذ"), Dock = DockStyle.Top, Height = 42 };
+        var settle = new Button { Text = UiLanguage.T("تسوية وصرف راتب الموظف المحدد"), Dock = DockStyle.Top, Height = 42 };
         var list = new ListBox { Dock = DockStyle.Fill };
         var month = DateTime.Now.ToString("yyyy-MM");
         var ids = new List<long>();
@@ -597,7 +600,73 @@ FROM customers s ORDER BY s.name";
             }
             catch(Exception) { tx.Rollback(); MessageBox.Show(UiLanguage.T("تعذر ترحيل الرواتب؛ أُلغي الترحيل بالكامل.")); }
         };
-        f.Controls.Add(list); f.Controls.Add(accrue); f.Controls.Add(saveEvent); f.Controls.Add(note); f.Controls.Add(amount); f.Controls.Add(kind); f.Controls.Add(person); f.Controls.Add(add); f.Controls.Add(salary); f.Controls.Add(job); f.Controls.Add(name);
+        settle.Click += (_, _) =>
+        {
+            if (person.SelectedIndex < 0)
+            { MessageBox.Show(UiLanguage.T("اختر الموظف أولًا.")); return; }
+            var employeeId = ids[person.SelectedIndex];
+            using var c = C();
+            using var tx = c.BeginTransaction();
+            try
+            {
+                long runId; double baseSalary; string employeeName;
+                using (var q = c.CreateCommand())
+                {
+                    q.Transaction = tx;
+                    q.CommandText = "SELECT r.id,r.base_salary,e.name FROM payroll_runs r JOIN employees e ON e.id=r.employee_id WHERE r.employee_id=$e AND r.period_month=$m";
+                    q.Parameters.AddWithValue("$e", employeeId); q.Parameters.AddWithValue("$m", month);
+                    using var reader = q.ExecuteReader();
+                    if (!reader.Read()) throw new InvalidOperationException("يجب ترحيل استحقاق الراتب لهذا الشهر أولًا.");
+                    runId = reader.GetInt64(0); baseSalary = reader.GetDouble(1); employeeName = reader.GetString(2);
+                }
+                using (var check = c.CreateCommand())
+                {
+                    check.Transaction = tx;
+                    check.CommandText = "SELECT COUNT(*) FROM payroll_settlements WHERE employee_id=$e AND period_month=$m";
+                    check.Parameters.AddWithValue("$e", employeeId); check.Parameters.AddWithValue("$m", month);
+                    if (Convert.ToInt32(check.ExecuteScalar()) > 0) throw new InvalidOperationException("تمت تسوية راتب هذا الموظف عن الشهر المحدد مسبقًا.");
+                }
+                double advances, deductions;
+                using (var q = c.CreateCommand())
+                {
+                    q.Transaction = tx;
+                    q.CommandText = "SELECT COALESCE(SUM(CASE WHEN kind='ADVANCE' THEN amount ELSE 0 END),0),COALESCE(SUM(CASE WHEN kind='DEDUCTION' THEN amount ELSE 0 END),0) FROM payroll_events WHERE employee_id=$e AND period_month=$m";
+                    q.Parameters.AddWithValue("$e", employeeId); q.Parameters.AddWithValue("$m", month);
+                    using var reader = q.ExecuteReader(); reader.Read(); advances = reader.GetDouble(0); deductions = reader.GetDouble(1);
+                }
+                if (deductions > 0.005)
+                    throw new InvalidOperationException("توجد خصومات غير مصنفة محاسبيًا. لا يمكن صرف الراتب حتى تحديد حساب الخصم وطريقة ترحيله.");
+                if (advances > baseSalary + 0.005)
+                    throw new InvalidOperationException("السلف تتجاوز الراتب المستحق. راجع السجل قبل التسوية.");
+                var cashPaid = Math.Max(0d, baseSalary - advances);
+                using (var insert = c.CreateCommand())
+                {
+                    insert.Transaction = tx;
+                    insert.CommandText = "INSERT INTO payroll_settlements(employee_id,period_month,base_salary,advance_offset,cash_paid,note) VALUES($e,$m,$s,$a,$c,$n)";
+                    insert.Parameters.AddWithValue("$e", employeeId); insert.Parameters.AddWithValue("$m", month);
+                    insert.Parameters.AddWithValue("$s", baseSalary); insert.Parameters.AddWithValue("$a", advances);
+                    insert.Parameters.AddWithValue("$c", cashPaid); insert.Parameters.AddWithValue("$n", "Payroll settlement for " + month);
+                    insert.ExecuteNonQuery();
+                }
+                var settlementId = LastId(c, tx);
+                var lines = new List<(string Account, double Debit, double Credit)>
+                {
+                    ("Salaries Payable", baseSalary, 0d)
+                };
+                if (advances > 0.005) lines.Add(("Employee Advances", 0d, advances));
+                if (cashPaid > 0.005) lines.Add(("Cash", 0d, cashPaid));
+                PostEntry(c, tx, "PAYROLL_SETTLEMENT", settlementId, "Salary settlement: " + employeeName + " / " + month, lines.ToArray());
+                tx.Commit();
+                MessageBox.Show(UiLanguage.T("تمت تسوية الراتب وترحيل الصرف. راجع دفتر الأستاذ وميزان المراجعة."));
+                Reload(); RefreshSummary();
+            }
+            catch (Exception ex)
+            {
+                tx.Rollback();
+                MessageBox.Show(UiLanguage.T("تعذرت تسوية الراتب؛ لم تُعتمد أي تغييرات. ") + ex.Message);
+            }
+        };
+        f.Controls.Add(list); f.Controls.Add(settle); f.Controls.Add(accrue); f.Controls.Add(saveEvent); f.Controls.Add(note); f.Controls.Add(amount); f.Controls.Add(kind); f.Controls.Add(person); f.Controls.Add(add); f.Controls.Add(salary); f.Controls.Add(job); f.Controls.Add(name);
         Reload(); f.ShowDialog();
     }
 
