@@ -46,13 +46,105 @@ public class DatabaseIntegrityTest {
         assertTrue(tableExists("party_payments"));
         assertTrue(tableExists("checks"));
         assertTrue(tableExists("payroll_events"));
+        assertTrue(tableExists("payroll_runs"));
+        assertTrue(tableExists("payroll_run_lines"));
+        assertTrue(tableExists("payroll_payments"));
         assertTrue(accountExists("1010"));
         assertTrue(accountExists("1100"));
         assertTrue(accountExists("2100"));
         assertTrue(accountExists("3100"));
         assertTrue(accountExists("4000"));
+        assertTrue(accountExists("2200"));
+        assertTrue(accountExists("2300"));
+        assertTrue(accountExists("6100"));
     }
 
+
+
+    @Test
+    public void monthlyPayrollAccrualPostsBalancedAndCannotBeDuplicated() {
+        ContentValues employee = new ContentValues();
+        employee.put("name", "موظف اختبار الرواتب");
+        employee.put("job_title", "محاسب");
+        employee.put("salary", 1000.00);
+        long employeeId = database.insertOrThrow("employees", null, employee);
+
+        ContentValues advance = new ContentValues();
+        advance.put("employee_id", employeeId);
+        advance.put("kind", "ADVANCE");
+        advance.put("amount", 100.00);
+        advance.put("note", "سلفة اختبار");
+        advance.put("period_month", "2026-10");
+        advance.put("created_at", System.currentTimeMillis());
+        advance.put("posted", 1);
+        database.insertOrThrow("payroll_events", null, advance);
+
+        ContentValues deduction = new ContentValues();
+        deduction.put("employee_id", employeeId);
+        deduction.put("kind", "DEDUCTION");
+        deduction.put("amount", 50.00);
+        deduction.put("note", "خصم اختبار");
+        deduction.put("period_month", "2026-10");
+        deduction.put("created_at", System.currentTimeMillis());
+        deduction.put("posted", 0);
+        database.insertOrThrow("payroll_events", null, deduction);
+
+        MainActivity activity = new MainActivity();
+        database.beginTransaction();
+        try {
+            activity.postMonthlyPayroll(database, "2026-10");
+            Cursor run = database.rawQuery(
+                    "SELECT id,journal_entry_id,gross_total,advances_total,deductions_total,net_total FROM payroll_runs WHERE period_month=?",
+                    new String[]{"2026-10"});
+            long journalId;
+            try {
+                assertTrue(run.moveToFirst());
+                journalId = run.getLong(1);
+                assertEquals(1000.00, run.getDouble(2), 0.001);
+                assertEquals(100.00, run.getDouble(3), 0.001);
+                assertEquals(50.00, run.getDouble(4), 0.001);
+                assertEquals(850.00, run.getDouble(5), 0.001);
+            } finally { run.close(); }
+            assertJournalBalanced(journalId);
+            assertAccountTotals("6100", 1000.00, 0.00);
+            assertAccountTotals("1300", 0.00, 100.00);
+            assertAccountTotals("2300", 0.00, 50.00);
+            assertAccountTotals("2200", 0.00, 850.00);
+            database.setTransactionSuccessful();
+        } finally { database.endTransaction(); }
+
+        try {
+            activity.postMonthlyPayroll(database, "2026-10");
+            fail("Monthly payroll accrual must not be posted twice");
+        } catch (IllegalStateException expected) {
+            assertTrue(expected.getMessage().contains("مسبقًا"));
+        }
+    }
+
+    @Test
+    public void monthlyPayrollRejectsDeductionsAndAdvancesAboveSalary() {
+        ContentValues employee = new ContentValues();
+        employee.put("name", "موظف راتبه غير كافٍ");
+        employee.put("salary", 100.00);
+        long employeeId = database.insertOrThrow("employees", null, employee);
+        ContentValues event = new ContentValues();
+        event.put("employee_id", employeeId);
+        event.put("kind", "DEDUCTION");
+        event.put("amount", 120.00);
+        event.put("period_month", "2026-10");
+        event.put("created_at", System.currentTimeMillis());
+        database.insertOrThrow("payroll_events", null, event);
+
+        try {
+            new MainActivity().postMonthlyPayroll(database, "2026-10");
+            fail("Payroll must reject deductions exceeding gross salary");
+        } catch (IllegalArgumentException expected) {
+            assertTrue(expected.getMessage().contains("تتجاوز الراتب"));
+        }
+        Cursor runs = database.rawQuery("SELECT COUNT(*) FROM payroll_runs", null);
+        try { assertTrue(runs.moveToFirst()); assertEquals(0, runs.getInt(0)); }
+        finally { runs.close(); }
+    }
 
     @Test
     public void returnCanBeRecordedOnlyOnceForOriginalInvoice() {
