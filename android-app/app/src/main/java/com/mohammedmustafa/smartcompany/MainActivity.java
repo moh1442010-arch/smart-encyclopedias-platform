@@ -198,21 +198,46 @@ public class MainActivity extends Activity{
   content.addView(t("إجمالي المدين: "+fmt(debit)+" | إجمالي الدائن: "+fmt(credit)+" | صافي مدين الحساب: "+fmt(debit-credit),16));
  }
  void changePin(){page("تغيير رمز الدخول");content.addView(t("أدخل الرمز الحالي ثم اختر رمزًا جديدًا من 6 أرقام على الأقل. لا تشارك الرمز مع أحد.",15));EditText oldPin=e("رمز الدخول الحالي"),newPin=e("رمز جديد (6 أرقام على الأقل)"),confirmPin=e("تأكيد الرمز الجديد");for(EditText x:new EditText[]{oldPin,newPin,confirmPin}){x.setInputType(2|0x10);content.addView(x);}Button save=b("حفظ رمز الدخول الجديد");content.addView(save);save.setOnClickListener(v->{android.content.SharedPreferences p=getSharedPreferences("security",0);String old=oldPin.getText().toString(),next=newPin.getText().toString(),confirm=confirmPin.getText().toString();if(!verifyPin(old,p)){toast("رمز الدخول الحالي غير صحيح");return;}if(next.length()<6||!next.matches("[0-9]+")){toast("رمز الدخول يجب أن يتكون من 6 أرقام على الأقل");return;}if(!next.equals(confirm)){toast("تأكيد الرمز غير مطابق");return;}if(savePin(next,p)){toast("تم تغيير رمز الدخول بنجاح");dashboard();}});}
+ int currencyScale(){
+  try{return CurrencySpec.of(getSharedPreferences("company_profile",0).getString("currency","SDG")).getFractionDigits();}
+  catch(Exception ex){return 2;}
+ }
  void companySettings(){
   page("إعدادات الشركة");
   android.content.SharedPreferences p=getSharedPreferences("company_profile",0);
   EditText name=e("اسم الشركة");name.setText(p.getString("name","شركة محمد مصطفى الذكية"));content.addView(name);
-  String[] currencyCodes={"SDG","SAR","AED","EGP","QAR","KWD","BHD","OMR","JOD","IQD","MAD","TND","DZD","LYD","YER","LBP","SYP","MRU","SOS","DJF","USD","EUR"};String[] currencyLabels=english()?new String[]{"SDG — Sudanese Pound","SAR — Saudi Riyal","AED — UAE Dirham","EGP — Egyptian Pound","QAR — Qatari Riyal","KWD — Kuwaiti Dinar","BHD — Bahraini Dinar","OMR — Omani Rial","JOD — Jordanian Dinar","IQD — Iraqi Dinar","MAD — Moroccan Dirham","TND — Tunisian Dinar","DZD — Algerian Dinar","LYD — Libyan Dinar","YER — Yemeni Rial","LBP — Lebanese Pound","SYP — Syrian Pound","MRU — Mauritanian Ouguiya","SOS — Somali Shilling","DJF — Djiboutian Franc","USD — US Dollar","EUR — Euro"}:new String[]{"SDG — الجنيه السوداني","SAR — الريال السعودي","AED — الدرهم الإماراتي","EGP — الجنيه المصري","QAR — الريال القطري","KWD — الدينار الكويتي","BHD — الدينار البحريني","OMR — الريال العماني","JOD — الدينار الأردني","IQD — الدينار العراقي","MAD — الدرهم المغربي","TND — الدينار التونسي","DZD — الدينار الجزائري","LYD — الدينار الليبي","YER — الريال اليمني","LBP — الليرة اللبنانية","SYP — الليرة السورية","MRU — الأوقية الموريتانية","SOS — الشلن الصومالي","DJF — الفرنك الجيبوتي","USD — الدولار الأمريكي","EUR — اليورو"};Spinner currency=new Spinner(this);ArrayAdapter<String> currencyAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,currencyLabels);currencyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);currency.setAdapter(currencyAdapter);String savedCurrency=p.getString("currency","SDG");for(int i=0;i<currencyCodes.length;i++)if(currencyCodes[i].equals(savedCurrency)){currency.setSelection(i);break;}content.addView(t("عملة واحدة لكل ملف شركة. تغيير العملة لا يحوّل الأرصدة القديمة تلقائيًا.",14));content.addView(currency);
-  EditText decimals=e("عدد المنازل العشرية (0 أو 2)");decimals.setInputType(2);decimals.setText(String.valueOf(p.getInt("decimals",2)));content.addView(decimals);
+  String[] currencyCodes={"SDG","SAR","AED","EGP","QAR","KWD","BHD","OMR","JOD","IQD","MAD","TND","DZD","LYD","YER","LBP","SYP","MRU","SOS","DJF","USD","EUR"};
+  String[] currencyLabels=english()?new String[]{"SDG — Sudanese Pound","SAR — Saudi Riyal","AED — UAE Dirham","EGP — Egyptian Pound","QAR — Qatari Riyal","KWD — Kuwaiti Dinar","BHD — Bahraini Dinar","OMR — Omani Rial","JOD — Jordanian Dinar","IQD — Iraqi Dinar","MAD — Moroccan Dirham","TND — Tunisian Dinar","DZD — Algerian Dinar","LYD — Libyan Dinar","YER — Yemeni Rial","LBP — Lebanese Pound","SYP — Syrian Pound","MRU — Mauritanian Ouguiya","SOS — Somali Shilling","DJF — Djiboutian Franc","USD — US Dollar","EUR — Euro"}:new String[]{"SDG — الجنيه السوداني","SAR — الريال السعودي","AED — الدرهم الإماراتي","EGP — الجنيه المصري","QAR — الريال القطري","KWD — الدينار الكويتي","BHD — الدينار البحريني","OMR — الريال العماني","JOD — الدينار الأردني","IQD — الدينار العراقي","MAD — الدرهم المغربي","TND — الدينار التونسي","DZD — الدينار الجزائري","LYD — الدينار الليبي","YER — الريال اليمني","LBP — الليرة اللبنانية","SYP — الليرة السورية","MRU — الأوقية الموريتانية","SOS — الشلن الصومالي","DJF — الفرنك الجيبوتي","USD — الدولار الأمريكي","EUR — اليورو"};
+  Spinner currency=new Spinner(this);
+  ArrayAdapter<String> currencyAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,currencyLabels);
+  currencyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);currency.setAdapter(currencyAdapter);
+  String savedCurrency=p.getString("currency","SDG");int savedIndex=0;
+  for(int i=0;i<currencyCodes.length;i++)if(currencyCodes[i].equals(savedCurrency)){savedIndex=i;break;}
+  currency.setSelection(savedIndex);
+  content.addView(t("عملة واحدة لكل ملف شركة. لا تغيّر العملة بعد تسجيل عمليات؛ تغيير العملة لا يحوّل الأرصدة التاريخية.",14));
+  content.addView(currency);
+  TextView precision=t("دقة العملة: "+CurrencySpec.of(currencyCodes[savedIndex]).getFractionDigits()+" منازل عشرية",14);content.addView(precision);
+  currency.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+   public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
+    precision.setText("دقة العملة: "+CurrencySpec.of(currencyCodes[position]).getFractionDigits()+" منازل عشرية");
+   }
+   public void onNothingSelected(android.widget.AdapterView<?> parent){}
+  });
   EditText tax=e("نسبة الضريبة % (0 إذا لا توجد ضريبة)");tax.setInputType(8194);tax.setText(String.valueOf(p.getString("tax_percent","0")));content.addView(tax);
   EditText prefix=e("بادئة رقم الفاتورة");prefix.setText(p.getString("invoice_prefix","INV"));content.addView(prefix);
-  content.addView(t("عدد المنازل يغيّر طريقة العرض فقط ولا يغيّر تخزين المبالغ. نسبة الضريبة محفوظة كإعداد ولا تُضاف تلقائيًا إلى الفواتير. لا يوجد تكامل ضريبي رسمي.",14));
+  content.addView(t("الدقة مرتبطة برمز العملة. نسبة الضريبة محفوظة كإعداد ولا تُضاف تلقائيًا إلى الفواتير، ولا يوجد تكامل ضريبي رسمي في هذا الإصدار.",14));
   Button save=b("حفظ إعدادات الشركة");content.addView(save);
   save.setOnClickListener(v->{
    String company=name.getText().toString().trim(),cur=currencyCodes[currency.getSelectedItemPosition()],pre=prefix.getText().toString().trim(),taxText=tax.getText().toString().trim();
-   int dec;double rate;
-   try{dec=Integer.parseInt(decimals.getText().toString().trim());rate=Double.parseDouble(taxText.isEmpty()?"0":taxText);}catch(Exception ex){toast("تحقق من عدد المنازل ونسبة الضريبة");return;}
-   if(company.isEmpty()||cur.isEmpty()||pre.isEmpty()||(dec!=0&&dec!=2)||Double.isNaN(rate)||Double.isInfinite(rate)||rate<0||rate>100){toast("بيانات غير صحيحة: أكمل الاسم والعملة والبادئة، والمنازل 0 أو 2، والضريبة بين 0 و100");return;}
+   double rate;
+   try{rate=Double.parseDouble(taxText.isEmpty()?"0":taxText);}catch(Exception ex){toast("تحقق من نسبة الضريبة");return;}
+   if(company.isEmpty()||cur.isEmpty()||pre.isEmpty()||Double.isNaN(rate)||Double.isInfinite(rate)||rate<0||rate>100){toast("بيانات غير صحيحة: أكمل الاسم والبادئة، والضريبة بين 0 و100");return;}
+   if(!cur.equals(savedCurrency)){
+    Cursor used=db.q("SELECT (SELECT COUNT(*) FROM transactions)+(SELECT COUNT(*) FROM products)+(SELECT COUNT(*) FROM journal_entries)");
+    long count=used.moveToFirst()?used.getLong(0):0;used.close();
+    if(count>0){toast("لا يمكن تغيير العملة بعد تسجيل بيانات مالية. أنشئ ملف شركة جديدًا بالعملة المطلوبة.");return;}
+   }
+   int dec=CurrencySpec.of(cur).getFractionDigits();
    boolean ok=p.edit().putString("name",company).putString("currency",cur).putInt("decimals",dec).putString("tax_percent",String.valueOf(rate)).putString("invoice_prefix",pre).commit();
    toast(ok?"تم حفظ إعدادات الشركة":"تعذر حفظ الإعدادات");
   });
@@ -243,7 +268,7 @@ public class MainActivity extends Activity{
    calc.setOnClickListener(v->{
     if(!validNumber(qty,true)||!validNumber(price,true)||!validNumber(discount,false)){toast("أدخل كمية وسعرًا وخصمًا رقميًا صحيحًا");return;}
     try {
-     long totalMinor=Money.netInvoiceMinorUnits(qty.getText().toString(),price.getText().toString(),discount.getText().toString().trim().isEmpty()?"0":discount.getText().toString());
+     long totalMinor=Money.netInvoiceMinorUnits(qty.getText().toString(),price.getText().toString(),discount.getText().toString().trim().isEmpty()?"0":discount.getText().toString(),currencyScale());
      if(num(qty)<=0){toast("تحقق من الكمية والسعر والخصم");return;}
      total.setText(tr("الإجمالي: ")+fmt(Money.fromMinorUnits(totalMinor).doubleValue()));
     } catch(Exception ex) { toast("تحقق من الكمية والسعر والخصم"); }
@@ -256,29 +281,29 @@ public class MainActivity extends Activity{
     double q=num(qty),pr,disc,paidValue;
     long invoiceMinor;
     try {
-     pr=Money.fromMinorUnits(Money.toMinorUnits(price.getText().toString())).doubleValue();
-     disc=Money.fromMinorUnits(Money.toMinorUnits(discount.getText().toString().trim().isEmpty()?"0":discount.getText().toString())).doubleValue();
-     paidValue=Money.fromMinorUnits(Money.toMinorUnits(paid.getText().toString().trim().isEmpty()?"0":paid.getText().toString())).doubleValue();
-     invoiceMinor=Money.netInvoiceMinorUnits(qty.getText().toString(),price.getText().toString(),discount.getText().toString().trim().isEmpty()?"0":discount.getText().toString());
+     pr=Money.fromMinorUnits(Money.toMinorUnits(price.getText().toString(),currencyScale()),currencyScale()).doubleValue();
+     disc=Money.fromMinorUnits(Money.toMinorUnits(discount.getText().toString().trim().isEmpty()?"0":discount.getText().toString(),currencyScale()),currencyScale()).doubleValue();
+     paidValue=Money.fromMinorUnits(Money.toMinorUnits(paid.getText().toString().trim().isEmpty()?"0":paid.getText().toString(),currencyScale()),currencyScale()).doubleValue();
+     invoiceMinor=Money.netInvoiceMinorUnits(qty.getText().toString(),price.getText().toString(),discount.getText().toString().trim().isEmpty()?"0":discount.getText().toString(),currencyScale());
     } catch(Exception ex) { toast("تحقق من الكمية والسعر والخصم والمدفوع");return; }
-    double totalValue=Money.fromMinorUnits(invoiceMinor).doubleValue();
+    double totalValue=Money.fromMinorUnits(invoiceMinor,currencyScale()).doubleValue();
     if(q<=0||pr<0||disc<0||paidValue<0||paidValue>totalValue){toast("تحقق من الكمية والسعر والخصم والمدفوع");return;}
     Cursor c=db.q("SELECT id,qty,cost FROM products WHERE name=? OR barcode=?",lookup,lookup);
     if(!c.moveToFirst()){c.close();toast("الصنف غير موجود");return;}
     long pid=c.getLong(0);double old=c.getDouble(1),cost=c.getDouble(2);c.close();
     double next=purchase?old+q:old-q;
     if(next<0){toast("الرصيد غير كافٍ");return;}
-    double pay=Math.min(paidValue,totalValue),remaining=Money.fromMinorUnits(Money.toMinorUnits(totalValue-pay)).doubleValue();
+    double pay=Math.min(paidValue,totalValue),remaining=Money.fromMinorUnits(Money.toMinorUnits(totalValue-pay,currencyScale()),currencyScale()).doubleValue();
     SQLiteDatabase sq=db.getWritableDatabase();sq.beginTransaction();
     try{
      ContentValues pv=new ContentValues();pv.put("qty",next);
-     if(purchase)pv.put("cost",Money.fromMinorUnits(Money.toMinorUnits(((old*cost)+totalValue)/Math.max(0.0000001,next))).doubleValue());
+     if(purchase)pv.put("cost",Money.fromMinorUnits(Money.toMinorUnits(((old*cost)+totalValue)/Math.max(0.0000001,next),currencyScale()),currencyScale()).doubleValue());
      int changed=sq.update("products",pv,"id=?",new String[]{String.valueOf(pid)});
      if(changed!=1)throw new IllegalStateException("Product update failed");
      ContentValues tv=new ContentValues();String type=purchase?"PURCHASE":"SALE";String partyTable=purchase?"suppliers":"customers";Cursor partyCursor=sq.rawQuery("SELECT id FROM "+partyTable+" WHERE name=? ORDER BY id LIMIT 1",new String[]{party});long partyId;if(partyCursor.moveToFirst()){partyId=partyCursor.getLong(0);partyCursor.close();}else{partyCursor.close();ContentValues partyValues=new ContentValues();partyValues.put("name",party);if(!purchase)partyValues.put("credit_limit",0);partyId=sq.insertOrThrow(partyTable,null,partyValues);}if(!purchase&&remaining>0){Cursor limc=sq.rawQuery("SELECT COALESCE(credit_limit,0) FROM customers WHERE id=?",new String[]{String.valueOf(partyId)});double creditLimit=limc.moveToFirst()?limc.getDouble(0):0;limc.close();if(creditLimit>0){Cursor bal=sq.rawQuery("SELECT COALESCE(SUM(remaining),0) FROM transactions WHERE type='SALE' AND (customer_id=? OR (customer_id IS NULL AND party=?))",new String[]{String.valueOf(partyId),party});double currentDue=bal.moveToFirst()?bal.getDouble(0):0;bal.close();if(currentDue+remaining>creditLimit+0.005)throw new IllegalArgumentException("تجاوزت الفاتورة حد ائتمان العميل. الرصيد الحالي "+fmt(currentDue)+" والحد "+fmt(creditLimit));}}tv.put("type",type);tv.put("party",party);if(purchase)tv.put("supplier_id",partyId);else tv.put("customer_id",partyId);tv.put("total",totalValue);tv.put("paid",pay);tv.put("remaining",remaining);tv.put("created_at",System.currentTimeMillis());
      long tid=sq.insertOrThrow("transactions",null,tv);String invoicePrefix=getSharedPreferences("company_profile",0).getString("invoice_prefix","INV");String invoiceNo=invoicePrefix+"-"+new java.text.SimpleDateFormat("yyyyMMdd",Locale.US).format(new Date())+"-"+String.format(Locale.US,"%06d",tid);sq.execSQL("UPDATE transactions SET invoice_no=? WHERE id=?",new Object[]{invoiceNo,tid});
      ContentValues iv=new ContentValues();iv.put("transaction_id",tid);iv.put("product_id",pid);iv.put("qty",q);iv.put("price",pr);iv.put("cost",cost);iv.put("discount",disc);sq.insertOrThrow("invoice_items",null,iv);
-     postJournal(sq,tid,type,totalValue,pay,remaining,Money.fromMinorUnits(Money.toMinorUnits(q*cost)).doubleValue());
+     postJournal(sq,tid,type,totalValue,pay,remaining,Money.fromMinorUnits(Money.toMinorUnits(q*cost,currencyScale()),currencyScale()).doubleValue());
      sq.setTransactionSuccessful();
     }catch(Exception ex){toast("لم تُحفظ الفاتورة. لم يتم اعتماد أي تغيير؛ راجع البيانات وحاول مجددًا.");return;}
     finally{sq.endTransaction();}
@@ -518,7 +543,7 @@ public class MainActivity extends Activity{
  ContentValues cv(Object...a){ContentValues v=new ContentValues();for(int i=0;i<a.length;i+=2){Object val=a[i+1];if(val instanceof Number)v.put(String.valueOf(a[i]),((Number)val).doubleValue());else v.put(String.valueOf(a[i]),String.valueOf(val));}return v;}
  boolean validIsoDate(String value,boolean required){if(value==null||value.trim().isEmpty())return !required;try{java.text.SimpleDateFormat sdf=new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US);sdf.setLenient(false);java.util.Date d=sdf.parse(value.trim());return d!=null&&sdf.format(d).equals(value.trim());}catch(Exception ex){return false;}}
  boolean validNumber(EditText x,boolean required){String value=x.getText().toString().trim();if(value.isEmpty())return !required;try{double d=Double.parseDouble(value);return !Double.isNaN(d)&&!Double.isInfinite(d);}catch(Exception ex){return false;}}
-  double num(EditText x){try{return Double.parseDouble(x.getText().toString());}catch(Exception z){return 0;}}String fmt(double x){int decimals=getSharedPreferences("company_profile",0).getInt("decimals",2);String currency=getSharedPreferences("company_profile",0).getString("currency","SDG").trim();if(currency.isEmpty())currency="SDG";return String.format(Locale.US,decimals==0?"%,.0f":"%,.2f",x)+" "+currency;}void toast(String s){Toast.makeText(this,tr(s),Toast.LENGTH_LONG).show();}void open(String u){try{startActivity(new Intent(Intent.ACTION_VIEW,android.net.Uri.parse(u)));}catch(Exception z){}}
+  double num(EditText x){try{return Double.parseDouble(x.getText().toString());}catch(Exception z){return 0;}}String fmt(double x){String currency=getSharedPreferences("company_profile",0).getString("currency","SDG").trim();if(currency.isEmpty())currency="SDG";int decimals;try{decimals=CurrencySpec.of(currency).getFractionDigits();}catch(Exception ex){decimals=2;}return String.format(Locale.US,"% ,."+decimals+"f",x).replace("% ,","%,")+" "+currency;}void toast(String s){Toast.makeText(this,tr(s),Toast.LENGTH_LONG).show();}void open(String u){try{startActivity(new Intent(Intent.ACTION_VIEW,android.net.Uri.parse(u)));}catch(Exception z){}}
  @Override protected void onStop(){super.onStop();if(authenticated){authenticated=false;needsRelogin=true;}}
  @Override protected void onResume(){super.onResume();if(needsRelogin){login();}}
  public void onBackPressed(){if(authenticated){dashboard();}else{super.onBackPressed();}}
