@@ -85,6 +85,8 @@ sealed class MainForm : Form
         // Additive schema migrations; never drop or rewrite existing transaction rows.
         try { using var m = c.CreateCommand(); m.CommandText = "ALTER TABLE sales ADD COLUMN customer_id INTEGER"; m.ExecuteNonQuery(); } catch (SqliteException) { }
         try { using var m = c.CreateCommand(); m.CommandText = "ALTER TABLE sales ADD COLUMN payment_mode TEXT NOT NULL DEFAULT 'CASH'"; m.ExecuteNonQuery(); } catch (SqliteException) { }
+        // Store the cost at sale time so future returns can reverse COGS without guessing historical costs.
+        try { using var m = c.CreateCommand(); m.CommandText = "ALTER TABLE sales ADD COLUMN unit_cost REAL NOT NULL DEFAULT 0"; m.ExecuteNonQuery(); } catch (SqliteException) { }
         try { using var m = c.CreateCommand(); m.CommandText = "ALTER TABLE purchases ADD COLUMN supplier_id INTEGER"; m.ExecuteNonQuery(); } catch (SqliteException) { }
         try { using var m = c.CreateCommand(); m.CommandText = "ALTER TABLE purchases ADD COLUMN payment_mode TEXT NOT NULL DEFAULT 'CASH'"; m.ExecuteNonQuery(); } catch (SqliteException) { }
         // Additive, non-destructive schema changes preserve existing customer data and transactions.
@@ -201,13 +203,14 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
                 insert.Transaction = tx;
                 insert.CommandText = purchase
                     ? "INSERT INTO purchases(product,qty,price,total,supplier_id,payment_mode) VALUES($n,$q,$p,$t,$party,$mode)"
-                    : "INSERT INTO sales(product,qty,price,total,customer_id,payment_mode) VALUES($n,$q,$p,$t,$party,$mode)";
+                    : "INSERT INTO sales(product,qty,price,total,customer_id,payment_mode,unit_cost) VALUES($n,$q,$p,$t,$party,$mode,$cost)";
                 insert.Parameters.AddWithValue("$n", productName);
                 insert.Parameters.AddWithValue("$q", qty);
                 insert.Parameters.AddWithValue("$p", price);
                 insert.Parameters.AddWithValue("$t", qty * price);
                 insert.Parameters.AddWithValue("$party", partyId.HasValue ? partyId.Value : DBNull.Value);
                 insert.Parameters.AddWithValue("$mode", isCredit ? "CREDIT" : "CASH");
+                if (!purchase) insert.Parameters.AddWithValue("$cost", oldUnitCost);
                 insert.ExecuteNonQuery();
                 var transactionId = LastId(c, tx);
                 var total = qty * price;
