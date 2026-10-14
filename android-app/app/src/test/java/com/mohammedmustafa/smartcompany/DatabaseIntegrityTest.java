@@ -246,6 +246,30 @@ public class DatabaseIntegrityTest {
                 beforeCount, journalEntryCount());
     }
 
+    @Test
+    public void postingTheSameTransactionTwiceIsRejectedWithoutDuplicateLedgerRows() {
+        MainActivity activity = new MainActivity();
+        database.beginTransaction();
+        try {
+            activity.postJournal(database, 111L, "SALE", 100.00, 100.00, 0.00, 60.00);
+            int afterFirstPost = journalEntryCount();
+
+            try {
+                activity.postJournal(database, 111L, "SALE", 100.00, 100.00, 0.00, 60.00);
+                fail("A transaction must not be posted to the ledger twice");
+            } catch (IllegalStateException expected) {
+                assertTrue(expected.getMessage().contains("already has a journal entry"));
+            }
+
+            assertEquals("Duplicate posting must not create another journal entry",
+                    afterFirstPost, journalEntryCount());
+            assertJournalBalanced(journalIdForTransaction(111L));
+            database.setTransactionSuccessful();
+        } finally {
+            database.endTransaction();
+        }
+    }
+
     private int journalEntryCount() {
         Cursor c = database.rawQuery("SELECT COUNT(*) FROM journal_entries", null);
         try {
