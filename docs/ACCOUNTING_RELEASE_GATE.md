@@ -7,7 +7,7 @@
 - Android release build and signing validation succeeded for build 2.3.1 on 2026-10-14.
 - Existing automated tests cover selected database invariants, return duplication, payroll posting, and money helper behavior.
 - Legacy SQLite monetary columns stored as REAL remain. A complete fixed-point database migration has **not** been established by the available evidence.
-- Currency-aware precision helpers are now available for SDG/EGP/SAR/AED/USD/EUR (2 digits), KWD/JOD/TND/BHD/IQD/LYD/OMR (3 digits), and XAF (0 digits). The current invoice UI/persistence path has **not yet been fully migrated to select a company currency and use its scale end-to-end**.
+- Currency precision is now derived from the selected company currency for invoice calculations, shared rounding, payroll payout input, and display formatting. Currency changes are blocked once transactions, products, or journal entries exist. This is an input/display improvement only: monetary persistence still uses SQLite REAL, so a complete fixed-point migration is **not done**. Supported currency precision mappings include SDG/EGP/SAR/AED/USD/EUR/MRU/SOS (2 digits), KWD/JOD/TND/BHD/IQD/LYD/OMR (3 digits), and XAF/DJF (0 digits).
 - Physical installation, update, backup/restore, legal/tax acceptance, and accountant acceptance remain unverified.
 
 ## Mandatory release gates
