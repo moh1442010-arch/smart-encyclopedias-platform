@@ -480,24 +480,37 @@ ORDER BY a.code";
             }
         }
         int missingSales, missingPurchases, missingExpenses, missingOpeningStock;
+        int missingReceipts, missingSupplierPayments, missingPayrollEvents, missingPayrollAccruals;
+        int unbalancedEntries, orphanLines, invalidLines;
         using (var q = c.CreateCommand())
         {
             q.CommandText = @"SELECT
 (SELECT COUNT(*) FROM sales s LEFT JOIN gl_entries g ON g.source_type='SALE' AND g.source_id=s.id WHERE g.id IS NULL),
 (SELECT COUNT(*) FROM purchases p LEFT JOIN gl_entries g ON g.source_type='PURCHASE' AND g.source_id=p.id WHERE g.id IS NULL),
 (SELECT COUNT(*) FROM expenses e LEFT JOIN gl_entries g ON g.source_type='EXPENSE' AND g.source_id=e.id WHERE g.id IS NULL),
-(SELECT COUNT(*) FROM products p LEFT JOIN gl_entries g ON g.source_type='OPENING_STOCK' AND g.source_id=p.id WHERE p.qty>0 AND g.id IS NULL)";
+(SELECT COUNT(*) FROM products p LEFT JOIN gl_entries g ON g.source_type='OPENING_STOCK' AND g.source_id=p.id WHERE p.qty>0 AND g.id IS NULL),
+(SELECT COUNT(*) FROM customer_receipts x LEFT JOIN gl_entries g ON g.source_type='CUSTOMER_RECEIPT' AND g.source_id=x.id WHERE g.id IS NULL),
+(SELECT COUNT(*) FROM supplier_payments x LEFT JOIN gl_entries g ON g.source_type='SUPPLIER_PAYMENT' AND g.source_id=x.id WHERE g.id IS NULL),
+(SELECT COUNT(*) FROM payroll_events x LEFT JOIN gl_entries g ON g.source_type='PAYROLL_ADVANCE' AND g.source_id=x.id WHERE x.kind='ADVANCE' AND g.id IS NULL),
+(SELECT COUNT(*) FROM payroll_runs x LEFT JOIN gl_entries g ON g.source_type='PAYROLL_ACCRUAL' AND g.source_id=x.id WHERE g.id IS NULL),
+(SELECT COUNT(*) FROM (SELECT e.id FROM gl_entries e LEFT JOIN gl_lines l ON l.entry_id=e.id GROUP BY e.id HAVING ABS(COALESCE(SUM(l.debit),0)-COALESCE(SUM(l.credit),0))>0.005)),
+(SELECT COUNT(*) FROM gl_lines l LEFT JOIN gl_entries e ON e.id=l.entry_id WHERE e.id IS NULL),
+(SELECT COUNT(*) FROM gl_lines WHERE debit<0 OR credit<0 OR (debit>0 AND credit>0))";
             using var r = q.ExecuteReader();
             r.Read();
             missingSales = r.GetInt32(0); missingPurchases = r.GetInt32(1); missingExpenses = r.GetInt32(2); missingOpeningStock = r.GetInt32(3);
+            missingReceipts = r.GetInt32(4); missingSupplierPayments = r.GetInt32(5); missingPayrollEvents = r.GetInt32(6); missingPayrollAccruals = r.GetInt32(7);
+            unbalancedEntries = r.GetInt32(8); orphanLines = r.GetInt32(9); invalidLines = r.GetInt32(10);
         }
         var balanced = Math.Abs(totalDebit - totalCredit) <= 0.005;
-        var report = "دفتر الأستاذ العام — ميزان المراجعة" + Environment.NewLine
+        var report = "دفتر الأستاذ العام — ميزان المراجعة التشخيصي" + Environment.NewLine
             + $"إجمالي المدين: {totalDebit:N2} | إجمالي الدائن: {totalCredit:N2}" + Environment.NewLine
-            + $"حالة التوازن: {(balanced ? "متوازن حسابيًا" : "غير متوازن — يتطلب التحقيق")}" + Environment.NewLine + Environment.NewLine
+            + $"حالة التوازن الإجمالي: {(balanced ? "متوازن إجمالًا فقط" : "غير متوازن — يتطلب التحقيق")}" + Environment.NewLine
+            + $"قيود غير متوازنة: {unbalancedEntries} | أسطر يتيمة: {orphanLines} | أسطر غير صالحة: {invalidLines}" + Environment.NewLine + Environment.NewLine
             + $"عمليات بلا قيد: مبيعات {missingSales} | مشتريات {missingPurchases} | مصروفات {missingExpenses} | مخزون افتتاحي {missingOpeningStock}" + Environment.NewLine
-
-            + "تنبيه: قد تشمل الأعداد سجلات تاريخية سابقة لإنشاء دفتر الأستاذ؛ لا تعتمد التقرير حتى تسوية كل الفروقات." + Environment.NewLine + Environment.NewLine
+            + $"تحصيلات عملاء بلا قيد: {missingReceipts} | سداد موردين بلا قيد: {missingSupplierPayments}" + Environment.NewLine
+            + $"سلف موظفين بلا قيد: {missingPayrollEvents} | استحقاقات رواتب بلا قيد: {missingPayrollAccruals}" + Environment.NewLine + Environment.NewLine
+            + "تنبيه: الأعداد قد تشمل سجلات تاريخية سبقت دفتر الأستاذ. الخصومات العامة والمرتجعات والتسويات والإقفال ليست مكتملة؛ لا تعتمد التقرير كقوائم مالية معتمدة." + Environment.NewLine + Environment.NewLine
             + string.Join(Environment.NewLine, rows);
         using var f = new Form { Text = "دفتر الأستاذ وميزان المراجعة", Width = 900, Height = 650, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
         var preview = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both, WordWrap = false, Dock = DockStyle.Fill, Font = new Font("Consolas", 11), Text = report };
