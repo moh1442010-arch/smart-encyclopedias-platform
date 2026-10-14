@@ -27,6 +27,8 @@ public class CurrencySpecTest {
         assertEquals(12345L, kwd.toMinorUnits("12.345"));
         assertEquals(new BigDecimal("12.345"), kwd.fromMinorUnits(12345L));
         assertEquals(12345L, Money.netInvoiceMinorUnits("1", "12.345", "0", 3));
+        assertEquals(2467L, Money.netInvoiceMinorUnits("2", "1.234", "0.001", 3));
+        assertEquals(1235L, Money.toMinorUnits("1.2345", 3));
     }
 
     @Test public void zeroDecimalCurrencyDoesNotInventFractionalUnits() {
