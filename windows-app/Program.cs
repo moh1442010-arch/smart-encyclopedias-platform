@@ -465,8 +465,16 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
             list.Items.Clear();
             using var c = C(); using var q = c.CreateCommand();
             q.CommandText = supplierPayment
-                ? @"SELECT s.name,COALESCE((SELECT SUM(p.total) FROM purchases p WHERE p.supplier_id=s.id AND p.payment_mode='CREDIT'),0)-COALESCE((SELECT SUM(x.amount) FROM supplier_payments x WHERE x.supplier_id=s.id),0) FROM suppliers s ORDER BY s.name"
-                : @"SELECT s.name,COALESCE((SELECT SUM(p.total) FROM sales p WHERE p.customer_id=s.id AND p.payment_mode='CREDIT'),0)-COALESCE((SELECT SUM(x.amount) FROM customer_receipts x WHERE x.customer_id=s.id),0) FROM customers s ORDER BY s.name";
+                ? @"SELECT s.name,
+COALESCE((SELECT SUM(p.total) FROM purchases p WHERE p.supplier_id=s.id AND p.payment_mode='CREDIT'),0)
+-COALESCE((SELECT SUM(r.total) FROM purchase_returns r JOIN purchases p ON p.id=r.purchase_id WHERE p.supplier_id=s.id AND p.payment_mode='CREDIT'),0)
+-COALESCE((SELECT SUM(x.amount) FROM supplier_payments x WHERE x.supplier_id=s.id),0)
+FROM suppliers s ORDER BY s.name"
+                : @"SELECT s.name,
+COALESCE((SELECT SUM(p.total) FROM sales p WHERE p.customer_id=s.id AND p.payment_mode='CREDIT'),0)
+-COALESCE((SELECT SUM(r.total) FROM sales_returns r JOIN sales p ON p.id=r.sale_id WHERE p.customer_id=s.id AND p.payment_mode='CREDIT'),0)
+-COALESCE((SELECT SUM(x.amount) FROM customer_receipts x WHERE x.customer_id=s.id),0)
+FROM customers s ORDER BY s.name";
             using var reader=q.ExecuteReader();
             while(reader.Read()) list.Items.Add(reader.GetString(0)+" | "+UiLanguage.T("الرصيد")+": "+reader.GetDouble(1).ToString("N2"));
         }
@@ -481,8 +489,12 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
                 {
                     balance.Transaction = tx;
                     balance.CommandText = supplierPayment
-                        ? "SELECT COALESCE((SELECT SUM(total) FROM purchases WHERE supplier_id=$id AND payment_mode='CREDIT'),0)-COALESCE((SELECT SUM(amount) FROM supplier_payments WHERE supplier_id=$id),0)"
-                        : "SELECT COALESCE((SELECT SUM(total) FROM sales WHERE customer_id=$id AND payment_mode='CREDIT'),0)-COALESCE((SELECT SUM(amount) FROM customer_receipts WHERE customer_id=$id),0)";
+                        ? @"SELECT COALESCE((SELECT SUM(total) FROM purchases WHERE supplier_id=$id AND payment_mode='CREDIT'),0)
+-COALESCE((SELECT SUM(r.total) FROM purchase_returns r JOIN purchases p ON p.id=r.purchase_id WHERE p.supplier_id=$id AND p.payment_mode='CREDIT'),0)
+-COALESCE((SELECT SUM(amount) FROM supplier_payments WHERE supplier_id=$id),0)"
+                        : @"SELECT COALESCE((SELECT SUM(total) FROM sales WHERE customer_id=$id AND payment_mode='CREDIT'),0)
+-COALESCE((SELECT SUM(r.total) FROM sales_returns r JOIN sales p ON p.id=r.sale_id WHERE p.customer_id=$id AND p.payment_mode='CREDIT'),0)
+-COALESCE((SELECT SUM(amount) FROM customer_receipts WHERE customer_id=$id),0)";
                     balance.Parameters.AddWithValue("$id",ids[party.SelectedIndex]);
                     var outstanding = Convert.ToDouble(balance.ExecuteScalar());
                     if(value > Math.Max(0d,outstanding) + 0.005d)
@@ -619,6 +631,7 @@ ORDER BY a.code";
         }
         int missingSales, missingPurchases, missingExpenses, missingOpeningStock;
         int missingReceipts, missingSupplierPayments, missingPayrollEvents, missingPayrollAccruals;
+        int missingSalesReturns, missingPurchaseReturns;
         int unbalancedEntries, orphanLines, invalidLines;
         using (var q = c.CreateCommand())
         {
@@ -640,6 +653,16 @@ ORDER BY a.code";
             missingReceipts = r.GetInt32(4); missingSupplierPayments = r.GetInt32(5); missingPayrollEvents = r.GetInt32(6); missingPayrollAccruals = r.GetInt32(7);
             unbalancedEntries = r.GetInt32(8); orphanLines = r.GetInt32(9); invalidLines = r.GetInt32(10);
         }
+        using (var q = c.CreateCommand())
+        {
+            q.CommandText = @"SELECT
+(SELECT COUNT(*) FROM sales_returns r LEFT JOIN gl_entries g ON g.source_type='SALE_RETURN' AND g.source_id=r.id WHERE g.id IS NULL),
+(SELECT COUNT(*) FROM purchase_returns r LEFT JOIN gl_entries g ON g.source_type='PURCHASE_RETURN' AND g.source_id=r.id WHERE g.id IS NULL)";
+            using var r = q.ExecuteReader();
+            r.Read();
+            missingSalesReturns = r.GetInt32(0);
+            missingPurchaseReturns = r.GetInt32(1);
+        }
         var balanced = Math.Abs(totalDebit - totalCredit) <= 0.005;
         var report = "دفتر الأستاذ العام — ميزان المراجعة التشخيصي" + Environment.NewLine
             + $"إجمالي المدين: {totalDebit:N2} | إجمالي الدائن: {totalCredit:N2}" + Environment.NewLine
@@ -647,6 +670,7 @@ ORDER BY a.code";
             + $"قيود غير متوازنة: {unbalancedEntries} | أسطر يتيمة: {orphanLines} | أسطر غير صالحة: {invalidLines}" + Environment.NewLine + Environment.NewLine
             + $"عمليات بلا قيد: مبيعات {missingSales} | مشتريات {missingPurchases} | مصروفات {missingExpenses} | مخزون افتتاحي {missingOpeningStock}" + Environment.NewLine
             + $"تحصيلات عملاء بلا قيد: {missingReceipts} | سداد موردين بلا قيد: {missingSupplierPayments}" + Environment.NewLine
+            + $"مرتجعات مبيعات بلا قيد: {missingSalesReturns} | مرتجعات مشتريات بلا قيد: {missingPurchaseReturns}" + Environment.NewLine
             + $"سلف موظفين بلا قيد: {missingPayrollEvents} | استحقاقات رواتب بلا قيد: {missingPayrollAccruals}" + Environment.NewLine + Environment.NewLine
             + "تنبيه: الأعداد قد تشمل سجلات تاريخية سبقت دفتر الأستاذ. الخصومات العامة والمرتجعات والتسويات والإقفال ليست مكتملة؛ لا تعتمد التقرير كقوائم مالية معتمدة." + Environment.NewLine + Environment.NewLine
             + string.Join(Environment.NewLine, rows);
