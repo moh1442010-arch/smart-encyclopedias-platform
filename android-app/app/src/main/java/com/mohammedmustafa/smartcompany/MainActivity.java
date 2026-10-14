@@ -276,6 +276,8 @@ public class MainActivity extends Activity{
    });
    Button save=b("حفظ وترحيل");content.addView(save);
    save.setOnClickListener(v->{
+    double configuredTax;try{configuredTax=Double.parseDouble(getSharedPreferences("company_profile",0).getString("tax_percent","0"));}catch(Exception ignored){configuredTax=0;}
+    if(configuredTax>0){toast("الفوترة الضريبية غير مفعلة بعد. صفّر نسبة الضريبة من إعدادات الشركة قبل تسجيل فواتير جديدة.");return;}
     String party=customer.getText().toString().trim(),lookup=item.getText().toString().trim();
     if(party.isEmpty()){toast("أدخل اسم العميل أو المورد");return;}
     if(lookup.isEmpty()||!validNumber(qty,true)||!validNumber(price,true)||!validNumber(discount,false)||!validNumber(paid,false)){toast("أكمل بيانات الفاتورة بأرقام صحيحة");return;}
