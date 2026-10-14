@@ -1,4 +1,4 @@
-name: Build Smart Company Signed Android Release 2.3.1 - Signing Validation
+name: Build Smart Company Signed Android Release 2.3.3 - Signing Validation
 
 concurrency:
   group: smart-company-android-release
@@ -59,7 +59,7 @@ jobs:
       - name: Upload clean-install test APK
         uses: actions/upload-artifact@v4
         with:
-          name: smart-company-2.3.1-clean-install-test-debug
+          name: smart-company-2.3.3-clean-install-test-debug
           path: android-app/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
@@ -110,26 +110,26 @@ jobs:
             fi
           fi
           apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
-          "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out release/SmartCompany-2.3.1-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
-          cp app/build/outputs/bundle/release/app-release.aab release/SmartCompany-2.3.1-release.aab
-          jarsigner -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" release/SmartCompany-2.3.1-release.aab "$KEY_ALIAS"
-          "$apksigner" verify --verbose release/SmartCompany-2.3.1-release.apk
-          jarsigner -verify -verbose release/SmartCompany-2.3.1-release.aab
-          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 release/SmartCompany-2.3.1-release.apk
-          sha256sum release/SmartCompany-2.3.1-release.apk release/SmartCompany-2.3.1-release.aab > release/SHA256SUMS.txt
+          "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out release/SmartCompany-2.3.3-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
+          cp app/build/outputs/bundle/release/app-release.aab release/SmartCompany-2.3.3-release.aab
+          jarsigner -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" release/SmartCompany-2.3.3-release.aab "$KEY_ALIAS"
+          "$apksigner" verify --verbose release/SmartCompany-2.3.3-release.apk
+          jarsigner -verify -verbose release/SmartCompany-2.3.3-release.aab
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 release/SmartCompany-2.3.3-release.apk
+          sha256sum release/SmartCompany-2.3.3-release.apk release/SmartCompany-2.3.3-release.aab > release/SHA256SUMS.txt
 
       - name: Final release QA
         working-directory: android-app
         run: |
           set -euo pipefail
           build_tools="$ANDROID_HOME/build-tools/36.0.0"
-          apk="release/SmartCompany-2.3.1-release.apk"
-          aab="release/SmartCompany-2.3.1-release.aab"
+          apk="release/SmartCompany-2.3.3-release.apk"
+          aab="release/SmartCompany-2.3.3-release.aab"
           test -s "$apk"
           test -s "$aab"
           test -s "release/SHA256SUMS.txt"
           badging="$("$build_tools/aapt" dump badging "$apk")"
-          echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='33' versionName='2.3.1'"
+          echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='33' versionName='2.3.3'"
           echo "$badging" | grep -F "application-label:'شركة محمد مصطفى الذكية'"
           permissions="$("$build_tools/aapt" dump permissions "$apk")"
           echo "$permissions" | grep -q "android.permission.INTERNET" || { echo "Required INTERNET permission for server-side commercial licensing is missing"; exit 1; }
@@ -140,10 +140,10 @@ jobs:
       - name: Upload signed release artifacts only
         uses: actions/upload-artifact@v4
         with:
-          name: smart-company-android-signed-release-v2.3.1
+          name: smart-company-android-signed-release-v2.3.3
           path: |
-            android-app/release/SmartCompany-2.3.1-release.apk
-            android-app/release/SmartCompany-2.3.1-release.aab
+            android-app/release/SmartCompany-2.3.3-release.apk
+            android-app/release/SmartCompany-2.3.3-release.aab
             android-app/release/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 90
