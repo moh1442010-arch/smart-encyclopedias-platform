@@ -262,7 +262,7 @@ public class MainActivity extends Activity{
      invoiceMinor=Money.netInvoiceMinorUnits(qty.getText().toString(),price.getText().toString(),discount.getText().toString().trim().isEmpty()?"0":discount.getText().toString());
     } catch(Exception ex) { toast("تحقق من الكمية والسعر والخصم والمدفوع");return; }
     double totalValue=Money.fromMinorUnits(invoiceMinor).doubleValue();
-    if(q<=0||pr<0||disc<0||disc>totalValue||paidValue<0||paidValue>totalValue){toast("تحقق من الكمية والسعر والخصم والمدفوع");return;}
+    if(q<=0||pr<0||disc<0||paidValue<0||paidValue>totalValue){toast("تحقق من الكمية والسعر والخصم والمدفوع");return;}
     Cursor c=db.q("SELECT id,qty,cost FROM products WHERE name=? OR barcode=?",lookup,lookup);
     if(!c.moveToFirst()){c.close();toast("الصنف غير موجود");return;}
     long pid=c.getLong(0);double old=c.getDouble(1),cost=c.getDouble(2);c.close();
