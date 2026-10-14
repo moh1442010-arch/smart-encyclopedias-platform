@@ -97,7 +97,7 @@ sealed class MainForm : Form
             ledger.CommandText = @"CREATE TABLE IF NOT EXISTS gl_accounts(id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT NOT NULL UNIQUE,name TEXT NOT NULL UNIQUE,kind TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS gl_entries(id INTEGER PRIMARY KEY AUTOINCREMENT,source_type TEXT NOT NULL,source_id INTEGER NOT NULL,memo TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(source_type,source_id));
 CREATE TABLE IF NOT EXISTS gl_lines(id INTEGER PRIMARY KEY AUTOINCREMENT,entry_id INTEGER NOT NULL REFERENCES gl_entries(id),account_id INTEGER NOT NULL REFERENCES gl_accounts(id),debit REAL NOT NULL DEFAULT 0,credit REAL NOT NULL DEFAULT 0,CHECK(debit>=0 AND credit>=0 AND NOT(debit>0 AND credit>0)));
-INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1100','Accounts Receivable','ASSET'),('1200','Inventory','ASSET'),('2000','Accounts Payable','LIABILITY'),('2100','Salaries Payable','LIABILITY'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE'),('6200','Salaries Expense','EXPENSE'),('1300','Employee Advances','ASSET'),('6300','Payroll Deductions','EXPENSE'),('4100','Sales Returns','CONTRA_REVENUE');";
+INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1100','Accounts Receivable','ASSET'),('1200','Inventory','ASSET'),('2000','Accounts Payable','LIABILITY'),('2100','Salaries Payable','LIABILITY'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE'),('6200','Salaries Expense','EXPENSE'),('1300','Employee Advances','ASSET'),('6300','Payroll Deductions','EXPENSE'),('4100','Sales Returns','CONTRA_REVENUE'),('4200','Purchase Return Gain','OTHER_INCOME'),('6400','Purchase Return Loss','EXPENSE');";
             ledger.ExecuteNonQuery();
         }
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE employees ADD COLUMN job_title TEXT NOT NULL DEFAULT ''"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
@@ -364,9 +364,14 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
                     }
                     if(qty>originalQty-alreadyReturned+0.0000001) throw new InvalidOperationException("Return quantity exceeds the unreturned purchase quantity.");
                     if(qty>stock+0.0000001) throw new InvalidOperationException("Cannot return stock that is no longer available.");
-                    double total=qty*price; double newStock=stock-qty; double remainingValue=(stock*stockCost)-(qty*price);
-                    if(newStock>0 && remainingValue < -0.005) throw new InvalidOperationException("Return would make inventory valuation negative; review stock costing.");
-                    double newCost=newStock>0?Math.Max(0,remainingValue/newStock):0d;
+                    if (stockCost <= 0.0000001)
+                        throw new InvalidOperationException("Historical weighted-average unit cost is missing; reconcile inventory valuation before posting this purchase return.");
+                    double total=qty*price;
+                    double inventoryCost=qty*stockCost;
+                    double newStock=stock-qty;
+                    // Perpetual weighted-average costing: remove returned stock at the current carrying cost,
+                    // not the supplier's historical invoice price. Keep the remaining average cost unchanged.
+                    double newCost=newStock>0.0000001?stockCost:0d;
                     using(var update=c.CreateCommand())
                     {
                         update.Transaction=tx; update.CommandText="UPDATE products SET qty=$q,unit_cost=$c WHERE id=$id";
@@ -391,7 +396,14 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
                     var returnLines = new List<(string Account,double Debit,double Credit)>();
                     if (apReduction > 0.005) returnLines.Add(("Accounts Payable", apReduction, 0d));
                     if (total - apReduction > 0.005) returnLines.Add(("Cash", total - apReduction, 0d));
-                    returnLines.Add(("Inventory", 0d, total));
+                    returnLines.Add(("Inventory", 0d, inventoryCost));
+                    // The supplier credit/refund follows the original purchase price, while inventory
+                    // is relieved at its carrying cost. Post the difference explicitly to avoid
+                    // corrupting inventory valuation or forcing a hidden imbalance.
+                    if (total > inventoryCost + 0.005)
+                        returnLines.Add(("Purchase Return Gain", 0d, total - inventoryCost));
+                    else if (inventoryCost > total + 0.005)
+                        returnLines.Add(("Purchase Return Loss", inventoryCost - total, 0d));
                     PostEntry(c,tx,"PURCHASE_RETURN",returnId,"Purchase return: "+product,returnLines.ToArray());
                 }
                 tx.Commit(); quantity.Clear(); note.Clear(); LoadOriginals(); ReloadReturns(); RefreshSummary();
