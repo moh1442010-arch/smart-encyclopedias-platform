@@ -97,7 +97,7 @@ sealed class MainForm : Form
             ledger.CommandText = @"CREATE TABLE IF NOT EXISTS gl_accounts(id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT NOT NULL UNIQUE,name TEXT NOT NULL UNIQUE,kind TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS gl_entries(id INTEGER PRIMARY KEY AUTOINCREMENT,source_type TEXT NOT NULL,source_id INTEGER NOT NULL,memo TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(source_type,source_id));
 CREATE TABLE IF NOT EXISTS gl_lines(id INTEGER PRIMARY KEY AUTOINCREMENT,entry_id INTEGER NOT NULL REFERENCES gl_entries(id),account_id INTEGER NOT NULL REFERENCES gl_accounts(id),debit REAL NOT NULL DEFAULT 0,credit REAL NOT NULL DEFAULT 0,CHECK(debit>=0 AND credit>=0 AND NOT(debit>0 AND credit>0)));
-INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1100','Accounts Receivable','ASSET'),('1200','Inventory','ASSET'),('2000','Accounts Payable','LIABILITY'),('2100','Salaries Payable','LIABILITY'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE'),('6200','Salaries Expense','EXPENSE'),('1300','Employee Advances','ASSET'),('6300','Payroll Deductions','EXPENSE'),('4100','Sales Returns','CONTRA_REVENUE'),('4200','Purchase Return Gain','OTHER_INCOME'),('6400','Purchase Return Loss','EXPENSE');";
+INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1100','Accounts Receivable','ASSET'),('1200','Inventory','ASSET'),('2000','Accounts Payable','LIABILITY'),('2100','Salaries Payable','LIABILITY'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE'),('6200','Salaries Expense','EXPENSE'),('1300','Employee Advances','ASSET'),('6300','Payroll Deductions','EXPENSE'),('2200','Payroll Deductions Payable','LIABILITY'),('4100','Sales Returns','CONTRA_REVENUE'),('4200','Purchase Return Gain','OTHER_INCOME'),('6400','Purchase Return Loss','EXPENSE');";
             ledger.ExecuteNonQuery();
         }
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE employees ADD COLUMN job_title TEXT NOT NULL DEFAULT ''"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
@@ -611,15 +611,53 @@ FROM customers s ORDER BY s.name";
         {
             if (person.SelectedIndex < 0 || !double.TryParse(amount.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var value) || value <= 0)
             { MessageBox.Show(UiLanguage.T("اختر موظفًا وأدخل مبلغًا صحيحًا.")); return; }
-            using var c = C(); using var q = c.CreateCommand();
-            q.CommandText = "INSERT INTO payroll_events(employee_id,kind,amount,note,period_month) VALUES($id,$k,$a,$n,$m)";
-            q.Parameters.AddWithValue("$id", ids[person.SelectedIndex]); q.Parameters.AddWithValue("$k", kind.SelectedIndex == 0 ? "ADVANCE" : "DEDUCTION");
-            q.Parameters.AddWithValue("$a", value); q.Parameters.AddWithValue("$n", note.Text.Trim()); q.Parameters.AddWithValue("$m", month);
-            using var tx = c.BeginTransaction(); q.Transaction = tx; q.ExecuteNonQuery();
-            var eventId = LastId(c, tx);
-            if (kind.SelectedIndex == 0) PostEntry(c, tx, "PAYROLL_ADVANCE", eventId, "Employee advance: " + (person.SelectedItem?.ToString() ?? ""), new (string Account, double Debit, double Credit)[] { ("Employee Advances", value, 0d), ("Cash", 0d, value) });
-            // Generic deductions remain recorded but unposted until their nature/accounting counterpart is explicitly classified.
-            tx.Commit(); amount.Clear(); note.Clear(); Reload(); RefreshSummary();
+            using var c = C(); using var tx = c.BeginTransaction();
+            try
+            {
+                using (var settled = c.CreateCommand())
+                {
+                    settled.Transaction = tx;
+                    settled.CommandText = "SELECT COUNT(*) FROM payroll_settlements WHERE employee_id=$e AND period_month=$m";
+                    settled.Parameters.AddWithValue("$e", ids[person.SelectedIndex]); settled.Parameters.AddWithValue("$m", month);
+                    if (Convert.ToInt32(settled.ExecuteScalar()) > 0)
+                        throw new InvalidOperationException("تمت تسوية راتب هذا الشهر؛ لا يمكن إضافة حركة بأثر رجعي.");
+                }
+                if (kind.SelectedIndex == 1)
+                {
+                    using var accrued = c.CreateCommand(); accrued.Transaction = tx;
+                    accrued.CommandText = "SELECT COUNT(*) FROM payroll_runs WHERE employee_id=$e AND period_month=$m";
+                    accrued.Parameters.AddWithValue("$e", ids[person.SelectedIndex]); accrued.Parameters.AddWithValue("$m", month);
+                    if (Convert.ToInt32(accrued.ExecuteScalar()) == 0)
+                        throw new InvalidOperationException("يجب ترحيل استحقاق الراتب قبل تسجيل الخصم.");
+                    using var totals = c.CreateCommand(); totals.Transaction = tx;
+                    totals.CommandText = "SELECT r.base_salary,COALESCE((SELECT SUM(amount) FROM payroll_events WHERE employee_id=$e AND period_month=$m AND kind='DEDUCTION'),0),COALESCE((SELECT SUM(amount) FROM payroll_events WHERE employee_id=$e AND period_month=$m AND kind='ADVANCE'),0) FROM payroll_runs r WHERE r.employee_id=$e AND r.period_month=$m";
+                    totals.Parameters.AddWithValue("$e", ids[person.SelectedIndex]); totals.Parameters.AddWithValue("$m", month);
+                    double salary, priorDeductions, priorAdvances;
+                    using (var rr = totals.ExecuteReader())
+                    {
+                        if (!rr.Read()) throw new InvalidOperationException("لم يُعثر على استحقاق الراتب.");
+                        salary = rr.GetDouble(0); priorDeductions = rr.GetDouble(1); priorAdvances = rr.GetDouble(2);
+                    }
+                    if (value + priorDeductions + priorAdvances > salary + 0.005)
+                        throw new InvalidOperationException("لا يمكن تسجيل خصم يتجاوز الراتب المتبقي بعد الخصومات السابقة.");
+                }
+                using var q = c.CreateCommand(); q.Transaction = tx;
+                q.CommandText = "INSERT INTO payroll_events(employee_id,kind,amount,note,period_month) VALUES($id,$k,$a,$n,$m)";
+                q.Parameters.AddWithValue("$id", ids[person.SelectedIndex]); q.Parameters.AddWithValue("$k", kind.SelectedIndex == 0 ? "ADVANCE" : "DEDUCTION");
+                q.Parameters.AddWithValue("$a", value); q.Parameters.AddWithValue("$n", note.Text.Trim()); q.Parameters.AddWithValue("$m", month);
+                q.ExecuteNonQuery();
+                var eventId = LastId(c, tx);
+                if (kind.SelectedIndex == 0)
+                    PostEntry(c, tx, "PAYROLL_ADVANCE", eventId, "Employee advance: " + (person.SelectedItem?.ToString() ?? ""), new (string Account, double Debit, double Credit)[] { ("Employee Advances", value, 0d), ("Cash", 0d, value) });
+                else
+                    PostEntry(c, tx, "PAYROLL_DEDUCTION", eventId, "Payroll deduction withheld: " + (person.SelectedItem?.ToString() ?? ""), new (string Account, double Debit, double Credit)[] { ("Salaries Payable", value, 0d), ("Payroll Deductions Payable", 0d, value) });
+                tx.Commit(); amount.Clear(); note.Clear(); Reload(); RefreshSummary();
+            }
+            catch (Exception ex)
+            {
+                tx.Rollback();
+                MessageBox.Show(UiLanguage.T("تعذر حفظ حركة الراتب؛ لم تُعتمد أي تغييرات. ") + ex.Message);
+            }
         };
         accrue.Click += (_, _) =>
         {
@@ -676,11 +714,10 @@ FROM customers s ORDER BY s.name";
                     q.Parameters.AddWithValue("$e", employeeId); q.Parameters.AddWithValue("$m", month);
                     using var reader = q.ExecuteReader(); reader.Read(); advances = reader.GetDouble(0); deductions = reader.GetDouble(1);
                 }
-                if (deductions > 0.005)
-                    throw new InvalidOperationException("توجد خصومات غير مصنفة محاسبيًا. لا يمكن صرف الراتب حتى تحديد حساب الخصم وطريقة ترحيله.");
-                if (advances > baseSalary + 0.005)
-                    throw new InvalidOperationException("السلف تتجاوز الراتب المستحق. راجع السجل قبل التسوية.");
-                var cashPaid = Math.Max(0d, baseSalary - advances);
+                if (advances + deductions > baseSalary + 0.005)
+                    throw new InvalidOperationException("مجموع السلف والخصومات يتجاوز الراتب المستحق.");
+                var payableAfterDeduction = Math.Max(0d, baseSalary - deductions);
+                var cashPaid = Math.Max(0d, baseSalary - advances - deductions);
                 using (var insert = c.CreateCommand())
                 {
                     insert.Transaction = tx;
@@ -693,7 +730,7 @@ FROM customers s ORDER BY s.name";
                 var settlementId = LastId(c, tx);
                 var lines = new List<(string Account, double Debit, double Credit)>
                 {
-                    ("Salaries Payable", baseSalary, 0d)
+                    ("Salaries Payable", payableAfterDeduction, 0d)
                 };
                 if (advances > 0.005) lines.Add(("Employee Advances", 0d, advances));
                 if (cashPaid > 0.005) lines.Add(("Cash", 0d, cashPaid));
@@ -741,7 +778,7 @@ ORDER BY a.code";
             }
         }
         int missingSales, missingPurchases, missingExpenses, missingOpeningStock;
-        int missingReceipts, missingSupplierPayments, missingPayrollEvents, missingPayrollAccruals;
+        int missingReceipts, missingSupplierPayments, missingPayrollEvents, missingPayrollDeductions, missingPayrollAccruals;
         int missingSalesReturns, missingPurchaseReturns, missingPayrollSettlements, unpostedDeductions;
         int unbalancedEntries, orphanLines, invalidLines;
         using (var q = c.CreateCommand())
@@ -754,6 +791,7 @@ ORDER BY a.code";
 (SELECT COUNT(*) FROM customer_receipts x LEFT JOIN gl_entries g ON g.source_type='CUSTOMER_RECEIPT' AND g.source_id=x.id WHERE g.id IS NULL),
 (SELECT COUNT(*) FROM supplier_payments x LEFT JOIN gl_entries g ON g.source_type='SUPPLIER_PAYMENT' AND g.source_id=x.id WHERE g.id IS NULL),
 (SELECT COUNT(*) FROM payroll_events x LEFT JOIN gl_entries g ON g.source_type='PAYROLL_ADVANCE' AND g.source_id=x.id WHERE x.kind='ADVANCE' AND g.id IS NULL),
+(SELECT COUNT(*) FROM payroll_events x LEFT JOIN gl_entries g ON g.source_type='PAYROLL_DEDUCTION' AND g.source_id=x.id WHERE x.kind='DEDUCTION' AND g.id IS NULL),
 (SELECT COUNT(*) FROM payroll_runs x LEFT JOIN gl_entries g ON g.source_type='PAYROLL_ACCRUAL' AND g.source_id=x.id WHERE g.id IS NULL),
 (SELECT COUNT(*) FROM (SELECT e.id FROM gl_entries e LEFT JOIN gl_lines l ON l.entry_id=e.id GROUP BY e.id HAVING ABS(COALESCE(SUM(l.debit),0)-COALESCE(SUM(l.credit),0))>0.005)),
 (SELECT COUNT(*) FROM gl_lines l LEFT JOIN gl_entries e ON e.id=l.entry_id WHERE e.id IS NULL),
@@ -761,8 +799,8 @@ ORDER BY a.code";
             using var r = q.ExecuteReader();
             r.Read();
             missingSales = r.GetInt32(0); missingPurchases = r.GetInt32(1); missingExpenses = r.GetInt32(2); missingOpeningStock = r.GetInt32(3);
-            missingReceipts = r.GetInt32(4); missingSupplierPayments = r.GetInt32(5); missingPayrollEvents = r.GetInt32(6); missingPayrollAccruals = r.GetInt32(7);
-            unbalancedEntries = r.GetInt32(8); orphanLines = r.GetInt32(9); invalidLines = r.GetInt32(10);
+            missingReceipts = r.GetInt32(4); missingSupplierPayments = r.GetInt32(5); missingPayrollEvents = r.GetInt32(6); missingPayrollDeductions = r.GetInt32(7); missingPayrollAccruals = r.GetInt32(8);
+            unbalancedEntries = r.GetInt32(9); orphanLines = r.GetInt32(10); invalidLines = r.GetInt32(11);
         }
         using (var q = c.CreateCommand())
         {
