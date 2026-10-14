@@ -61,8 +61,27 @@ sealed class MainForm : Form
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
         Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("المرتجعات", Returns); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
         Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("التقارير المالية", Reports); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
+        Add("الباقات والأسعار", Pricing);
         Add("اختيار اللغة / Language", ToggleLanguage);
         RefreshSummary();
+    }
+
+    void Pricing()
+    {
+        var text = UiLanguage.English
+            ? "Smart Accountant — proposed launch prices\n\n" +
+              "Android (perpetual license, one device): SDG 120,000 for first 200, then SDG 150,000 | International: $16 then $19 | Saudi Arabia: SAR 59.\n\n" +
+              "Windows x64 (perpetual license, one device): SDG 180,000 for first 200, then SDG 220,000 | International: $24 then $29 | Saudi Arabia: SAR 89.\n\n" +
+              "Android + Windows bundle: SDG 250,000 for first 200 bundles, then SDG 320,000 | International: $34 then $42 | Saudi Arabia: SAR 129.\n\n" +
+              "These prices cover the specified release only, not future features or cloud services. Monthly/annual subscriptions and automatic activation are not available. This build is not yet commercially approved; confirm release availability and price with support before payment.\n\n" +
+              "Market reference: Zoho Books Professional is SAR 129/month or SAR 90/month billed annually in Saudi Arabia; UAE pricing is AED 129/month or AED 90/month billed annually. Competitor scope and cloud services differ, so this is not a like-for-like comparison."
+            : "المحاسب الذكي — أسعار الإطلاق المقترحة\n\n" +
+              "أندرويد (ترخيص دائم لجهاز واحد): 120,000 ج.س لأول 200 ترخيص، ثم 150,000 ج.س | دوليًا: 16 دولارًا ثم 19 دولارًا | السعودية: 59 ر.س.\n\n" +
+              "ويندوز x64 (ترخيص دائم لجهاز واحد): 180,000 ج.س لأول 200 ترخيص، ثم 220,000 ج.س | دوليًا: 24 دولارًا ثم 29 دولارًا | السعودية: 89 ر.س.\n\n" +
+              "حزمة أندرويد + ويندوز: 250,000 ج.س لأول 200 حزمة، ثم 320,000 ج.س | دوليًا: 34 دولارًا ثم 42 دولارًا | السعودية: 129 ر.س.\n\n" +
+              "هذه أسعار ترخيص دائم للإصدار المحدد، ولا تشمل مزايا مستقبلية أو خدمات سحابية. لا تتوفر اشتراكات شهرية/سنوية أو تفعيل آلي داخل التطبيق. النسخة الحالية قبل الاعتماد التجاري؛ أكد توفر الإصدار والسعر مع الدعم قبل أي دفع.\n\n" +
+              "مرجع السوق: Zoho Books Professional في السعودية 129 ر.س شهريًا أو 90 ر.س/شهر عند الدفع السنوي؛ وخطته الإماراتية 129 درهمًا شهريًا أو 90 درهمًا/شهر سنويًا. نطاق المنافسين والخدمات السحابية مختلف، لذا المقارنة مرجعية وليست تطابقًا مباشرًا.";
+        MessageBox.Show(text, UiLanguage.T("الباقات والأسعار"), MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     void ToggleLanguage()
