@@ -136,9 +136,15 @@ public class MainActivity extends Activity{
   page("الباقات والأسعار");
   content.addView(t("اختر طريقة الشراء التي تناسب نشاطك",21));
   content.addView(t("تجربة مجانية لمدة 7 أيام — للتقييم فقط. لا تُحذف بيانات الشركة عند انتهاء الترخيص.",15));
+  content.addView(t("أسعار الإطلاق المقترحة — ترخيص دائم للإصدار المحدد",20));
+  content.addView(t("أندرويد — جهاز واحد: 120,000 ج.س لأول 200 ترخيص، ثم 150,000 ج.س | دوليًا: 16 دولارًا ثم 19 دولارًا | السعودية: 59 ر.س.",15));
+  content.addView(t("ويندوز x64 — جهاز واحد: 180,000 ج.س لأول 200 ترخيص، ثم 220,000 ج.س | دوليًا: 24 دولارًا ثم 29 دولارًا | السعودية: 89 ر.س.",15));
+  content.addView(t("حزمة أندرويد + ويندوز: 250,000 ج.س لأول 200 حزمة، ثم 320,000 ج.س | دوليًا: 34 دولارًا ثم 42 دولارًا | السعودية: 129 ر.س.",15));
+  content.addView(t("الأسعار لترخيص دائم للإصدار المحدد فقط؛ لا تشمل مزايا مستقبلية أو خدمات سحابية. لا تتوفر اشتراكات شهرية/سنوية أو تفعيل آلي داخل التطبيق.",14));
+  content.addView(t("النسختان قيد التحقق التجاري. أكد توفر الإصدار والسعر مع الدعم قبل الدفع. إرسال الطلب لا يعني تفعيل الترخيص تلقائيًا.",14));
   content.addView(t("مستويات الخدمة",20));
-  Spinner tier=new Spinner(this);String[] tiers={"Basic","Pro","Business","Enterprise — عرض مخصص"};tier.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,tiers));content.addView(t("نوع الخدمة / الباقة",15));content.addView(tier);
-  Spinner period=new Spinner(this);String[] periods={"اشتراك شهري","اشتراك سنوي","ترخيص دائم"};period.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,periods));content.addView(t("مدة الاشتراك",15));content.addView(period);
+  Spinner tier=new Spinner(this);String[] tiers={"أندرويد","ويندوز x64","حزمة أندرويد + ويندوز","Enterprise — عرض مخصص"};tier.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,tiers));content.addView(t("المنتج",15));content.addView(tier);
+  Spinner period=new Spinner(this);String[] periods={"ترخيص دائم للإصدار المحدد"};period.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,periods));content.addView(t("نوع الترخيص",15));content.addView(period);
   EditText company=e("اسم الشركة أو النشاط");company.setInputType(1);content.addView(company);
   EditText contact=e("رقم واتساب للتواصل");contact.setInputType(3);content.addView(contact);
   EditText notes=e("تفاصيل الخدمة المطلوبة أو عدد المستخدمين والفروع");notes.setMinLines(2);notes.setGravity(Gravity.TOP);content.addView(notes);
@@ -148,15 +154,14 @@ public class MainActivity extends Activity{
   content.addView(t("الدفع في السودان عبر بنكك",19));
   content.addView(t("رقم الحساب: 1882224",22));
   Button copy=b("نسخ رقم حساب بنكك");content.addView(copy);copy.setOnClickListener(v->{((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Bankak account","1882224"));toast("تم نسخ رقم حساب بنكك");});
-  content.addView(t("بعد التحويل، أرفق إيصال الدفع. يمكنك أيضًا إرفاق شعار الشركة إذا طلبت تخصيص الفواتير أو إعداد التطبيق باسم نشاطك.",14));
+  content.addView(t("لا تحوّل المبلغ قبل تأكيد توفر النسخة والترخيص مع الدعم.",14));
   Button logo=b("اختيار شعار الشركة (اختياري)");content.addView(logo);logo.setOnClickListener(v->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("image/*");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,902);});
   Button receipt=b("اختيار إيصال التحويل");content.addView(receipt);receipt.setOnClickListener(v->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("image/*");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,903);});
-  content.addView(t("الأسعار المعروضة سابقًا أسعار اختبار وليست نهائية. تأكد من السعر النهائي ومدة الخدمة مع الدعم قبل التحويل. إرسال الطلب لا يعني تفعيل الاشتراك تلقائيًا.",14));
-  Button send=b("إرسال طلب الاشتراك والشعار/الإيصال");content.addView(send);send.setOnClickListener(v->{
+  Button send=b("إرسال طلب الترخيص والشعار/الإيصال");content.addView(send);send.setOnClickListener(v->{
    if(company.getText().toString().trim().isEmpty()){toast("أدخل اسم الشركة أو النشاط أولًا");return;}
-   String message="طلب خدمة — شركة محمد مصطفى الذكية / المحاسب الذكي\nالشركة: "+company.getText().toString().trim()+"\nالباقة: "+tier.getSelectedItem().toString()+"\nالمدة: "+period.getSelectedItem().toString()+"\nرقم تواصل العميل: "+contact.getText().toString().trim()+"\nالتفاصيل: "+notes.getText().toString().trim()+"\nبنكك: 1882224\nدعم واتساب: +249121851285\nالبريد: moh1442010@gmail.com\nيرجى مراجعة الطلب والتحويل قبل تفعيل الترخيص.";
+   String message="طلب ترخيص — المحاسب الذكي\\nالشركة: "+company.getText().toString().trim()+"\\nالمنتج: "+tier.getSelectedItem().toString()+"\\nنوع الترخيص: ترخيص دائم للإصدار المحدد\\nرقم تواصل العميل: "+contact.getText().toString().trim()+"\\nالتفاصيل: "+notes.getText().toString().trim()+"\\nيرجى تأكيد السعر وتوفر الإصدار مع الدعم قبل الدفع.\\nبنكك: 1882224\\nدعم واتساب: +249121851285\\nالبريد: moh1442010@gmail.com";
    ArrayList<android.net.Uri> files=new ArrayList<>();if(planLogoUri!=null)files.add(planLogoUri);if(planReceiptUri!=null)files.add(planReceiptUri);
-   try{Intent share;if(files.isEmpty()){share=new Intent(Intent.ACTION_SEND);share.setType("text/plain");share.putExtra(Intent.EXTRA_TEXT,message);}else{share=new Intent(Intent.ACTION_SEND_MULTIPLE);share.setType("image/*");share.putExtra(Intent.EXTRA_TEXT,message);share.putParcelableArrayListExtra(Intent.EXTRA_STREAM,files);share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);android.content.ClipData clip=android.content.ClipData.newUri(getContentResolver(), "مرفقات طلب الاشتراك", files.get(0));for(int j=1;j<files.size();j++)clip.addItem(new android.content.ClipData.Item(files.get(j)));share.setClipData(clip);}startActivity(Intent.createChooser(share,tr("إرسال الطلب عبر تطبيق مناسب")));}catch(Exception ex){toast("تعذر فتح تطبيق الإرسال؛ حاول البريد أو واتساب يدويًا");}
+   try{Intent share;if(files.isEmpty()){share=new Intent(Intent.ACTION_SEND);share.setType("text/plain");share.putExtra(Intent.EXTRA_TEXT,message);}else{share=new Intent(Intent.ACTION_SEND_MULTIPLE);share.setType("image/*");share.putExtra(Intent.EXTRA_TEXT,message);share.putParcelableArrayListExtra(Intent.EXTRA_STREAM,files);share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);android.content.ClipData clip=android.content.ClipData.newUri(getContentResolver(), "مرفقات طلب الترخيص", files.get(0));for(int j=1;j<files.size();j++)clip.addItem(new android.content.ClipData.Item(files.get(j)));share.setClipData(clip);}startActivity(Intent.createChooser(share,tr("إرسال الطلب عبر تطبيق مناسب")));}catch(Exception ex){toast("تعذر فتح تطبيق الإرسال؛ حاول البريد أو واتساب يدويًا");}
   });
   Button supportButton=b("الاستفسار عن الباقات");content.addView(supportButton);supportButton.setOnClickListener(v->support());
  }
