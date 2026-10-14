@@ -60,9 +60,30 @@ sealed class MainForm : Form
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
         Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("المرتجعات", Returns); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
-        Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("التقارير المالية", Reports); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
+        Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("التقارير المالية", Reports); Add("الدفع والتحويل البنكي", PaymentDetails); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
         Add("اختيار اللغة / Language", ToggleLanguage);
         RefreshSummary();
+    }
+
+    void PaymentDetails()
+    {
+        using var f = new Form { Text = UiLanguage.T("الدفع والتحويل البنكي"), Width = 650, Height = 390, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        const string iban = "SD8504018822240001";
+        var title = new Label { Text = UiLanguage.T("بيانات التحويل البنكي بالدولار الأمريكي (USD)"), Dock = DockStyle.Top, Height = 48, TextAlign = ContentAlignment.MiddleCenter, Font = new Font("Segoe UI", 14, FontStyle.Bold) };
+        var number = new TextBox { Text = iban, ReadOnly = true, Dock = DockStyle.Top, Height = 42, TextAlign = HorizontalAlignment.Center, Font = new Font("Segoe UI", 14, FontStyle.Bold) };
+        var amount = new TextBox { PlaceholderText = UiLanguage.T("المبلغ المحوّل بالدولار"), Dock = DockStyle.Top, Height = 38 };
+        var reference = new TextBox { PlaceholderText = UiLanguage.T("مرجع التحويل البنكي"), Dock = DockStyle.Top, Height = 38 };
+        var copy = new Button { Text = UiLanguage.T("📋 نسخ رقم IBAN"), Dock = DockStyle.Top, Height = 44 };
+        copy.Click += (_, _) => { try { Clipboard.SetText(iban); MessageBox.Show(UiLanguage.T("تم نسخ رقم IBAN.")); } catch { MessageBox.Show(UiLanguage.T("تعذر النسخ؛ حدد الرقم وانسخه يدويًا.")); } };
+        var notice = new Button { Text = UiLanguage.T("💬 إرسال إشعار التحويل عبر واتساب"), Dock = DockStyle.Top, Height = 48 };
+        notice.Click += (_, _) => {
+            if (string.IsNullOrWhiteSpace(amount.Text) || string.IsNullOrWhiteSpace(reference.Text)) { MessageBox.Show(UiLanguage.T("أدخل المبلغ ومرجع التحويل.")); return; }
+            var message = "السلام عليكم، أرسل إشعار تحويل بنكي لشراء ترخيص المحاسب الذكي.\\nالمبلغ: " + amount.Text.Trim() + " USD\\nمرجع التحويل: " + reference.Text.Trim() + "\\nIBAN المستفيد: " + iban + "\\nيرجى تأكيد وصول المبلغ قبل إصدار الترخيص. سأرفق إيصال التحويل في المحادثة.";
+            var url = "https://wa.me/249121851285?text=" + Uri.EscapeDataString(message);
+            try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch { MessageBox.Show(UiLanguage.T("تعذر فتح واتساب؛ انسخ الإشعار وأرسله للدعم يدويًا.")); }
+        };
+        var help = new Label { Text = UiLanguage.T("تحقق من اسم المستفيد والعملة والرسوم مع البنك. لا ترسل كلمات مرور أو رموز تحقق. لا يُصدر الترخيص إلا بعد تأكيد وصول المبلغ."), Dock = DockStyle.Top, Height = 60, TextAlign = ContentAlignment.MiddleCenter };
+        f.Controls.Add(help); f.Controls.Add(notice); f.Controls.Add(reference); f.Controls.Add(amount); f.Controls.Add(copy); f.Controls.Add(number); f.Controls.Add(title); f.ShowDialog(this);
     }
 
     void ToggleLanguage()
