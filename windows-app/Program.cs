@@ -306,15 +306,15 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
                 using var c = C(); using var tx = c.BeginTransaction();
                 if (kind.SelectedIndex == 0)
                 {
-                    long productId; string product; string mode; double originalQty, price, cost, alreadyReturned, stock, stockCost;
+                    long productId; long? customerId; string product; string mode; double originalQty, price, cost, alreadyReturned, stock, stockCost;
                     using (var q = c.CreateCommand())
                     {
                         q.Transaction = tx;
-                        q.CommandText = "SELECT s.product,s.qty,s.price,s.unit_cost,s.payment_mode,(SELECT COALESCE(SUM(r.qty),0) FROM sales_returns r WHERE r.sale_id=s.id),p.id,p.qty,p.unit_cost FROM sales s JOIN products p ON p.name=s.product WHERE s.id=$id";
+                        q.CommandText = "SELECT s.product,s.qty,s.price,s.unit_cost,s.payment_mode,(SELECT COALESCE(SUM(r.qty),0) FROM sales_returns r WHERE r.sale_id=s.id),p.id,p.qty,p.unit_cost,s.customer_id FROM sales s JOIN products p ON p.name=s.product WHERE s.id=$id";
                         q.Parameters.AddWithValue("$id", sourceId);
                         using var reader = q.ExecuteReader();
                         if (!reader.Read()) throw new InvalidOperationException("Original sale or product not found.");
-                        product=reader.GetString(0); originalQty=reader.GetDouble(1); price=reader.GetDouble(2); cost=reader.GetDouble(3); mode=reader.GetString(4); alreadyReturned=reader.GetDouble(5); productId=reader.GetInt64(6); stock=reader.GetDouble(7); stockCost=reader.GetDouble(8);
+                        product=reader.GetString(0); originalQty=reader.GetDouble(1); price=reader.GetDouble(2); cost=reader.GetDouble(3); mode=reader.GetString(4); alreadyReturned=reader.GetDouble(5); productId=reader.GetInt64(6); stock=reader.GetDouble(7); stockCost=reader.GetDouble(8); customerId=reader.IsDBNull(9)?null:reader.GetInt64(9);
                     }
                     if (qty > originalQty - alreadyReturned + 0.0000001) throw new InvalidOperationException("Return quantity exceeds the unreturned sale quantity.");
                     double total = qty * price; double newStock = stock + qty;
@@ -330,20 +330,37 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
                         insert.Parameters.AddWithValue("$s",sourceId); insert.Parameters.AddWithValue("$p",product); insert.Parameters.AddWithValue("$q",qty); insert.Parameters.AddWithValue("$u",price); insert.Parameters.AddWithValue("$c",cost); insert.Parameters.AddWithValue("$t",total); insert.Parameters.AddWithValue("$n",note.Text.Trim()); insert.ExecuteNonQuery();
                     }
                     long returnId = LastId(c,tx);
-                    PostEntry(c,tx,"SALE_RETURN",returnId,"Sales return: "+product,
-                        new (string Account,double Debit,double Credit)[]{("Sales Returns",total,0d),(mode=="CREDIT"?"Accounts Receivable":"Cash",0d,total),("Inventory",qty*cost,0d),("Cost of Goods Sold",0d,qty*cost)});
+                    double arReduction = 0d;
+                    if (mode == "CREDIT" && customerId.HasValue)
+                    {
+                        using var outstanding = c.CreateCommand(); outstanding.Transaction = tx;
+                        outstanding.CommandText = @"SELECT COALESCE((SELECT SUM(total) FROM sales WHERE customer_id=$id AND payment_mode='CREDIT'),0)
+-COALESCE((SELECT SUM(r.total) FROM sales_returns r JOIN sales s ON s.id=r.sale_id WHERE s.customer_id=$id AND s.payment_mode='CREDIT'),0)
+-COALESCE((SELECT SUM(amount) FROM customer_receipts WHERE customer_id=$id),0)";
+                        outstanding.Parameters.AddWithValue("$id", customerId.Value);
+                        arReduction = Math.Min(total, Math.Max(0d, Convert.ToDouble(outstanding.ExecuteScalar())));
+                    }
+                    var returnLines = new List<(string Account,double Debit,double Credit)>
+                    {
+                        ("Sales Returns", total, 0d),
+                        ("Inventory", qty*cost, 0d),
+                        ("Cost of Goods Sold", 0d, qty*cost)
+                    };
+                    if (arReduction > 0.005) returnLines.Add(("Accounts Receivable", 0d, arReduction));
+                    if (total - arReduction > 0.005) returnLines.Add(("Cash", 0d, total - arReduction));
+                    PostEntry(c,tx,"SALE_RETURN",returnId,"Sales return: "+product,returnLines.ToArray());
                 }
                 else
                 {
-                    long productId; string product; string mode; double originalQty, price, alreadyReturned, stock, stockCost;
+                    long productId; long? supplierId; string product; string mode; double originalQty, price, alreadyReturned, stock, stockCost;
                     using (var q = c.CreateCommand())
                     {
                         q.Transaction=tx;
-                        q.CommandText="SELECT p.product,p.qty,p.price,p.payment_mode,(SELECT COALESCE(SUM(r.qty),0) FROM purchase_returns r WHERE r.purchase_id=p.id),i.id,i.qty,i.unit_cost FROM purchases p JOIN products i ON i.name=p.product WHERE p.id=$id";
+                        q.CommandText="SELECT p.product,p.qty,p.price,p.payment_mode,(SELECT COALESCE(SUM(r.qty),0) FROM purchase_returns r WHERE r.purchase_id=p.id),i.id,i.qty,i.unit_cost,p.supplier_id FROM purchases p JOIN products i ON i.name=p.product WHERE p.id=$id";
                         q.Parameters.AddWithValue("$id",sourceId);
                         using var reader=q.ExecuteReader();
                         if(!reader.Read()) throw new InvalidOperationException("Original purchase or product not found.");
-                        product=reader.GetString(0); originalQty=reader.GetDouble(1); price=reader.GetDouble(2); mode=reader.GetString(3); alreadyReturned=reader.GetDouble(4); productId=reader.GetInt64(5); stock=reader.GetDouble(6); stockCost=reader.GetDouble(7);
+                        product=reader.GetString(0); originalQty=reader.GetDouble(1); price=reader.GetDouble(2); mode=reader.GetString(3); alreadyReturned=reader.GetDouble(4); productId=reader.GetInt64(5); stock=reader.GetDouble(6); stockCost=reader.GetDouble(7); supplierId=reader.IsDBNull(8)?null:reader.GetInt64(8);
                     }
                     if(qty>originalQty-alreadyReturned+0.0000001) throw new InvalidOperationException("Return quantity exceeds the unreturned purchase quantity.");
                     if(qty>stock+0.0000001) throw new InvalidOperationException("Cannot return stock that is no longer available.");
@@ -361,8 +378,21 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
                         insert.Parameters.AddWithValue("$s",sourceId); insert.Parameters.AddWithValue("$p",product); insert.Parameters.AddWithValue("$q",qty); insert.Parameters.AddWithValue("$u",price); insert.Parameters.AddWithValue("$t",total); insert.Parameters.AddWithValue("$n",note.Text.Trim()); insert.ExecuteNonQuery();
                     }
                     long returnId=LastId(c,tx);
-                    PostEntry(c,tx,"PURCHASE_RETURN",returnId,"Purchase return: "+product,
-                        new (string Account,double Debit,double Credit)[]{(mode=="CREDIT"?"Accounts Payable":"Cash",total,0d),("Inventory",0d,total)});
+                    double apReduction = 0d;
+                    if (mode == "CREDIT" && supplierId.HasValue)
+                    {
+                        using var outstanding = c.CreateCommand(); outstanding.Transaction = tx;
+                        outstanding.CommandText = @"SELECT COALESCE((SELECT SUM(total) FROM purchases WHERE supplier_id=$id AND payment_mode='CREDIT'),0)
+-COALESCE((SELECT SUM(r.total) FROM purchase_returns r JOIN purchases p ON p.id=r.purchase_id WHERE p.supplier_id=$id AND p.payment_mode='CREDIT'),0)
+-COALESCE((SELECT SUM(amount) FROM supplier_payments WHERE supplier_id=$id),0)";
+                        outstanding.Parameters.AddWithValue("$id", supplierId.Value);
+                        apReduction = Math.Min(total, Math.Max(0d, Convert.ToDouble(outstanding.ExecuteScalar())));
+                    }
+                    var returnLines = new List<(string Account,double Debit,double Credit)>();
+                    if (apReduction > 0.005) returnLines.Add(("Accounts Payable", apReduction, 0d));
+                    if (total - apReduction > 0.005) returnLines.Add(("Cash", total - apReduction, 0d));
+                    returnLines.Add(("Inventory", 0d, total));
+                    PostEntry(c,tx,"PURCHASE_RETURN",returnId,"Purchase return: "+product,returnLines.ToArray());
                 }
                 tx.Commit(); quantity.Clear(); note.Clear(); LoadOriginals(); ReloadReturns(); RefreshSummary();
                 MessageBox.Show("تم حفظ المرتجع وترحيله. راجع دفتر الأستاذ وميزان المراجعة.");
