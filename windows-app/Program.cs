@@ -59,7 +59,7 @@ sealed class MainForm : Form
         var head = new Label { Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.3 — نسخة تجريبية"), Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(11,31,58), ForeColor = Color.FromArgb(212,175,55), Font = new Font("Segoe UI", 22, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
-        Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
+        Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("المرتجعات", Returns); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
         Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("التقارير المالية", Reports); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
         Add("اختيار اللغة / Language", ToggleLanguage);
         RefreshSummary();
@@ -97,7 +97,7 @@ sealed class MainForm : Form
             ledger.CommandText = @"CREATE TABLE IF NOT EXISTS gl_accounts(id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT NOT NULL UNIQUE,name TEXT NOT NULL UNIQUE,kind TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS gl_entries(id INTEGER PRIMARY KEY AUTOINCREMENT,source_type TEXT NOT NULL,source_id INTEGER NOT NULL,memo TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(source_type,source_id));
 CREATE TABLE IF NOT EXISTS gl_lines(id INTEGER PRIMARY KEY AUTOINCREMENT,entry_id INTEGER NOT NULL REFERENCES gl_entries(id),account_id INTEGER NOT NULL REFERENCES gl_accounts(id),debit REAL NOT NULL DEFAULT 0,credit REAL NOT NULL DEFAULT 0,CHECK(debit>=0 AND credit>=0 AND NOT(debit>0 AND credit>0)));
-INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1100','Accounts Receivable','ASSET'),('1200','Inventory','ASSET'),('2000','Accounts Payable','LIABILITY'),('2100','Salaries Payable','LIABILITY'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE'),('6200','Salaries Expense','EXPENSE'),('1300','Employee Advances','ASSET'),('6300','Payroll Deductions','EXPENSE');";
+INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1100','Accounts Receivable','ASSET'),('1200','Inventory','ASSET'),('2000','Accounts Payable','LIABILITY'),('2100','Salaries Payable','LIABILITY'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE'),('6200','Salaries Expense','EXPENSE'),('1300','Employee Advances','ASSET'),('6300','Payroll Deductions','EXPENSE'),('4100','Sales Returns','CONTRA_REVENUE');";
             ledger.ExecuteNonQuery();
         }
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE employees ADD COLUMN job_title TEXT NOT NULL DEFAULT ''"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
@@ -106,6 +106,8 @@ INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET')
 // Additive registers preserve historical rows and support explicit settlement documents.
 using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF NOT EXISTS payroll_runs(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,period_month TEXT NOT NULL,base_salary REAL NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(employee_id,period_month))"; payroll.ExecuteNonQuery(); }
         using (var settlements = c.CreateCommand()) { settlements.CommandText = "CREATE TABLE IF NOT EXISTS customer_receipts(id INTEGER PRIMARY KEY AUTOINCREMENT,customer_id INTEGER NOT NULL,amount REAL NOT NULL CHECK(amount>0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS supplier_payments(id INTEGER PRIMARY KEY AUTOINCREMENT,supplier_id INTEGER NOT NULL,amount REAL NOT NULL CHECK(amount>0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);"; settlements.ExecuteNonQuery(); }
+        // Additive return registers; original sales/purchases are retained for auditability.
+        using (var returns = c.CreateCommand()) { returns.CommandText = "CREATE TABLE IF NOT EXISTS sales_returns(id INTEGER PRIMARY KEY AUTOINCREMENT,sale_id INTEGER NOT NULL,product TEXT NOT NULL,qty REAL NOT NULL CHECK(qty>0),unit_price REAL NOT NULL CHECK(unit_price>=0),unit_cost REAL NOT NULL CHECK(unit_cost>=0),total REAL NOT NULL CHECK(total>=0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS purchase_returns(id INTEGER PRIMARY KEY AUTOINCREMENT,purchase_id INTEGER NOT NULL,product TEXT NOT NULL,qty REAL NOT NULL CHECK(qty>0),unit_price REAL NOT NULL CHECK(unit_price>=0),total REAL NOT NULL CHECK(total>=0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);"; returns.ExecuteNonQuery(); }
         try { using var indexName = c.CreateCommand(); indexName.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS idx_products_name ON products(name COLLATE NOCASE)"; indexName.ExecuteNonQuery(); } catch (SqliteException) { }
         using var index = c.CreateCommand(); index.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode) WHERE barcode IS NOT NULL AND barcode != ''"; index.ExecuteNonQuery();
     }
@@ -241,6 +243,135 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
         };
         f.Controls.Add(save); f.Controls.Add(party); f.Controls.Add(partyLabel); f.Controls.Add(paymentMode); f.Controls.Add(p); f.Controls.Add(q); f.Controls.Add(n);
         f.ShowDialog();
+    }
+
+
+    void Returns()
+    {
+        using var f = new Form { Text = "المرتجعات", Width = 760, Height = 540, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var kind = new ComboBox { Dock = DockStyle.Top, Height = 38, DropDownStyle = ComboBoxStyle.DropDownList };
+        kind.Items.Add("مرتجع مبيعات"); kind.Items.Add("مرتجع مشتريات"); kind.SelectedIndex = 0;
+        var original = new ComboBox { Dock = DockStyle.Top, Height = 42, DropDownStyle = ComboBoxStyle.DropDownList };
+        var quantity = new TextBox { Dock = DockStyle.Top, Height = 38, PlaceholderText = "كمية المرتجع" };
+        var note = new TextBox { Dock = DockStyle.Top, Height = 38, PlaceholderText = "سبب / مرجع المرتجع" };
+        var save = new Button { Dock = DockStyle.Top, Height = 44, Text = "حفظ المرتجع وترحيله" };
+        var list = new ListBox { Dock = DockStyle.Fill };
+        var ids = new List<long>();
+        void LoadOriginals()
+        {
+            original.Items.Clear(); ids.Clear();
+            using var c = C(); using var q = c.CreateCommand();
+            q.CommandText = kind.SelectedIndex == 0
+                ? "SELECT s.id,s.product,s.qty,s.price,s.payment_mode,COALESCE(s.unit_cost,0),(SELECT COALESCE(SUM(r.qty),0) FROM sales_returns r WHERE r.sale_id=s.id) FROM sales s ORDER BY s.id DESC"
+                : "SELECT p.id,p.product,p.qty,p.price,p.payment_mode,0,(SELECT COALESCE(SUM(r.qty),0) FROM purchase_returns r WHERE r.purchase_id=p.id) FROM purchases p ORDER BY p.id DESC";
+            using var reader = q.ExecuteReader();
+            while (reader.Read())
+            {
+                long id = reader.GetInt64(0); string product = reader.GetString(1);
+                double available = reader.GetDouble(2) - reader.GetDouble(6);
+                if (available <= 0.0000001) continue;
+                if (kind.SelectedIndex == 0 && reader.GetDouble(5) <= 0)
+                {
+                    original.Items.Add("#" + id + " | " + product + " | متاح " + available.ToString("N3") + " | تكلفة تاريخية غير متوفرة");
+                    ids.Add(-id);
+                }
+                else
+                {
+                    original.Items.Add("#" + id + " | " + product + " | متاح " + available.ToString("N3") + " | " + reader.GetDouble(3).ToString("N2"));
+                    ids.Add(id);
+                }
+            }
+            if (original.Items.Count > 0) original.SelectedIndex = 0;
+        }
+        void ReloadReturns()
+        {
+            list.Items.Clear();
+            using var c = C(); using var q = c.CreateCommand();
+            q.CommandText = "SELECT 'بيع' AS k,id,product,qty,total,created_at FROM sales_returns UNION ALL SELECT 'شراء',id,product,qty,total,created_at FROM purchase_returns ORDER BY created_at DESC LIMIT 100";
+            using var reader = q.ExecuteReader();
+            while (reader.Read()) list.Items.Add(reader.GetString(0) + " #" + reader.GetInt64(1) + " | " + reader.GetString(2) + " | كمية " + reader.GetDouble(3).ToString("N3") + " | " + reader.GetDouble(4).ToString("N2") + " | " + reader.GetString(5));
+        }
+        kind.SelectedIndexChanged += (_, _) => LoadOriginals();
+        save.Click += (_, _) =>
+        {
+            if (original.SelectedIndex < 0 || !double.TryParse(quantity.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var qty) || qty <= 0)
+            { MessageBox.Show("اختر الفاتورة وأدخل كمية مرتجع موجبة."); return; }
+            if (ids[original.SelectedIndex] < 0)
+            { MessageBox.Show("هذه فاتورة تاريخية لا تحتوي تكلفة البيع وقت العملية. يلزم مراجعة التكلفة قبل ترحيل المرتجع."); return; }
+            long sourceId = ids[original.SelectedIndex];
+            try
+            {
+                using var c = C(); using var tx = c.BeginTransaction();
+                if (kind.SelectedIndex == 0)
+                {
+                    long productId; string product; string mode; double originalQty, price, cost, alreadyReturned, stock, stockCost;
+                    using (var q = c.CreateCommand())
+                    {
+                        q.Transaction = tx;
+                        q.CommandText = "SELECT s.product,s.qty,s.price,s.unit_cost,s.payment_mode,(SELECT COALESCE(SUM(r.qty),0) FROM sales_returns r WHERE r.sale_id=s.id),p.id,p.qty,p.unit_cost FROM sales s JOIN products p ON p.name=s.product WHERE s.id=$id";
+                        q.Parameters.AddWithValue("$id", sourceId);
+                        using var reader = q.ExecuteReader();
+                        if (!reader.Read()) throw new InvalidOperationException("Original sale or product not found.");
+                        product=reader.GetString(0); originalQty=reader.GetDouble(1); price=reader.GetDouble(2); cost=reader.GetDouble(3); mode=reader.GetString(4); alreadyReturned=reader.GetDouble(5); productId=reader.GetInt64(6); stock=reader.GetDouble(7); stockCost=reader.GetDouble(8);
+                    }
+                    if (qty > originalQty - alreadyReturned + 0.0000001) throw new InvalidOperationException("Return quantity exceeds the unreturned sale quantity.");
+                    double total = qty * price; double newStock = stock + qty;
+                    double newCost = newStock > 0 ? ((stock * stockCost) + (qty * cost)) / newStock : cost;
+                    using (var update = c.CreateCommand())
+                    {
+                        update.Transaction=tx; update.CommandText="UPDATE products SET qty=$q,unit_cost=$c WHERE id=$id";
+                        update.Parameters.AddWithValue("$q",newStock); update.Parameters.AddWithValue("$c",newCost); update.Parameters.AddWithValue("$id",productId); update.ExecuteNonQuery();
+                    }
+                    using (var insert = c.CreateCommand())
+                    {
+                        insert.Transaction=tx; insert.CommandText="INSERT INTO sales_returns(sale_id,product,qty,unit_price,unit_cost,total,note) VALUES($s,$p,$q,$u,$c,$t,$n)";
+                        insert.Parameters.AddWithValue("$s",sourceId); insert.Parameters.AddWithValue("$p",product); insert.Parameters.AddWithValue("$q",qty); insert.Parameters.AddWithValue("$u",price); insert.Parameters.AddWithValue("$c",cost); insert.Parameters.AddWithValue("$t",total); insert.Parameters.AddWithValue("$n",note.Text.Trim()); insert.ExecuteNonQuery();
+                    }
+                    long returnId = LastId(c,tx);
+                    PostEntry(c,tx,"SALE_RETURN",returnId,"Sales return: "+product,
+                        new (string Account,double Debit,double Credit)[]{("Sales Returns",total,0d),(mode=="CREDIT"?"Accounts Receivable":"Cash",0d,total),("Inventory",qty*cost,0d),("Cost of Goods Sold",0d,qty*cost)});
+                }
+                else
+                {
+                    long productId; string product; string mode; double originalQty, price, alreadyReturned, stock, stockCost;
+                    using (var q = c.CreateCommand())
+                    {
+                        q.Transaction=tx;
+                        q.CommandText="SELECT p.product,p.qty,p.price,p.payment_mode,(SELECT COALESCE(SUM(r.qty),0) FROM purchase_returns r WHERE r.purchase_id=p.id),i.id,i.qty,i.unit_cost FROM purchases p JOIN products i ON i.name=p.product WHERE p.id=$id";
+                        q.Parameters.AddWithValue("$id",sourceId);
+                        using var reader=q.ExecuteReader();
+                        if(!reader.Read()) throw new InvalidOperationException("Original purchase or product not found.");
+                        product=reader.GetString(0); originalQty=reader.GetDouble(1); price=reader.GetDouble(2); mode=reader.GetString(3); alreadyReturned=reader.GetDouble(4); productId=reader.GetInt64(5); stock=reader.GetDouble(6); stockCost=reader.GetDouble(7);
+                    }
+                    if(qty>originalQty-alreadyReturned+0.0000001) throw new InvalidOperationException("Return quantity exceeds the unreturned purchase quantity.");
+                    if(qty>stock+0.0000001) throw new InvalidOperationException("Cannot return stock that is no longer available.");
+                    double total=qty*price; double newStock=stock-qty; double remainingValue=(stock*stockCost)-(qty*price);
+                    if(newStock>0 && remainingValue < -0.005) throw new InvalidOperationException("Return would make inventory valuation negative; review stock costing.");
+                    double newCost=newStock>0?Math.Max(0,remainingValue/newStock):0d;
+                    using(var update=c.CreateCommand())
+                    {
+                        update.Transaction=tx; update.CommandText="UPDATE products SET qty=$q,unit_cost=$c WHERE id=$id";
+                        update.Parameters.AddWithValue("$q",newStock); update.Parameters.AddWithValue("$c",newCost); update.Parameters.AddWithValue("$id",productId); update.ExecuteNonQuery();
+                    }
+                    using(var insert=c.CreateCommand())
+                    {
+                        insert.Transaction=tx; insert.CommandText="INSERT INTO purchase_returns(purchase_id,product,qty,unit_price,total,note) VALUES($s,$p,$q,$u,$t,$n)";
+                        insert.Parameters.AddWithValue("$s",sourceId); insert.Parameters.AddWithValue("$p",product); insert.Parameters.AddWithValue("$q",qty); insert.Parameters.AddWithValue("$u",price); insert.Parameters.AddWithValue("$t",total); insert.Parameters.AddWithValue("$n",note.Text.Trim()); insert.ExecuteNonQuery();
+                    }
+                    long returnId=LastId(c,tx);
+                    PostEntry(c,tx,"PURCHASE_RETURN",returnId,"Purchase return: "+product,
+                        new (string Account,double Debit,double Credit)[]{(mode=="CREDIT"?"Accounts Payable":"Cash",total,0d),("Inventory",0d,total)});
+                }
+                tx.Commit(); quantity.Clear(); note.Clear(); LoadOriginals(); ReloadReturns(); RefreshSummary();
+                MessageBox.Show("تم حفظ المرتجع وترحيله. راجع دفتر الأستاذ وميزان المراجعة.");
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("تعذر حفظ المرتجع؛ أُلغيت العملية بالكامل. "+ex.Message);
+            }
+        };
+        f.Controls.Add(list); f.Controls.Add(save); f.Controls.Add(note); f.Controls.Add(quantity); f.Controls.Add(original); f.Controls.Add(kind);
+        LoadOriginals(); ReloadReturns(); f.ShowDialog();
     }
 
     void CashExpense()
