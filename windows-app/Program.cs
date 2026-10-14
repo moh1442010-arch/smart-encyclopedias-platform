@@ -54,9 +54,9 @@ sealed class MainForm : Form
     public MainForm()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!); InitDb();
-        Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.3"); Width = 1050; Height = 720; StartPosition = FormStartPosition.CenterScreen;
+        Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.4"); Width = 1050; Height = 720; StartPosition = FormStartPosition.CenterScreen;
         RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes; RightToLeftLayout = !UiLanguage.English;
-        var head = new Label { Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.3 — نسخة تجريبية"), Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(11,31,58), ForeColor = Color.FromArgb(212,175,55), Font = new Font("Segoe UI", 22, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
+        var head = new Label { Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.4 — نسخة تجريبية"), Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(11,31,58), ForeColor = Color.FromArgb(212,175,55), Font = new Font("Segoe UI", 22, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
         Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("المرتجعات", Returns); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
@@ -816,7 +816,7 @@ ORDER BY a.code";
         {
             q.CommandText = @"SELECT
 (SELECT COUNT(*) FROM payroll_settlements p LEFT JOIN gl_entries g ON g.source_type='PAYROLL_SETTLEMENT' AND g.source_id=p.id WHERE g.id IS NULL),
-(SELECT COUNT(*) FROM payroll_events WHERE kind='DEDUCTION')";
+(SELECT COUNT(*) FROM payroll_events x LEFT JOIN gl_entries g ON g.source_type='PAYROLL_DEDUCTION' AND g.source_id=x.id WHERE x.kind='DEDUCTION' AND g.id IS NULL)";
             using var r = q.ExecuteReader();
             r.Read();
             missingPayrollSettlements = r.GetInt32(0);
@@ -845,7 +845,7 @@ FROM gl_lines l JOIN gl_accounts a ON a.id=l.account_id WHERE a.name='Inventory'
             + $"تحصيلات عملاء بلا قيد: {missingReceipts} | سداد موردين بلا قيد: {missingSupplierPayments}" + Environment.NewLine
             + $"مرتجعات مبيعات بلا قيد: {missingSalesReturns} | مرتجعات مشتريات بلا قيد: {missingPurchaseReturns}" + Environment.NewLine
             + $"سلف موظفين بلا قيد: {missingPayrollEvents} | استحقاقات رواتب بلا قيد: {missingPayrollAccruals}" + Environment.NewLine
-            + $"تسويات رواتب بلا قيد: {missingPayrollSettlements} | خصومات رواتب غير مصنفة وغير مرحلة: {unpostedDeductions}" + Environment.NewLine + Environment.NewLine
+            + $"تسويات رواتب بلا قيد: {missingPayrollSettlements} | خصومات رواتب بلا قيد: {unpostedDeductions}" + Environment.NewLine + Environment.NewLine
             + "تنبيه: قد تشمل الأعداد سجلات تاريخية سبقت دفتر الأستاذ. لا تُرحّل السجلات القديمة تلقائيًا؛ راجعها يدويًا. لا تعتمد التقرير كقوائم مالية معتمدة قبل اكتمال اختبارات مستقلة." + Environment.NewLine + Environment.NewLine
             + string.Join(Environment.NewLine, rows);
         using var f = new Form { Text = "دفتر الأستاذ وميزان المراجعة", Width = 900, Height = 650, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
