@@ -7,7 +7,7 @@ android {
   applicationId 'com.mohammedmustafa.smartcompany'
   minSdk 23
   targetSdk 36
-  versionCode 33
+  versionCode 34
   versionName '2.3.2'
  }
  testOptions { unitTests.includeAndroidResources = true }
