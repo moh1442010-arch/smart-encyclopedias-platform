@@ -490,10 +490,83 @@ public class MainActivity extends Activity{
    return out.toString();
   }
   void printText(String title,String body){WebView web=new WebView(this);web.setWebViewClient(new WebViewClient(){public void onPageFinished(WebView view,String url){PrintManager pm=(PrintManager)getSystemService(Context.PRINT_SERVICE);PrintAttributes attrs=new PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4).setResolution(new PrintAttributes.Resolution("smartcompany","Smart Company",300,300)).setMinMargins(PrintAttributes.Margins.NO_MARGINS).build();pm.print(title,view.createPrintDocumentAdapter(title),attrs);}});String safe=body.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;");String html="<html><body dir='"+(english()?"ltr":"rtl")+"' style='font-family:sans-serif;padding:24px'><h2>"+tr(title)+"</h2><pre style='white-space:pre-wrap;font-size:14pt'>"+safe+"</pre><p>"+tr("توقيع المحاسب:")+" ____________________</p></body></html>";web.loadDataWithBaseURL(null,html,"text/html","UTF-8",null);}
- void backup(){page("النسخ الاحتياطي");content.addView(t("احفظ نسخة دورية في مكان آمن. استعادة نسخة قديمة تستبدل البيانات الحالية.",15));Button x=b("تصدير نسخة قاعدة البيانات");content.addView(x);x.setOnClickListener(v->{Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.setType("application/octet-stream");i.putExtra(Intent.EXTRA_TITLE,"SmartCompany-backup.db");startActivityForResult(i,900);});Button restore=b("استعادة نسخة قاعدة البيانات");content.addView(restore);restore.setOnClickListener(v->{new AlertDialog.Builder(this).setTitle(tr("استعادة نسخة قاعدة البيانات")).setMessage(tr("سيتم استبدال بيانات التطبيق الحالية بالنسخة المختارة. هل أنشأت نسخة احتياطية حديثة؟")).setNegativeButton(tr("إلغاء"),(d,w)->{}).setPositiveButton(tr("اختيار ملف"),(d,w)->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("*/*");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,901);}).show();});}
- void startBarcodeScan(){try{com.google.zxing.integration.android.IntentIntegrator scanner=new com.google.zxing.integration.android.IntentIntegrator(this);scanner.setPrompt(tr("وجّه الكاميرا نحو الباركود"));scanner.setBeepEnabled(false);scanner.setOrientationLocked(false);scanner.setDesiredBarcodeFormats(com.google.zxing.integration.android.IntentIntegrator.ALL_CODE_TYPES);scanner.initiateScan();}catch(Exception ex){toast("تعذر تشغيل الكاميرا أو ماسح الباركود");}}
- protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);com.google.zxing.integration.android.IntentResult scanResult=com.google.zxing.integration.android.IntentIntegrator.parseActivityResult(request,result,data);if(scanResult!=null){if(scanResult.getContents()!=null&&pendingBarcodeTarget!=null){pendingBarcodeTarget.setText(scanResult.getContents().trim());toast("تمت قراءة الباركود");}pendingBarcodeTarget=null;return;}if(data==null||data.getData()==null||result!=RESULT_OK)return;if(request==902){planLogoUri=data.getData();toast("تم اختيار شعار الشركة");return;}else if(request==903){planReceiptUri=data.getData();toast("تم اختيار إيصال التحويل");return;}if(request==900){try{db.getWritableDatabase().execSQL("PRAGMA wal_checkpoint(FULL)");try(InputStream in=new FileInputStream(getDatabasePath("smartcompany2.db"));OutputStream out=getContentResolver().openOutputStream(data.getData())){if(out==null)throw new IOException("Output stream unavailable");byte[] buf=new byte[8192];int n;while((n=in.read(buf))>0)out.write(buf,0,n);out.flush();}toast("تم تصدير النسخة الاحتياطية");}catch(Exception ex){toast("تعذر التصدير");}}else if(request==901){File temp=new File(getCacheDir(),"restore-check.db");File target=getDatabasePath("smartcompany2.db");File staged=new File(target.getPath()+".restore-new");File previous=new File(target.getPath()+".restore-old");try{try(InputStream in=getContentResolver().openInputStream(data.getData());FileOutputStream out=new FileOutputStream(temp)){if(in==null)throw new IOException("Input stream unavailable");byte[] buf=new byte[8192];int n;while((n=in.read(buf))>0)out.write(buf,0,n);out.getFD().sync();}boolean valid=false;SQLiteDatabase check=null;try{check=SQLiteDatabase.openDatabase(temp.getAbsolutePath(),null,SQLiteDatabase.OPEN_READONLY);Cursor integrity=check.rawQuery("PRAGMA integrity_check",null);try{valid=integrity.moveToFirst()&&"ok".equalsIgnoreCase(integrity.getString(0))&&!integrity.moveToNext();}finally{integrity.close();}Cursor tables=check.rawQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('products','transactions','accounts','journal_entries','journal_lines')",null);try{valid=valid&&tables.moveToFirst()&&tables.getInt(0)==5;}finally{tables.close();}Cursor version=check.rawQuery("PRAGMA user_version",null);try{valid=valid&&version.moveToFirst()&&version.getInt(0)>=0&&version.getInt(0)<=10;}finally{version.close();}}finally{if(check!=null)check.close();}if(!valid)throw new IOException("Invalid database backup");try(InputStream in=new FileInputStream(temp);FileOutputStream out=new FileOutputStream(staged)){byte[] buf=new byte[8192];int n;while((n=in.read(buf))>0)out.write(buf,0,n);out.getFD().sync();}if(db!=null)db.close();new File(target.getPath()+"-wal").delete();new File(target.getPath()+"-shm").delete();if(previous.exists()&&!previous.delete())throw new IOException("Cannot clear previous database rollback file");if(target.exists()&&!target.renameTo(previous))throw new IOException("Cannot preserve current database before restore");if(!staged.renameTo(target)){if(previous.exists())previous.renameTo(target);throw new IOException("Cannot atomically install restored database");}db=new DB(this);db.getWritableDatabase();if(previous.exists())previous.delete();temp.delete();toast("تمت استعادة النسخة الاحتياطية؛ راجع أرصدتك وتقاريرك");if(authenticated)dashboard();else login();}catch(Exception ex){staged.delete();if(previous.exists()){if(target.exists())target.delete();previous.renameTo(target);}temp.delete();if(db!=null)try{db.close();}catch(Exception ignored){}db=new DB(this);try{db.getWritableDatabase();}catch(Exception ignored){}toast("فشلت الاستعادة؛ احتُفظ بالبيانات السابقة إن أمكن");}}}
- void manualJournal(){
+ void backup(){page("النسخ الاحتياطي");content.addView(t("تُشفّر النسخة بكلمة مرور تختارها. احفظ كلمة المرور منفصلة؛ لا يمكن استعادة النسخة دونها. استعادة نسخة قديمة تستبدل البيانات الحالية.",15));Button x=b("تصدير نسخة مشفرة");content.addView(x);x.setOnClickListener(v->{Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.setType("application/octet-stream");i.putExtra(Intent.EXTRA_TITLE,"AlMizan-encrypted-backup.almbak");startActivityForResult(i,900);});Button restore=b("استعادة نسخة مشفرة");content.addView(restore);restore.setOnClickListener(v->{new AlertDialog.Builder(this).setTitle(tr("استعادة نسخة قاعدة البيانات")).setMessage(tr("سيتم استبدال بيانات التطبيق الحالية بالنسخة المختارة. أنشئ نسخة حديثة أولًا، وتأكد من معرفة كلمة مرور النسخة المشفرة.")).setNegativeButton(tr("إلغاء"),(d,w)->{}).setPositiveButton(tr("اختيار ملف"),(d,w)->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("*/*");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,901);}).show();});}
+  void startBarcodeScan(){try{com.google.zxing.integration.android.IntentIntegrator scanner=new com.google.zxing.integration.android.IntentIntegrator(this);scanner.setPrompt(tr("وجّه الكاميرا نحو الباركود"));scanner.setBeepEnabled(false);scanner.setOrientationLocked(false);scanner.setDesiredBarcodeFormats(com.google.zxing.integration.android.IntentIntegrator.ALL_CODE_TYPES);scanner.initiateScan();}catch(Exception ex){toast("تعذر تشغيل الكاميرا أو ماسح الباركود");}}
+ protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);com.google.zxing.integration.android.IntentResult scanResult=com.google.zxing.integration.android.IntentIntegrator.parseActivityResult(request,result,data);if(scanResult!=null){if(scanResult.getContents()!=null&&pendingBarcodeTarget!=null){pendingBarcodeTarget.setText(scanResult.getContents().trim());toast("تمت قراءة الباركود");}pendingBarcodeTarget=null;return;}if(data==null||data.getData()==null||result!=RESULT_OK)return;if(request==902){planLogoUri=data.getData();toast("تم اختيار شعار الشركة");return;}else if(request==903){planReceiptUri=data.getData();toast("تم اختيار إيصال التحويل");return;}if(request==900){promptBackupPassword(data.getData(),true);}else if(request==901){promptBackupPassword(data.getData(),false);}}
+ 
+  void promptBackupPassword(android.net.Uri uri,boolean exporting){
+   EditText password=new EditText(this);password.setSingleLine(true);password.setInputType(0x81);
+   password.setHint(exporting?"كلمة مرور النسخة (10 أحرف على الأقل)":"كلمة مرور النسخة الاحتياطية");
+   new AlertDialog.Builder(this).setTitle(exporting?"تشفير النسخة الاحتياطية":"فك تشفير النسخة الاحتياطية")
+    .setMessage(exporting?"اختر كلمة مرور قوية واحفظها في مكان آمن. لن يمكن استعادة النسخة دونها.":"أدخل كلمة المرور التي استُخدمت عند إنشاء النسخة.")
+    .setView(password).setNegativeButton("إلغاء",null).setPositiveButton("متابعة",(d,w)->{
+     String pass=password.getText().toString();
+     if(exporting&&pass.length()<10){toast("استخدم كلمة مرور من 10 أحرف على الأقل");return;}
+     if(!exporting&&pass.isEmpty()){toast("أدخل كلمة مرور النسخة");return;}
+     if(exporting)writeEncryptedBackup(uri,pass);else restoreEncryptedBackup(uri,pass);
+    }).show();
+  }
+  javax.crypto.SecretKey backupKey(String password,byte[] salt)throws Exception{
+   javax.crypto.spec.PBEKeySpec spec=new javax.crypto.spec.PBEKeySpec(password.toCharArray(),salt,210000,256);
+   try{return new javax.crypto.spec.SecretKeySpec(javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).getEncoded(),"AES");}
+   finally{spec.clearPassword();}
+  }
+  void writeEncryptedBackup(android.net.Uri uri,String password){
+   try{
+    db.getWritableDatabase().execSQL("PRAGMA wal_checkpoint(FULL)");
+    byte[] salt=new byte[16],iv=new byte[12];java.security.SecureRandom random=new java.security.SecureRandom();random.nextBytes(salt);random.nextBytes(iv);
+    javax.crypto.Cipher cipher=javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
+    cipher.init(javax.crypto.Cipher.ENCRYPT_MODE,backupKey(password,salt),new javax.crypto.spec.GCMParameterSpec(128,iv));
+    try(InputStream in=new FileInputStream(getDatabasePath("smartcompany2.db"));OutputStream raw=getContentResolver().openOutputStream(uri)){
+     if(raw==null)throw new IOException("Output stream unavailable");
+     raw.write(new byte[]{'A','L','M','I','Z','A','N','1'});raw.write(salt);raw.write(iv);
+     javax.crypto.CipherOutputStream encrypted=new javax.crypto.CipherOutputStream(raw,cipher);
+     byte[] buf=new byte[8192];int n;while((n=in.read(buf))!=-1)encrypted.write(buf,0,n);encrypted.close();
+    }
+    toast("تم تصدير نسخة احتياطية مشفرة. احتفظ بكلمة المرور منفصلة.");
+   }catch(Exception ex){toast("تعذر إنشاء النسخة المشفرة");}
+  }
+  void restoreEncryptedBackup(android.net.Uri uri,String password){
+   File temp=new File(getCacheDir(),"restore-check.db");File target=getDatabasePath("smartcompany2.db");File staged=new File(target.getPath()+".restore-new");File previous=new File(target.getPath()+".restore-old");
+   try{
+    try(InputStream raw=getContentResolver().openInputStream(uri)){
+     if(raw==null)throw new IOException("Input stream unavailable");
+     byte[] magic=new byte[8],salt=new byte[16],iv=new byte[12];
+     if(readFully(raw,magic)!=8||!java.util.Arrays.equals(magic,new byte[]{'A','L','M','I','Z','A','N','1'}))throw new IOException("Unsupported backup format");
+     if(readFully(raw,salt)!=16||readFully(raw,iv)!=12)throw new IOException("Truncated backup header");
+     javax.crypto.Cipher cipher=javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
+     cipher.init(javax.crypto.Cipher.DECRYPT_MODE,backupKey(password,salt),new javax.crypto.spec.GCMParameterSpec(128,iv));
+     javax.crypto.CipherInputStream decrypted=new javax.crypto.CipherInputStream(raw,cipher);
+     try(FileOutputStream out=new FileOutputStream(temp)){byte[] buf=new byte[8192];int n;while((n=decrypted.read(buf))!=-1)out.write(buf,0,n);out.getFD().sync();}
+     finally{decrypted.close();}
+    }
+    boolean valid=false;SQLiteDatabase check=null;
+    try{
+     check=SQLiteDatabase.openDatabase(temp.getAbsolutePath(),null,SQLiteDatabase.OPEN_READONLY);
+     Cursor integrity=check.rawQuery("PRAGMA integrity_check",null);
+     try{valid=integrity.moveToFirst()&&"ok".equalsIgnoreCase(integrity.getString(0))&&!integrity.moveToNext();}finally{integrity.close();}
+     Cursor tables=check.rawQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('products','transactions','accounts','journal_entries','journal_lines')",null);
+     try{valid=valid&&tables.moveToFirst()&&tables.getInt(0)==5;}finally{tables.close();}
+     Cursor version=check.rawQuery("PRAGMA user_version",null);
+     try{valid=valid&&version.moveToFirst()&&version.getInt(0)>=0&&version.getInt(0)<=10;}finally{version.close();}
+    }finally{if(check!=null)check.close();}
+    if(!valid)throw new IOException("Invalid or unauthenticated database backup");
+    try(InputStream in=new FileInputStream(temp);FileOutputStream out=new FileOutputStream(staged)){byte[] buf=new byte[8192];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);out.getFD().sync();}
+    if(db!=null)db.close();new File(target.getPath()+"-wal").delete();new File(target.getPath()+"-shm").delete();
+    if(previous.exists()&&!previous.delete())throw new IOException("Cannot clear previous database rollback file");
+    if(target.exists()&&!target.renameTo(previous))throw new IOException("Cannot preserve current database before restore");
+    if(!staged.renameTo(target)){if(previous.exists())previous.renameTo(target);throw new IOException("Cannot atomically install restored database");}
+    db=new DB(this);db.getWritableDatabase();if(previous.exists())previous.delete();temp.delete();
+    toast("تمت استعادة النسخة المشفرة؛ راجع الأرصدة والتقارير");if(authenticated)dashboard();else login();
+   }catch(Exception ex){
+    staged.delete();if(previous.exists()){if(target.exists())target.delete();previous.renameTo(target);}temp.delete();
+    if(db!=null)try{db.close();}catch(Exception ignored){}db=new DB(this);try{db.getWritableDatabase();}catch(Exception ignored){}
+    toast("فشلت الاستعادة. تحقق من كلمة المرور وسلامة الملف؛ حُفظت البيانات السابقة إن أمكن");
+   }
+  }
+  int readFully(InputStream in,byte[] bytes)throws IOException{int offset=0;while(offset<bytes.length){int n=in.read(bytes,offset,bytes.length-offset);if(n<0)break;offset+=n;}return offset;}
+
+  void manualJournal(){
    page("القيود اليدوية");
    content.addView(t("أدخل سطرين على الأقل. يجب أن يكون كل سطر مدينًا أو دائنًا فقط، وأن يتساوى إجمالي الطرفين. القيود المحفوظة لا تُحذف من هذه الشاشة.",14));
    Cursor ac=db.q("SELECT id,code,name FROM accounts ORDER BY code");
