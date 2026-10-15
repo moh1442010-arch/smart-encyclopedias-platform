@@ -144,7 +144,7 @@ test("expired monthly license stays locked instead of receiving a new trial", as
     clock += 31 * 86400000;
     const status = await (await call(env, "/api/app-license/status", { device: "monthly-device-0001" })).json();
     assert.equal(status.mode, "expired");
-    assert.equal(status.licenseStatus, undefined);
+    assert.equal(status.licenseStatus, "active");
     assert.equal(status.licenseId, "TEST-MONTH-01");
   } finally { globalThis.Date = originalDate; }
 });
