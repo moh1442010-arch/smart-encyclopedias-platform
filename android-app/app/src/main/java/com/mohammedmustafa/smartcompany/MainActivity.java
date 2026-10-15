@@ -17,7 +17,7 @@ public class MainActivity extends Activity{
  }
  void toggleLanguage(){boolean next=!english();getSharedPreferences("settings",0).edit().putBoolean("english",next).apply();if(authenticated)dashboard();else login();}
  Button languageButton(){Button x=b(english()?"العربية":"ENGLISH");x.setOnClickListener(v->toggleLanguage());return x;}
- public void onCreate(Bundle b){super.onCreate(b);db=new DB(this);checkCommercialAccess();}
+ public void onCreate(Bundle b){super.onCreate(b);getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);db=new DB(this);checkCommercialAccess();}
 
  static final String LICENSE_API="https://smart-encyclopedias-delivery.moh1442010.workers.dev";
  static final long OFFLINE_GRACE_MS=72L*60L*60L*1000L;
