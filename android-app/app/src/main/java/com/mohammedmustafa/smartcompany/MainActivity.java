@@ -508,7 +508,7 @@ public class MainActivity extends Activity{
   }
   javax.crypto.SecretKey backupKey(String password,byte[] salt)throws Exception{
    javax.crypto.spec.PBEKeySpec spec=new javax.crypto.spec.PBEKeySpec(password.toCharArray(),salt,210000,256);
-   try{return new javax.crypto.spec.SecretKeySpec(javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).getEncoded(),"AES");}
+   try{return new javax.crypto.spec.SecretKeySpec(javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1").generateSecret(spec).getEncoded(),"AES");}
    finally{spec.clearPassword();}
   }
   void writeEncryptedBackup(android.net.Uri uri,String password){
