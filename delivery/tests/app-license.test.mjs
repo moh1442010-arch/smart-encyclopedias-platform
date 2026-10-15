@@ -122,3 +122,29 @@ test("paid activation is device-bound and a revoked license is not granted", asy
     assert.equal((await revoked.json()).mode, "expired");
   } finally { globalThis.Date = originalDate; }
 });
+
+
+test("expired monthly license stays locked instead of receiving a new trial", async () => {
+  const originalDate = globalThis.Date;
+  globalThis.Date = TestDate;
+  clock = RealDate.parse("2026-10-15T12:00:00.000Z");
+  try {
+    const { db } = makeDb();
+    const env = { DB: db, LICENSE_ADMIN_KEY: "test-admin-secret" };
+    const createdResponse = await call(env, "/api/app-license/admin/create", {
+      method: "POST", device: "", admin: "test-admin-secret",
+      body: { approved: true, plan: "basic", termType: "monthly", customerName: "Monthly Test", licenseId: "TEST-MONTH-01" }
+    });
+    assert.equal(createdResponse.status, 201);
+    const created = await createdResponse.json();
+    const activated = await call(env, "/api/app-license/activate", {
+      method: "POST", device: "monthly-device-0001", body: { activationCode: created.activationCode }
+    });
+    assert.equal(activated.status, 200);
+    clock += 31 * 86400000;
+    const status = await (await call(env, "/api/app-license/status", { device: "monthly-device-0001" })).json();
+    assert.equal(status.mode, "expired");
+    assert.equal(status.licenseStatus, undefined);
+    assert.equal(status.licenseId, "TEST-MONTH-01");
+  } finally { globalThis.Date = originalDate; }
+});
