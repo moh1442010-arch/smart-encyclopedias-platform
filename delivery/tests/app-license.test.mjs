@@ -119,6 +119,6 @@ test("paid activation is device-bound and a revoked license is not granted", asy
     assert.equal((await otherDevice.json()).error, "license_bound_to_another_device");
     licenses.get("TEST-LICENSE-01").status = "revoked";
     const revoked = await call(env, "/api/app-license/status", { device: "device-0000000001" });
-    assert.equal((await revoked.json()).mode, "trial");
+    assert.equal((await revoked.json()).mode, "expired");
   } finally { globalThis.Date = originalDate; }
 });
