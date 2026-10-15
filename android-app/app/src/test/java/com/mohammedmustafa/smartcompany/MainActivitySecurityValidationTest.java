@@ -44,6 +44,17 @@ public class MainActivitySecurityValidationTest {
     }
 
     @Test
+    public void repeatedIncorrectPinsTriggerPersistentTemporaryLockout() {
+        SharedPreferences prefs = context.getSharedPreferences("test-pin-lockout", Context.MODE_PRIVATE);
+        prefs.edit().clear().commit();
+        for (int i = 0; i < 5; i++) activity.recordPinFailure(prefs);
+        assertTrue("Five failed attempts must trigger a temporary lockout", activity.pinLockRemainingMs(prefs) > 0);
+        activity.clearPinFailures(prefs);
+        assertEquals("Successful authentication reset must clear lockout", 0L, activity.pinLockRemainingMs(prefs));
+        prefs.edit().clear().commit();
+    }
+
+    @Test
     public void chequeDatesRequireRealIsoCalendarDates() {
         assertTrue(activity.validIsoDate("2024-02-29", true));
         assertFalse(activity.validIsoDate("2025-02-29", true));
