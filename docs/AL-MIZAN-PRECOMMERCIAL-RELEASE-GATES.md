@@ -18,7 +18,7 @@ The Android release workflow now emits:
 - `SIGNING-CERTIFICATE.txt` — verbose `apksigner` certificate output.
 - `SIGNING-CERT-SHA256.txt` — normalized SHA-256 certificate fingerprint.
 
-First compare the new fingerprint to the installed release's certificate. Only after confirming the correct long-term release key should the approved fingerprint be saved as the GitHub Actions secret `SMARTCOMPANY_SIGNING_CERT_SHA256`. The release workflow will then fail if a future APK is signed with a different certificate.
+Inspection of the signed 2.3.4 and 2.3.5 APK artifacts found the same certificate fingerprint: `159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279`. The 2.3.6 release workflow pins this verified fingerprint and fails if a future APK is signed with a different certificate. This protects continuity for the official 2.3.4/2.3.5 release line, but it does not prove that the APK installed on the user's phone was signed by that key; compare the actual prior installed package or its archived APK if available.
 
 Never replace a signing key or delete the old installed application merely to make an update succeed. If the old release was signed by another key and its original private key is unavailable, Android generally cannot update that installation in place; a migration/reinstall procedure with verified backup may be required.
 
