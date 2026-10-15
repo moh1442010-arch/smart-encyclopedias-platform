@@ -274,6 +274,16 @@ async function appLicenseStatus(request, env) {
     }, 200, env);
   }
 
+  // Do not convert a revoked, suspended, or expired paid license into a fresh trial.
+  // Keep the device bound to its existing license record and return a locked state.
+  if (license) {
+    return json({
+      ok: true, mode: "expired", licenseId: license.id, plan: license.plan,
+      termType: license.term_type, expiresAt: license.expires_at,
+      licenseStatus: license.status, serverTime: new Date().toISOString()
+    }, 200, env);
+  }
+
   let trial = await env.DB.prepare(
     "SELECT started_at, expires_at FROM app_trials WHERE device_hash = ?"
   ).bind(deviceHash).first();
