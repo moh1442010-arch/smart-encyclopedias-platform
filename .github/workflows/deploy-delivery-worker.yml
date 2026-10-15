@@ -25,6 +25,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run app license regression tests before deployment
+        run: node --test delivery/tests/app-license.test.mjs
+
       - name: Deploy to Cloudflare Workers
         working-directory: delivery
         run: npx --yes wrangler@4 deploy --config wrangler.jsonc
