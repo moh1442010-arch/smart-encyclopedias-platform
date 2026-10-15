@@ -37,6 +37,13 @@ public class MainActivitySecurityValidationTest {
     }
 
     @Test
+    public void sensitiveScreensBlockScreenshotsAndRecentAppPreviews() {
+        int flags = activity.getWindow().getAttributes().flags;
+        assertTrue("Sensitive company data must not be captured in screenshots",
+                (flags & android.view.WindowManager.LayoutParams.FLAG_SECURE) != 0);
+    }
+
+    @Test
     public void chequeDatesRequireRealIsoCalendarDates() {
         assertTrue(activity.validIsoDate("2024-02-29", true));
         assertFalse(activity.validIsoDate("2025-02-29", true));
