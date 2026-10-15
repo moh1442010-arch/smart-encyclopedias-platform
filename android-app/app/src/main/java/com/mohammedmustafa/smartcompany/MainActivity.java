@@ -539,9 +539,7 @@ public class MainActivity extends Activity{
      if(readFully(raw,salt)!=16||readFully(raw,iv)!=12)throw new IOException("Truncated backup header");
      javax.crypto.Cipher cipher=javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
      cipher.init(javax.crypto.Cipher.DECRYPT_MODE,backupKey(password,salt),new javax.crypto.spec.GCMParameterSpec(128,iv));
-     javax.crypto.CipherInputStream decrypted=new javax.crypto.CipherInputStream(raw,cipher);
-     try(FileOutputStream out=new FileOutputStream(temp)){byte[] buf=new byte[8192];int n;while((n=decrypted.read(buf))!=-1)out.write(buf,0,n);out.getFD().sync();}
-     finally{decrypted.close();}
+     try(FileOutputStream out=new FileOutputStream(temp)){byte[] buf=new byte[8192];int n;while((n=raw.read(buf))!=-1){byte[] plain=cipher.update(buf,0,n);if(plain!=null&&plain.length>0)out.write(plain);}byte[] tail=cipher.doFinal();if(tail!=null&&tail.length>0)out.write(tail);out.getFD().sync();}
     }
     boolean valid=false;SQLiteDatabase check=null;
     try{
