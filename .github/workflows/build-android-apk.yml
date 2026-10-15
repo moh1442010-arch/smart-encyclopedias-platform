@@ -69,7 +69,6 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.SMARTCOMPANY_KEYSTORE_PASSWORD }}
           KEY_ALIAS: smartcompany-release
           KEY_PASSWORD: ${{ secrets.SMARTCOMPANY_KEYSTORE_PASSWORD }}
-          SMARTCOMPANY_SIGNING_CERT_SHA256: ${{ secrets.SMARTCOMPANY_SIGNING_CERT_SHA256 }}
         working-directory: android-app
         run: |
           set -euo pipefail
@@ -125,14 +124,11 @@ jobs:
             exit 1
           fi
           echo "$cert_sha" > release/SIGNING-CERT-SHA256.txt
-          if [ -n "${SMARTCOMPANY_SIGNING_CERT_SHA256:-}" ]; then
-            expected="$(printf '%s' "$SMARTCOMPANY_SIGNING_CERT_SHA256" | tr '[:upper:]' '[:lower:]' | tr -d ':[:space:]')"
-            if [ "$cert_sha" != "$expected" ]; then
-              echo "::error title=Signing certificate changed::This APK is signed with a different certificate than SMARTCOMPANY_SIGNING_CERT_SHA256. Android updates will fail."
-              exit 1
-            fi
-          else
-            echo "::warning title=Signing certificate baseline not configured::Compare SIGNING-CERT-SHA256.txt with the certificate of the currently installed release, then store the approved fingerprint as SMARTCOMPANY_SIGNING_CERT_SHA256."
+          # Public certificate fingerprint verified from the 2.3.4 and 2.3.5 signed release artifacts.
+          expected="159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
+          if [ "$cert_sha" != "$expected" ]; then
+            echo "::error title=Signing certificate changed::Expected the verified long-term release certificate. Android updates may fail if the signing key changed."
+            exit 1
           fi
           sha256sum release/AlMizan-2.3.6-release.apk release/AlMizan-2.3.6-release.aab > release/SHA256SUMS.txt
 
