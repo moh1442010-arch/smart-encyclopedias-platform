@@ -41,7 +41,7 @@ jobs:
             -X POST "$base/api/app-license/activate" \
             -H 'content-type: application/json' \
             -H 'x-app-device-id: live-smoke-device-0001' \
-            --data '{"activationCode":"INVALID-LIVE-SMOKE-CODE"}')"
+            --data '{"activationCode":"BAD!"}')"
           test "$status" = "400"
           grep -q '"error":"invalid_activation_code"' /tmp/license-activate.json
           echo "Live license API is reachable and rejects missing device IDs and invalid activation codes."
