@@ -24,6 +24,12 @@ button,.button{display:inline-flex;justify-content:center;align-items:center;gap
 <tr><td>Pro</td><td>غير متاح حاليًا</td><td>45,000 ج.س</td><td>450,000 ج.س</td></tr>
 <tr><td>Business</td><td>غير متاح حاليًا</td><td>80,000 ج.س</td><td>800,000 ج.س</td></tr>
 </tbody></table></div></section>
+<section class="card"><h2>🌐 الأسعار بالدولار الأمريكي (USD)</h2><p class="note">الأسعار المعتمدة بالدولار للشراء الدولي. Enterprise يتطلب عرض سعر مخصصًا.</p><div class="table-wrap"><table><thead><tr><th>الباقة</th><th>ترخيص دائم</th><th>شهري</th><th>سنوي</th></tr></thead><tbody>
+<tr><td>Basic</td><td>$249</td><td>$9</td><td>$90</td></tr>
+<tr><td>Pro</td><td>$499</td><td>$19</td><td>$190</td></tr>
+<tr><td>Business</td><td>$999</td><td>$39</td><td>$390</td></tr>
+<tr><td>Enterprise</td><td colspan="3">عرض سعر مخصص</td></tr>
+</tbody></table></div></section>
 <section class="card"><h2>🇸🇦 السعودية — الريال السعودي (ر.س)</h2><p class="note">أسعار السعودية قيد المراجعة ولم تُعتمد بعد؛ لا نعتمد تحويلًا آليًا من أسعار الجنيه السوداني.</p><div class="table-wrap"><table><thead><tr><th>الباقة</th><th>ترخيص دائم</th><th>شهري</th><th>سنوي</th></tr></thead><tbody>
 <tr><td>Basic</td><td>قيد المراجعة</td><td>قيد المراجعة</td><td>قيد المراجعة</td></tr>
 <tr><td>Pro</td><td>قيد المراجعة</td><td>قيد المراجعة</td><td>قيد المراجعة</td></tr>
@@ -33,7 +39,7 @@ button,.button{display:inline-flex;justify-content:center;align-items:center;gap
 <div class="controls">
 <div><label for="market">الدولة / العملة</label><select id="market"><option value="sdg">السودان — جنيه سوداني (بنكك)</option><option value="sar">السعودية — ريال سعودي</option><option value="usd">الدفع بالدولار الأمريكي (اطلب السعر)</option></select></div>
 <div><label for="tier">الباقة</label><select id="tier"><option>Basic</option><option>Pro</option><option>Business</option><option>Enterprise — عرض مخصص</option></select></div>
-<div><label for="period">مدة الترخيص</label><select id="period"><option value="perpetual" disabled>ترخيص دائم — غير متاح حاليًا</option><option value="monthly">اشتراك شهري</option><option value="annual">اشتراك سنوي</option></select></div>
+<div><label for="period">مدة الترخيص</label><select id="period"><option value="perpetual">ترخيص دائم — حسب العملة والباقة</option><option value="monthly">اشتراك شهري</option><option value="annual">اشتراك سنوي</option></select></div>
 <div><label for="company">اسم الشركة / النشاط</label><input id="company" placeholder="اكتب اسم الشركة"></div>
 <div><label for="phone">رقم واتساب للتواصل</label><input id="phone" inputmode="tel" placeholder="مفتاح الدولة ورقم الهاتف"></div>
 <div><label for="notes">تفاصيل إضافية</label><textarea id="notes" placeholder="عدد المستخدمين أو الفروع أو احتياجات التخصيص"></textarea></div>
@@ -44,7 +50,7 @@ button,.button{display:inline-flex;justify-content:center;align-items:center;gap
 <div class="payment"><strong>بيانات الدفع المعتمدة للعرض — التحويل والتفعيل ما زالا مغلقين حتى إعلان فتح البيع</strong>
 <div class="controls" style="margin-top:12px">
 <div><label for="bankakNumber">السودان — الجنيه السوداني (بنكك)</label><input id="bankakNumber" value="1882224" readonly dir="ltr" aria-label="رقم بنكك"><button class="secondary" type="button" id="copyBankak">نسخ رقم بنكك</button></div>
-<div><label for="usdIban">الدفع بالدولار — الآيبان</label><input id="usdIban" value="SD8504018822240001" readonly dir="ltr" aria-label="رقم الآيبان"><button class="secondary" type="button" id="copyIban">نسخ الآيبان</button><p class="note">تم اعتماد الآيبان كما زوّدنا به صاحب الحساب. راجع اسم المستفيد داخل تطبيق البنك قبل التحويل.</p></div>
+<div><label for="usdIban">الدفع بالدولار — الآيبان</label><input id="usdIban" value="SD8504018822240001" readonly dir="ltr" aria-label="رقم الآيبان"><button class="secondary" type="button" id="copyIban">نسخ الآيبان</button><p class="note">تم اعتماد الآيبان كما زوّدنا به صاحب الحساب. تأكد من البنك أن الحساب يستقبل الدولار الأمريكي، وراجع اسم المستفيد قبل التحويل.</p></div>
 </div>
 <p class="note" id="copyStatus" role="status" aria-live="polite">لن تطلب الصفحة تحويلًا أو ترخيصًا قبل إعلان فتح البيع. لا ترسل كلمات مرور أو رموز تحقق لأي جهة.</p></div>
 <p class="warning">مهم: هذا نموذج تسجيل اهتمام فقط، وليس طلب شراء أو تأكيد ترخيص. لا تحويلات ولا تفعيل قبل إعلان الإطلاق.</p>
@@ -53,9 +59,9 @@ button,.button{display:inline-flex;justify-content:center;align-items:center;gap
 <div class="footer">شركة محمد مصطفى الذكية · الدعم: <a href="https://wa.me/249121851285">واتساب +249121851285</a> · <a href="mailto:moh1442010@gmail.com">moh1442010@gmail.com</a></div>
 </main>
 <script>
-const prices={sdg:{Basic:["","25,000","250,000"],Pro:["","45,000","450,000"],Business:["","80,000","800,000"]}};
+const prices={sdg:{Basic:["","25,000","250,000"],Pro:["","45,000","450,000"],Business:["","80,000","800,000"]},usd:{Basic:["249","9","90"],Pro:["499","19","190"],Business:["999","39","390"]}};
 const $=id=>document.getElementById(id);
-function currentPrice(){const m=$("market").value,t=$("tier").value,p=$("period").value;if(p==="perpetual")return "الترخيص الدائم غير متاح حاليًا";if(t.startsWith("Enterprise"))return "عرض سعر مخصص — غير متاح قبل اعتماد الإطلاق";if(m==="usd"||m==="sar")return "السعر قيد المراجعة — لا يوجد سعر معتمد";return prices.sdg[t][{monthly:1,annual:2}[p]]+" ج.س"+(p==="monthly"?" شهريًا":" سنويًا")}
+function currentPrice(){const m=$("market").value,t=$("tier").value,p=$("period").value;if(t.startsWith("Enterprise"))return "عرض سعر مخصص — تواصل مع الدعم";if(m==="sar")return "السعر قيد المراجعة — لا يوجد سعر معتمد";const i={perpetual:0,monthly:1,annual:2}[p];if(m==="usd")return "$"+prices.usd[t][i]+(p==="monthly"?" شهريًا":p==="annual"?" سنويًا":" — ترخيص دائم");if(p==="perpetual")return "الترخيص الدائم غير متاح حاليًا بالجنيه السوداني";return prices.sdg[t][i]+" ج.س"+(p==="monthly"?" شهريًا":" سنويًا")}
 function update(){ $("price").textContent="السعر المختار: "+currentPrice(); }
 ["market","tier","period"].forEach(id=>$(id).addEventListener("change",update));
 $("whatsapp").addEventListener("click",()=>{const company=$("company").value.trim();if(!company){alert("يرجى إدخال اسم الشركة أو النشاط أولًا");$("company").focus();return}const msg="السلام عليكم، أريد تسجيل اهتمام بباقة المحاسب الميزان.\nالشركة: "+company+"\nالدولة/العملة: "+$("market").selectedOptions[0].text+"\nالباقة: "+$("tier").value+"\nالمدة: "+$("period").selectedOptions[0].text+"\nالسعر المبدئي المعروض: "+currentPrice()+"\nرقم التواصل: "+$("phone").value.trim()+"\nالتفاصيل: "+$("notes").value.trim()+"\nأفهم أن هذا تسجيل اهتمام فقط، وليس طلب شراء أو تحويل؛ البيع والتفعيل غير مفتوحين بعد.";location.href="https://wa.me/249121851285?text="+encodeURIComponent(msg)});
