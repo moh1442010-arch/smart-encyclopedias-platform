@@ -2,21 +2,22 @@
   "product": "المحاسب الميزان",
   "channel": "prelaunch",
   "last_reviewed": "2026-10-16",
-  "storefront_status": "prelaunch_merged_deployment_unverified",
+  "storefront_status": "prelaunch_deployed_downloads_disabled_device_qa_pending",
   "downloads_enabled": false,
   "android_candidate": {
     "version": "2.3.9",
     "version_code": 40,
-    "source_commit": "b4eb27e19cf2ae7d1a42723b9f08a907999d8ed5",
-    "workflow_run": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/38859328834",
-    "artifact_id": 12028626694,
+    "source_commit": "d9a2c67e7f0a2bf228316ffe7ee4556acb038707",
+    "workflow_run": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/38949724479",
+    "artifact_id": 12067896687,
     "artifact_name": "al-mizan-android-four-editions-signed-release-v2.3.9",
-    "artifact_zip_sha256": "9f107e3e13b313c84d291d27c6c63f42d8ec051a3a725c492f9634c4c186efaf",
+    "artifact_zip_sha256": "fc40697d097d9dd1ee474c64021edd2624a3e0bbbd43c348cf4eed78a4b13e1c",
     "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
     "ci_status": "passed",
     "device_update_test": "not_verified",
     "end_to_end_accounting_acceptance": "not_verified",
-    "public_download_url": null
+    "public_download_url": null,
+    "source_branch": "feature/al-mizan-quality-gates-windows-core"
   },
   "releases": [
     {
@@ -24,9 +25,9 @@
       "edition": "Basic",
       "version": "2.3.9",
       "artifact_url": null,
-      "sha256": "8f6c6769059dc6baa4ae28f1e68113ab5b2e4bfb49854fb9cee55aa7b5acf810",
+      "sha256": "0d331ee1daeb17a1da7678e8f1c1c051855fc5dc1c45ced69271f022216a20ab",
       "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
-      "source_commit": "b4eb27e19cf2ae7d1a42723b9f08a907999d8ed5",
+      "source_commit": "d9a2c67e7f0a2bf228316ffe7ee4556acb038707",
       "status": "signed_ci_candidate_pending_device_qa"
     },
     {
@@ -34,9 +35,9 @@
       "edition": "Pro",
       "version": "2.3.9",
       "artifact_url": null,
-      "sha256": "0b7602ebc33126fa7942dbf9ea26228a084a53c0b90632edc1dad273568eb627",
+      "sha256": "3812c0da0f50cb75fe97518bd5092f2d8f74d0c83808dacafc15c8c10f781997",
       "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
-      "source_commit": "b4eb27e19cf2ae7d1a42723b9f08a907999d8ed5",
+      "source_commit": "d9a2c67e7f0a2bf228316ffe7ee4556acb038707",
       "status": "signed_ci_candidate_pending_device_qa"
     },
     {
@@ -44,9 +45,9 @@
       "edition": "Business",
       "version": "2.3.9",
       "artifact_url": null,
-      "sha256": "01cf2c904887ae523df29df7456cc1cee21d3ef12271d225c66440344562666e",
+      "sha256": "f6cfd4548565c840b95b8bd9c1d64ae97ded5d4bff59a1632f83f42f487f2c68",
       "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
-      "source_commit": "b4eb27e19cf2ae7d1a42723b9f08a907999d8ed5",
+      "source_commit": "d9a2c67e7f0a2bf228316ffe7ee4556acb038707",
       "status": "signed_ci_candidate_pending_device_qa"
     },
     {
@@ -54,9 +55,9 @@
       "edition": "Enterprise",
       "version": "2.3.9",
       "artifact_url": null,
-      "sha256": "277173cd30a1242f0ee39143f42100fc85e002fe70d06fc613290829b55c2658",
+      "sha256": "68b40d69defe9dbc11d94dcbedbc1df22558c83ae96fd4f27aa1b72fb29c5d19",
       "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
-      "source_commit": "b4eb27e19cf2ae7d1a42723b9f08a907999d8ed5",
+      "source_commit": "d9a2c67e7f0a2bf228316ffe7ee4556acb038707",
       "status": "signed_ci_candidate_pending_device_qa"
     },
     {
@@ -64,21 +65,21 @@
       "edition": "core",
       "version": "2.2.7",
       "artifact_url": null,
-      "sha256": "a01498e2be5214f7f0108e5f6575323c75689485ef06defb34a5babdc6e72bc4",
+      "sha256": "57aedc932508a24805bb48a81ca2e5d3c90ae96371dc4071c49f540d806874cf",
       "signing_certificate_sha256": null,
-      "source_commit": "aeda725ad14866ecc71ceacc9411656805442a5b",
-      "status": "built_ci_precommercial_pending_device_qa"
+      "source_commit": "031dbe543fd675bccb1f37fa9aa5dc164ddaa44a",
+      "status": "built_ci_launch_smoke_passed_precommercial_pending_device_qa"
     }
   ],
   "policy": "Only publish verified artifacts; never guess URLs, hashes, version numbers, or signing fingerprints. Do not enable public downloads until device update/install and accounting acceptance pass.",
   "windows_candidate": {
     "version": "2.2.7",
-    "source_commit": "aeda725ad14866ecc71ceacc9411656805442a5b",
-    "workflow_run": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/38943094895",
-    "artifact_id": 12063509290,
+    "source_commit": "031dbe543fd675bccb1f37fa9aa5dc164ddaa44a",
+    "workflow_run": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/38950001396",
+    "artifact_id": 12068700703,
     "artifact_name": "smart-company-windows-v2.2.7",
-    "artifact_zip_sha256": "bb086d6c90ffd09431a3f17b46d4954d6e0f04875b00dca5fbd6ca4679fdf95b",
-    "executable_sha256": "a01498e2be5214f7f0108e5f6575323c75689485ef06defb34a5babdc6e72bc4",
+    "artifact_zip_sha256": "02fe0e9184918ff7920a1deb98d94138383a72f4a1c9d48e6ce21dd57b7e752c",
+    "executable_sha256": "57aedc932508a24805bb48a81ca2e5d3c90ae96371dc4071c49f540d806874cf",
     "ci_status": "passed",
     "device_install_update_test": "not_verified",
     "end_to_end_accounting_acceptance": "not_verified",
