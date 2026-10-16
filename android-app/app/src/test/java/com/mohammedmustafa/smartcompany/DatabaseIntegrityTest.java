@@ -604,7 +604,7 @@ public class DatabaseIntegrityTest {
         helper = new MainActivity.DB(context);
         database = helper.getWritableDatabase();
 
-        assertEquals(12, database.getVersion());
+        assertEquals(13, database.getVersion());
         assertTrue(tableExists("audit_events"));
         Cursor preserved = database.rawQuery(
                 "SELECT party,total,paid,remaining FROM transactions WHERE id=?",
@@ -627,6 +627,47 @@ public class DatabaseIntegrityTest {
             assertTrue("Post-upgrade changes must be audited", audit.moveToFirst());
             assertEquals("UPDATE", audit.getString(0));
         } finally { audit.close(); }
+    }
+
+
+    @Test
+    public void monetaryMinorColumnsBackfillAndTrackLegacyWritesExactlyToCents() {
+        assertTrue(columnExists("transactions", "total_minor"));
+        assertTrue(columnExists("transactions", "paid_minor"));
+        assertTrue(columnExists("journal_lines", "debit_minor"));
+        assertTrue(columnExists("invoice_items", "discount_minor"));
+
+        ContentValues sale = new ContentValues();
+        sale.put("type", "SALE");
+        sale.put("party", "اختبار دقة المبالغ");
+        sale.put("total", 250.75);
+        sale.put("paid", 100.25);
+        sale.put("remaining", 150.50);
+        long id = database.insertOrThrow("transactions", null, sale);
+
+        Cursor money = database.rawQuery(
+                "SELECT total_minor,paid_minor,remaining_minor FROM transactions WHERE id=?",
+                new String[]{String.valueOf(id)});
+        try {
+            assertTrue(money.moveToFirst());
+            assertEquals(25075L, money.getLong(0));
+            assertEquals(10025L, money.getLong(1));
+            assertEquals(15050L, money.getLong(2));
+        } finally { money.close(); }
+
+        ContentValues payment = new ContentValues();
+        payment.put("paid", 125.25);
+        payment.put("remaining", 125.50);
+        database.update("transactions", payment, "id=?", new String[]{String.valueOf(id)});
+
+        Cursor updated = database.rawQuery(
+                "SELECT paid_minor,remaining_minor FROM transactions WHERE id=?",
+                new String[]{String.valueOf(id)});
+        try {
+            assertTrue(updated.moveToFirst());
+            assertEquals(12525L, updated.getLong(0));
+            assertEquals(12550L, updated.getLong(1));
+        } finally { updated.close(); }
     }
 
     private int countRows(Cursor cursor) {
