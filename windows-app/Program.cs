@@ -73,14 +73,14 @@ sealed class MainForm : Form
         void LabelText(string text, int height = 32, int size = 12) => panel.Controls.Add(new Label { Text = UiLanguage.T(text), Width = 740, Height = height, Font = new Font("Segoe UI", size, FontStyle.Regular), TextAlign = ContentAlignment.MiddleCenter });
         LabelText("باقات المحاسب الذكي — اختر السوق والباقة والمدة", 44, 17);
         LabelText("السودان — الجنيه السوداني (ج.س)", 34, 14);
-        LabelText("Basic: دائم 150,000 | شهري 15,000 | سنوي 150,000 ج.س");
-        LabelText("Pro: دائم 300,000 | شهري 30,000 | سنوي 300,000 ج.س");
-        LabelText("Business: دائم 600,000 | شهري 60,000 | سنوي 600,000 ج.س");
+        LabelText("Basic: دائم غير متاح | شهري 25,000 | سنوي 250,000 ج.س");
+        LabelText("Pro: دائم غير متاح | شهري 45,000 | سنوي 450,000 ج.س");
+        LabelText("Business: دائم غير متاح | شهري 80,000 | سنوي 800,000 ج.س");
         LabelText("السعودية — الريال السعودي (ر.س)", 34, 14);
         LabelText("Basic: دائم 399 | شهري 29 | سنوي 290 ر.س");
         LabelText("Pro: دائم 799 | شهري 59 | سنوي 590 ر.س");
         LabelText("Business: دائم 1,499 | شهري 119 | سنوي 1,190 ر.س");
-        LabelText("السعر بالدولار غير معتمد هنا؛ اطلب عرض السعر من الدعم.", 38, 11);
+        LabelText("USD — Basic: دائم $249 | شهري $9 | سنوي $90", 32, 12);\n        LabelText("USD — Pro: دائم $499 | شهري $19 | سنوي $190", 32, 12);\n        LabelText("USD — Business: دائم $999 | شهري $39 | سنوي $390", 32, 12);\n        LabelText("Enterprise: عرض سعر مخصص", 32, 11);
         var market = new ComboBox { Width = 720, DropDownStyle = ComboBoxStyle.DropDownList };
         market.Items.AddRange(new object[] { "السودان — جنيه سوداني (بنكك)", "السعودية — ريال سعودي", "الدفع بالدولار الأمريكي — اطلب السعر" }); market.SelectedIndex = 0;
         var tier = new ComboBox { Width = 720, DropDownStyle = ComboBoxStyle.DropDownList };
@@ -99,10 +99,10 @@ sealed class MainForm : Form
         {
             int p = tier.SelectedIndex, d = period.SelectedIndex;
             if (p == 3) return "عرض سعر مخصص — تواصل مع الدعم";
-            if (market.SelectedIndex == 2) return "السعر بالدولار غير محدد — اطلب السعر من الدعم";
-            string[][] sdg = { new[] { "150,000", "15,000", "150,000" }, new[] { "300,000", "30,000", "300,000" }, new[] { "600,000", "60,000", "600,000" } };
+            if (market.SelectedIndex == 2) { string[][] usd = { new[] { "249", "9", "90" }, new[] { "499", "19", "190" }, new[] { "999", "39", "390" } }; return "$" + usd[p][d] + (d == 0 ? " — ترخيص دائم" : d == 1 ? " شهريًا" : " سنويًا"); }
+            string[][] sdg = { new[] { "غير متاح", "25,000", "250,000" }, new[] { "غير متاح", "45,000", "450,000" }, new[] { "غير متاح", "80,000", "800,000" } };
             string[][] sar = { new[] { "399", "29", "290" }, new[] { "799", "59", "590" }, new[] { "1,499", "119", "1,190" } };
-            return market.SelectedIndex == 0 ? sdg[p][d] + " ج.س" : sar[p][d] + " ر.س";
+            return market.SelectedIndex == 0 ? (d == 0 ? "الترخيص الدائم غير متاح بالجنيه السوداني حاليًا" : sdg[p][d] + " ج.س") : sar[p][d] + " ر.س";
         }
         void UpdatePrice(object? sender, EventArgs e) => price.Text = UiLanguage.T("السعر المختار: ") + PriceText();
         market.SelectedIndexChanged += UpdatePrice; tier.SelectedIndexChanged += UpdatePrice; period.SelectedIndexChanged += UpdatePrice; UpdatePrice(this, EventArgs.Empty);
