@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>آراء وتجارب زوار الموسوعة | منصة الموسوعات الذكية</title>
-  <meta name="description" content="آراء وتجارب زوار وقراء الموسوعة الشاملة في الذكاء الاصطناعي باللغة العربية. شارك رأيك بصدق وساعدنا على تطوير الإصدارات القادمة.">
+  <title>آراء العملاء والزوار | المحاسب الميزان ومنصة الموسوعات الذكية</title>
+  <meta name="description" content="آراء وتجارب عملاء وزوار المحاسب الميزان والموسوعة الشاملة. شارك رأيك أو ملاحظتك للمساعدة في تحسين المنتجات.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://moh1442010-arch.github.io/smart-encyclopedias-platform/reviews.html">
   <link rel="stylesheet" href="assets/styles.css">
@@ -47,16 +47,17 @@
 <body>
   <main class="reviews-page">
     <nav class="topbar" aria-label="التنقل">
-      <a class="back-link" href="index.html">← العودة إلى المنصة</a>
-      <a class="nav-link" href="preview.html">📖 مشاهدة المعاينة</a>
+      <a class="back-link" href="store/">← متجر المحاسب الميزان</a>
+      <a class="nav-link" href="downloads/">⬇️ صفحة التنزيلات</a>
+      <a class="nav-link" href="complaints.html">📝 البلاغات والشكاوى</a>
     </nav>
 
     <header class="reviews-hero">
       <span class="badge">صفحة المجتمع والمصداقية</span>
-      <h1>⭐ آراء وتجارب زوار الموسوعة</h1>
-      <p>هذه الصفحة مخصصة للتجارب الحقيقية. لا نشتري تقييمات ولا ننشئ شهادات وهمية؛ نريد أن يرى الزائر رأي القارئ الحقيقي، بما فيه الملاحظات والاقتراحات التي تساعدنا على التطوير.</p>
+      <h1>⭐ آراء العملاء والزوار</h1>
+      <p>شارك تجربتك مع تطبيق المحاسب الميزان أو الموسوعة الشاملة. لا ننشئ تقييمات وهمية؛ نراجع الآراء الحقيقية، بما فيها النقد والملاحظات، قبل نشرها.</p>
       <div class="hero-actions">
-        <a class="btn btn-primary" href="preview.html">شاهد 20 صفحة حقيقية</a>
+        <a class="btn btn-primary" href="downloads/">تنزيل تطبيق المحاسب الميزان</a>
         <a class="btn btn-gold" href="https://wa.me/249121851285?text=%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%B9%D9%84%D9%8A%D9%83%D9%85%D8%8C%20%D8%A3%D8%B1%D8%BA%D8%A8%20%D9%81%D9%8A%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D8%A7%D9%84%D9%85%D9%88%D8%B3%D9%88%D8%B9%20%D9%88%D8%A7%D9%84%D8%B4%D8%B1%D8%A7%D8%A1.">💬 الاستفسار والشراء</a>
       </div>
     </header>
@@ -82,9 +83,17 @@
 
     <section class="section review-form" aria-labelledby="send-review">
       <h2 id="send-review">شاركنا رأيك</h2>
-      <p class="form-help">إذا اطلعت على المعاينة أو اشتريت النسخة الكاملة، أرسل تقييمك. بعد الضغط على زر الإرسال سيتم تجهيز الرسالة في واتساب لإرسالها مباشرة إلى فريق المنصة للمراجعة.</p>
+      <p class="form-help">اختر المنتج ثم اكتب تقييمك أو اقتراحك. لا تحتاج إلى إنشاء حساب في الموقع. بعد الإرسال تُجهز رسالة واتساب للمراجعة البشرية؛ ولن يُنشر الرأي تلقائياً.</p>
       <form id="review-form">
         <div class="form-grid">
+          <div class="field full">
+            <label for="review-product">المنتج محل التقييم</label>
+            <select id="review-product" name="product" required>
+              <option value="المحاسب الميزان — تطبيق Android/Windows">المحاسب الميزان — تطبيق Android/Windows</option>
+              <option value="الموسوعة الشاملة في الذكاء الاصطناعي">الموسوعة الشاملة في الذكاء الاصطناعي</option>
+              <option value="المتجر والموقع">المتجر والموقع</option>
+            </select>
+          </div>
           <div class="field">
             <label for="review-name">الاسم</label>
             <input id="review-name" name="name" maxlength="60" required placeholder="الاسم الأول أو اسم مختصر">
@@ -124,6 +133,7 @@
     const status=document.getElementById('review-status');
     form.addEventListener('submit',function(e){
       e.preventDefault();
+      const product=document.getElementById('review-product').value;
       const name=document.getElementById('review-name').value.trim();
       const role=document.getElementById('review-role').value.trim() || 'غير محدد';
       const rating=document.getElementById('review-rating').value;
