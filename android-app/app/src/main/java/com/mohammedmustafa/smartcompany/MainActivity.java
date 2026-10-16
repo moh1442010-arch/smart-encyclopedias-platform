@@ -55,6 +55,7 @@ public class MainActivity extends Activity{
     android.content.SharedPreferences p=getSharedPreferences("commercial_license",0);
     long expiry=p.getLong("expires_at",0),verified=p.getLong("last_verified_at",0);
     String savedMode=p.getString("mode",""),savedPlan=p.getString("license_plan",""),savedTerm=p.getString("license_term_type","");
+    boolean savedEditionMatches=!"licensed".equals(savedMode)||BuildConfig.EDITION.equalsIgnoreCase(savedPlan);
     allowed=offlineLicenseAllowed(savedMode,savedPlan,savedTerm,expiry,verified,System.currentTimeMillis());
     error=!savedEditionMatches?"الترخيص المحفوظ مخصص لنسخة أخرى. اتصل بالإنترنت للتحقق من الباقة.":allowed?"":"يلزم الاتصال بالإنترنت للتحقق من الترخيص أول مرة أو بعد انتهاء مهلة العمل دون اتصال.";
    }
