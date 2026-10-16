@@ -113,4 +113,22 @@ public class MainActivitySecurityValidationTest {
         assertFalse(subject.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
                 "monthly", now + 60_000L, 0L, now));
     }
+
+    @Test
+    public void editionNavigationGatesMatchTheInstalledFlavor() {
+        assertTrue(activity.editionAllows("الفواتير والمبيعات"));
+        assertTrue(activity.editionAllows("الأصناف والمخزون"));
+        if ("basic".equals(BuildConfig.EDITION)) {
+            assertFalse(activity.editionAllows("الخزينة والشيكات"));
+            assertFalse(activity.editionAllows("الحسابات البنكية"));
+            assertFalse(activity.editionAllows("المحاسبة والتقارير"));
+            assertFalse(activity.editionAllows("الموظفون والرواتب"));
+        } else if ("pro".equals(BuildConfig.EDITION)) {
+            assertTrue(activity.editionAllows("المحاسبة والتقارير"));
+            assertFalse(activity.editionAllows("الموظفون والرواتب"));
+        } else {
+            assertTrue(activity.editionAllows("المحاسبة والتقارير"));
+            assertTrue(activity.editionAllows("الموظفون والرواتب"));
+        }
+    }
 }
