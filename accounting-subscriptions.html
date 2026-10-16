@@ -41,7 +41,12 @@ button,.button{display:inline-flex;justify-content:center;align-items:center;gap
 <div class="price" id="price">السعر المختار: 25,000 ج.س — شهريًا</div><p class="warning">حاليًا نسجل الاهتمام فقط. لا تحوّل أي مبلغ ولا ترسل إيصالًا؛ الدفع والتفعيل غير مفتوحين حتى إعلان جاهزية النسخة.</p>
 <p class="note">الأسعار بالدولار غير محددة في هذه القائمة، ولا يجري تحويل الأسعار آليًا بين العملات. اطلب عرض سعر بالدولار من الدعم.</p>
 <div class="btnrow"><button class="primary" id="whatsapp">💬 تسجيل اهتمامك عبر واتساب</button></div>
-<div class="payment"><strong>الدفع والتفعيل غير متاحين حاليًا.</strong><p class="note">لن ننشر بيانات التحويل أو نستقبل مبالغ قبل اجتياز بوابات الإصدار والإعلان عن فتح البيع. لا ترسل كلمات مرور أو رموز تحقق لأي جهة.</p></div>
+<div class="payment"><strong>بيانات الدفع المعتمدة للعرض — التحويل والتفعيل ما زالا مغلقين حتى إعلان فتح البيع</strong>
+<div class="controls" style="margin-top:12px">
+<div><label for="bankakNumber">السودان — الجنيه السوداني (بنكك)</label><input id="bankakNumber" value="1882224" readonly dir="ltr" aria-label="رقم بنكك"><button class="secondary" type="button" id="copyBankak">نسخ رقم بنكك</button></div>
+<div><label for="usdIban">الدفع بالدولار — الآيبان</label><input id="usdIban" value="SD_850401882240001" readonly dir="ltr" aria-label="رقم الآيبان"><button class="secondary" type="button" id="copyIban">نسخ الآيبان</button><p class="note">تنبيه: صيغة الآيبان المرسلة تحتوي على شرطة سفلية، وطولها لا يبدو مطابقًا لصيغة الآيبان السوداني المعتادة. أوقفنا عرضها كبيانات تحويل نهائية لحين تأكيدها من كشف الحساب أو تطبيق البنك.</p></div>
+</div>
+<p class="note" id="copyStatus" role="status" aria-live="polite">لن تطلب الصفحة تحويلًا أو ترخيصًا قبل إعلان فتح البيع. لا ترسل كلمات مرور أو رموز تحقق لأي جهة.</p></div>
 <p class="warning">مهم: هذا نموذج تسجيل اهتمام فقط، وليس طلب شراء أو تأكيد ترخيص. لا تحويلات ولا تفعيل قبل إعلان الإطلاق.</p>
 </section>
 <section class="card"><h2>تنزيل التطبيق</h2><p class="note">التنزيل التجاري غير متاح حتى اجتياز اختبارات الإصدار. لا تستخدم روابط GitHub Actions الداخلية للتوزيع على العملاء.</p><div class="download"><span class="button gold" aria-disabled="true">تنزيل Android — غير متاح بعد</span><span class="button gold" aria-disabled="true">تنزيل Windows — غير متاح بعد</span></div></section>
@@ -54,6 +59,9 @@ function currentPrice(){const m=$("market").value,t=$("tier").value,p=$("period"
 function update(){ $("price").textContent="السعر المختار: "+currentPrice(); }
 ["market","tier","period"].forEach(id=>$(id).addEventListener("change",update));
 $("whatsapp").addEventListener("click",()=>{const company=$("company").value.trim();if(!company){alert("يرجى إدخال اسم الشركة أو النشاط أولًا");$("company").focus();return}const msg="السلام عليكم، أريد تسجيل اهتمام بباقة المحاسب الميزان.\nالشركة: "+company+"\nالدولة/العملة: "+$("market").selectedOptions[0].text+"\nالباقة: "+$("tier").value+"\nالمدة: "+$("period").selectedOptions[0].text+"\nالسعر المبدئي المعروض: "+currentPrice()+"\nرقم التواصل: "+$("phone").value.trim()+"\nالتفاصيل: "+$("notes").value.trim()+"\nأفهم أن هذا تسجيل اهتمام فقط، وليس طلب شراء أو تحويل؛ البيع والتفعيل غير مفتوحين بعد.";location.href="https://wa.me/249121851285?text="+encodeURIComponent(msg)});
+async function copyAccount(id,label){const value=$(id).value;try{await navigator.clipboard.writeText(value);$("copyStatus").textContent="تم نسخ "+label+"."}catch(e){const field=$(id);field.focus();field.select();$("copyStatus").textContent="حدد النص وانسخه يدويًا: "+label}}
+$("copyBankak").addEventListener("click",()=>copyAccount("bankakNumber","رقم بنكك"));
+$("copyIban").addEventListener("click",()=>{ $("copyStatus").textContent="لم يتم نسخ الآيبان: يرجى تأكيد صيغته أولًا مع البنك." });
 update();
 </script>
 </body></html>
