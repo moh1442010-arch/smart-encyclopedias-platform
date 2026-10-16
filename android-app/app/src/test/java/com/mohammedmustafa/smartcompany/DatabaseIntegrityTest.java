@@ -580,6 +580,55 @@ public class DatabaseIntegrityTest {
         }
     }
 
+    @Test
+    public void upgradeFromSchemaElevenInstallsAuditTriggersWithoutChangingExistingRows() {
+        ContentValues original = new ContentValues();
+        original.put("type", "SALE");
+        original.put("party", "بيانات قبل الترحيل");
+        original.put("total", 250.75);
+        original.put("paid", 100.25);
+        original.put("remaining", 150.50);
+        long originalId = database.insertOrThrow("transactions", null, original);
+
+        Cursor triggers = database.rawQuery(
+                "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'audit_%'",
+                null);
+        java.util.ArrayList<String> triggerNames = new java.util.ArrayList<>();
+        try { while (triggers.moveToNext()) triggerNames.add(triggers.getString(0)); }
+        finally { triggers.close(); }
+        for (String name : triggerNames) database.execSQL("DROP TRIGGER IF EXISTS " + name);
+        database.execSQL("DROP TABLE IF EXISTS audit_events");
+        database.setVersion(11);
+        helper.close();
+
+        helper = new MainActivity.DB(context);
+        database = helper.getWritableDatabase();
+
+        assertEquals(12, database.getVersion());
+        assertTrue(tableExists("audit_events"));
+        Cursor preserved = database.rawQuery(
+                "SELECT party,total,paid,remaining FROM transactions WHERE id=?",
+                new String[]{String.valueOf(originalId)});
+        try {
+            assertTrue("Existing transaction must survive schema 11 to 12 upgrade", preserved.moveToFirst());
+            assertEquals("بيانات قبل الترحيل", preserved.getString(0));
+            assertEquals(250.75, preserved.getDouble(1), 0.000001);
+            assertEquals(100.25, preserved.getDouble(2), 0.000001);
+            assertEquals(150.50, preserved.getDouble(3), 0.000001);
+        } finally { preserved.close(); }
+
+        ContentValues afterUpgrade = new ContentValues();
+        afterUpgrade.put("paid", 125.25);
+        database.update("transactions", afterUpgrade, "id=?", new String[]{String.valueOf(originalId)});
+        Cursor audit = database.rawQuery(
+                "SELECT operation FROM audit_events WHERE entity='transactions' AND entity_id=?",
+                new String[]{String.valueOf(originalId)});
+        try {
+            assertTrue("Post-upgrade changes must be audited", audit.moveToFirst());
+            assertEquals("UPDATE", audit.getString(0));
+        } finally { audit.close(); }
+    }
+
     private int countRows(Cursor cursor) {
         int count = 0;
         while (cursor.moveToNext()) count++;
