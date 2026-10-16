@@ -19,44 +19,41 @@ button,.button{display:inline-flex;justify-content:center;align-items:center;gap
 <body>
 <header><h1>المحاسب الذكي</h1><p>باقات وأسعار شركة محمد مصطفى الذكية — اختر ما يناسب نشاطك من الجوال أو الكمبيوتر</p></header>
 <main>
-<section class="card"><h2>🇸🇩 السودان — الجنيه السوداني (ج.س)</h2><div class="table-wrap"><table><thead><tr><th>الباقة</th><th>ترخيص دائم</th><th>شهري</th><th>سنوي</th></tr></thead><tbody>
-<tr><td>Basic</td><td>150,000 ج.س</td><td>15,000 ج.س</td><td>150,000 ج.س</td></tr>
-<tr><td>Pro</td><td>300,000 ج.س</td><td>30,000 ج.س</td><td>300,000 ج.س</td></tr>
-<tr><td>Business</td><td>600,000 ج.س</td><td>60,000 ج.س</td><td>600,000 ج.س</td></tr>
+<section class="card"><h2>🇸🇩 السودان — الجنيه السوداني (ج.س)</h2><p class="warning">الأسعار أدناه هي سياسة A المعتمدة مبدئيًا. البيع والتفعيل واستقبال التحويلات ما زالت معلّقة حتى اجتياز اختبارات الإصدار والترخيص واعتماد الإطلاق رسميًا.</p><div class="table-wrap"><table><thead><tr><th>الباقة</th><th>ترخيص دائم</th><th>شهري</th><th>سنوي</th></tr></thead><tbody>
+<tr><td>Basic</td><td>غير متاح حاليًا</td><td>25,000 ج.س</td><td>250,000 ج.س</td></tr>
+<tr><td>Pro</td><td>غير متاح حاليًا</td><td>45,000 ج.س</td><td>450,000 ج.س</td></tr>
+<tr><td>Business</td><td>غير متاح حاليًا</td><td>80,000 ج.س</td><td>800,000 ج.س</td></tr>
 </tbody></table></div></section>
-<section class="card"><h2>🇸🇦 السعودية — الريال السعودي (ر.س)</h2><div class="table-wrap"><table><thead><tr><th>الباقة</th><th>ترخيص دائم</th><th>شهري</th><th>سنوي</th></tr></thead><tbody>
-<tr><td>Basic</td><td>399 ر.س</td><td>29 ر.س</td><td>290 ر.س</td></tr>
-<tr><td>Pro</td><td>799 ر.س</td><td>59 ر.س</td><td>590 ر.س</td></tr>
-<tr><td>Business</td><td>1,499 ر.س</td><td>119 ر.س</td><td>1,190 ر.س</td></tr>
+<section class="card"><h2>🇸🇦 السعودية — الريال السعودي (ر.س)</h2><p class="note">أسعار السعودية قيد المراجعة ولم تُعتمد بعد؛ لا نعتمد تحويلًا آليًا من أسعار الجنيه السوداني.</p><div class="table-wrap"><table><thead><tr><th>الباقة</th><th>ترخيص دائم</th><th>شهري</th><th>سنوي</th></tr></thead><tbody>
+<tr><td>Basic</td><td>قيد المراجعة</td><td>قيد المراجعة</td><td>قيد المراجعة</td></tr>
+<tr><td>Pro</td><td>قيد المراجعة</td><td>قيد المراجعة</td><td>قيد المراجعة</td></tr>
+<tr><td>Business</td><td>قيد المراجعة</td><td>قيد المراجعة</td><td>قيد المراجعة</td></tr>
 </tbody></table></div></section>
 <section class="card"><h2>اختر الباقة وأرسل طلب الاشتراك</h2>
 <div class="controls">
 <div><label for="market">الدولة / العملة</label><select id="market"><option value="sdg">السودان — جنيه سوداني (بنكك)</option><option value="sar">السعودية — ريال سعودي</option><option value="usd">الدفع بالدولار الأمريكي (اطلب السعر)</option></select></div>
 <div><label for="tier">الباقة</label><select id="tier"><option>Basic</option><option>Pro</option><option>Business</option><option>Enterprise — عرض مخصص</option></select></div>
-<div><label for="period">مدة الترخيص</label><select id="period"><option value="perpetual">ترخيص دائم</option><option value="monthly">اشتراك شهري</option><option value="annual">اشتراك سنوي</option></select></div>
+<div><label for="period">مدة الترخيص</label><select id="period"><option value="perpetual" disabled>ترخيص دائم — غير متاح حاليًا</option><option value="monthly">اشتراك شهري</option><option value="annual">اشتراك سنوي</option></select></div>
 <div><label for="company">اسم الشركة / النشاط</label><input id="company" placeholder="اكتب اسم الشركة"></div>
 <div><label for="phone">رقم واتساب للتواصل</label><input id="phone" inputmode="tel" placeholder="مفتاح الدولة ورقم الهاتف"></div>
 <div><label for="notes">تفاصيل إضافية</label><textarea id="notes" placeholder="عدد المستخدمين أو الفروع أو احتياجات التخصيص"></textarea></div>
 </div>
-<div class="price" id="price">السعر المختار: 150,000 ج.س</div>
+<div class="price" id="price">السعر المختار: 25,000 ج.س — شهريًا</div><p class="warning">حاليًا نسجل الاهتمام فقط. لا تحوّل أي مبلغ ولا ترسل إيصالًا؛ الدفع والتفعيل غير مفتوحين حتى إعلان جاهزية النسخة.</p>
 <p class="note">الأسعار بالدولار غير محددة في هذه القائمة، ولا يجري تحويل الأسعار آليًا بين العملات. اطلب عرض سعر بالدولار من الدعم.</p>
-<div class="btnrow"><button class="primary" id="whatsapp">💬 إرسال طلب الاشتراك عبر واتساب</button><button class="secondary" id="copyBankak">📋 نسخ رقم حساب بنكك</button><button class="secondary" id="copyIban">📋 نسخ IBAN</button></div>
-<div class="payment"><div><strong>الدفع في السودان عبر بنكك</strong></div><span class="account" id="bankak">1882224</span><div><strong>IBAN المتاح:</strong> <span class="account" id="iban">SD8504018822240001</span></div><p class="note">قبل إرسال أي تحويل بالدولار، تحقّق مع البنك من اسم المستفيد والعملة وأن هذا الحساب يستقبل تحويلات USD، ومن الرسوم البنكية. لا ترسل كلمات مرور أو رموز تحقق.</p></div>
-<p class="warning">مهم: إرسال الطلب أو إشعار التحويل لا يفعّل الترخيص تلقائيًا. تتم مراجعة الطلب وتأكيد وصول المبلغ يدويًا قبل إصدار التفعيل. أرفق إيصال التحويل في محادثة واتساب بعد فتحها.</p>
+<div class="btnrow"><button class="primary" id="whatsapp">💬 تسجيل اهتمامك عبر واتساب</button></div>
+<div class="payment"><strong>الدفع والتفعيل غير متاحين حاليًا.</strong><p class="note">لن ننشر بيانات التحويل أو نستقبل مبالغ قبل اجتياز بوابات الإصدار والإعلان عن فتح البيع. لا ترسل كلمات مرور أو رموز تحقق لأي جهة.</p></div>
+<p class="warning">مهم: هذا نموذج تسجيل اهتمام فقط، وليس طلب شراء أو تأكيد ترخيص. لا تحويلات ولا تفعيل قبل إعلان الإطلاق.</p>
 </section>
-<section class="card"><h2>تنزيل التطبيق</h2><p class="note">روابط تنزيل أحدث الملفات تظهر بعد نجاح البناء. قد يطلب GitHub تسجيل الدخول للوصول إلى ملف Artifacts.</p><div class="download"><a class="button gold" href="https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/workflows/build-android-apk.yml">تنزيل نسخة Android</a><a class="button gold" href="https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/workflows/build-windows-app.yml">تنزيل نسخة Windows</a></div></section>
+<section class="card"><h2>تنزيل التطبيق</h2><p class="note">التنزيل التجاري غير متاح حتى اجتياز اختبارات الإصدار. لا تستخدم روابط GitHub Actions الداخلية للتوزيع على العملاء.</p><div class="download"><span class="button gold" aria-disabled="true">تنزيل Android — غير متاح بعد</span><span class="button gold" aria-disabled="true">تنزيل Windows — غير متاح بعد</span></div></section>
 <div class="footer">شركة محمد مصطفى الذكية · الدعم: <a href="https://wa.me/249121851285">واتساب +249121851285</a> · <a href="mailto:moh1442010@gmail.com">moh1442010@gmail.com</a></div>
 </main>
 <script>
-const prices={sdg:{Basic:["150,000","15,000","150,000"],Pro:["300,000","30,000","300,000"],Business:["600,000","60,000","600,000"]},sar:{Basic:["399","29","290"],Pro:["799","59","590"],Business:["1,499","119","1,190"]}};
+const prices={sdg:{Basic:["","25,000","250,000"],Pro:["","45,000","450,000"],Business:["","80,000","800,000"]}};
 const $=id=>document.getElementById(id);
-function currentPrice(){const m=$("market").value,t=$("tier").value,p=$("period").value;const d={perpetual:0,monthly:1,annual:2}[p];if(t.startsWith("Enterprise"))return "عرض سعر مخصص — تواصل مع الدعم";if(m==="usd")return "السعر بالدولار غير محدد — اطلب عرض سعر";return prices[m][t][d]+(m==="sdg"?" ج.س":" ر.س")}
+function currentPrice(){const m=$("market").value,t=$("tier").value,p=$("period").value;if(p==="perpetual")return "الترخيص الدائم غير متاح حاليًا";if(t.startsWith("Enterprise"))return "عرض سعر مخصص — غير متاح قبل اعتماد الإطلاق";if(m==="usd"||m==="sar")return "السعر قيد المراجعة — لا يوجد سعر معتمد";return prices.sdg[t][{monthly:1,annual:2}[p]]+" ج.س"+(p==="monthly"?" شهريًا":" سنويًا")}
 function update(){ $("price").textContent="السعر المختار: "+currentPrice(); }
 ["market","tier","period"].forEach(id=>$(id).addEventListener("change",update));
-async function copyText(value,label){try{await navigator.clipboard.writeText(value);alert("تم نسخ "+label)}catch(e){const t=document.createElement("textarea");t.value=value;document.body.appendChild(t);t.select();document.execCommand("copy");t.remove();alert("تم نسخ "+label)}}
-$("copyBankak").addEventListener("click",()=>copyText("1882224","رقم حساب بنكك"));
-$("copyIban").addEventListener("click",()=>copyText("SD8504018822240001","IBAN"));
-$("whatsapp").addEventListener("click",()=>{const company=$("company").value.trim();if(!company){alert("يرجى إدخال اسم الشركة أو النشاط أولًا");$("company").focus();return}const msg="السلام عليكم، أريد طلب باقة من المحاسب الذكي.\nالشركة: "+company+"\nالدولة/العملة: "+$("market").selectedOptions[0].text+"\nالباقة: "+$("tier").value+"\nالمدة: "+$("period").selectedOptions[0].text+"\nالسعر المعروض: "+currentPrice()+"\nرقم التواصل: "+$("phone").value.trim()+"\nالتفاصيل: "+$("notes").value.trim()+"\nبنكك: 1882224\nIBAN: SD8504018822240001\nيرجى تأكيد السعر وبيانات المستفيد قبل التحويل والتفعيل.";location.href="https://wa.me/249121851285?text="+encodeURIComponent(msg)});
+$("whatsapp").addEventListener("click",()=>{const company=$("company").value.trim();if(!company){alert("يرجى إدخال اسم الشركة أو النشاط أولًا");$("company").focus();return}const msg="السلام عليكم، أريد تسجيل اهتمام بباقة المحاسب الميزان.\nالشركة: "+company+"\nالدولة/العملة: "+$("market").selectedOptions[0].text+"\nالباقة: "+$("tier").value+"\nالمدة: "+$("period").selectedOptions[0].text+"\nالسعر المبدئي المعروض: "+currentPrice()+"\nرقم التواصل: "+$("phone").value.trim()+"\nالتفاصيل: "+$("notes").value.trim()+"\nأفهم أن هذا تسجيل اهتمام فقط، وليس طلب شراء أو تحويل؛ البيع والتفعيل غير مفتوحين بعد.";location.href="https://wa.me/249121851285?text="+encodeURIComponent(msg)});
 update();
 </script>
 </body></html>
