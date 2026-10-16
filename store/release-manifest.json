@@ -1,0 +1,15 @@
+{
+  "product": "المحاسب الميزان",
+  "channel": "prelaunch",
+  "last_reviewed": "2026-10-16",
+  "storefront_status": "draft_not_yet_published",
+  "downloads_enabled": false,
+  "releases": [
+    {"platform":"android","edition":"Basic","version":null,"artifact_url":null,"sha256":null,"signing_certificate_sha256":null,"source_commit":null,"status":"pending_signed_build_and_device_qa"},
+    {"platform":"android","edition":"Pro","version":null,"artifact_url":null,"sha256":null,"signing_certificate_sha256":null,"source_commit":null,"status":"pending_signed_build_and_device_qa"},
+    {"platform":"android","edition":"Business","version":null,"artifact_url":null,"sha256":null,"signing_certificate_sha256":null,"source_commit":null,"status":"pending_signed_build_and_device_qa"},
+    {"platform":"android","edition":"Enterprise","version":null,"artifact_url":null,"sha256":null,"signing_certificate_sha256":null,"source_commit":null,"status":"pending_signed_build_and_device_qa"},
+    {"platform":"windows","edition":"core","version":null,"artifact_url":null,"sha256":null,"signing_certificate_sha256":null,"source_commit":null,"status":"not_built_or_verified"}
+  ],
+  "policy": "Only publish verified artifacts; never guess URLs, hashes, version numbers, or signing fingerprints."
+}
