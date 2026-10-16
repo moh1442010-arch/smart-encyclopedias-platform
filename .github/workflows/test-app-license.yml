@@ -29,3 +29,19 @@ jobs:
           node-version: "22"
       - name: Run app license regression tests
         run: node --test delivery/tests/app-license.test.mjs
+      - name: Live license API read-only smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://smart-encyclopedias-delivery.moh1442010.workers.dev"
+          status="$(curl --silent --show-error --output /tmp/license-status.json --write-out '%{http_code}' "$base/api/app-license/status")"
+          test "$status" = "400"
+          grep -q '"error":"device_id_required"' /tmp/license-status.json
+          status="$(curl --silent --show-error --output /tmp/license-activate.json --write-out '%{http_code}' \
+            -X POST "$base/api/app-license/activate" \
+            -H 'content-type: application/json' \
+            -H 'x-app-device-id: live-smoke-device-0001' \
+            --data '{"activationCode":"INVALID-LIVE-SMOKE-CODE"}')"
+          test "$status" = "400"
+          grep -q '"error":"invalid_activation_code"' /tmp/license-activate.json
+          echo "Live license API is reachable and rejects missing device IDs and invalid activation codes."
