@@ -23,6 +23,14 @@ public class MainActivity extends Activity{
  static final long OFFLINE_GRACE_MS=72L*60L*60L*1000L;
  long parseLicenseTime(String value){try{java.text.SimpleDateFormat f=new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",Locale.US);f.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));java.util.Date d=f.parse(value);return d==null?0:d.getTime();}catch(Exception e){try{java.text.SimpleDateFormat f=new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'",Locale.US);f.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));java.util.Date d=f.parse(value);return d==null?0:d.getTime();}catch(Exception ignored){return 0;}}}
  String appDeviceId(){String id=android.provider.Settings.Secure.getString(getContentResolver(),android.provider.Settings.Secure.ANDROID_ID);return id==null?"":id;}
+ boolean offlineLicenseAllowed(android.content.SharedPreferences p,long now){
+  long expiry=p.getLong("expires_at",0);
+  long verified=p.getLong("last_verified_at",0);
+  long lastSeen=p.getLong("last_seen_wall",0);
+  // Fail closed if the wall clock moved backwards materially since the last server response.
+  if(lastSeen<=0||now<lastSeen-300000L)return false;
+  return expiry>now&&verified>0&&now>=verified&&now-verified<=OFFLINE_GRACE_MS;
+ }
  void checkCommercialAccess(){
   new Thread(()->{
    boolean allowed=false; String mode=""; String error="";
@@ -35,15 +43,15 @@ public class MainActivity extends Activity{
     if(code>=200&&code<300&&d.optBoolean("ok")){
      mode=d.optString("mode","");long expiry=0;try{expiry=parseLicenseTime(d.optString("expiresAt",""));}catch(Exception ignored){}
      allowed=("licensed".equals(mode)||("trial".equals(mode)&&expiry>System.currentTimeMillis()));
-     getSharedPreferences("commercial_license",0).edit().putString("mode",mode).putLong("expires_at",expiry).putLong("last_verified_at",System.currentTimeMillis()).putString("license_id",d.optString("licenseId","")).apply();
+     long verifiedAt=System.currentTimeMillis();getSharedPreferences("commercial_license",0).edit().putString("mode",mode).putLong("expires_at",expiry).putLong("last_verified_at",verifiedAt).putLong("last_seen_wall",verifiedAt).putString("license_id",d.optString("licenseId","")).apply();
      if(!allowed)error="انتهت التجربة المجانية. أدخل رمز الترخيص التجاري للمتابعة.";
     }else error="تعذر التحقق من الترخيص. حاول مرة أخرى.";
     c.disconnect();
    }catch(Exception ex){
     android.content.SharedPreferences p=getSharedPreferences("commercial_license",0);
-    long expiry=p.getLong("expires_at",0),verified=p.getLong("last_verified_at",0);
-    allowed=expiry>System.currentTimeMillis()&&verified>0&&System.currentTimeMillis()-verified<=OFFLINE_GRACE_MS;
-    error=allowed?"":"يلزم الاتصال بالإنترنت للتحقق من الترخيص أول مرة أو بعد انتهاء مهلة العمل دون اتصال.";
+    long now=System.currentTimeMillis();
+    allowed=offlineLicenseAllowed(p,now);
+    error=allowed?"":"يلزم الاتصال بالإنترنت للتحقق من الترخيص أول مرة أو بعد انتهاء مهلة العمل دون اتصال، أو للتحقق من تغيير ساعة الجهاز.";
    }
    final boolean ok=allowed;final String message=error;
    runOnUiThread(()->{if(ok)login();else licensePage(message);});
@@ -71,7 +79,7 @@ public class MainActivity extends Activity{
      org.json.JSONObject d=new org.json.JSONObject(out.toString("UTF-8"));
      if(status>=200&&status<300&&d.optBoolean("ok")){
       long expiry=0;try{expiry=parseLicenseTime(d.optString("expiresAt",""));}catch(Exception ignored){}
-      getSharedPreferences("commercial_license",0).edit().putString("mode","licensed").putLong("expires_at",expiry).putLong("last_verified_at",System.currentTimeMillis()).putString("license_id",d.optString("licenseId","")).apply();ok=true;
+      long verifiedAt=System.currentTimeMillis();getSharedPreferences("commercial_license",0).edit().putString("mode","licensed").putLong("expires_at",expiry).putLong("last_verified_at",verifiedAt).putLong("last_seen_wall",verifiedAt).putString("license_id",d.optString("licenseId","")).apply();ok=true;
      }else resultMessage="تعذر التفعيل: "+d.optString("error","تحقق من الرمز وحالته.");
      c.disconnect();
     }catch(Exception ex){}
