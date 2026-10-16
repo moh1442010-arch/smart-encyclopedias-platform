@@ -581,7 +581,7 @@ public class DatabaseIntegrityTest {
     }
 
     @Test
-    public void upgradeFromSchemaElevenPreservesRowsAndBackfillsMinorUnits() {
+    public void upgradeFromSchemaTwelveWithoutMinorColumnsPreservesRowsAndBackfillsMoney() {
         ContentValues original = new ContentValues();
         original.put("type", "SALE");
         original.put("party", "بيانات قبل الترحيل");
@@ -590,15 +590,37 @@ public class DatabaseIntegrityTest {
         original.put("remaining", 150.50);
         long originalId = database.insertOrThrow("transactions", null, original);
 
+        // Recreate the relevant schema-12 condition: old monetary columns exist,
+        // but no *_minor columns or triggers from the new migration are present.
         Cursor triggers = database.rawQuery(
-                "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'audit_%'",
-                null);
+                "SELECT name FROM sqlite_master WHERE type='trigger'", null);
         java.util.ArrayList<String> triggerNames = new java.util.ArrayList<>();
         try { while (triggers.moveToNext()) triggerNames.add(triggers.getString(0)); }
         finally { triggers.close(); }
-        for (String name : triggerNames) database.execSQL("DROP TRIGGER IF EXISTS " + name);
+        for (String name : triggerNames) {
+            database.execSQL("DROP TRIGGER IF EXISTS \"" + name.replace("\"", "\"\"") + "\"");
+        }
         database.execSQL("DROP TABLE IF EXISTS audit_events");
-        database.setVersion(11);
+
+        String[][] moneyColumns = {
+                {"products", "sale_price_minor", "cost_minor"},
+                {"customers", "credit_limit_minor"},
+                {"employees", "salary_minor"},
+                {"payroll_events", "amount_minor"},
+                {"transactions", "total_minor", "paid_minor", "remaining_minor"},
+                {"invoice_items", "price_minor", "cost_minor", "discount_minor"},
+                {"bank_accounts", "opening_balance_minor"},
+                {"bank_movements", "amount_minor"},
+                {"checks", "amount_minor"},
+                {"party_payments", "amount_minor"},
+                {"journal_lines", "debit_minor", "credit_minor"}
+        };
+        for (String[] columns : moneyColumns) {
+            for (int i = 1; i < columns.length; i++) {
+                database.execSQL("ALTER TABLE " + columns[0] + " DROP COLUMN " + columns[i]);
+            }
+        }
+        database.setVersion(12);
         helper.close();
 
         helper = new MainActivity.DB(context);
@@ -610,7 +632,7 @@ public class DatabaseIntegrityTest {
                 "SELECT party,total,paid,remaining FROM transactions WHERE id=?",
                 new String[]{String.valueOf(originalId)});
         try {
-            assertTrue("Existing transaction must survive schema 11 to 12 upgrade", preserved.moveToFirst());
+            assertTrue("Existing transaction must survive schema 12 to 13 upgrade", preserved.moveToFirst());
             assertEquals("بيانات قبل الترحيل", preserved.getString(0));
             assertEquals(250.75, preserved.getDouble(1), 0.000001);
             assertEquals(100.25, preserved.getDouble(2), 0.000001);
@@ -631,11 +653,10 @@ public class DatabaseIntegrityTest {
         afterUpgrade.put("paid", 125.25);
         database.update("transactions", afterUpgrade, "id=?", new String[]{String.valueOf(originalId)});
         Cursor audit = database.rawQuery(
-                "SELECT operation FROM audit_events WHERE entity='transactions' AND entity_id=?",
+                "SELECT operation FROM audit_events WHERE entity='transactions' AND entity_id=? AND operation='UPDATE'",
                 new String[]{String.valueOf(originalId)});
         try {
             assertTrue("Post-upgrade changes must be audited", audit.moveToFirst());
-            assertEquals("UPDATE", audit.getString(0));
         } finally { audit.close(); }
     }
 
