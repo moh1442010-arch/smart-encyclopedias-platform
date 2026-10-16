@@ -64,7 +64,7 @@
       "edition": "core",
       "version": "2.2.7",
       "artifact_url": null,
-      "sha256": "a01498e2be5214f7f0108e5f6575323c75689485ef06defb34a5babdce6e72bc4",
+      "sha256": "a01498e2be5214f7f0108e5f6575323c75689485ef06defb34a5babdc6e72bc4",
       "signing_certificate_sha256": null,
       "source_commit": "aeda725ad14866ecc71ceacc9411656805442a5b",
       "status": "built_ci_precommercial_pending_device_qa"
@@ -78,7 +78,7 @@
     "artifact_id": 12063509290,
     "artifact_name": "smart-company-windows-v2.2.7",
     "artifact_zip_sha256": "bb086d6c90ffd09431a3f17b46d4954d6e0f04875b00dca5fbd6ca4679fdf95b",
-    "executable_sha256": "a01498e2be5214f7f0108e5f6575323c75689485ef06defb34a5babdce6e72bc4",
+    "executable_sha256": "a01498e2be5214f7f0108e5f6575323c75689485ef06defb34a5babdc6e72bc4",
     "ci_status": "passed",
     "device_install_update_test": "not_verified",
     "end_to_end_accounting_acceptance": "not_verified",
