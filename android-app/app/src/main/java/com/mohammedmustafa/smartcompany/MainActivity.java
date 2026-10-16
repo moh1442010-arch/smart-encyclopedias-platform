@@ -518,7 +518,9 @@ public class MainActivity extends Activity{
    Cursor p=db.q("SELECT COALESCE(SUM(CASE WHEN t.type='SALE_RETURN' THEN -((i.price-i.cost)*i.qty-i.discount) ELSE ((i.price-i.cost)*i.qty-i.discount) END),0) FROM invoice_items i JOIN transactions t ON t.id=i.transaction_id WHERE t.type IN ('SALE','SALE_RETURN') AND t.created_at BETWEEN ? AND ?",args);double gp=p.moveToFirst()?p.getDouble(0):0;p.close();
    Cursor ex=db.q("SELECT COALESCE(SUM(total),0) FROM transactions WHERE type='EXPENSE' AND created_at BETWEEN ? AND ?",args);double expense=ex.moveToFirst()?ex.getDouble(0):0;ex.close();
    content.addView(t("مجمل الربح التقديري: "+fmt(gp),20));content.addView(t("تقدير تشغيلي أولي بعد المصروفات: "+fmt(gp-expense),20));
-   Button tb=b("ميزان المراجعة");content.addView(tb);tb.setOnClickListener(v->trialBalance());
+   if(!"basic".equals(BuildConfig.EDITION)){
+    Button tb=b("ميزان المراجعة");content.addView(tb);tb.setOnClickListener(v->trialBalance());
+   }
    Button print=b("طباعة التقرير / PDF");content.addView(print);print.setOnClickListener(v->printText("التقرير المالي",reportText(start,end,period)));
    Button email=b("إرسال التقرير بالبريد الإلكتروني");content.addView(email);email.setOnClickListener(v->{Intent i=new Intent(Intent.ACTION_SEND);i.setType("text/plain");i.putExtra(Intent.EXTRA_SUBJECT,tr("التقرير المالي"));i.putExtra(Intent.EXTRA_TEXT,reportText(start,end,period));startActivity(Intent.createChooser(i,tr("إرسال التقرير بالبريد الإلكتروني")));});
   }
