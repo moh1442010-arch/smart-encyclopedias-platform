@@ -166,14 +166,14 @@ public class MainActivity extends Activity{
    String price="السعر قيد المراجعة — لا يوجد سعر معتمد لهذه العملة.";
    if(p.equals("Enterprise — عرض مخصص"))price="عرض سعر مخصص — تواصل مع الدعم.";
    else if(m.startsWith("السودان")){
-    String[][] prices={{"150,000","15,000","150,000"},{"300,000","30,000","300,000"},{"600,000","60,000","600,000"}};
+    String[][] prices={{"غير متاح","25,000","250,000"},{"غير متاح","45,000","450,000"},{"غير متاح","80,000","800,000"}};
     int pi=p.equals("Basic")?0:p.equals("Pro")?1:2;int di=d.equals("ترخيص دائم")?0:d.equals("اشتراك شهري")?1:2;
-    price=prices[pi][di]+" ج.س";
-   }else if(m.startsWith("السعودية")){
-    String[][] prices={{"399","29","290"},{"799","59","590"},{"1,499","119","1,190"}};
+    price=di==0?"الترخيص الدائم غير متاح بالجنيه السوداني حاليًا":prices[pi][di]+" ج.س";
+   }else if(m.startsWith("الدفع بالدولار")){
+    String[][] prices={{"249","9","90"},{"499","19","190"},{"999","39","390"}};
     int pi=p.equals("Basic")?0:p.equals("Pro")?1:2;int di=d.equals("ترخيص دائم")?0:d.equals("اشتراك شهري")?1:2;
-    price=prices[pi][di]+" ر.س";
-   }
+    price="$"+prices[pi][di]+(di==0?" — ترخيص دائم":di==1?" شهريًا":" سنويًا");
+   }else if(m.startsWith("السعودية")){price="السعر قيد المراجعة — لا يوجد سعر معتمد";}
    selectedPrice.setText("السعر المختار: "+price);
   };
   android.widget.AdapterView.OnItemSelectedListener priceListener=new android.widget.AdapterView.OnItemSelectedListener(){public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){updatePrice.run();}public void onNothingSelected(android.widget.AdapterView<?> parent){}};
