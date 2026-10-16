@@ -87,7 +87,7 @@ public class MainActivitySecurityValidationTest {
     @Test
     public void perpetualLicenseAllowsOnlyTheConfiguredOfflineGracePeriod() {
         long now = System.currentTimeMillis();
-        MainActivity subject = new MainActivity();
+        MainActivity subject = activity;
         assertTrue(subject.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
                 "perpetual", 0L, now - 60_000L, now));
         assertFalse(subject.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
@@ -101,7 +101,7 @@ public class MainActivitySecurityValidationTest {
     @Test
     public void offlineTrialAndTimeLimitedLicensesMustStillBeUnexpired() {
         long now = System.currentTimeMillis();
-        MainActivity subject = new MainActivity();
+        MainActivity subject = activity;
         assertTrue(subject.offlineLicenseAllowed("trial", "", "", now + 60_000L,
                 now - 60_000L, now));
         assertFalse(subject.offlineLicenseAllowed("trial", "", "", now - 1L,
