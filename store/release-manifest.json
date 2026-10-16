@@ -62,13 +62,26 @@
     {
       "platform": "windows",
       "edition": "core",
-      "version": null,
+      "version": "2.2.7",
       "artifact_url": null,
-      "sha256": null,
+      "sha256": "a01498e2be5214f7f0108e5f6575323c75689485ef06defb34a5babdce6e72bc4",
       "signing_certificate_sha256": null,
-      "source_commit": null,
-      "status": "not_built_or_verified"
+      "source_commit": "aeda725ad14866ecc71ceacc9411656805442a5b",
+      "status": "built_ci_precommercial_pending_device_qa"
     }
   ],
-  "policy": "Only publish verified artifacts; never guess URLs, hashes, version numbers, or signing fingerprints. Do not enable public downloads until device update/install and accounting acceptance pass."
+  "policy": "Only publish verified artifacts; never guess URLs, hashes, version numbers, or signing fingerprints. Do not enable public downloads until device update/install and accounting acceptance pass.",
+  "windows_candidate": {
+    "version": "2.2.7",
+    "source_commit": "aeda725ad14866ecc71ceacc9411656805442a5b",
+    "workflow_run": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/38943094895",
+    "artifact_id": 12063509290,
+    "artifact_name": "smart-company-windows-v2.2.7",
+    "artifact_zip_sha256": "bb086d6c90ffd09431a3f17b46d4954d6e0f04875b00dca5fbd6ca4679fdf95b",
+    "executable_sha256": "a01498e2be5214f7f0108e5f6575323c75689485ef06defb34a5babdce6e72bc4",
+    "ci_status": "passed",
+    "device_install_update_test": "not_verified",
+    "end_to_end_accounting_acceptance": "not_verified",
+    "public_download_url": null
+  }
 }
