@@ -192,7 +192,7 @@ public class MainActivity extends Activity{
    Button send=b("💬 إرسال طلب/استفسار عبر واتساب");content.addView(send);send.setOnClickListener(v->{
     String m=String.valueOf(market.getSelectedItem()),p=String.valueOf(tier.getSelectedItem()),d=String.valueOf(period.getSelectedItem()),price=selectedPrice.getText().toString();
     if(company.getText().toString().trim().isEmpty()){toast("أدخل اسم الشركة أو النشاط أولًا");return;}
-    String message="السلام عليكم، أريد الاستفسار عن باقة المحاسب الميزان.\\nالشركة: "+company.getText().toString().trim()+"\\nالعملة/طريقة الدفع: "+m+"\\nالباقة: "+p+"\\nالمدة: "+d+"\\nالسعر المعروض: "+price+"\\nرقم التواصل: "+contact.getText().toString().trim()+"\\nالتفاصيل: "+notes.getText().toString().trim()+"\\nبنكك (SDG): 1882224\\nIBAN (USD): SD8504018822240001\\nالطلب للاستفسار فقط؛ لا يتم التفعيل إلا بعد اعتماد الإصدار وتأكيد الدفع رسميًا.";
+    String message="السلام عليكم، أريد الاستفسار عن باقة المحاسب الميزان.\nالشركة: "+company.getText().toString().trim()+"\nالعملة/طريقة الدفع: "+m+"\nالباقة: "+p+"\nالمدة: "+d+"\nالسعر المعروض: "+price+"\nرقم التواصل: "+contact.getText().toString().trim()+"\nالتفاصيل: "+notes.getText().toString().trim()+"\nبنكك (SDG): 1882224\nIBAN (USD): SD8504018822240001\nالطلب للاستفسار فقط؛ لا يتم التفعيل إلا بعد اعتماد الإصدار وتأكيد الدفع رسميًا.";
     open("https://wa.me/249121851285?text="+android.net.Uri.encode(message));
    });
    Button supportButton=b("التواصل مع الدعم عبر واتساب");content.addView(supportButton);supportButton.setOnClickListener(v->support());
