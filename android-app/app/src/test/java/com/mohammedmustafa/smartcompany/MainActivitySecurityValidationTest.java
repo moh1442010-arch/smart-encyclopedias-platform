@@ -83,4 +83,61 @@ public class MainActivitySecurityValidationTest {
         assertTrue(activity.verifyPin("1234", prefs));
         assertFalse(activity.verifyPin("1235", prefs));
     }
+
+    @Test
+    public void perpetualLicenseAllowsOnlyTheConfiguredOfflineGracePeriod() {
+        long now = System.currentTimeMillis();
+        MainActivity subject = new MainActivity();
+        assertTrue(subject.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
+                "perpetual", 0L, now - 60_000L, now));
+        assertFalse(subject.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
+                "perpetual", 0L, now - MainActivity.OFFLINE_GRACE_MS - 1L, now));
+        assertFalse(subject.offlineLicenseAllowed("licensed", "another-edition",
+                "perpetual", 0L, now - 60_000L, now));
+        assertFalse(subject.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
+                "monthly", 0L, now - 60_000L, now));
+    }
+
+    @Test
+    public void offlineTrialAndTimeLimitedLicensesMustStillBeUnexpired() {
+        long now = System.currentTimeMillis();
+        MainActivity subject = new MainActivity();
+        assertTrue(subject.offlineLicenseAllowed("trial", "", "", now + 60_000L,
+                now - 60_000L, now));
+        assertFalse(subject.offlineLicenseAllowed("trial", "", "", now - 1L,
+                now - 60_000L, now));
+        assertTrue(subject.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
+                "monthly", now + 60_000L, now - 60_000L, now));
+        assertFalse(subject.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
+                "monthly", now - 1L, now - 60_000L, now));
+        assertFalse(subject.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
+                "monthly", now + 60_000L, 0L, now));
+    }
+
+    @Test
+    public void editionNavigationGatesMatchTheInstalledFlavor() {
+        assertTrue(activity.editionAllows("الفواتير والمبيعات"));
+        assertTrue(activity.editionAllows("الأصناف والمخزون"));
+        if ("basic".equals(BuildConfig.EDITION)) {
+            assertFalse(activity.editionAllows("الخزينة والشيكات"));
+            assertFalse(activity.editionAllows("الحسابات البنكية"));
+            assertFalse(activity.editionAllows("المحاسبة والتقارير"));
+            assertFalse(activity.editionAllows("الموظفون والرواتب"));
+        } else if ("pro".equals(BuildConfig.EDITION)) {
+            assertTrue(activity.editionAllows("المحاسبة والتقارير"));
+            assertFalse(activity.editionAllows("الموظفون والرواتب"));
+        } else {
+            assertTrue(activity.editionAllows("المحاسبة والتقارير"));
+            assertTrue(activity.editionAllows("الموظفون والرواتب"));
+        }
+    }
+
+    @Test
+    public void partialReturnQuantitiesMustStayWithinOriginalInvoiceLimit() {
+        assertTrue(activity.canReturnQuantity(5.0, 0.0, 2.0));
+        assertTrue(activity.canReturnQuantity(5.0, 2.0, 3.0));
+        assertFalse(activity.canReturnQuantity(5.0, 4.0, 2.0));
+        assertFalse(activity.canReturnQuantity(5.0, 0.0, 0.0));
+        assertFalse(activity.canReturnQuantity(5.0, 0.0, Double.NaN));
+    }
 }

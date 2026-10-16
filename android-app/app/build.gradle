@@ -3,12 +3,31 @@ android {
  namespace 'com.mohammedmustafa.smartcompany'
  buildFeatures { buildConfig true }
  compileSdk 36
+ flavorDimensions += "edition"
  defaultConfig {
   applicationId 'com.mohammedmustafa.smartcompany'
   minSdk 23
   targetSdk 36
-  versionCode 39
-  versionName '2.3.8'
+  versionCode 40
+  versionName '2.3.9'
+ }
+ productFlavors {
+  basic {
+   dimension "edition"
+   buildConfigField "String", "EDITION", '"basic"'
+  }
+  pro {
+   dimension "edition"
+   buildConfigField "String", "EDITION", '"pro"'
+  }
+  business {
+   dimension "edition"
+   buildConfigField "String", "EDITION", '"business"'
+  }
+  enterprise {
+   dimension "edition"
+   buildConfigField "String", "EDITION", '"enterprise"'
+  }
  }
  testOptions { unitTests.includeAndroidResources = true }
 }

@@ -55,34 +55,87 @@ public class DatabaseIntegrityTest {
 
 
     @Test
-    public void returnCanBeRecordedOnlyOnceForOriginalInvoice() {
-        assertTrue(columnExists("transactions", "original_transaction_id"));
-        assertTrue(accountExists("4100"));
+    public void partialReturnsAreAllowedButCumulativeQuantityCannotExceedOriginalInvoice() {
+        ContentValues product = new ContentValues();
+        product.put("name", "Return Test Item");
+        product.put("qty", 10.0);
+        product.put("sale_price", 20.0);
+        product.put("cost", 10.0);
+        long productId = database.insertOrThrow("products", null, product);
+
         ContentValues original = new ContentValues();
         original.put("type", "SALE");
         original.put("party", "عميل اختبار");
         original.put("total", 100.0);
-        original.put("paid", 100.0);
-        original.put("remaining", 0.0);
+        original.put("paid", 0.0);
+        original.put("remaining", 100.0);
         original.put("created_at", System.currentTimeMillis());
         original.put("invoice_no", "TEST-ORIGINAL-1");
         long originalId = database.insertOrThrow("transactions", null, original);
 
-        ContentValues returned = new ContentValues();
-        returned.put("type", "SALE_RETURN");
-        returned.put("party", "عميل اختبار");
-        returned.put("total", 100.0);
-        returned.put("paid", 100.0);
-        returned.put("remaining", 0.0);
-        returned.put("created_at", System.currentTimeMillis());
-        returned.put("original_transaction_id", originalId);
-        database.insertOrThrow("transactions", null, returned);
+        ContentValues originalItem = new ContentValues();
+        originalItem.put("transaction_id", originalId);
+        originalItem.put("product_id", productId);
+        originalItem.put("qty", 5.0);
+        originalItem.put("price", 20.0);
+        originalItem.put("cost", 10.0);
+        originalItem.put("discount", 0.0);
+        database.insertOrThrow("invoice_items", null, originalItem);
 
+        for (int i = 0; i < 2; i++) {
+            ContentValues returned = new ContentValues();
+            returned.put("type", "SALE_RETURN");
+            returned.put("party", "عميل اختبار");
+            returned.put("total", 40.0);
+            returned.put("paid", 0.0);
+            returned.put("remaining", 40.0);
+            returned.put("created_at", System.currentTimeMillis());
+            returned.put("original_transaction_id", originalId);
+            long returnId = database.insertOrThrow("transactions", null, returned);
+
+            ContentValues returnItem = new ContentValues();
+            returnItem.put("transaction_id", returnId);
+            returnItem.put("product_id", productId);
+            returnItem.put("qty", 2.0);
+            returnItem.put("price", 20.0);
+            returnItem.put("cost", 10.0);
+            returnItem.put("discount", 0.0);
+            database.insertOrThrow("invoice_items", null, returnItem);
+        }
+
+        ContentValues excessReturn = new ContentValues();
+        excessReturn.put("type", "SALE_RETURN");
+        excessReturn.put("party", "عميل اختبار");
+        excessReturn.put("total", 40.0);
+        excessReturn.put("paid", 0.0);
+        excessReturn.put("remaining", 40.0);
+        excessReturn.put("created_at", System.currentTimeMillis());
+        excessReturn.put("original_transaction_id", originalId);
+        long excessReturnId = database.insertOrThrow("transactions", null, excessReturn);
+
+        ContentValues excessItem = new ContentValues();
+        excessItem.put("transaction_id", excessReturnId);
+        excessItem.put("product_id", productId);
+        excessItem.put("qty", 2.0);
+        excessItem.put("price", 20.0);
+        excessItem.put("cost", 10.0);
+        excessItem.put("discount", 0.0);
         try {
-            database.insertOrThrow("transactions", null, returned);
-            fail("A second return for the same original invoice must be rejected");
+            database.insertOrThrow("invoice_items", null, excessItem);
+            fail("Cumulative return quantity must not exceed the original invoice quantity");
         } catch (android.database.SQLException expected) {
-            // The partial unique index enforces one full return per original invoice.
+            // SQLite trigger rejects the third return: 2 + 2 + 2 exceeds the original quantity of 5.
+        }
+
+        Cursor returnedQty = database.rawQuery(
+                "SELECT COALESCE(SUM(i.qty),0) FROM invoice_items i " +
+                "JOIN transactions r ON r.id=i.transaction_id WHERE r.original_transaction_id=?",
+                new String[]{String.valueOf(originalId)});
+        try {
+            assertTrue(returnedQty.moveToFirst());
+            assertEquals(4.0, returnedQty.getDouble(0), 0.000001);
+        } finally {
+            returnedQty.close();
         }
     }
 
