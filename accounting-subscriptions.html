@@ -44,7 +44,7 @@ button,.button{display:inline-flex;justify-content:center;align-items:center;gap
 <div class="payment"><strong>بيانات الدفع المعتمدة للعرض — التحويل والتفعيل ما زالا مغلقين حتى إعلان فتح البيع</strong>
 <div class="controls" style="margin-top:12px">
 <div><label for="bankakNumber">السودان — الجنيه السوداني (بنكك)</label><input id="bankakNumber" value="1882224" readonly dir="ltr" aria-label="رقم بنكك"><button class="secondary" type="button" id="copyBankak">نسخ رقم بنكك</button></div>
-<div><label for="usdIban">الدفع بالدولار — الآيبان</label><input id="usdIban" value="SD_850401882240001" readonly dir="ltr" aria-label="رقم الآيبان"><button class="secondary" type="button" id="copyIban">نسخ الآيبان</button><p class="note">تنبيه: صيغة الآيبان المرسلة تحتوي على شرطة سفلية، وطولها لا يبدو مطابقًا لصيغة الآيبان السوداني المعتادة. أوقفنا عرضها كبيانات تحويل نهائية لحين تأكيدها من كشف الحساب أو تطبيق البنك.</p></div>
+<div><label for="usdIban">الدفع بالدولار — الآيبان</label><input id="usdIban" value="SD8504018822240001" readonly dir="ltr" aria-label="رقم الآيبان"><button class="secondary" type="button" id="copyIban">نسخ الآيبان</button><p class="note">تم اعتماد الآيبان كما زوّدنا به صاحب الحساب. راجع اسم المستفيد داخل تطبيق البنك قبل التحويل.</p></div>
 </div>
 <p class="note" id="copyStatus" role="status" aria-live="polite">لن تطلب الصفحة تحويلًا أو ترخيصًا قبل إعلان فتح البيع. لا ترسل كلمات مرور أو رموز تحقق لأي جهة.</p></div>
 <p class="warning">مهم: هذا نموذج تسجيل اهتمام فقط، وليس طلب شراء أو تأكيد ترخيص. لا تحويلات ولا تفعيل قبل إعلان الإطلاق.</p>
@@ -61,7 +61,7 @@ function update(){ $("price").textContent="السعر المختار: "+currentP
 $("whatsapp").addEventListener("click",()=>{const company=$("company").value.trim();if(!company){alert("يرجى إدخال اسم الشركة أو النشاط أولًا");$("company").focus();return}const msg="السلام عليكم، أريد تسجيل اهتمام بباقة المحاسب الميزان.\nالشركة: "+company+"\nالدولة/العملة: "+$("market").selectedOptions[0].text+"\nالباقة: "+$("tier").value+"\nالمدة: "+$("period").selectedOptions[0].text+"\nالسعر المبدئي المعروض: "+currentPrice()+"\nرقم التواصل: "+$("phone").value.trim()+"\nالتفاصيل: "+$("notes").value.trim()+"\nأفهم أن هذا تسجيل اهتمام فقط، وليس طلب شراء أو تحويل؛ البيع والتفعيل غير مفتوحين بعد.";location.href="https://wa.me/249121851285?text="+encodeURIComponent(msg)});
 async function copyAccount(id,label){const value=$(id).value;try{await navigator.clipboard.writeText(value);$("copyStatus").textContent="تم نسخ "+label+"."}catch(e){const field=$(id);field.focus();field.select();$("copyStatus").textContent="حدد النص وانسخه يدويًا: "+label}}
 $("copyBankak").addEventListener("click",()=>copyAccount("bankakNumber","رقم بنكك"));
-$("copyIban").addEventListener("click",()=>{ $("copyStatus").textContent="لم يتم نسخ الآيبان: يرجى تأكيد صيغته أولًا مع البنك." });
+$("copyIban").addEventListener("click",()=>copyAccount("usdIban","الآيبان"));
 update();
 </script>
 </body></html>
