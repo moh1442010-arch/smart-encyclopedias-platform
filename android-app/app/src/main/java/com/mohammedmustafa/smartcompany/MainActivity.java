@@ -179,7 +179,7 @@ public class MainActivity extends Activity{
  void plansPage(){
   page("الباقات والأسعار");
   content.addView(t("باقات المحاسب الميزان — اختر الدولة والباقة ومدة الترخيص",21));
-  content.addView(t("تجربة مجانية لمدة 7 أيام. اختر الباقة والمدة؛ السعر المختار ظاهر بوضوح قبل إرسال طلب الاشتراك. بعد انتهاء التجربة ستظهر صفحة الاشتراك. تأكد من بيانات المستفيد قبل التحويل؛ إرسال الطلب لا يفعّل الترخيص تلقائيًا.",14));
+  content.addView(t("تجربة مجانية لمدة 7 أيام. اختر الباقة والمدة؛ السعر المختار ظاهر بوضوح قبل إرسال طلب الاشتراك. الأسعار المعروضة مبدئية وقابلة للاعتماد أو التعديل قبل الإطلاق التجاري. إرسال الطلب لا يفعّل الترخيص تلقائيًا؛ التفعيل بعد مراجعة الطلب وتأكيد الدفع.",14));
   content.addView(t("🇸🇩 السودان — الجنيه السوداني (ج.س)",18));
   content.addView(priceLine("Basic: دائم 150,000 | شهري 15,000 | سنوي 150,000 ج.س"));
   content.addView(priceLine("Pro: دائم 300,000 | شهري 30,000 | سنوي 300,000 ج.س"));
@@ -192,7 +192,7 @@ public class MainActivity extends Activity{
   String[] markets={"السودان — جنيه سوداني (بنكك)","السعودية — ريال سعودي","الدفع بالدولار الأمريكي — اطلب السعر"};
   market.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,markets));
   content.addView(t("بلد/عملة الدفع",15));content.addView(market);
-  Spinner tier=new Spinner(this);String[] tiers={BuildConfig.EDITION.equals("basic")?"Basic":BuildConfig.EDITION.equals("pro")?"Pro":BuildConfig.EDITION.equals("business")?"Business":"Enterprise"};
+  Spinner tier=new Spinner(this);String[] tiers={"Basic","Pro","Business","Enterprise"};
   tier.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,tiers));
   content.addView(t("الباقة",15));content.addView(tier);
   Spinner period=new Spinner(this);String[] periods={"ترخيص دائم","اشتراك شهري","اشتراك سنوي"};
@@ -233,6 +233,15 @@ public class MainActivity extends Activity{
    open("https://wa.me/249121851285?text="+android.net.Uri.encode(message));
   });
   Button supportButton=b("التواصل مع الدعم عبر واتساب");content.addView(supportButton);supportButton.setOnClickListener(v->support());
+  content.addView(t("روابط تنزيل النسخ",22));
+  content.addView(t("ستُضاف روابط التنزيل المباشر هنا بعد تجهيز المتجر الإلكتروني واعتماد ملفات الإصدار الموقعة. لا توجد روابط تنزيل نهائية منشورة حاليًا.",14));
+  String[] editions={"Basic — الأساسية","Pro — الاحترافية","Business — الأعمال","Enterprise — المؤسسات"};
+  for(String editionName:editions){
+   content.addView(priceLine("⚖ "+editionName));
+   content.addView(t("Android APK: سيضاف الرابط بعد اعتماد النسخة الموقعة.",14));
+   content.addView(t("Windows: سيضاف الرابط بعد بناء نسخة Windows واختبارها واعتمادها.",14));
+  }
+  content.addView(t("ملاحظة: اختر الباقة المطلوبة في طلب الشراء؛ سيتم تزويدك برابط النسخة المطابقة بعد اعتماد المتجر والتفعيل.",14));
  }
  void groupMenu(String title,String[][] links){
   page(title);content.addView(t("اختر الوظيفة المطلوبة",16));
