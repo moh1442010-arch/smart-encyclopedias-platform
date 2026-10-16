@@ -68,6 +68,17 @@ jobs:
           Get-FileHash release/SmartCompany-Windows-2.2.7-x64.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  SmartCompany-Windows-2.2.7-x64.exe" } | Set-Content release/SHA256SUMS.txt
           Get-Item release/SmartCompany-Windows-2.2.7-x64.exe,release/SmartCompany-Windows-2.2.7-x64.zip,release/SHA256SUMS.txt | Format-Table Name,Length
 
+      - name: Windows executable launch smoke test
+        shell: powershell
+        run: |
+          $exe = (Resolve-Path "release/SmartCompany-Windows-2.2.7-x64.exe").Path
+          $proc = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 8
+          $proc.Refresh()
+          if ($proc.HasExited) { throw "Windows app exited during launch smoke test with code $($proc.ExitCode)." }
+          Stop-Process -Id $proc.Id -Force
+          Write-Output "Windows GUI process stayed alive for 8 seconds; launch smoke test passed."
+
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
