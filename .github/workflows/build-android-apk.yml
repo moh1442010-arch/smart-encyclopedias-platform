@@ -1,4 +1,4 @@
-name: Build Al-Mizan Basic Pro Business Android Releases 2.3.8 - Signed
+name: Build Al-Mizan Enterprise Basic Pro Business Android Releases 2.3.8 - Signed
 
 concurrency:
   group: smart-company-android-release
@@ -44,11 +44,11 @@ jobs:
 
       - name: Automated database integrity tests
         working-directory: android-app
-        run: ./gradlew testBasicDebugUnitTest testProDebugUnitTest testBusinessDebugUnitTest
+        run: ./gradlew testBasicDebugUnitTest testProDebugUnitTest testBusinessDebugUnitTest testEnterpriseDebugUnitTest
 
       - name: Build release only
         working-directory: android-app
-        run: ./gradlew clean assembleBasicRelease assembleProRelease assembleBusinessRelease bundleBasicRelease bundleProRelease bundleBusinessRelease
+        run: ./gradlew clean assembleBasicRelease assembleProRelease assembleBusinessRelease assembleEnterpriseRelease bundleBasicRelease bundleProRelease bundleBusinessRelease bundleEnterpriseRelease
 
       # A fresh-install test APK is signed with Android's automatically generated debug key.
       # It is for device testing only, never for commercial distribution.
@@ -111,7 +111,7 @@ jobs:
           fi
           apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           expected="159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
-          for edition in basic pro business; do
+          for edition in basic pro business enterprise; do
             apk_in="app/build/outputs/apk/$edition/release/app-$edition-release-unsigned.apk"
             aab_in="app/build/outputs/bundle/${edition}Release/app-$edition-release.aab"
             label="$(printf '%s' "$edition" | sed 's/.*/\u&/')"
@@ -160,7 +160,7 @@ jobs:
       - name: Upload signed release artifacts only
         uses: actions/upload-artifact@v4
         with:
-          name: al-mizan-android-three-editions-signed-release-v2.3.8
+          name: al-mizan-android-four-editions-signed-release-v2.3.8
           path: |
             android-app/release/AlMizan-*-2.3.8-release.apk
             android-app/release/AlMizan-*-2.3.8-release.aab
