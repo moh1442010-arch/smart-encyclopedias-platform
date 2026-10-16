@@ -1,0 +1,74 @@
+name: Publish public expert-review downloads (pre-release only)
+
+on:
+  push:
+    paths:
+      - ".github/workflows/publish-expert-review-downloads.yml"
+      - "store/release-manifest.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: al-mizan-expert-review-downloads
+  cancel-in-progress: false
+
+jobs:
+  publish-review-candidates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout manifest
+        uses: actions/checkout@v4
+
+      - name: Download known CI candidate artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p staging/android-2.3.9 staging/android-2.3.8 staging/windows-2.2.7 public-review
+          # These are CI artifacts recorded in store/release-manifest.json. They are
+          # published as PRE-RELEASE review candidates only, never as commercial approval.
+          gh run download 38949724479 --repo "$GITHUB_REPOSITORY" --name "al-mizan-android-four-editions-signed-release-v2.3.9" --dir staging/android-2.3.9
+          gh run download 38950086936 --repo "$GITHUB_REPOSITORY" --name "al-mizan-android-signed-release-v2.3.8" --dir staging/android-2.3.8
+          gh run download 38950001396 --repo "$GITHUB_REPOSITORY" --name "smart-company-windows-v2.2.7" --dir staging/windows-2.2.7
+
+          # Rename assets to keep all candidate versions unambiguous.
+          while IFS= read -r -d '' f; do cp "$f" "public-review/AlMizan-review-2.3.9-$(basename "$f")"; done < <(find staging/android-2.3.9 -type f \( -iname '*.apk' -o -iname '*.aab' -o -iname '*.txt' \) -print0)
+          while IFS= read -r -d '' f; do cp "$f" "public-review/AlMizan-review-2.3.8-$(basename "$f")"; done < <(find staging/android-2.3.8 -type f \( -iname '*.apk' -o -iname '*.aab' -o -iname '*.txt' \) -print0)
+          while IFS= read -r -d '' f; do cp "$f" "public-review/Windows-review-2.2.7-$(basename "$f")"; done < <(find staging/windows-2.2.7 -type f \( -iname '*.exe' -o -iname '*.zip' -o -iname '*.txt' \) -print0)
+
+          apk_count=$(find public-review -maxdepth 1 -type f -iname '*.apk' | wc -l)
+          test "$apk_count" -ge 5 || { echo "::error::Expected four 2.3.9 edition APKs plus the 2.3.8 candidate; found $apk_count."; exit 1; }
+          test "$(find public-review -maxdepth 1 -type f -iname '*.exe' | wc -l)" -ge 1
+          (cd public-review && sha256sum * > REVIEW-SHA256SUMS.txt)
+          cat > public-review/REVIEW-NOTICE.txt <<'NOTICE'
+          AL-MIZAN EXPERT REVIEW CANDIDATES — NOT APPROVED FOR COMMERCIAL USE
+          These files are provided for independent installation, accounting, security, licensing and update testing.
+          Successful CI build/signature checks do not prove accounting correctness or production readiness.
+          Do not use with real financial records. Report findings at:
+          https://github.com/moh1442010-arch/smart-encyclopedias-platform/issues/18
+          Public feedback:
+          https://moh1442010-arch.github.io/smart-encyclopedias-platform/reviews.html
+          Complaints/reports:
+          https://moh1442010-arch.github.io/smart-encyclopedias-platform/complaints.html
+          NOTICE
+
+      - name: Publish a public prerelease for expert review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="al-mizan-expert-review-2026-10-16"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" public-review/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$tag" public-review/* --repo "$GITHUB_REPOSITORY" \
+              --title "Al-Mizan expert review candidates — NOT FOR SALE" \
+              --notes "Public, no-account download links for independent expert review only. These are pre-commercial candidates; do not treat them as approved for sale. Validate installation/update, accounting flows, licensing, backups, privacy and Windows behavior. Submit evidence to issue #18." \
+              --prerelease
+          fi
