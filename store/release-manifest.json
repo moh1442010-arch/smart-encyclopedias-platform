@@ -84,5 +84,22 @@
     "device_install_update_test": "not_verified",
     "end_to_end_accounting_acceptance": "not_verified",
     "public_download_url": null
+  },
+  "android_main_branch_candidate": {
+    "version": "2.3.8",
+    "version_code": 39,
+    "source_branch": "main",
+    "source_commit": "e7822ce12814315781d63e214c42dd1e7a4d8e40",
+    "workflow_run": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/38950086936",
+    "artifact_id": 12068521460,
+    "artifact_name": "al-mizan-android-signed-release-v2.3.8",
+    "artifact_zip_sha256": "a5ce0873c19311a8d2b33194609ff740788275c7206636ada6d1ddc8cdefe4fa",
+    "apk_sha256": "9b760a63757118b690528aaea01729dd944dc794d557958f928c066d752e5a1c",
+    "aab_sha256": "f5daa1da1cfb13a5a39c30dba7da2276eba40e9f28f50767d49a43a7def3d390",
+    "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
+    "ci_status": "passed",
+    "device_update_test": "not_verified",
+    "end_to_end_accounting_acceptance": "not_verified",
+    "public_download_url": null
   }
 }
