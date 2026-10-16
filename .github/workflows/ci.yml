@@ -41,16 +41,16 @@ jobs:
               source = Path(page).read_text(encoding="utf-8")
               scripts = [
                   body for attrs, body in re.findall(
-                      r"<script\\b([^>]*)>(.*?)</script\\s*>",
+                      r"<script\b([^>]*)>(.*?)</script\s*>",
                       source, flags=re.IGNORECASE | re.DOTALL
                   )
-                  if not re.search(r"\\bsrc\\s*=", attrs, flags=re.IGNORECASE)
+                  if not re.search(r"\bsrc\s*=", attrs, flags=re.IGNORECASE)
                   and body.strip()
               ]
               if not scripts:
                   raise SystemExit(f"No inline JavaScript found in {page}")
               Path(f"/tmp/{Path(page).stem}-inline.js").write_text(
-                  "\\n".join(scripts), encoding="utf-8"
+                  "\n".join(scripts), encoding="utf-8"
               )
           PY
           node --check /tmp/admin-inline.js
