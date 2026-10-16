@@ -143,15 +143,15 @@ public class MainActivity extends Activity{
   content.addView(t("باقات المحاسب الميزان — اختر الدولة والباقة ومدة الترخيص",21));
   content.addView(t("تجربة مجانية لمدة 7 أيام. اختر الباقة والمدة؛ السعر المختار ظاهر بوضوح قبل إرسال طلب الاشتراك. بعد انتهاء التجربة ستظهر صفحة الاشتراك. تأكد من بيانات المستفيد قبل التحويل؛ إرسال الطلب لا يفعّل الترخيص تلقائيًا.",14));
   content.addView(t("🇸🇩 السودان — الجنيه السوداني (ج.س)",18));
-  content.addView(priceLine("Basic: دائم 150,000 | شهري 15,000 | سنوي 150,000 ج.س"));
-  content.addView(priceLine("Pro: دائم 300,000 | شهري 30,000 | سنوي 300,000 ج.س"));
-  content.addView(priceLine("Business: دائم 600,000 | شهري 60,000 | سنوي 600,000 ج.س"));
-  content.addView(t("🇸🇦 السعودية — الريال السعودي (ر.س)",18));
-  content.addView(priceLine("Basic: دائم 399 | شهري 29 | سنوي 290 ر.س"));
-  content.addView(priceLine("Pro: دائم 799 | شهري 59 | سنوي 590 ر.س"));
-  content.addView(priceLine("Business: دائم 1,499 | شهري 119 | سنوي 1,190 ر.س"));
+  content.addView(priceLine("Basic: دائم غير متاح | شهري 25,000 | سنوي 250,000 ج.س"));
+  content.addView(priceLine("Pro: دائم غير متاح | شهري 45,000 | سنوي 450,000 ج.س"));
+  content.addView(priceLine("Business: دائم غير متاح | شهري 80,000 | سنوي 800,000 ج.س"));
+  content.addView(t("🇸🇦 السعودية — الريال السعودي (ر.س) — الأسعار قيد المراجعة",18));
+  content.addView(priceLine("Basic: السعر قيد المراجعة"));
+  content.addView(priceLine("Pro: السعر قيد المراجعة"));
+  content.addView(priceLine("Business: السعر قيد المراجعة"));
   Spinner market=new Spinner(this);
-  String[] markets={"السودان — جنيه سوداني (بنكك)","السعودية — ريال سعودي","الدفع بالدولار الأمريكي — اطلب السعر"};
+  String[] markets={"السودان — جنيه سوداني (بنكك)","السعودية — ريال سعودي (قيد المراجعة)","الدفع بالدولار الأمريكي"};
   market.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,markets));
   content.addView(t("بلد/عملة الدفع",15));content.addView(market);
   Spinner tier=new Spinner(this);String[] tiers={"Basic","Pro","Business","Enterprise — عرض مخصص"};
@@ -163,7 +163,7 @@ public class MainActivity extends Activity{
   TextView selectedPrice=t("السعر المختار: 150,000 ج.س",21);selectedPrice.setTextColor(green);content.addView(selectedPrice);
   Runnable updatePrice=()->{
    String m=String.valueOf(market.getSelectedItem()),p=String.valueOf(tier.getSelectedItem()),d=String.valueOf(period.getSelectedItem());
-   String price="السعر غير محدد — تواصل مع الدعم لعرض سعر بالدولار.";
+   String price="السعر قيد المراجعة — لا يوجد سعر معتمد لهذه العملة.";
    if(p.equals("Enterprise — عرض مخصص"))price="عرض سعر مخصص — تواصل مع الدعم.";
    else if(m.startsWith("السودان")){
     String[][] prices={{"150,000","15,000","150,000"},{"300,000","30,000","300,000"},{"600,000","60,000","600,000"}};
