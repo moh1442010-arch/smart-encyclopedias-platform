@@ -78,7 +78,7 @@ public class MainActivity extends Activity{
      java.net.HttpURLConnection c=(java.net.HttpURLConnection)new java.net.URL(LICENSE_API+"/api/app-license/activate").openConnection();
      c.setRequestMethod("POST");c.setConnectTimeout(8000);c.setReadTimeout(8000);c.setDoOutput(true);
      c.setRequestProperty("Content-Type","application/json; charset=utf-8");c.setRequestProperty("x-app-device-id",appDeviceId());
-     org.json.JSONObject body=new org.json.JSONObject();body.put("activationCode",activation);
+     org.json.JSONObject body=new org.json.JSONObject();body.put("activationCode",activation);body.put("edition",BuildConfig.EDITION);
      try(java.io.OutputStream os=c.getOutputStream()){os.write(body.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));}
      int status=c.getResponseCode();java.io.InputStream in=status>=200&&status<300?c.getInputStream():c.getErrorStream();
      java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();byte[] buf=new byte[2048];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);in.close();
