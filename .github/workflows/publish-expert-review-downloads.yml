@@ -1,10 +1,10 @@
 name: Publish public expert-review downloads (pre-release only)
 
 on:
-  push:
-    paths:
-      - ".github/workflows/publish-expert-review-downloads.yml"
-      - "store/release-manifest.json"
+  workflow_run:
+    workflows:
+      - Build Al-Mizan Accountant Android Release 2.4.0 - Signed
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -17,47 +17,63 @@ concurrency:
 
 jobs:
   publish-review-candidates:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout manifest
-        uses: actions/checkout@v4
-
-      - name: Download known CI candidate artifacts
+      - name: Download latest signed Android candidate and Windows candidate
         env:
           GH_TOKEN: ${{ github.token }}
+          EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p staging/android-2.3.9 staging/android-2.3.8 staging/windows-2.2.7 public-review
-          # These are CI artifacts recorded in store/release-manifest.json. They are
-          # published as PRE-RELEASE review candidates only, never as commercial approval.
-          gh run download 38949724479 --repo "$GITHUB_REPOSITORY" --name "al-mizan-android-four-editions-signed-release-v2.3.9" --dir staging/android-2.3.9
-          gh run download 38950086936 --repo "$GITHUB_REPOSITORY" --name "al-mizan-android-signed-release-v2.3.8" --dir staging/android-2.3.8
+          mkdir -p staging/android-2.4.0 staging/windows-2.2.7 public-review
+          run_id="$EVENT_RUN_ID"
+          if [ -z "$run_id" ]; then
+            run_id="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build-android-apk.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
+          fi
+          test -n "$run_id" && test "$run_id" != "null"
+          echo "Downloading signed Android candidate from successful workflow run $run_id"
+          gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --name "al-mizan-android-signed-release-v2.4.0" --dir staging/android-2.4.0
+
+          # Windows 2.2.7 remains a clearly labeled historical expert-review candidate.
           gh run download 38950001396 --repo "$GITHUB_REPOSITORY" --name "smart-company-windows-v2.2.7" --dir staging/windows-2.2.7
 
-          # Rename assets to keep all candidate versions unambiguous.
-          while IFS= read -r -d '' f; do cp "$f" "public-review/AlMizan-review-2.3.9-$(basename "$f")"; done < <(find staging/android-2.3.9 -type f \( -iname '*.apk' -o -iname '*.aab' -o -iname '*.txt' \) -print0)
-          while IFS= read -r -d '' f; do cp "$f" "public-review/AlMizan-review-2.3.8-$(basename "$f")"; done < <(find staging/android-2.3.8 -type f \( -iname '*.apk' -o -iname '*.aab' -o -iname '*.txt' \) -print0)
-          while IFS= read -r -d '' f; do cp "$f" "public-review/Windows-review-2.2.7-$(basename "$f")"; done < <(find staging/windows-2.2.7 -type f \( -iname '*.exe' -o -iname '*.zip' -o -iname '*.txt' \) -print0)
+          apk="$(find staging/android-2.4.0 -type f -iname 'AlMizan-2.4.0-release.apk' -print -quit)"
+          aab="$(find staging/android-2.4.0 -type f -iname 'AlMizan-2.4.0-release.aab' -print -quit)"
+          test -n "$apk" && test -s "$apk"
+          test -n "$aab" && test -s "$aab"
+          cp "$apk" public-review/AlMizan-review-2.4.0-release.apk
+          cp "$aab" public-review/AlMizan-review-2.4.0-release.aab
+          while IFS= read -r -d '' f; do
+            case "$(basename "$f")" in
+              SHA256SUMS.txt|SIGNING-CERTIFICATE.txt|SIGNING-CERT-SHA256.txt)
+                cp "$f" "public-review/AlMizan-review-2.4.0-$(basename "$f")"
+                ;;
+            esac
+          done < <(find staging/android-2.4.0 -type f -print0)
 
-          apk_count=$(find public-review -maxdepth 1 -type f -iname '*.apk' | wc -l)
-          test "$apk_count" -ge 5 || { echo "::error::Expected four 2.3.9 edition APKs plus the 2.3.8 candidate; found $apk_count."; exit 1; }
+          while IFS= read -r -d '' f; do
+            cp "$f" "public-review/Windows-review-2.2.7-$(basename "$f")"
+          done < <(find staging/windows-2.2.7 -type f \( -iname '*.exe' -o -iname '*.zip' -o -iname '*.txt' \) -print0)
+
+          test -s public-review/AlMizan-review-2.4.0-release.apk
+          test -s public-review/AlMizan-review-2.4.0-release.aab
           test "$(find public-review -maxdepth 1 -type f -iname '*.exe' | wc -l)" -ge 1
           (cd public-review && sha256sum * > REVIEW-SHA256SUMS.txt)
           cat > public-review/REVIEW-NOTICE.txt <<'NOTICE'
-          AL-MIZAN EXPERT REVIEW CANDIDATES — NOT APPROVED FOR COMMERCIAL USE
-          These files are provided for independent installation, accounting, security, licensing and update testing.
-          Successful CI build/signature checks do not prove accounting correctness or production readiness.
-          Do not use with real financial records. Report findings at:
+          AL-MIZAN EXPERT REVIEW CANDIDATES — NOT APPROVED FOR COMMERCIAL SALE
+          Android 2.4.0 is the current subscription-pricing correction candidate.
+          Windows 2.2.7 is a historical review candidate and is not represented as current.
+          Review installation/update compatibility, accounting calculations and postings,
+          licensing, database integrity, backup/restore, privacy and Windows runtime behavior.
+          Do not use with real financial records. Do not treat CI success as independent QA.
+          Submit evidence at:
           https://github.com/moh1442010-arch/smart-encyclopedias-platform/issues/18
-          Public feedback:
-          https://moh1442010-arch.github.io/smart-encyclopedias-platform/reviews.html
-          Complaints/reports:
-          https://moh1442010-arch.github.io/smart-encyclopedias-platform/complaints.html
           NOTICE
 
-      - name: Publish a public prerelease for expert review
+      - name: Publish or update the public prerelease for expert review
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -69,6 +85,6 @@ jobs:
           else
             gh release create "$tag" public-review/* --repo "$GITHUB_REPOSITORY" \
               --title "Al-Mizan expert review candidates — NOT FOR SALE" \
-              --notes "Public, no-account download links for independent expert review only. These are pre-commercial candidates; do not treat them as approved for sale. Validate installation/update, accounting flows, licensing, backups, privacy and Windows behavior. Submit evidence to issue #18." \
+              --notes "Public no-account downloads for independent expert review only. Android 2.4.0 is a review candidate, not a commercial release. Windows 2.2.7 is a historical review candidate. Validate installation/update, accounting flows, licensing, backups, privacy and Windows behavior. Submit evidence to issue #18." \
               --prerelease
           fi
