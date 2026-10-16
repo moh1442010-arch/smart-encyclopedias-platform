@@ -131,4 +131,13 @@ public class MainActivitySecurityValidationTest {
             assertTrue(activity.editionAllows("الموظفون والرواتب"));
         }
     }
+
+    @Test
+    public void partialReturnQuantitiesMustStayWithinOriginalInvoiceLimit() {
+        assertTrue(activity.canReturnQuantity(5.0, 0.0, 2.0));
+        assertTrue(activity.canReturnQuantity(5.0, 2.0, 3.0));
+        assertFalse(activity.canReturnQuantity(5.0, 4.0, 2.0));
+        assertFalse(activity.canReturnQuantity(5.0, 0.0, 0.0));
+        assertFalse(activity.canReturnQuantity(5.0, 0.0, Double.NaN));
+    }
 }
