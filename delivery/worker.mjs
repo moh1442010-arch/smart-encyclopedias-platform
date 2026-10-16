@@ -329,12 +329,40 @@ async function activateAppLicense(request, env) {
     return json({ ok: false, error: "license_bound_to_another_device" }, 403, env);
   }
   if (!license.device_hash) {
-    const result = await env.DB.prepare(
-      "UPDATE app_licenses SET device_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND device_hash IS NULL AND status = 'active'"
-    ).bind(deviceHash, license.id).run();
-    if (!result.meta?.changes) {
-      const fresh = await env.DB.prepare("SELECT device_hash FROM app_licenses WHERE id = ?").bind(license.id).first();
-      if (!fresh || fresh.device_hash !== deviceHash) return json({ ok: false, error: "license_bound_to_another_device" }, 403, env);
+    const current = await env.DB.prepare(
+      "SELECT id, status FROM app_licenses WHERE device_hash = ? LIMIT 1"
+    ).bind(deviceHash).first();
+
+    try {
+      if (current && current.id !== license.id) {
+        // One installed edition is allowed per device. Activating a newly approved
+        // plan atomically supersedes the old bound license before binding the new one.
+        // A superseded code cannot be reused on another device.
+        const results = await env.DB.batch([
+          env.DB.prepare(
+            "UPDATE app_licenses SET device_hash = NULL, status = CASE WHEN status = 'active' THEN 'superseded' ELSE status END, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND device_hash = ?"
+          ).bind(current.id, deviceHash),
+          env.DB.prepare(
+            "UPDATE app_licenses SET device_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND device_hash IS NULL AND status = 'active'"
+          ).bind(deviceHash, license.id)
+        ]);
+        if (!results?.[1]?.meta?.changes) {
+          const fresh = await env.DB.prepare("SELECT device_hash FROM app_licenses WHERE id = ?").bind(license.id).first();
+          if (!fresh || fresh.device_hash !== deviceHash) {
+            return json({ ok: false, error: "device_license_switch_conflict" }, 409, env);
+          }
+        }
+      } else {
+        const result = await env.DB.prepare(
+          "UPDATE app_licenses SET device_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND device_hash IS NULL AND status = 'active'"
+        ).bind(deviceHash, license.id).run();
+        if (!result.meta?.changes) {
+          const fresh = await env.DB.prepare("SELECT device_hash FROM app_licenses WHERE id = ?").bind(license.id).first();
+          if (!fresh || fresh.device_hash !== deviceHash) return json({ ok: false, error: "license_bound_to_another_device" }, 403, env);
+        }
+      }
+    } catch (error) {
+      return json({ ok: false, error: "device_license_switch_conflict" }, 409, env);
     }
   }
   return json({
