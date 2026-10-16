@@ -34,16 +34,21 @@ public class MainActivity extends Activity{
     org.json.JSONObject d=new org.json.JSONObject(out.toString("UTF-8"));
     if(code>=200&&code<300&&d.optBoolean("ok")){
      mode=d.optString("mode","");long expiry=0;try{expiry=parseLicenseTime(d.optString("expiresAt",""));}catch(Exception ignored){}
-     allowed=("licensed".equals(mode)||("trial".equals(mode)&&expiry>System.currentTimeMillis()));
-     getSharedPreferences("commercial_license",0).edit().putString("mode",mode).putLong("expires_at",expiry).putLong("last_verified_at",System.currentTimeMillis()).putString("license_id",d.optString("licenseId","")).apply();
-     if(!allowed)error="انتهت التجربة المجانية. أدخل رمز الترخيص التجاري للمتابعة.";
+     String licensePlan=d.optString("plan","");
+     boolean editionMatches=!"licensed".equals(mode)||BuildConfig.EDITION.equalsIgnoreCase(licensePlan);
+     allowed=editionMatches&&("licensed".equals(mode)||("trial".equals(mode)&&expiry>System.currentTimeMillis()));
+     getSharedPreferences("commercial_license",0).edit().putString("mode",mode).putString("license_plan",licensePlan).putLong("expires_at",expiry).putLong("last_verified_at",System.currentTimeMillis()).putString("license_id",d.optString("licenseId","")).apply();
+     if(!editionMatches)error="هذا الترخيص مخصص لنسخة "+licensePlan.toUpperCase(Locale.ROOT)+". ثبّت النسخة المطابقة للترخيص.";
+     else if(!allowed)error="انتهت التجربة المجانية أو صلاحية الترخيص. أدخل رمز ترخيص صالحًا.";
     }else error="تعذر التحقق من الترخيص. حاول مرة أخرى.";
     c.disconnect();
    }catch(Exception ex){
     android.content.SharedPreferences p=getSharedPreferences("commercial_license",0);
     long expiry=p.getLong("expires_at",0),verified=p.getLong("last_verified_at",0);
-    allowed=expiry>System.currentTimeMillis()&&verified>0&&System.currentTimeMillis()-verified<=OFFLINE_GRACE_MS;
-    error=allowed?"":"يلزم الاتصال بالإنترنت للتحقق من الترخيص أول مرة أو بعد انتهاء مهلة العمل دون اتصال.";
+    String savedMode=p.getString("mode",""),savedPlan=p.getString("license_plan","");
+    boolean savedEditionMatches=!"licensed".equals(savedMode)||BuildConfig.EDITION.equalsIgnoreCase(savedPlan);
+    allowed=savedEditionMatches&&expiry>System.currentTimeMillis()&&verified>0&&System.currentTimeMillis()-verified<=OFFLINE_GRACE_MS;
+    error=!savedEditionMatches?"الترخيص المحفوظ مخصص لنسخة أخرى. اتصل بالإنترنت للتحقق من الباقة.":allowed?"":"يلزم الاتصال بالإنترنت للتحقق من الترخيص أول مرة أو بعد انتهاء مهلة العمل دون اتصال.";
    }
    final boolean ok=allowed;final String message=error;
    runOnUiThread(()->{if(ok)login();else licensePage(message);});
@@ -70,8 +75,13 @@ public class MainActivity extends Activity{
      java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();byte[] buf=new byte[2048];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);in.close();
      org.json.JSONObject d=new org.json.JSONObject(out.toString("UTF-8"));
      if(status>=200&&status<300&&d.optBoolean("ok")){
-      long expiry=0;try{expiry=parseLicenseTime(d.optString("expiresAt",""));}catch(Exception ignored){}
-      getSharedPreferences("commercial_license",0).edit().putString("mode","licensed").putLong("expires_at",expiry).putLong("last_verified_at",System.currentTimeMillis()).putString("license_id",d.optString("licenseId","")).apply();ok=true;
+      String licensePlan=d.optString("plan","");
+      if(!BuildConfig.EDITION.equalsIgnoreCase(licensePlan)){
+       resultMessage="رمز التفعيل مخصص لنسخة "+licensePlan.toUpperCase(Locale.ROOT)+". استخدم تطبيق النسخة المطابقة.";
+      }else{
+       long expiry=0;try{expiry=parseLicenseTime(d.optString("expiresAt",""));}catch(Exception ignored){}
+       getSharedPreferences("commercial_license",0).edit().putString("mode","licensed").putString("license_plan",licensePlan).putLong("expires_at",expiry).putLong("last_verified_at",System.currentTimeMillis()).putString("license_id",d.optString("licenseId","")).apply();ok=true;
+      }
      }else resultMessage="تعذر التفعيل: "+d.optString("error","تحقق من الرمز وحالته.");
      c.disconnect();
     }catch(Exception ex){}
