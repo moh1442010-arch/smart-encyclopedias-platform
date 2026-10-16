@@ -151,12 +151,12 @@ jobs:
           if (actual !== String(win.sha256).toLowerCase()) throw new Error('Windows EXE SHA-256 does not match the approved manifest: ' + actual);
           console.log('Windows EXE SHA-256 verified: ' + actual);
           NODE
-          cp release/android/SHA256SUMS.txt release/SHA256SUMS-Android.txt
-          cp release/windows/SHA256SUMS.txt release/SHA256SUMS-Windows.txt
           cp release/android/AlMizan-*-release.apk release/
           cp release/windows/SmartCompany-Windows-*.exe release/
           cp release/windows/SmartCompany-Windows-*.zip release/
           cp release/windows/README.txt release/README-Windows.txt
+          (cd release && sha256sum AlMizan-*-release.apk > SHA256SUMS-Android.txt)
+          (cd release && sha256sum SmartCompany-Windows-*.exe SmartCompany-Windows-*.zip > SHA256SUMS-Windows.txt)
           ls -lh release/
 
       - name: Refuse duplicate release tag
