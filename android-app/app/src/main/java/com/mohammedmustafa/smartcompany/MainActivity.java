@@ -186,12 +186,12 @@ public class MainActivity extends Activity{
   Button copyBankak=b("📋 نسخ رقم حساب بنكك");content.addView(copyBankak);copyBankak.setOnClickListener(v->{((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Bankak account","1882224"));toast("تم نسخ رقم حساب بنكك");});
   content.addView(t("IBAN المتاح: SD8504018822240001 — تحقّق من البنك أن الحساب يستقبل التحويل بالدولار الأمريكي قبل الإرسال.",14));
   Button copyIban=b("📋 نسخ رقم IBAN");content.addView(copyIban);copyIban.setOnClickListener(v->{((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("IBAN","SD8504018822240001"));toast("تم نسخ رقم IBAN");});
-  content.addView(t("بعد التحويل، أرفق إيصال الدفع برسالة واتساب. لن يتم التفعيل إلا بعد مراجعة الطلب وتأكيد وصول المبلغ.",14));
-  Button receipt=b("اختيار إيصال التحويل");content.addView(receipt);receipt.setOnClickListener(v->{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.setType("image/*");i.addCategory(Intent.CATEGORY_OPENABLE);startActivityForResult(i,903);});
+  content.addView(t("التسجيل الحالي لتسجيل الاهتمام فقط. لا تحوّل أي مبلغ ولا ترسل إيصالًا حتى إعلان فتح البيع رسميًا.",14));
+  Button receipt=b("إرفاق إيصال التحويل — غير متاح حاليًا");receipt.setEnabled(false);content.addView(receipt);
   Button send=b("💳 اشترك الآن — أرسل طلب الاشتراك عبر واتساب");content.addView(send);send.setOnClickListener(v->{
    String m=String.valueOf(market.getSelectedItem()),p=String.valueOf(tier.getSelectedItem()),d=String.valueOf(period.getSelectedItem()),price=selectedPrice.getText().toString();
    if(company.getText().toString().trim().isEmpty()){toast("أدخل اسم الشركة أو النشاط أولًا");return;}
-   String message="السلام عليكم، أريد طلب باقة من المحاسب الميزان.\nالشركة: "+company.getText().toString().trim()+"\nالسوق/العملة: "+m+"\nالباقة: "+p+"\nالمدة: "+d+"\nالسعر المعروض: "+price+"\nرقم تواصل العميل: "+contact.getText().toString().trim()+"\nالتفاصيل: "+notes.getText().toString().trim()+"\nبنكك: 1882224\nIBAN: SD8504018822240001\nيرجى تأكيد السعر النهائي وبيانات المستفيد والتحويل قبل التفعيل.";
+   String message="السلام عليكم، أريد طلب باقة من المحاسب الميزان.\nالشركة: "+company.getText().toString().trim()+"\nالسوق/العملة: "+m+"\nالباقة: "+p+"\nالمدة: "+d+"\nالسعر المعروض: "+price+"\nرقم تواصل العميل: "+contact.getText().toString().trim()+"\nالتفاصيل: "+notes.getText().toString().trim()+"\nبنكك: 1882224\nIBAN: SD8504018822240001\nهذا طلب تسجيل اهتمام فقط. لا تحوّل أي مبلغ ولا ترسل إيصالًا قبل إعلان فتح البيع رسميًا.";
    open("https://wa.me/249121851285?text="+android.net.Uri.encode(message));
   });
   Button supportButton=b("التواصل مع الدعم عبر واتساب");content.addView(supportButton);supportButton.setOnClickListener(v->support());
