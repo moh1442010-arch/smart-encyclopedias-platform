@@ -325,6 +325,13 @@ async function activateAppLicense(request, env) {
       (license.expires_at && new Date(license.expires_at).getTime() <= Date.now())) {
     return json({ ok: false, error: "license_invalid_or_expired" }, 403, env);
   }
+  const requestedEdition = String(body && body.edition || "").trim().toLowerCase();
+  if (requestedEdition && !/^(basic|pro|business|enterprise)$/.test(requestedEdition)) {
+    return json({ ok: false, error: "invalid_edition" }, 400, env);
+  }
+  if (requestedEdition && requestedEdition !== license.plan) {
+    return json({ ok: false, error: "license_plan_mismatch", plan: license.plan }, 409, env);
+  }
   if (license.device_hash && license.device_hash !== deviceHash) {
     return json({ ok: false, error: "license_bound_to_another_device" }, 403, env);
   }
