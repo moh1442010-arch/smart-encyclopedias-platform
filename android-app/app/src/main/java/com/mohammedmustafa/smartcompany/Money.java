@@ -37,9 +37,14 @@ public final class Money implements Comparable<Money> {
         if (scale < 0 || scale > 6) {
             throw new IllegalArgumentException("Currency scale must be between 0 and 6");
         }
-        long minor = amount.setScale(scale, RoundingMode.UNNECESSARY)
-                .movePointRight(scale).longValueExact();
-        return new Money(minor, scale);
+        try {
+            long minor = amount.setScale(scale, RoundingMode.UNNECESSARY)
+                    .movePointRight(scale).longValueExact();
+            return new Money(minor, scale);
+        } catch (ArithmeticException ex) {
+            throw new IllegalArgumentException(
+                    "Amount exceeds the configured currency precision or range", ex);
+        }
     }
 
     public static Money parse(String amount, int scale) {
