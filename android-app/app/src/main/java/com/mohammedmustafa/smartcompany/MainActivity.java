@@ -552,6 +552,11 @@ public class MainActivity extends Activity{
     }).show();
   }
   javax.crypto.SecretKey backupKey(String password,byte[] salt)throws Exception{
+   javax.crypto.spec.PBEKeySpec spec=new javax.crypto.spec.PBEKeySpec(password.toCharArray(),salt,600000,256);
+   try{return new javax.crypto.spec.SecretKeySpec(javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).getEncoded(),"AES");}
+   finally{spec.clearPassword();}
+  }
+  javax.crypto.SecretKey backupKeyLegacy(String password,byte[] salt)throws Exception{
    javax.crypto.spec.PBEKeySpec spec=new javax.crypto.spec.PBEKeySpec(password.toCharArray(),salt,210000,256);
    try{return new javax.crypto.spec.SecretKeySpec(javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1").generateSecret(spec).getEncoded(),"AES");}
    finally{spec.clearPassword();}
@@ -564,7 +569,7 @@ public class MainActivity extends Activity{
     cipher.init(javax.crypto.Cipher.ENCRYPT_MODE,backupKey(password,salt),new javax.crypto.spec.GCMParameterSpec(128,iv));
     try(InputStream in=new FileInputStream(getDatabasePath("smartcompany2.db"));OutputStream raw=getContentResolver().openOutputStream(uri)){
      if(raw==null)throw new IOException("Output stream unavailable");
-     raw.write(new byte[]{'A','L','M','I','Z','A','N','1'});raw.write(salt);raw.write(iv);
+     raw.write(new byte[]{'A','L','M','I','Z','A','N','2'});raw.write(salt);raw.write(iv);
      javax.crypto.CipherOutputStream encrypted=new javax.crypto.CipherOutputStream(raw,cipher);
      byte[] buf=new byte[8192];int n;while((n=in.read(buf))!=-1)encrypted.write(buf,0,n);encrypted.close();
     }
@@ -578,10 +583,13 @@ public class MainActivity extends Activity{
     try(InputStream raw=getContentResolver().openInputStream(uri)){
      if(raw==null)throw new IOException("Input stream unavailable");
      byte[] magic=new byte[8],salt=new byte[16],iv=new byte[12];
-     if(readFully(raw,magic)!=8||!java.util.Arrays.equals(magic,new byte[]{'A','L','M','I','Z','A','N','1'}))throw new IOException("Unsupported backup format");
+     if(readFully(raw,magic)!=8)throw new IOException("Truncated backup header");
+     boolean legacyFormat=java.util.Arrays.equals(magic,new byte[]{'A','L','M','I','Z','A','N','1'});
+     boolean currentFormat=java.util.Arrays.equals(magic,new byte[]{'A','L','M','I','Z','A','N','2'});
+     if(!legacyFormat&&!currentFormat)throw new IOException("Unsupported backup format");
      if(readFully(raw,salt)!=16||readFully(raw,iv)!=12)throw new IOException("Truncated backup header");
      javax.crypto.Cipher cipher=javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
-     cipher.init(javax.crypto.Cipher.DECRYPT_MODE,backupKey(password,salt),new javax.crypto.spec.GCMParameterSpec(128,iv));
+     cipher.init(javax.crypto.Cipher.DECRYPT_MODE,legacyFormat?backupKeyLegacy(password,salt):backupKey(password,salt),new javax.crypto.spec.GCMParameterSpec(128,iv));
      try(FileOutputStream out=new FileOutputStream(temp)){byte[] buf=new byte[8192];int n;while((n=raw.read(buf))!=-1){byte[] plain=cipher.update(buf,0,n);if(plain!=null&&plain.length>0)out.write(plain);}byte[] tail=cipher.doFinal();if(tail!=null&&tail.length>0)out.write(tail);out.getFD().sync();}
     }
     boolean valid=false;SQLiteDatabase check=null;
