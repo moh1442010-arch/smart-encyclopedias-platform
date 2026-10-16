@@ -86,6 +86,18 @@ public class MainActivitySecurityValidationTest {
     }
 
     @Test
+    public void backupKeyUsesStrongVersionedKdfAndRetainsLegacyDerivation() throws Exception {
+        byte[] salt = new byte[16];
+        java.util.Arrays.fill(salt, (byte) 7);
+        byte[] current = activity.backupKey("correct horse battery staple", salt).getEncoded();
+        byte[] legacy = activity.backupKeyLegacy("correct horse battery staple", salt).getEncoded();
+        assertEquals("AES-256 key length must be preserved", 32, current.length);
+        assertEquals("Legacy AES-256 backup key length must remain supported", 32, legacy.length);
+        assertFalse("The new KDF must not silently reuse the legacy key derivation",
+                java.security.MessageDigest.isEqual(current, legacy));
+    }
+
+    @Test
     public void restoreGateAcceptsCurrentSchemaAndRejectsFutureSchema() {
         assertTrue("Backups from the current schema must pass the schema-version gate",
                 activity.supportedBackupSchemaVersion(MainActivity.DB.SCHEMA_VERSION));
