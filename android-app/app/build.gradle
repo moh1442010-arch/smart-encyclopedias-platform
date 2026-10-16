@@ -24,6 +24,10 @@ android {
    dimension "edition"
    buildConfigField "String", "EDITION", '"business"'
   }
+  enterprise {
+   dimension "edition"
+   buildConfigField "String", "EDITION", '"enterprise"'
+  }
  }
  testOptions { unitTests.includeAndroidResources = true }
 }
