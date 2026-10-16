@@ -581,7 +581,7 @@ public class DatabaseIntegrityTest {
     }
 
     @Test
-    public void upgradeFromSchemaElevenInstallsAuditTriggersWithoutChangingExistingRows() {
+    public void upgradeFromSchemaElevenPreservesRowsAndBackfillsMinorUnits() {
         ContentValues original = new ContentValues();
         original.put("type", "SALE");
         original.put("party", "بيانات قبل الترحيل");
@@ -616,6 +616,16 @@ public class DatabaseIntegrityTest {
             assertEquals(100.25, preserved.getDouble(2), 0.000001);
             assertEquals(150.50, preserved.getDouble(3), 0.000001);
         } finally { preserved.close(); }
+
+        Cursor migratedMoney = database.rawQuery(
+                "SELECT total_minor,paid_minor,remaining_minor FROM transactions WHERE id=?",
+                new String[]{String.valueOf(originalId)});
+        try {
+            assertTrue("Legacy monetary row must have migrated minor units", migratedMoney.moveToFirst());
+            assertEquals(25075L, migratedMoney.getLong(0));
+            assertEquals(10025L, migratedMoney.getLong(1));
+            assertEquals(15050L, migratedMoney.getLong(2));
+        } finally { migratedMoney.close(); }
 
         ContentValues afterUpgrade = new ContentValues();
         afterUpgrade.put("paid", 125.25);
