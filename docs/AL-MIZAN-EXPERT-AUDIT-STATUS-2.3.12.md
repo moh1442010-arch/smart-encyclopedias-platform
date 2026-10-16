@@ -27,7 +27,7 @@
 2. Added compatibility verification for the previous PBKDF2-HMAC-SHA1 / 120,000 verifier. A matching legacy PIN is re-saved using the current KDF; incorrect PINs do not trigger migration.
 3. Added a regression test for legacy PIN verifier migration.
 4. Bumped Android version to 2.3.12 / versionCode 44 and aligned signed workflow artifact names and package QA assertion.
-5. Kept the existing application ID and signing certificate continuity checks.
+5. Added a bounded offline-license check that rejects a materially rolled-back wall clock based on the last server-verified time, with tests for trial expiry and perpetual licenses. This is a local tamper signal, not a substitute for live server testing.\n6. Kept the existing application ID and signing certificate continuity checks.
 
 ## Required before commercial release
 
