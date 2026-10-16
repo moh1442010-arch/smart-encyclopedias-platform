@@ -139,63 +139,53 @@ public class MainActivity extends Activity{
   }
  }
  void plansPage(){
-  page("الباقات والأسعار");
-  content.addView(t("باقات المحاسب الميزان — اختر الدولة والباقة ومدة الترخيص",21));
-  content.addView(t("تجربة مجانية لمدة 7 أيام. اختر الباقة والمدة؛ السعر المختار ظاهر بوضوح قبل إرسال طلب الاشتراك. بعد انتهاء التجربة ستظهر صفحة الاشتراك. تأكد من بيانات المستفيد قبل التحويل؛ إرسال الطلب لا يفعّل الترخيص تلقائيًا.",14));
-  content.addView(t("🇸🇩 السودان — الجنيه السوداني (ج.س)",18));
-  content.addView(priceLine("Basic: دائم غير متاح | شهري 25,000 | سنوي 250,000 ج.س"));
-  content.addView(priceLine("Pro: دائم غير متاح | شهري 45,000 | سنوي 450,000 ج.س"));
-  content.addView(priceLine("Business: دائم غير متاح | شهري 80,000 | سنوي 800,000 ج.س"));
-  content.addView(t("🇸🇦 السعودية — الريال السعودي (ر.س) — الأسعار قيد المراجعة",18));
-  content.addView(priceLine("Basic: السعر قيد المراجعة"));
-  content.addView(priceLine("Pro: السعر قيد المراجعة"));
-  content.addView(priceLine("Business: السعر قيد المراجعة"));
-  Spinner market=new Spinner(this);
-  String[] markets={"السودان — جنيه سوداني (بنكك)","السعودية — ريال سعودي (قيد المراجعة)","الدفع بالدولار الأمريكي"};
-  market.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,markets));
-  content.addView(t("بلد/عملة الدفع",15));content.addView(market);
-  Spinner tier=new Spinner(this);String[] tiers={"Basic","Pro","Business","Enterprise — عرض مخصص"};
-  tier.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,tiers));
-  content.addView(t("الباقة",15));content.addView(tier);
-  Spinner period=new Spinner(this);String[] periods={"ترخيص دائم","اشتراك شهري","اشتراك سنوي"};
-  period.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,periods));
-  content.addView(t("مدة الترخيص/الاشتراك",15));content.addView(period);
-  TextView selectedPrice=t("السعر المختار: 150,000 ج.س",21);selectedPrice.setTextColor(green);content.addView(selectedPrice);
-  Runnable updatePrice=()->{
-   String m=String.valueOf(market.getSelectedItem()),p=String.valueOf(tier.getSelectedItem()),d=String.valueOf(period.getSelectedItem());
-   String price="السعر قيد المراجعة — لا يوجد سعر معتمد لهذه العملة.";
-   if(p.equals("Enterprise — عرض مخصص"))price="عرض سعر مخصص — تواصل مع الدعم.";
-   else if(m.startsWith("السودان")){
-    String[][] prices={{"غير متاح","25,000","250,000"},{"غير متاح","45,000","450,000"},{"غير متاح","80,000","800,000"}};
-    int pi=p.equals("Basic")?0:p.equals("Pro")?1:2;int di=d.equals("ترخيص دائم")?0:d.equals("اشتراك شهري")?1:2;
-    price=di==0?"الترخيص الدائم غير متاح بالجنيه السوداني حاليًا":prices[pi][di]+" ج.س";
-   }else if(m.startsWith("الدفع بالدولار")){
-    String[][] prices={{"249","9","90"},{"499","19","190"},{"999","39","390"}};
-    int pi=p.equals("Basic")?0:p.equals("Pro")?1:2;int di=d.equals("ترخيص دائم")?0:d.equals("اشتراك شهري")?1:2;
-    price="$"+prices[pi][di]+(di==0?" — ترخيص دائم":di==1?" شهريًا":" سنويًا");
-   }else if(m.startsWith("السعودية")){price="السعر قيد المراجعة — لا يوجد سعر معتمد";}
-   selectedPrice.setText("السعر المختار: "+price);
-  };
-  android.widget.AdapterView.OnItemSelectedListener priceListener=new android.widget.AdapterView.OnItemSelectedListener(){public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){updatePrice.run();}public void onNothingSelected(android.widget.AdapterView<?> parent){}};
-  market.setOnItemSelectedListener(priceListener);tier.setOnItemSelectedListener(priceListener);period.setOnItemSelectedListener(priceListener);
-  EditText company=e("اسم الشركة أو النشاط");company.setInputType(1);content.addView(company);
-  EditText contact=e("رقم واتساب للتواصل");contact.setInputType(3);content.addView(contact);
-  EditText notes=e("تفاصيل الخدمة المطلوبة أو عدد المستخدمين والفروع");notes.setMinLines(2);notes.setGravity(Gravity.TOP);content.addView(notes);
-  content.addView(t("الدفع والتحويل",19));
-  content.addView(t("بنكك — رقم الحساب: 1882224",18));
-  Button copyBankak=b("📋 نسخ رقم حساب بنكك");content.addView(copyBankak);copyBankak.setOnClickListener(v->{((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Bankak account","1882224"));toast("تم نسخ رقم حساب بنكك");});
-  content.addView(t("IBAN المتاح: SD8504018822240001 — تحقّق من البنك أن الحساب يستقبل التحويل بالدولار الأمريكي قبل الإرسال.",14));
-  Button copyIban=b("📋 نسخ رقم IBAN");content.addView(copyIban);copyIban.setOnClickListener(v->{((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("IBAN","SD8504018822240001"));toast("تم نسخ رقم IBAN");});
-  content.addView(t("التسجيل الحالي لتسجيل الاهتمام فقط. لا تحوّل أي مبلغ ولا ترسل إيصالًا حتى إعلان فتح البيع رسميًا.",14));
-  Button receipt=b("إرفاق إيصال التحويل — غير متاح حاليًا");receipt.setEnabled(false);content.addView(receipt);
-  Button send=b("💳 اشترك الآن — أرسل طلب الاشتراك عبر واتساب");content.addView(send);send.setOnClickListener(v->{
-   String m=String.valueOf(market.getSelectedItem()),p=String.valueOf(tier.getSelectedItem()),d=String.valueOf(period.getSelectedItem()),price=selectedPrice.getText().toString();
-   if(company.getText().toString().trim().isEmpty()){toast("أدخل اسم الشركة أو النشاط أولًا");return;}
-   String message="السلام عليكم، أريد طلب باقة من المحاسب الميزان.\nالشركة: "+company.getText().toString().trim()+"\nالسوق/العملة: "+m+"\nالباقة: "+p+"\nالمدة: "+d+"\nالسعر المعروض: "+price+"\nرقم تواصل العميل: "+contact.getText().toString().trim()+"\nالتفاصيل: "+notes.getText().toString().trim()+"\nبنكك: 1882224\nIBAN: SD8504018822240001\nهذا طلب تسجيل اهتمام فقط. لا تحوّل أي مبلغ ولا ترسل إيصالًا قبل إعلان فتح البيع رسميًا.";
-   open("https://wa.me/249121851285?text="+android.net.Uri.encode(message));
-  });
-  Button supportButton=b("التواصل مع الدعم عبر واتساب");content.addView(supportButton);supportButton.setOnClickListener(v->support());
- }
+   page("الباقات والأسعار");
+   content.addView(t("باقات المحاسب الميزان — الدفع بالجنيه السوداني أو الدولار الأمريكي",21));
+   content.addView(t("تجربة مجانية لمدة 7 أيام. أزلنا الأسعار القديمة غير المعتمدة. لن نعرض مبلغًا قبل اعتماد السعر الرسمي لكل باقة وعملة. الدفع المحلي عبر بنكك بالجنيه السوداني، والدفع بالدولار الأمريكي عبر IBAN. إرسال الطلب لا يفعّل الترخيص تلقائيًا.",14));
+   content.addView(t("🇸🇩 السودان — الجنيه السوداني (SDG) | الدفع عبر بنكك",18));
+   content.addView(priceLine("Basic: السعر المعتمد سيُعلن قبل فتح البيع"));
+   content.addView(priceLine("Pro: السعر المعتمد سيُعلن قبل فتح البيع"));
+   content.addView(priceLine("Business: السعر المعتمد سيُعلن قبل فتح البيع"));
+   content.addView(t("🇺🇸 الدفع بالدولار الأمريكي (USD) | التحويل عبر IBAN",18));
+   content.addView(priceLine("Basic: USD price pending final approval"));
+   content.addView(priceLine("Pro: USD price pending final approval"));
+   content.addView(priceLine("Business: USD price pending final approval"));
+   Spinner market=new Spinner(this);
+   String[] markets={"السودان — جنيه سوداني (بنكك)","الدفع بالدولار الأمريكي — IBAN"};
+   market.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,markets));
+   content.addView(t("عملة وطريقة الدفع",15));content.addView(market);
+   Spinner tier=new Spinner(this);String[] tiers={"Basic","Pro","Business","Enterprise — عرض مخصص"};
+   tier.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,tiers));
+   content.addView(t("الباقة",15));content.addView(tier);
+   Spinner period=new Spinner(this);String[] periods={"اشتراك شهري","اشتراك سنوي"};
+   period.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,periods));
+   content.addView(t("مدة الاشتراك",15));content.addView(period);
+   TextView selectedPrice=t("السعر المختار: سيُعلن السعر المعتمد قبل فتح البيع",21);selectedPrice.setTextColor(green);content.addView(selectedPrice);
+   Runnable updatePrice=()->{
+    String m=String.valueOf(market.getSelectedItem()),p=String.valueOf(tier.getSelectedItem()),d=String.valueOf(period.getSelectedItem());
+    String price=p.equals("Enterprise — عرض مخصص")?"عرض سعر مخصص — تواصل مع الدعم.":m.startsWith("الدفع بالدولار")?"السعر بالدولار الأمريكي قيد الاعتماد — لا توجد قيمة نهائية معتمدة بعد.":"السعر بالجنيه السوداني قيد الاعتماد — لا توجد قيمة نهائية معتمدة بعد.";
+    selectedPrice.setText("السعر المختار ("+d+"): "+price);
+   };
+   android.widget.AdapterView.OnItemSelectedListener priceListener=new android.widget.AdapterView.OnItemSelectedListener(){public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){updatePrice.run();}public void onNothingSelected(android.widget.AdapterView<?> parent){}};
+   market.setOnItemSelectedListener(priceListener);tier.setOnItemSelectedListener(priceListener);period.setOnItemSelectedListener(priceListener);
+   EditText company=e("اسم الشركة أو النشاط");company.setInputType(1);content.addView(company);
+   EditText contact=e("رقم واتساب للتواصل");contact.setInputType(3);content.addView(contact);
+   EditText notes=e("تفاصيل الخدمة المطلوبة أو عدد المستخدمين والفروع");notes.setMinLines(2);notes.setGravity(Gravity.TOP);content.addView(notes);
+   content.addView(t("الدفع والتحويل",19));
+   content.addView(t("بنكك — رقم الحساب: 1882224 (للجنيه السوداني)",18));
+   Button copyBankak=b("📋 نسخ رقم حساب بنكك");content.addView(copyBankak);copyBankak.setOnClickListener(v->{((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Bankak account","1882224"));toast("تم نسخ رقم حساب بنكك");});
+   content.addView(t("الدفع بالدولار الأمريكي (USD) عبر IBAN: SD8504018822240001. تأكد من بيانات التحويل مع البنك قبل الدفع.",14));
+   Button copyIban=b("📋 نسخ رقم IBAN");content.addView(copyIban);copyIban.setOnClickListener(v->{((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("IBAN","SD8504018822240001"));toast("تم نسخ رقم IBAN");});
+   content.addView(t("التسجيل الحالي لتسجيل الاهتمام فقط. لا تحوّل أي مبلغ ولا ترسل إيصالًا حتى إعلان فتح البيع رسميًا واعتماد الأسعار.",14));
+   Button receipt=b("إرفاق إيصال التحويل — غير متاح حاليًا");receipt.setEnabled(false);content.addView(receipt);
+   Button send=b("💳 أرسل طلب الاشتراك عبر واتساب");content.addView(send);send.setOnClickListener(v->{
+    String m=String.valueOf(market.getSelectedItem()),p=String.valueOf(tier.getSelectedItem()),d=String.valueOf(period.getSelectedItem()),price=selectedPrice.getText().toString();
+    if(company.getText().toString().trim().isEmpty()){toast("أدخل اسم الشركة أو النشاط أولًا");return;}
+    String message="السلام عليكم، أريد طلب باقة من المحاسب الميزان.\nالشركة: "+company.getText().toString().trim()+"\nالعملة/طريقة الدفع: "+m+"\nالباقة: "+p+"\nالمدة: "+d+"\nالسعر المعروض: "+price+"\nرقم تواصل العميل: "+contact.getText().toString().trim()+"\nالتفاصيل: "+notes.getText().toString().trim()+"\nبنكك (للجنيه السوداني): 1882224\nIBAN (للدولار الأمريكي): SD8504018822240001\nهذا طلب اهتمام فقط؛ الأسعار النهائية قيد الاعتماد. لا تحوّل أي مبلغ قبل إعلان فتح البيع رسميًا.";
+    open("https://wa.me/249121851285?text="+android.net.Uri.encode(message));
+   });
+   Button supportButton=b("التواصل مع الدعم عبر واتساب");content.addView(supportButton);supportButton.setOnClickListener(v->support());
+  }
  void groupMenu(String title,String[][] links){
   page(title);content.addView(t("اختر الوظيفة المطلوبة",16));
   for(String[] link:links){Button go=b(link[0]);go.setTextSize(17);content.addView(go,new LinearLayout.LayoutParams(-1,-2));go.setOnClickListener(v->openSection(link[1]));}
