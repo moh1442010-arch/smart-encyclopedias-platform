@@ -1,4 +1,4 @@
-name: Build Al-Mizan Enterprise Basic Pro Business Android Releases 2.3.8 - Signed
+name: Build Al-Mizan Enterprise Basic Pro Business Android Releases 2.3.9 - Signed
 
 concurrency:
   group: smart-company-android-release
@@ -59,7 +59,7 @@ jobs:
       - name: Upload clean-install test APK
         uses: actions/upload-artifact@v4
         with:
-          name: al-mizan-basic-2.3.8-clean-install-test-debug
+          name: al-mizan-basic-2.3.9-clean-install-test-debug
           path: android-app/app/build/outputs/apk/basic/debug/app-basic-debug.apk
           if-no-files-found: error
           retention-days: 30
@@ -115,8 +115,8 @@ jobs:
             apk_in="app/build/outputs/apk/$edition/release/app-$edition-release-unsigned.apk"
             aab_in="app/build/outputs/bundle/${edition}Release/app-$edition-release.aab"
             label="$(printf '%s' "$edition" | sed 's/.*/\u&/')"
-            apk_out="release/AlMizan-$label-2.3.8-release.apk"
-            aab_out="release/AlMizan-$label-2.3.8-release.aab"
+            apk_out="release/AlMizan-$label-2.3.9-release.apk"
+            aab_out="release/AlMizan-$label-2.3.9-release.aab"
             test -s "$apk_in"
             test -s "$aab_in"
             "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out "$apk_out" "$apk_in"
@@ -133,7 +133,7 @@ jobs:
             fi
             echo "$cert_sha" > "release/SIGNING-CERT-SHA256-$edition.txt"
           done
-          sha256sum release/AlMizan-*-2.3.8-release.apk release/AlMizan-*-2.3.8-release.aab > release/SHA256SUMS.txt
+          sha256sum release/AlMizan-*-2.3.9-release.apk release/AlMizan-*-2.3.9-release.aab > release/SHA256SUMS.txt
 
       - name: Final release QA for all editions
         working-directory: android-app
@@ -142,12 +142,12 @@ jobs:
           build_tools="$ANDROID_HOME/build-tools/36.0.0"
           for edition in basic pro business enterprise; do
             label="$(printf '%s' "$edition" | sed 's/.*/\u&/')"
-            apk="release/AlMizan-$label-2.3.8-release.apk"
-            aab="release/AlMizan-$label-2.3.8-release.aab"
+            apk="release/AlMizan-$label-2.3.9-release.apk"
+            aab="release/AlMizan-$label-2.3.9-release.aab"
             test -s "$apk"
             test -s "$aab"
             badging="$("$build_tools/aapt" dump badging "$apk")"
-            echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='39' versionName='2.3.8'"
+            echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='39' versionName='2.3.9'"
             echo "$badging" | grep -F "application-label:'المحاسب الميزان'"
             permissions="$("$build_tools/aapt" dump permissions "$apk")"
             echo "$permissions" | grep -q "android.permission.INTERNET" || { echo "Required INTERNET permission for server-side commercial licensing is missing in $edition"; exit 1; }
@@ -160,10 +160,10 @@ jobs:
       - name: Upload signed release artifacts only
         uses: actions/upload-artifact@v4
         with:
-          name: al-mizan-android-four-editions-signed-release-v2.3.8
+          name: al-mizan-android-four-editions-signed-release-v2.3.9
           path: |
-            android-app/release/AlMizan-*-2.3.8-release.apk
-            android-app/release/AlMizan-*-2.3.8-release.aab
+            android-app/release/AlMizan-*-2.3.9-release.apk
+            android-app/release/AlMizan-*-2.3.9-release.aab
             android-app/release/SHA256SUMS.txt
             android-app/release/SIGNING-CERTIFICATE-*.txt
             android-app/release/SIGNING-CERT-SHA256-*.txt
