@@ -372,45 +372,102 @@ public class MainActivity extends Activity{
   }
 
 
+ boolean canReturnQuantity(double originalQty,double previouslyReturned,double requestedQty){
+  return Double.isFinite(originalQty)&&Double.isFinite(previouslyReturned)&&Double.isFinite(requestedQty)
+      &&originalQty>0&&previouslyReturned>=0&&requestedQty>0
+      &&previouslyReturned+requestedQty<=originalQty+0.000001;
+ }
  void returns(){
-  page("المرتجعات");content.addView(t("عكس فاتورة كاملة فقط — لا تُحذف الفاتورة الأصلية، ويُمنع ردّها مرتين. راجع الكمية المتاحة قبل اعتماد مرتجع الشراء.",15));
+  page("المرتجعات");
+  content.addView(t("يمكن إرجاع جزء من الفاتورة أو الفاتورة كاملة. لا تُحذف الفاتورة الأصلية، وتُمنع إعادة الكمية نفسها مرتين.",15));
   EditText invoice=e("رقم الفاتورة الأصلية");invoice.setSingleLine(true);content.addView(invoice);
-  Button process=b("معاينة الفاتورة والمرتجع");content.addView(process);
+  Button process=b("معاينة الفاتورة وتحديد كميات المرتجع");content.addView(process);
   process.setOnClickListener(v->{
    String no=invoice.getText().toString().trim();if(no.isEmpty()){toast("أدخل رقم الفاتورة");return;}
    Cursor c=db.q("SELECT id,type,party,total,paid,remaining,COALESCE(customer_id,0),COALESCE(supplier_id,0) FROM transactions WHERE invoice_no=?",no);
    if(!c.moveToFirst()){c.close();toast("لم يُعثر على الفاتورة");return;}
-   long originalId=c.getLong(0);String originalType=c.getString(1),party=c.getString(2);double total=c.getDouble(3),paid=c.getDouble(4),remaining=c.getDouble(5);long customerId=c.getLong(6),supplierId=c.getLong(7);c.close();
-   boolean sale=originalType.equals("SALE"),purchase=originalType.equals("PURCHASE");
+   long originalId=c.getLong(0);String originalType=c.getString(1),party=c.getString(2);
+   double originalTotal=c.getDouble(3),originalPaid=c.getDouble(4),originalRemaining=c.getDouble(5);
+   long customerId=c.getLong(6),supplierId=c.getLong(7);c.close();
+   boolean sale="SALE".equals(originalType),purchase="PURCHASE".equals(originalType);
    if(!sale&&!purchase){toast("يمكن إرجاع فاتورة بيع أو شراء أصلية فقط");return;}
-   Cursor prior=db.q("SELECT id FROM transactions WHERE original_transaction_id=?",String.valueOf(originalId));boolean already=prior.moveToFirst();prior.close();if(already){toast("سبق تسجيل مرتجع لهذه الفاتورة؛ لا يمكن تكراره");return;}
-   Cursor items=db.q("SELECT i.product_id,i.qty,i.price,i.cost,i.discount,p.name,p.qty,p.cost FROM invoice_items i JOIN products p ON p.id=i.product_id WHERE i.transaction_id=? ORDER BY i.id",String.valueOf(originalId));
+   Cursor items=db.q("SELECT i.product_id,i.qty,i.price,i.cost,i.discount,p.name,p.qty,p.cost,COALESCE((SELECT SUM(ri.qty) FROM invoice_items ri JOIN transactions rt ON rt.id=ri.transaction_id WHERE rt.original_transaction_id=? AND ri.product_id=i.product_id),0) FROM invoice_items i JOIN products p ON p.id=i.product_id WHERE i.transaction_id=? ORDER BY i.id",String.valueOf(originalId),String.valueOf(originalId));
    if(!items.moveToFirst()){items.close();toast("لا توجد تفاصيل أصناف صالحة لهذه الفاتورة");return;}
-   ArrayList<long[]> ids=new ArrayList<>();ArrayList<double[]> vals=new ArrayList<>();ArrayList<String> names=new ArrayList<>();boolean invalid=false;double inventoryValue=0,returnCogs=0;int count=0;
-   do{long pid=items.getLong(0);double q=items.getDouble(1),price=items.getDouble(2),itemCost=items.getDouble(3),disc=items.getDouble(4),stock=items.getDouble(6),avgCost=items.getDouble(7);if(q<=0||price<0||itemCost<0||disc<0){invalid=true;break;}if(purchase&&stock+0.000001<q){invalid=true;break;}ids.add(new long[]{pid});vals.add(new double[]{q,price,itemCost,disc,stock,avgCost});names.add(items.getString(5));inventoryValue+=q*price-disc;returnCogs+=q*itemCost;count++;}while(items.moveToNext());items.close();
-   if(invalid||count==0){toast(purchase?"الكمية المتاحة لا تسمح بإرجاع الشراء أو بيانات الأصناف غير سليمة":"بيانات أصناف الفاتورة غير سليمة");return;}
-   final String summaryText=(sale?"مرتجع بيع":"مرتجع شراء")+" — "+no+"\nالطرف: "+party+"\nإجمالي العكس: "+fmt(total)+"\nالمبلغ المدفوع/المردود: "+fmt(paid)+"\nالرصيد المستحق المعكوس: "+fmt(remaining)+"\nعدد الأصناف: "+count+"\nسيتم عكس الفاتورة كاملة.";
-   new AlertDialog.Builder(this).setTitle("تأكيد المرتجع").setMessage(summaryText).setNegativeButton("إلغاء",null).setPositiveButton("اعتماد المرتجع", (dlg,which)->{
-    SQLiteDatabase sq=db.getWritableDatabase();sq.beginTransaction();
-    try{
-     Cursor dup=sq.rawQuery("SELECT 1 FROM transactions WHERE original_transaction_id=? LIMIT 1",new String[]{String.valueOf(originalId)});boolean exists=dup.moveToFirst();dup.close();if(exists)throw new IllegalStateException("Return already exists");
-     double totalCost=0;
-     for(int i=0;i<ids.size();i++){
-      long pid=ids.get(i)[0];double[] z=vals.get(i);double q=z[0],price=z[1],itemCost=z[2],disc=z[3],stock=z[4],avg=z[5];double next=purchase?stock-q:stock+q;
-      ContentValues pv=new ContentValues();pv.put("qty",next);
-      if(purchase){double currentValue=stock*avg,returnedValue=q*price-disc;if(next<0.000001){if(currentValue+0.005<returnedValue)throw new IllegalStateException("Inventory valuation mismatch");pv.put("cost",0);}else{double newValue=currentValue-returnedValue;if(newValue< -0.005)throw new IllegalStateException("Inventory valuation mismatch");pv.put("cost",Math.max(0,newValue/next));}totalCost+=returnedValue;}
-      else{pv.put("cost",next>0?((stock*avg)+(q*itemCost))/next:itemCost);totalCost+=q*itemCost;}
-      if(sq.update("products",pv,"id=?",new String[]{String.valueOf(pid)})!=1)throw new IllegalStateException("Product update failed");
-     }
-     ContentValues rt=new ContentValues();rt.put("type",sale?"SALE_RETURN":"PURCHASE_RETURN");rt.put("party",party);rt.put("total",total);rt.put("paid",paid);rt.put("remaining",remaining);rt.put("created_at",System.currentTimeMillis());rt.put("original_transaction_id",originalId);if(sale)rt.put("customer_id",customerId);else rt.put("supplier_id",supplierId);long returnId=sq.insertOrThrow("transactions",null,rt);
-     String prefix=getSharedPreferences("company_profile",0).getString("invoice_prefix","INV");String returnNo=prefix+"-RET-"+String.format(Locale.US,"%06d",returnId);sq.execSQL("UPDATE transactions SET invoice_no=? WHERE id=?",new Object[]{returnNo,returnId});
-     for(int i=0;i<ids.size();i++){double[] z=vals.get(i);ContentValues iv=new ContentValues();iv.put("transaction_id",returnId);iv.put("product_id",ids.get(i)[0]);iv.put("qty",z[0]);iv.put("price",z[1]);iv.put("cost",z[2]);iv.put("discount",z[3]);sq.insertOrThrow("invoice_items",null,iv);}
-     long je=journal(sq),cash=accountId(sq,"1010"),receivable=accountId(sq,"1100"),inventory=accountId(sq,"1200"),salesReturns=accountId(sq,"4100"),payable=accountId(sq,"2100"),cogs=accountId(sq,"5100");
-     if(sale){line(sq,je,salesReturns,total,0);if(paid>0)line(sq,je,cash,0,paid);if(remaining>0)line(sq,je,receivable,0,remaining);if(totalCost>0){line(sq,je,inventory,totalCost,0);line(sq,je,cogs,0,totalCost);}}
-     else{if(paid>0)line(sq,je,cash,paid,0);if(remaining>0)line(sq,je,payable,remaining,0);line(sq,je,inventory,0,total);}
-     assertBalanced(sq,je);sq.execSQL("UPDATE journal_entries SET description=? WHERE id=?",new Object[]{"مرتجع "+(sale?"بيع ":"شراء ")+no,je});sq.setTransactionSuccessful();toast("تم اعتماد المرتجع وترحيل القيد: "+returnNo);dashboard();
-    }catch(Exception ex){toast("تعذر اعتماد المرتجع؛ أُلغيت جميع التغييرات. راجع رصيد المخزون وتقييمه.");}
-    finally{sq.endTransaction();}
+   ArrayList<long[]> ids=new ArrayList<>();ArrayList<double[]> vals=new ArrayList<>();ArrayList<String> names=new ArrayList<>();
+   boolean invalid=false;
+   do{
+    double q=items.getDouble(1),price=items.getDouble(2),itemCost=items.getDouble(3),disc=items.getDouble(4),stock=items.getDouble(6),avgCost=items.getDouble(7),returned=items.getDouble(8);
+    if(q<=0||price<0||itemCost<0||disc<0||returned<0||returned>q+0.000001){invalid=true;break;}
+    ids.add(new long[]{items.getLong(0)});vals.add(new double[]{q,price,itemCost,disc,stock,avgCost,returned});names.add(items.getString(5));
+   }while(items.moveToNext());
+   items.close();
+   if(invalid||ids.isEmpty()){toast("بيانات الفاتورة أو المرتجعات السابقة غير سليمة");return;}
+   LinearLayout form=new LinearLayout(this);form.setOrientation(LinearLayout.VERTICAL);form.setPadding(20,8,20,8);
+   ArrayList<EditText> fields=new ArrayList<>();
+   for(int i=0;i<ids.size();i++){
+    double[] z=vals.get(i);double available=Math.max(0,z[0]-z[6]);
+    form.addView(t(names.get(i)+" — الكمية الأصلية: "+fmt(z[0])+" — المتاح للرد: "+fmt(available),14));
+    EditText qtyField=e("الكمية المراد إرجاعها");qtyField.setInputType(8194);qtyField.setText("0");form.addView(qtyField);fields.add(qtyField);
+   }
+   new AlertDialog.Builder(this).setTitle(sale?"مرتجع بيع جزئي":"مرتجع شراء جزئي").setView(form).setNegativeButton("إلغاء",null).setPositiveButton("معاينة المبالغ",(dlg,which)->{
+    ArrayList<double[]> chosen=new ArrayList<>();double totalReturn=0,totalReturnCost=0;boolean bad=false;String reason="";
+    for(int i=0;i<ids.size();i++){
+     EditText field=fields.get(i);double requested=num(field);double[] z=vals.get(i);
+     if(!validNumber(field,true)||requested<0){bad=true;reason="أدخل كميات رقمية غير سالبة";break;}
+     if(requested==0){chosen.add(new double[]{0,0,0});continue;}
+     if(!canReturnQuantity(z[0],z[6],requested)){bad=true;reason="الكمية المطلوبة تتجاوز المتبقي من الفاتورة";break;}
+     if(purchase&&z[4]+0.000001<requested){bad=true;reason="رصيد المخزون لا يسمح بإرجاع هذه الكمية";break;}
+     double allocatedDiscount=z[3]*requested/z[0];double lineTotal=requested*z[1]-allocatedDiscount;
+     if(!Double.isFinite(lineTotal)||lineTotal<0){bad=true;reason="قيمة المرتجع غير سليمة";break;}
+     chosen.add(new double[]{requested,allocatedDiscount,lineTotal});totalReturn+=lineTotal;
+     totalReturnCost+=sale?requested*z[2]:lineTotal;
+    }
+    if(bad){toast(reason);return;}
+    if(totalReturn<=0){toast("أدخل كمية مرتجعة واحدة على الأقل");return;}
+    if(!Double.isFinite(totalReturn)||totalReturn>originalTotal+0.005){toast("إجمالي المرتجع يتجاوز الفاتورة أو غير صالح");return;}
+    final double returnTotal=totalReturn,returnCost=totalReturnCost;
+    final ArrayList<double[]> selected=chosen;
+    double receivableReduction=Math.min(returnTotal,Math.max(0,originalRemaining));
+    double cashRefund=returnTotal-receivableReduction;
+    final double reduceBalance=receivableReduction,refundCash=cashRefund;
+    String summaryText=(sale?"مرتجع بيع":"مرتجع شراء")+" — "+no+"\nالطرف: "+party+"\nإجمالي المرتجع: "+fmt(returnTotal)+"\nتخفيض الرصيد المستحق: "+fmt(receivableReduction)+"\nالمبلغ النقدي المسترد/المستلم: "+fmt(cashRefund)+"\nلن تتغير الفاتورة الأصلية أو تُحذف.";
+    new AlertDialog.Builder(this).setTitle("تأكيد المرتجع الجزئي").setMessage(summaryText).setNegativeButton("إلغاء",null).setPositiveButton("اعتماد المرتجع",(confirm,choice)->{
+     SQLiteDatabase sq=db.getWritableDatabase();sq.beginTransaction();
+     try{
+      ContentValues rt=new ContentValues();rt.put("type",sale?"SALE_RETURN":"PURCHASE_RETURN");rt.put("party",party);rt.put("total",returnTotal);rt.put("paid",refundCash);rt.put("remaining",reduceBalance);rt.put("created_at",System.currentTimeMillis());rt.put("original_transaction_id",originalId);if(sale)rt.put("customer_id",customerId);else rt.put("supplier_id",supplierId);
+      long returnId=sq.insertOrThrow("transactions",null,rt);
+      String prefix=getSharedPreferences("company_profile",0).getString("invoice_prefix","INV");String returnNo=prefix+"-RET-"+String.format(Locale.US,"%06d",returnId);
+      sq.execSQL("UPDATE transactions SET invoice_no=? WHERE id=?",new Object[]{returnNo,returnId});
+      double appliedCost=0;
+      for(int i=0;i<ids.size();i++){
+       double[] pick=selected.get(i);if(pick[0]<=0)continue;
+       double[] z=vals.get(i);long pid=ids.get(i)[0];double q=pick[0],lineTotal=pick[2],itemCost=z[2];
+       Cursor current=sq.rawQuery("SELECT qty,cost FROM products WHERE id=?",new String[]{String.valueOf(pid)});
+       if(!current.moveToFirst()){current.close();throw new IllegalStateException("Product no longer exists");}
+       double stock=current.getDouble(0),avgCost=current.getDouble(1);current.close();
+       double next=purchase?stock-q:stock+q;
+       if(next< -0.000001)throw new IllegalStateException("Insufficient stock for purchase return");
+       ContentValues pv=new ContentValues();pv.put("qty",Math.max(0,next));
+       if(purchase){
+        double currentValue=stock*avgCost,newValue=currentValue-lineTotal;
+        if(newValue< -0.005)throw new IllegalStateException("Inventory valuation mismatch");
+        pv.put("cost",next<0.000001?0:Math.max(0,newValue/next));appliedCost+=lineTotal;
+       }else{
+        pv.put("cost",next>0.000001?((stock*avgCost)+(q*itemCost))/next:itemCost);appliedCost+=q*itemCost;
+       }
+       if(sq.update("products",pv,"id=?",new String[]{String.valueOf(pid)})!=1)throw new IllegalStateException("Product update failed");
+       ContentValues iv=new ContentValues();iv.put("transaction_id",returnId);iv.put("product_id",pid);iv.put("qty",q);iv.put("price",z[1]);iv.put("cost",itemCost);iv.put("discount",pick[1]);sq.insertOrThrow("invoice_items",null,iv);
+      }
+      if(Math.abs(appliedCost-returnCost)>0.01)throw new IllegalStateException("Return valuation mismatch");
+      double newRemaining=Math.max(0,originalRemaining-reduceBalance);
+      if(sq.update("transactions",cv("remaining",newRemaining),"id=?",new String[]{String.valueOf(originalId)})!=1)throw new IllegalStateException("Original invoice update failed");
+      long je=journal(sq),cash=accountId(sq,"1010"),receivable=accountId(sq,"1100"),inventory=accountId(sq,"1200"),salesReturns=accountId(sq,"4100"),payable=accountId(sq,"2100"),cogs=accountId(sq,"5100");
+      if(sale){line(sq,je,salesReturns,returnTotal,0);if(refundCash>0)line(sq,je,cash,0,refundCash);if(reduceBalance>0)line(sq,je,receivable,0,reduceBalance);if(returnCost>0){line(sq,je,inventory,returnCost,0);line(sq,je,cogs,0,returnCost);}}
+      else{if(refundCash>0)line(sq,je,cash,refundCash,0);if(reduceBalance>0)line(sq,je,payable,reduceBalance,0);line(sq,je,inventory,0,returnTotal);}
+      assertBalanced(sq,je);sq.execSQL("UPDATE journal_entries SET description=? WHERE id=?",new Object[]{"مرتجع "+(sale?"بيع ":"شراء ")+no+" جزئي",je});sq.setTransactionSuccessful();toast("تم اعتماد المرتجع الجزئي وترحيل القيد: "+returnNo);dashboard();
+     }catch(Exception ex){toast("تعذر اعتماد المرتجع؛ أُلغيت جميع التغييرات. تحقق من الكميات والأرصدة وتقييم المخزون.");}
+     finally{sq.endTransaction();}
+    }).show();
    }).show();
   });
  }
