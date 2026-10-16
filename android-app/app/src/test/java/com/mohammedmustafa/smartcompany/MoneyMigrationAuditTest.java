@@ -35,7 +35,7 @@ public class MoneyMigrationAuditTest {
         assertTrue(result.isSafeForColumnMigration());
     }
 
-    @Test public void auditRejectsValuesThatWouldNeedSilentRounding() {
+    @Test public void auditRejectsNullMonetaryValuesForExplicitReview() {\n        database.execSQL("INSERT INTO legacy_amounts(amount) VALUES (NULL)");\n        MoneyMigrationAudit.Result result =\n                MoneyMigrationAudit.auditColumn(database, "legacy_amounts", "amount", 2);\n        assertFalse(result.isSafeForColumnMigration());\n        assertEquals(1, result.rejectedValues.size());\n        assertTrue(result.rejectedValues.get(0).reason.contains("Null"));\n    }\n\n    @Test public void auditRejectsValuesThatWouldNeedSilentRounding() {
         database.execSQL("INSERT INTO legacy_amounts(amount) VALUES (1.005)");
         MoneyMigrationAudit.Result result =
                 MoneyMigrationAudit.auditColumn(database, "legacy_amounts", "amount", 2);
