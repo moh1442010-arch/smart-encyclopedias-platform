@@ -81,6 +81,11 @@ The existing encrypted-restore validation accepted database schema versions only
 
 Added a pure-Java AccountingCore journal invariant validator and unit tests. It uses integer minor units, requires at least two journal lines, rejects negative/empty/both-sided lines, checks exact debit/credit equality, and fails on integer overflow. Added tests for a balanced entry, an unbalanced entry, invalid lines, and overflow. This is a reusable domain foundation—not yet wired into the existing sales/purchase/payroll/bank posting paths, and not yet a Windows client. The CI result for these newly added Android unit tests has not been confirmed in this work session.
 
+
+## Read-only legacy-money migration preflight (2026-10-16)
+
+Added `MoneyMigrationAudit`, a read-only SQLite column auditor. It checks that every non-null legacy REAL value is finite, representable at the configured currency scale without implicit rounding, and within integer minor-unit range; it reports row IDs that need review and detects aggregate overflow. Unit tests cover exact values, fractional precision that needs review, range overflow, unsafe identifiers, and the invariant that audit itself does not modify legacy rows. This is a **preflight only**: it does not alter the schema, backfill minor-unit columns, or prove whole-ledger reconciliation. The actual migration remains blocked until every relevant monetary column is inventoried, before/after account-level balances are reconciled, and a rollback test passes.
+
 ## Human review exit criteria
 
 Release only after all P0 issues are closed, CI passes for all editions, signed artifact hashes and certificate identity are recorded, upgrade/restore tests pass, and a human reviewer completes a documented test session on the target Samsung Android 16 device. Windows remains a separate release candidate and must pass its own tests. No honest process can guarantee 100% defect-free software; the goal is measurable coverage, zero known release-blocking defects, and explicit residual-risk acceptance.
