@@ -86,6 +86,26 @@ public class MainActivitySecurityValidationTest {
     }
 
     @Test
+    public void offlineLicenseGraceRejectsClockRollbackAndExpiredTrial() {
+        SharedPreferences prefs = context.getSharedPreferences("test-offline-license-clock", Context.MODE_PRIVATE);
+        prefs.edit().clear().commit();
+        long now = 1_800_000_000_000L;
+        prefs.edit()
+                .putLong("expires_at", now + 10L * 24 * 60 * 60 * 1000)
+                .putLong("last_verified_at", now - 60L * 60 * 1000)
+                .putLong("last_seen_wall", now - 60L * 60 * 1000)
+                .commit();
+
+        assertTrue("A recently verified unexpired license may use the offline grace period",
+                activity.offlineLicenseAllowed(prefs, now));
+        assertFalse("A material clock rollback must fail closed while offline",
+                activity.offlineLicenseAllowed(prefs, now - 24L * 60 * 60 * 1000));
+        assertFalse("An expired trial must not pass the offline check",
+                activity.offlineLicenseAllowed(prefs, now + 11L * 24 * 60 * 60 * 1000));
+        prefs.edit().clear().commit();
+    }
+
+    @Test
     public void chequeDatesRequireRealIsoCalendarDates() {
         assertTrue(activity.validIsoDate("2024-02-29", true));
         assertFalse(activity.validIsoDate("2025-02-29", true));
