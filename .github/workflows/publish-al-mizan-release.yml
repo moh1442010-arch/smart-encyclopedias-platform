@@ -100,6 +100,30 @@ jobs:
           test -s release/windows/SHA256SUMS.txt
           (cd release/windows && sha256sum --check SHA256SUMS.txt)
 
+      - name: Verify build run IDs and source commits against manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANDROID_RUN_ID: ${{ inputs.android_run_id }}
+          WINDOWS_RUN_ID: ${{ inputs.windows_run_id }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const { execFileSync } = require('child_process');
+          const m = JSON.parse(fs.readFileSync('store/release-manifest.json', 'utf8'));
+          for (const [label, id, expectedSha] of [
+            ['Android', process.env.ANDROID_RUN_ID, m.android_candidate.source_commit],
+            ['Windows', process.env.WINDOWS_RUN_ID, (m.releases || []).find(x => x.platform === 'windows')?.source_commit]
+          ]) {
+            if (!/^[0-9]+$/.test(id)) throw new Error(label + ' run ID is invalid.');
+            if (!/^[a-f0-9]{40}$/i.test(expectedSha || '')) throw new Error(label + ' source commit is not recorded in the manifest.');
+            const output = execFileSync('gh', ['run','view',id,'--repo',process.env.GITHUB_REPOSITORY,'--json','conclusion,headSha'], {encoding:'utf8'});
+            const run = JSON.parse(output);
+            if (run.conclusion !== 'success') throw new Error(label + ' workflow run did not succeed.');
+            if (String(run.headSha || '').toLowerCase() !== expectedSha.toLowerCase()) throw new Error(label + ' run source commit does not match the approved manifest.');
+            console.log(label + ' run and source commit verified.');
+          }
+          NODE
+
       - name: Verify exact APK hashes against approved manifest
         env:
           ANDROID_VERSION: ${{ inputs.version }}
@@ -116,6 +140,16 @@ jobs:
             if (actual !== expected) throw new Error(`SHA-256 mismatch for ${edition}: ${actual}`);
             console.log(`${edition} APK SHA-256 verified: ${actual}`);
           }
+          NODE
+          node <<'NODE'
+          const fs = require('fs');
+          const crypto = require('crypto');
+          const m = JSON.parse(fs.readFileSync('store/release-manifest.json', 'utf8'));
+          const win = (m.releases || []).find(x => x.platform === 'windows');
+          const file = `release/windows/SmartCompany-Windows-${win.version}-x64.exe`;
+          const actual = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+          if (actual !== String(win.sha256).toLowerCase()) throw new Error('Windows EXE SHA-256 does not match the approved manifest: ' + actual);
+          console.log('Windows EXE SHA-256 verified: ' + actual);
           NODE
           cp release/android/SHA256SUMS.txt release/SHA256SUMS-Android.txt
           cp release/windows/SHA256SUMS.txt release/SHA256SUMS-Windows.txt
