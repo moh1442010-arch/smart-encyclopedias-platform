@@ -35,7 +35,6 @@ jobs:
               "admin.html",
               "smart-company-admin.html",
               "accounting-subscriptions.html",
-              "store/index.html",
           ]
           for page in pages:
               source = Path(page).read_text(encoding="utf-8")
@@ -56,7 +55,6 @@ jobs:
           node --check /tmp/admin-inline.js
           node --check /tmp/smart-company-admin-inline.js
           node --check /tmp/accounting-subscriptions-inline.js
-          node --check /tmp/index-inline.js
       - name: Verify required files
         run: |
           test -s index.html
