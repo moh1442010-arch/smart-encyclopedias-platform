@@ -1,4 +1,4 @@
-name: Build Al-Mizan Accountant Android Release 2.3.8 - Signed
+name: Build Al-Mizan Basic Pro Business Android Releases 2.3.8 - Signed
 
 concurrency:
   group: smart-company-android-release
@@ -44,23 +44,23 @@ jobs:
 
       - name: Automated database integrity tests
         working-directory: android-app
-        run: ./gradlew testDebugUnitTest
+        run: ./gradlew testBasicDebugUnitTest testProDebugUnitTest testBusinessDebugUnitTest
 
       - name: Build release only
         working-directory: android-app
-        run: ./gradlew clean assembleRelease bundleRelease
+        run: ./gradlew clean assembleBasicRelease assembleProRelease assembleBusinessRelease bundleBasicRelease bundleProRelease bundleBusinessRelease
 
       # A fresh-install test APK is signed with Android's automatically generated debug key.
       # It is for device testing only, never for commercial distribution.
       - name: Build clean-install test APK
         working-directory: android-app
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleBasicDebug
 
       - name: Upload clean-install test APK
         uses: actions/upload-artifact@v4
         with:
-          name: al-mizan-2.3.8-clean-install-test-debug
-          path: android-app/app/build/outputs/apk/debug/app-debug.apk
+          name: al-mizan-basic-2.3.8-clean-install-test-debug
+          path: android-app/app/build/outputs/apk/basic/debug/app-basic-debug.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -110,56 +110,62 @@ jobs:
             fi
           fi
           apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
-          "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out release/AlMizan-2.3.8-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
-          cp app/build/outputs/bundle/release/app-release.aab release/AlMizan-2.3.8-release.aab
-          jarsigner -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" release/AlMizan-2.3.8-release.aab "$KEY_ALIAS"
-          "$apksigner" verify --verbose release/AlMizan-2.3.8-release.apk
-          jarsigner -verify -verbose release/AlMizan-2.3.8-release.aab
-          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 release/AlMizan-2.3.8-release.apk
-          # Record the release certificate fingerprint so installed-version update issues can be diagnosed.
-          "$apksigner" verify --print-certs release/AlMizan-2.3.8-release.apk > release/SIGNING-CERTIFICATE.txt
-          cert_sha="$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2); exit}' release/SIGNING-CERTIFICATE.txt | tr -d ':[:space:]')"
-          if [ -z "$cert_sha" ]; then
-            echo "::error title=Signing certificate fingerprint missing::Could not extract the signed APK certificate fingerprint."
-            exit 1
-          fi
-          echo "$cert_sha" > release/SIGNING-CERT-SHA256.txt
-          # Public certificate fingerprint verified from the 2.3.4 and 2.3.5 signed release artifacts.
           expected="159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
-          if [ "$cert_sha" != "$expected" ]; then
-            echo "::error title=Signing certificate changed::Expected the verified long-term release certificate. Android updates may fail if the signing key changed."
-            exit 1
-          fi
-          sha256sum release/AlMizan-2.3.8-release.apk release/AlMizan-2.3.8-release.aab > release/SHA256SUMS.txt
+          for edition in basic pro business; do
+            apk_in="app/build/outputs/apk/$edition/release/app-$edition-release-unsigned.apk"
+            aab_in="app/build/outputs/bundle/${edition}Release/app-$edition-release.aab"
+            label="$(printf '%s' "$edition" | sed 's/.*/\u&/')"
+            apk_out="release/AlMizan-$label-2.3.8-release.apk"
+            aab_out="release/AlMizan-$label-2.3.8-release.aab"
+            test -s "$apk_in"
+            test -s "$aab_in"
+            "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out "$apk_out" "$apk_in"
+            cp "$aab_in" "$aab_out"
+            jarsigner -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" "$aab_out" "$KEY_ALIAS"
+            "$apksigner" verify --verbose "$apk_out"
+            jarsigner -verify -verbose "$aab_out"
+            "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$apk_out"
+            "$apksigner" verify --print-certs "$apk_out" > "release/SIGNING-CERTIFICATE-$edition.txt"
+            cert_sha="$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2); exit}' "release/SIGNING-CERTIFICATE-$edition.txt" | tr -d ':[:space:]')"
+            if [ "$cert_sha" != "$expected" ]; then
+              echo "::error title=Signing certificate changed::$edition release certificate did not match the verified long-term signing certificate."
+              exit 1
+            fi
+            echo "$cert_sha" > "release/SIGNING-CERT-SHA256-$edition.txt"
+          done
+          sha256sum release/AlMizan-*-2.3.8-release.apk release/AlMizan-*-2.3.8-release.aab > release/SHA256SUMS.txt
 
-      - name: Final release QA
+      - name: Final release QA for all editions
         working-directory: android-app
         run: |
           set -euo pipefail
           build_tools="$ANDROID_HOME/build-tools/36.0.0"
-          apk="release/AlMizan-2.3.8-release.apk"
-          aab="release/AlMizan-2.3.8-release.aab"
-          test -s "$apk"
-          test -s "$aab"
+          for edition in basic pro business; do
+            label="$(printf '%s' "$edition" | sed 's/.*/\u&/')"
+            apk="release/AlMizan-$label-2.3.8-release.apk"
+            aab="release/AlMizan-$label-2.3.8-release.aab"
+            test -s "$apk"
+            test -s "$aab"
+            badging="$("$build_tools/aapt" dump badging "$apk")"
+            echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany.$edition' versionCode='39' versionName='2.3.8'"
+            echo "$badging" | grep -F "application-label:'المحاسب الميزان'"
+            permissions="$("$build_tools/aapt" dump permissions "$apk")"
+            echo "$permissions" | grep -q "android.permission.INTERNET" || { echo "Required INTERNET permission for server-side commercial licensing is missing in $edition"; exit 1; }
+            "$build_tools/apksigner" verify --verbose "$apk"
+            jarsigner -verify -verbose "$aab"
+          done
           test -s "release/SHA256SUMS.txt"
-          badging="$("$build_tools/aapt" dump badging "$apk")"
-          echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='39' versionName='2.3.8'"
-          echo "$badging" | grep -F "application-label:'المحاسب الميزان'"
-          permissions="$("$build_tools/aapt" dump permissions "$apk")"
-          echo "$permissions" | grep -q "android.permission.INTERNET" || { echo "Required INTERNET permission for server-side commercial licensing is missing"; exit 1; }
-          "$build_tools/apksigner" verify --verbose "$apk"
-          jarsigner -verify -verbose "$aab"
           sha256sum --check release/SHA256SUMS.txt
 
       - name: Upload signed release artifacts only
         uses: actions/upload-artifact@v4
         with:
-          name: al-mizan-android-signed-release-v2.3.8
+          name: al-mizan-android-three-editions-signed-release-v2.3.8
           path: |
-            android-app/release/AlMizan-2.3.8-release.apk
-            android-app/release/AlMizan-2.3.8-release.aab
+            android-app/release/AlMizan-*-2.3.8-release.apk
+            android-app/release/AlMizan-*-2.3.8-release.aab
             android-app/release/SHA256SUMS.txt
-            android-app/release/SIGNING-CERTIFICATE.txt
-            android-app/release/SIGNING-CERT-SHA256.txt
+            android-app/release/SIGNING-CERTIFICATE-*.txt
+            android-app/release/SIGNING-CERT-SHA256-*.txt
           if-no-files-found: error
           retention-days: 90
