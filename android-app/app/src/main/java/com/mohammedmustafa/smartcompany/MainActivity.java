@@ -183,7 +183,7 @@ public class MainActivity extends Activity{
   String[] markets={"السودان — جنيه سوداني (بنكك)","السعودية — ريال سعودي","الدفع بالدولار الأمريكي — اطلب السعر"};
   market.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,markets));
   content.addView(t("بلد/عملة الدفع",15));content.addView(market);
-  Spinner tier=new Spinner(this);String[] tiers={BuildConfig.EDITION.equals("basic")?"Basic":BuildConfig.EDITION.equals("pro")?"Pro":"Business"};
+  Spinner tier=new Spinner(this);String[] tiers={BuildConfig.EDITION.equals("basic")?"Basic":BuildConfig.EDITION.equals("pro")?"Pro":BuildConfig.EDITION.equals("business")?"Business":"Enterprise"};
   tier.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,tiers));
   content.addView(t("الباقة",15));content.addView(tier);
   Spinner period=new Spinner(this);String[] periods={"ترخيص دائم","اشتراك شهري","اشتراك سنوي"};
