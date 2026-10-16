@@ -505,6 +505,87 @@ public class DatabaseIntegrityTest {
         database.insertOrThrow("invoice_items", null, item);
     }
 
+    @Test
+    public void financialRecordInsertUpdateDeleteAreCapturedByAppendOnlyAuditLog() {
+        assertTrue(tableExists("audit_events"));
+        ContentValues transaction = new ContentValues();
+        transaction.put("type", "SALE");
+        transaction.put("party", "عميل تدقيق");
+        transaction.put("total", 125.50);
+        transaction.put("paid", 25.50);
+        transaction.put("remaining", 100.00);
+        transaction.put("created_at", System.currentTimeMillis());
+        long id = database.insertOrThrow("transactions", null, transaction);
+
+        ContentValues update = new ContentValues();
+        update.put("paid", 50.50);
+        update.put("remaining", 75.00);
+        assertEquals(1, database.update("transactions", update, "id=?", new String[]{String.valueOf(id)}));
+        assertEquals(1, database.delete("transactions", "id=?", new String[]{String.valueOf(id)}));
+
+        Cursor events = database.rawQuery(
+                "SELECT operation,entity,entity_id,old_data,new_data FROM audit_events " +
+                "WHERE entity='transactions' AND entity_id=? ORDER BY id",
+                new String[]{String.valueOf(id)});
+        try {
+            assertEquals("INSERT, UPDATE and DELETE must all be recorded", 3, countRows(events));
+            events.moveToFirst();
+            assertEquals("INSERT", events.getString(0));
+            assertEquals("transactions", events.getString(1));
+            assertEquals(String.valueOf(id), events.getString(2));
+            assertTrue(events.getString(4).contains("SALE"));
+            events.moveToNext();
+            assertEquals("UPDATE", events.getString(0));
+            assertTrue(events.getString(3).contains("25.5"));
+            assertTrue(events.getString(4).contains("50.5"));
+            events.moveToNext();
+            assertEquals("DELETE", events.getString(0));
+            assertNotNull(events.getString(3));
+            assertNull(events.getString(4));
+        } finally {
+            events.close();
+        }
+    }
+
+    @Test
+    public void auditLogRejectsUpdateAndDeleteAttempts() {
+        ContentValues transaction = new ContentValues();
+        transaction.put("type", "EXPENSE");
+        transaction.put("total", 10.0);
+        transaction.put("paid", 10.0);
+        transaction.put("remaining", 0.0);
+        long transactionId = database.insertOrThrow("transactions", null, transaction);
+        Cursor c = database.rawQuery(
+                "SELECT id FROM audit_events WHERE entity='transactions' AND entity_id=? LIMIT 1",
+                new String[]{String.valueOf(transactionId)});
+        long auditId;
+        try {
+            assertTrue(c.moveToFirst());
+            auditId = c.getLong(0);
+        } finally {
+            c.close();
+        }
+
+        try {
+            database.execSQL("UPDATE audit_events SET operation='TAMPERED' WHERE id=?", new Object[]{auditId});
+            fail("Audit events must be immutable");
+        } catch (android.database.SQLException expected) {
+            assertTrue(expected.getMessage().contains("append-only"));
+        }
+        try {
+            database.delete("audit_events", "id=?", new String[]{String.valueOf(auditId)});
+            fail("Audit events must not be deletable through normal SQL");
+        } catch (android.database.SQLException expected) {
+            assertTrue(expected.getMessage().contains("append-only"));
+        }
+    }
+
+    private int countRows(Cursor cursor) {
+        int count = 0;
+        while (cursor.moveToNext()) count++;
+        return count;
+    }
+
     private boolean columnExists(String table, String column) {
         Cursor c = database.rawQuery("PRAGMA table_info(" + table + ")", null);
         try {
