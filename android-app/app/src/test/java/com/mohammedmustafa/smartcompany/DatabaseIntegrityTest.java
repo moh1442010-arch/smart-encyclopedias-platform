@@ -36,12 +36,6 @@ public class DatabaseIntegrityTest {
         if (context != null) context.deleteDatabase("smartcompany2.db");
     }
 
-    private MainActivity newActivityForPosting() {
-        MainActivity activity = new MainActivity();
-        activity.attachBaseContext(context);
-        return activity;
-    }
-
     @Test
     public void createsCoreAccountingTablesAndDefaultAccounts() {
         assertTrue(tableExists("transactions"));
@@ -212,7 +206,7 @@ public class DatabaseIntegrityTest {
     @Test
     public void salesPurchasesAndExpensesPostBalancedAccountingEntries() {
         // Exercise the application's real posting routine, not only hand-built test rows.
-        MainActivity activity = newActivityForPosting();
+        MainActivity activity = new MainActivity();
         long saleId;
         long purchaseId;
         long expenseId;
@@ -244,7 +238,7 @@ public class DatabaseIntegrityTest {
 
     @Test
     public void partiallyUnpaidExpenseCreditsCashAndPayableAndBalances() {
-        MainActivity activity = newActivityForPosting();
+        MainActivity activity = new MainActivity();
         database.beginTransaction();
         try {
             activity.postJournal(database, 104L, "EXPENSE", 25.00, 15.00, 10.00, 0.00);
@@ -261,7 +255,7 @@ public class DatabaseIntegrityTest {
 
     @Test
     public void journalPostingRejectsMismatchedAmountsBeforeWritingAnything() {
-        MainActivity activity = newActivityForPosting();
+        MainActivity activity = new MainActivity();
         Cursor before = database.rawQuery("SELECT COUNT(*) FROM journal_entries", null);
         int countBefore;
         try { assertTrue(before.moveToFirst()); countBefore = before.getInt(0); }
@@ -283,7 +277,7 @@ public class DatabaseIntegrityTest {
 
     @Test
     public void journalPostingRejectsNegativeAmounts() {
-        MainActivity activity = newActivityForPosting();
+        MainActivity activity = new MainActivity();
         try {
             activity.postJournal(database, 106L, "EXPENSE", 10.00, 15.00, -5.00, 0.00);
             fail("Negative remaining amount must be rejected");
@@ -294,7 +288,7 @@ public class DatabaseIntegrityTest {
 
     @Test
     public void journalPostingRejectsNonFiniteAmountsBeforeWritingAnything() {
-        MainActivity activity = newActivityForPosting();
+        MainActivity activity = new MainActivity();
         int beforeCount = journalEntryCount();
 
         try {
@@ -324,7 +318,7 @@ public class DatabaseIntegrityTest {
 
     @Test
     public void journalPostingRejectsUnsupportedTransactionTypeBeforeWritingAnything() {
-        MainActivity activity = newActivityForPosting();
+        MainActivity activity = new MainActivity();
         int beforeCount = journalEntryCount();
 
         try {
@@ -340,7 +334,7 @@ public class DatabaseIntegrityTest {
 
     @Test
     public void postingTheSameTransactionTwiceIsRejectedWithoutDuplicateLedgerRows() {
-        MainActivity activity = newActivityForPosting();
+        MainActivity activity = new MainActivity();
         database.beginTransaction();
         try {
             activity.postJournal(database, 111L, "SALE", 100.00, 100.00, 0.00, 60.00);
