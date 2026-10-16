@@ -90,15 +90,24 @@ public final class MoneyMigrationAudit {
                     rejected.add(new RejectedValue(rowId, "Non-finite legacy value"));
                     continue;
                 }
+                BigDecimal decimal;
+                long minor;
                 try {
-                    BigDecimal decimal = BigDecimal.valueOf(value);
-                    long minor = decimal.setScale(scale, RoundingMode.UNNECESSARY)
+                    decimal = BigDecimal.valueOf(value);
+                    minor = decimal.setScale(scale, RoundingMode.UNNECESSARY)
                             .movePointRight(scale).longValueExact();
-                    decimalTotal = decimalTotal.add(decimal);
-                    minorTotal = Math.addExact(minorTotal, minor);
                 } catch (ArithmeticException ex) {
                     rejected.add(new RejectedValue(rowId, "Precision or integer range requires review"));
+                    continue;
                 }
+                try {
+                    minorTotal = Math.addExact(minorTotal, minor);
+                } catch (ArithmeticException ex) {
+                    overflow = true;
+                    rejected.add(new RejectedValue(rowId, "Aggregate minor-unit total overflow requires review"));
+                    continue;
+                }
+                decimalTotal = decimalTotal.add(decimal);
             }
         } finally {
             cursor.close();
