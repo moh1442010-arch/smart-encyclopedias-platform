@@ -29,7 +29,9 @@ public class MainActivity extends Activity{
   long lastSeen=p.getLong("last_seen_wall",0);
   // Fail closed if the wall clock moved backwards materially since the last server response.
   if(lastSeen<=0||now<lastSeen-300000L)return false;
-  return expiry>now&&verified>0&&now>=verified&&now-verified<=OFFLINE_GRACE_MS;
+  String mode=p.getString("mode","");
+  boolean unexpired="licensed".equals(mode)?(expiry==0||expiry>now):("trial".equals(mode)&&expiry>now);
+  return unexpired&&verified>0&&now>=verified&&now-verified<=OFFLINE_GRACE_MS;
  }
  void checkCommercialAccess(){
   new Thread(()->{
