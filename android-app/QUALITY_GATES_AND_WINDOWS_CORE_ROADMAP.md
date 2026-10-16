@@ -71,6 +71,11 @@ A new `Money` value type was added as a foundation only. It is **not yet wired i
 
 Preferred: a Windows desktop client using a shared, platform-neutral accounting domain/API and the same golden test fixtures. Avoid porting Android UI code. Before choosing WinUI/WPF/.NET or a web-desktop shell, benchmark printing, Arabic RTL, offline persistence, update delivery, and signing. Keep local-first behavior consistent; do not introduce a second ledger implementation that can diverge.
 
+
+## Restore regression found during code inspection (2026-10-16)
+
+The existing encrypted-restore validation accepted database schema versions only from 0 through 10, while this candidate opens the live database at schema version 11. That mismatch could reject a valid backup created by the current app. The check now accepts versions 0 through 11 and rejects negative/future versions; a focused regression test was added. This is a source-level fix only: the Android test task and an actual encrypted export/restore cycle still must pass before this gate is considered closed. A future version remains rejected intentionally so the app does not attempt to open an unknown schema.
+
 ## Human review exit criteria
 
 Release only after all P0 issues are closed, CI passes for all editions, signed artifact hashes and certificate identity are recorded, upgrade/restore tests pass, and a human reviewer completes a documented test session on the target Samsung Android 16 device. Windows remains a separate release candidate and must pass its own tests. No honest process can guarantee 100% defect-free software; the goal is measurable coverage, zero known release-blocking defects, and explicit residual-risk acceptance.
