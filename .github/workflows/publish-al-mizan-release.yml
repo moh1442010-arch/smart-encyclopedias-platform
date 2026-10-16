@@ -1,0 +1,155 @@
+name: Publish approved Al-Mizan public release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Android release version (must match the approved manifest)
+        required: true
+        default: "2.3.9"
+        type: string
+      android_run_id:
+        description: Successful signed Android workflow run ID
+        required: true
+        type: string
+      android_artifact_name:
+        description: Exact signed Android artifact name
+        required: true
+        default: "al-mizan-android-four-editions-signed-release-v2.3.9"
+        type: string
+      windows_version:
+        description: Windows version (must match the approved manifest)
+        required: true
+        default: "2.2.7"
+        type: string
+      windows_run_id:
+        description: Successful Windows workflow run ID
+        required: true
+        type: string
+      windows_artifact_name:
+        description: Exact Windows artifact name
+        required: true
+        default: "smart-company-windows-v2.2.7"
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: al-mizan-public-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout release manifest
+        uses: actions/checkout@v4
+
+      - name: Require explicit release approval in manifest
+        env:
+          ANDROID_VERSION: ${{ inputs.version }}
+          WINDOWS_VERSION: ${{ inputs.windows_version }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const m = JSON.parse(fs.readFileSync('store/release-manifest.json', 'utf8'));
+          const fail = (msg) => { console.error('Release blocked: ' + msg); process.exit(1); };
+          if (m.downloads_enabled !== true) fail('downloads_enabled is not true.');
+          if (m.channel !== 'approved-release') fail('channel must be approved-release.');
+          if (m.android_candidate?.version !== process.env.ANDROID_VERSION) fail('Android version does not match the manifest.');
+          if (m.android_candidate?.device_update_test !== 'passed') fail('real-device install/update test is not marked passed.');
+          if (m.android_candidate?.end_to_end_accounting_acceptance !== 'passed') fail('accounting acceptance is not marked passed.');
+          if (m.android_candidate?.public_download_url) fail('manifest already has a public URL; review for an existing release before publishing.');
+          const android = (m.releases || []).filter(x => x.platform === 'android');
+          if (android.length !== 4) fail('manifest must list all four Android editions.');
+          for (const edition of ['Basic','Pro','Business','Enterprise']) {
+            const x = android.find(y => y.edition === edition);
+            if (!x || x.version !== process.env.ANDROID_VERSION || x.status !== 'approved' || !/^[a-f0-9]{64}$/i.test(x.sha256 || '')) fail('Android ' + edition + ' is not approved with a valid SHA-256.');
+          }
+          const win = (m.releases || []).find(x => x.platform === 'windows');
+          if (!win || win.status !== 'verified' || win.version !== process.env.WINDOWS_VERSION || !/^[a-f0-9]{64}$/i.test(win.sha256 || '')) fail('Windows artifact is not verified with the requested version and SHA-256.');
+          console.log('Manifest approval gates passed for Android ' + process.env.ANDROID_VERSION + ' and Windows ' + process.env.WINDOWS_VERSION + '.');
+          NODE
+
+      - name: Download signed Android artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.android_run_id }}
+          ARTIFACT_NAME: ${{ inputs.android_artifact_name }}
+        run: |
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "Invalid Android run ID"; exit 1; }
+          mkdir -p release/android
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$ARTIFACT_NAME" --dir release/android
+          for edition in Basic Pro Business Enterprise; do
+            test -s "release/android/AlMizan-$edition-${{ inputs.version }}-release.apk"
+          done
+
+      - name: Download Windows artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.windows_run_id }}
+          ARTIFACT_NAME: ${{ inputs.windows_artifact_name }}
+        run: |
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "Invalid Windows run ID"; exit 1; }
+          mkdir -p release/windows
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$ARTIFACT_NAME" --dir release/windows
+          test -s release/windows/SmartCompany-Windows-${{ inputs.windows_version }}-x64.exe
+          test -s release/windows/SHA256SUMS.txt
+          (cd release/windows && sha256sum --check SHA256SUMS.txt)
+
+      - name: Verify exact APK hashes against approved manifest
+        env:
+          ANDROID_VERSION: ${{ inputs.version }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const crypto = require('crypto');
+          const { execFileSync } = require('child_process');
+          const m = JSON.parse(fs.readFileSync('store/release-manifest.json', 'utf8'));
+          for (const edition of ['Basic','Pro','Business','Enterprise']) {
+            const file = `release/android/AlMizan-${edition}-${process.env.ANDROID_VERSION}-release.apk`;
+            const actual = crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+            const expected = m.releases.find(x => x.platform === 'android' && x.edition === edition).sha256.toLowerCase();
+            if (actual !== expected) throw new Error(`SHA-256 mismatch for ${edition}: ${actual}`);
+            console.log(`${edition} APK SHA-256 verified: ${actual}`);
+          }
+          NODE
+          cp release/android/SHA256SUMS.txt release/SHA256SUMS-Android.txt
+          cp release/windows/SHA256SUMS.txt release/SHA256SUMS-Windows.txt
+          cp release/android/AlMizan-*-release.apk release/
+          cp release/windows/SmartCompany-Windows-*.exe release/
+          cp release/windows/SmartCompany-Windows-*.zip release/
+          cp release/windows/README.txt release/README-Windows.txt
+          ls -lh release/
+
+      - name: Refuse duplicate release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          TAG="al-mizan-v$VERSION"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; refusing to overwrite public assets."
+            exit 1
+          fi
+
+      - name: Publish public downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          WINDOWS_VERSION: ${{ inputs.windows_version }}
+        run: |
+          gh release create "al-mizan-v$VERSION" \
+            release/AlMizan-*-release.apk \
+            "release/SmartCompany-Windows-$WINDOWS_VERSION-x64.exe" \
+            "release/SmartCompany-Windows-$WINDOWS_VERSION-x64.zip" \
+            release/SHA256SUMS-Android.txt \
+            release/SHA256SUMS-Windows.txt \
+            release/README-Windows.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Al-Mizan Accountant $VERSION — approved release" \
+            --notes "Public release of approved Al-Mizan Android editions and Windows build. Verify the downloaded file against the published SHA-256 checksum. The release is published only after the owner approved the release manifest and real-device/accounting acceptance gates passed."
