@@ -91,6 +91,7 @@ public class MainActivitySecurityValidationTest {
         prefs.edit().clear().commit();
         long now = 1_800_000_000_000L;
         prefs.edit()
+                .putString("mode", "trial")
                 .putLong("expires_at", now + 10L * 24 * 60 * 60 * 1000)
                 .putLong("last_verified_at", now - 60L * 60 * 1000)
                 .putLong("last_seen_wall", now - 60L * 60 * 1000)
@@ -102,6 +103,11 @@ public class MainActivitySecurityValidationTest {
                 activity.offlineLicenseAllowed(prefs, now - 24L * 60 * 60 * 1000));
         assertFalse("An expired trial must not pass the offline check",
                 activity.offlineLicenseAllowed(prefs, now + 11L * 24 * 60 * 60 * 1000));
+        prefs.edit().putString("mode", "licensed").putLong("expires_at", 0L)
+                .putLong("last_verified_at", now - 60L * 60 * 1000)
+                .putLong("last_seen_wall", now - 60L * 60 * 1000).commit();
+        assertTrue("A perpetual license with no expiry may use the bounded offline grace period",
+                activity.offlineLicenseAllowed(prefs, now));
         prefs.edit().clear().commit();
     }
 
