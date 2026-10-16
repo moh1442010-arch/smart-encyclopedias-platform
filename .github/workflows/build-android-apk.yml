@@ -140,7 +140,7 @@ jobs:
         run: |
           set -euo pipefail
           build_tools="$ANDROID_HOME/build-tools/36.0.0"
-          for edition in basic pro business; do
+          for edition in basic pro business enterprise; do
             label="$(printf '%s' "$edition" | sed 's/.*/\u&/')"
             apk="release/AlMizan-$label-2.3.8-release.apk"
             aab="release/AlMizan-$label-2.3.8-release.aab"
