@@ -14,6 +14,11 @@ function makeDb() {
   const trials = new Map();
   const licenses = new Map();
   const db = {
+    async batch(statements) {
+      const results = [];
+      for (const statement of statements) results.push(await statement.run());
+      return results;
+    },
     prepare(sql) {
       let values = [];
       const stmt = {
@@ -30,9 +35,21 @@ function makeDb() {
             licenses.set(id, { id, license_code_hash: codeHash, plan, term_type: termType, customer_name: customerName, customer_email: customerEmail, order_id: orderId, status: "active", device_hash: null, starts_at: new TestDate().toISOString(), expires_at: expiresAt, approved_by: approvedBy });
             return { meta: { changes: 1 } };
           }
+          if (sql.includes("UPDATE app_licenses SET device_hash = NULL")) {
+            const [id, hash] = values; const row = licenses.get(id);
+            if (row && row.device_hash === hash) {
+              row.device_hash = null;
+              if (row.status === "active") row.status = "superseded";
+              return { meta: { changes: 1 } };
+            }
+            return { meta: { changes: 0 } };
+          }
           if (sql.includes("UPDATE app_licenses SET device_hash")) {
             const [hash, id] = values; const row = licenses.get(id);
-            if (row && row.status === "active" && row.device_hash === null) { row.device_hash = hash; return { meta: { changes: 1 } }; }
+            if (row && row.status === "active" && row.device_hash === null) {
+              if ([...licenses.values()].some(x => x.id !== id && x.device_hash === hash)) throw new Error("device already bound");
+              row.device_hash = hash; return { meta: { changes: 1 } };
+            }
             return { meta: { changes: 0 } };
           }
           if (sql.includes("UPDATE app_licenses SET status")) {
@@ -146,5 +163,47 @@ test("expired monthly license stays locked instead of receiving a new trial", as
     assert.equal(status.mode, "expired");
     assert.equal(status.licenseStatus, "active");
     assert.equal(status.licenseId, "TEST-MONTH-01");
+  } finally { globalThis.Date = originalDate; }
+});
+
+test("activating an upgraded edition on the same device supersedes the old license safely", async () => {
+  const originalDate = globalThis.Date;
+  globalThis.Date = TestDate;
+  clock = RealDate.parse("2026-10-16T12:00:00.000Z");
+  try {
+    const { db, licenses } = makeDb();
+    const env = { DB: db, LICENSE_ADMIN_KEY: "test-admin-secret" };
+    const firstCreated = await call(env, "/api/app-license/admin/create", {
+      method: "POST", device: "", admin: "test-admin-secret",
+      body: { approved: true, plan: "basic", termType: "perpetual", customerName: "Upgrade Test", licenseId: "TEST-BASIC-01" }
+    });
+    const first = await firstCreated.json();
+    assert.equal(firstCreated.status, 201);
+    const firstActivation = await call(env, "/api/app-license/activate", {
+      method: "POST", device: "upgrade-device-0001", body: { activationCode: first.activationCode }
+    });
+    assert.equal(firstActivation.status, 200);
+
+    const nextCreated = await call(env, "/api/app-license/admin/create", {
+      method: "POST", device: "", admin: "test-admin-secret",
+      body: { approved: true, plan: "pro", termType: "annual", customerName: "Upgrade Test", licenseId: "TEST-PRO-0001" }
+    });
+    const next = await nextCreated.json();
+    assert.equal(nextCreated.status, 201);
+    const nextActivation = await call(env, "/api/app-license/activate", {
+      method: "POST", device: "upgrade-device-0001", body: { activationCode: next.activationCode }
+    });
+    assert.equal(nextActivation.status, 200);
+    const status = await (await call(env, "/api/app-license/status", { device: "upgrade-device-0001" })).json();
+    assert.equal(status.mode, "licensed");
+    assert.equal(status.plan, "pro");
+    assert.equal(licenses.get("TEST-BASIC-01").status, "superseded");
+    assert.equal(licenses.get("TEST-BASIC-01").device_hash, null);
+
+    const reuseOldCode = await call(env, "/api/app-license/activate", {
+      method: "POST", device: "different-device-0001", body: { activationCode: first.activationCode }
+    });
+    assert.equal(reuseOldCode.status, 403);
+    assert.equal((await reuseOldCode.json()).error, "license_invalid_or_expired");
   } finally { globalThis.Date = originalDate; }
 });
