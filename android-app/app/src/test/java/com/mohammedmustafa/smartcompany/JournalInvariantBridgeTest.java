@@ -57,4 +57,47 @@ public class JournalInvariantBridgeTest {
             assertTrue(expected.getMessage().contains("non-negative"));
         }
     }
+
+    @Test public void validatesCreditPurchaseAndSupplierPaymentJournals() {
+        AccountingCore.JournalEntry purchase = JournalInvariantBridge.validate("PURCHASE-1", Arrays.asList(
+                new JournalInvariantBridge.LegacyLine("1200", 80.0, 0),
+                new JournalInvariantBridge.LegacyLine("2100", 0, 80.0)), 2);
+        assertEquals(8000L, purchase.totalDebitMinor());
+        assertEquals(purchase.totalDebitMinor(), purchase.totalCreditMinor());
+
+        AccountingCore.JournalEntry supplierPayment = JournalInvariantBridge.validate("SUPPLIER-PAY-1", Arrays.asList(
+                new JournalInvariantBridge.LegacyLine("2100", 30.0, 0),
+                new JournalInvariantBridge.LegacyLine("1010", 0, 30.0)), 2);
+        assertEquals(3000L, supplierPayment.totalDebitMinor());
+        assertEquals(supplierPayment.totalDebitMinor(), supplierPayment.totalCreditMinor());
+    }
+
+    @Test public void validatesCustomerReceiptAndSalesReturnJournals() {
+        AccountingCore.JournalEntry receipt = JournalInvariantBridge.validate("RECEIPT-1", Arrays.asList(
+                new JournalInvariantBridge.LegacyLine("1010", 25.0, 0),
+                new JournalInvariantBridge.LegacyLine("1100", 0, 25.0)), 2);
+        assertEquals(2500L, receipt.totalDebitMinor());
+        assertEquals(receipt.totalDebitMinor(), receipt.totalCreditMinor());
+
+        AccountingCore.JournalEntry returnEntry = JournalInvariantBridge.validate("RETURN-1", Arrays.asList(
+                new JournalInvariantBridge.LegacyLine("4100", 10.0, 0),
+                new JournalInvariantBridge.LegacyLine("1010", 0, 10.0)), 2);
+        assertEquals(1000L, returnEntry.totalDebitMinor());
+        assertEquals(returnEntry.totalDebitMinor(), returnEntry.totalCreditMinor());
+    }
+
+    @Test public void acceptsTinyBinaryFloatingPointNoiseButRejectsCurrencyRounding() {
+        AccountingCore.JournalEntry entry = JournalInvariantBridge.validate("FLOAT-NOISE", Arrays.asList(
+                new JournalInvariantBridge.LegacyLine("1010", 0.30000000000000004, 0),
+                new JournalInvariantBridge.LegacyLine("4000", 0, 0.30)), 2);
+        assertEquals(30L, entry.totalDebitMinor());
+        try {
+            JournalInvariantBridge.validate("ROUND-1", Arrays.asList(
+                    new JournalInvariantBridge.LegacyLine("1010", 1.005, 0),
+                    new JournalInvariantBridge.LegacyLine("4000", 0, 1.01)), 2);
+            fail("Currency rounding must be explicit at the transaction boundary");
+        } catch (IllegalArgumentException expected) {
+            assertTrue(expected.getMessage().contains("precision"));
+        }
+    }
 }
