@@ -683,7 +683,7 @@ public class MainActivity extends Activity{
     boolean exists=false;
     try(Cursor c=d.rawQuery("PRAGMA table_info("+table+")",null)){
      int nameIndex=c.getColumnIndex("name");
-     while(c.moveToNext())if(legacy.equals(c.getString(nameIndex)+"__never")){}else if(minor.equals(c.getString(nameIndex)))exists=true;
+     while(c.moveToNext())if(minor.equals(c.getString(nameIndex)))exists=true;
     }
     if(!exists)d.execSQL("ALTER TABLE "+table+" ADD COLUMN "+minor+" INTEGER NOT NULL DEFAULT 0");
     d.execSQL("UPDATE "+table+" SET "+minor+"=CAST(ROUND(COALESCE("+legacy+",0)*100.0) AS INTEGER) WHERE "+minor+"!=CAST(ROUND(COALESCE("+legacy+",0)*100.0) AS INTEGER)");
