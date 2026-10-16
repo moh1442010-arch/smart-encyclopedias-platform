@@ -52,6 +52,14 @@ public class MoneyMigrationAuditTest {
         assertEquals(1, result.rejectedValues.size());
     }
 
+    @Test public void auditDetectsAggregateMinorUnitOverflow() {
+        database.execSQL("INSERT INTO legacy_amounts(amount) VALUES (50000000000000000.0), (50000000000000000.0)");
+        MoneyMigrationAudit.Result result =
+                MoneyMigrationAudit.auditColumn(database, "legacy_amounts", "amount", 2);
+        assertTrue(result.aggregateOverflow);
+        assertFalse(result.isSafeForColumnMigration());
+    }
+
     @Test public void auditDoesNotAllowSqlIdentifierInjection() {
         try {
             MoneyMigrationAudit.auditColumn(database, "legacy_amounts; DROP TABLE legacy_amounts", "amount", 2);
