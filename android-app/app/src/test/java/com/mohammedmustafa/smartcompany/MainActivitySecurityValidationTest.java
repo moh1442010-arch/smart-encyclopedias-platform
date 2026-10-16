@@ -72,6 +72,21 @@ public class MainActivitySecurityValidationTest {
     }
 
     @Test
+    public void offlineTrialAndTimeLimitedLicensesMustStillBeUnexpired() {
+        long now = System.currentTimeMillis();
+        assertTrue(activity.offlineLicenseAllowed("trial", "", "", now + 60_000L,
+                now - 60_000L, now));
+        assertFalse(activity.offlineLicenseAllowed("trial", "", "", now - 1L,
+                now - 60_000L, now));
+        assertTrue(activity.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
+                "monthly", now + 60_000L, now - 60_000L, now));
+        assertFalse(activity.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
+                "monthly", now - 1L, now - 60_000L, now));
+        assertFalse(activity.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
+                "monthly", now + 60_000L, 0L, now));
+    }
+
+    @Test
     public void pinIsSaltedAndVerifiedWithoutStoringPlaintext() {
         SharedPreferences prefs = activity.getSharedPreferences("test-security", Context.MODE_PRIVATE);
         prefs.edit().clear().commit();
