@@ -2,14 +2,73 @@
   "product": "المحاسب الميزان",
   "channel": "prelaunch",
   "last_reviewed": "2026-10-16",
-  "storefront_status": "draft_not_yet_published",
+  "storefront_status": "prelaunch_merged_deployment_unverified",
   "downloads_enabled": false,
+  "android_candidate": {
+    "version": "2.3.9",
+    "version_code": 40,
+    "source_commit": "b4eb27e19cf2ae7d1a42723b9f08a907999d8ed5",
+    "workflow_run": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/38859328834",
+    "artifact_id": 12028626694,
+    "artifact_name": "al-mizan-android-four-editions-signed-release-v2.3.9",
+    "artifact_zip_sha256": "9f107e3e13b313c84d291d27c6c63f42d8ec051a3a725c492f9634c4c186efaf",
+    "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
+    "ci_status": "passed",
+    "device_update_test": "not_verified",
+    "end_to_end_accounting_acceptance": "not_verified",
+    "public_download_url": null
+  },
   "releases": [
-    {"platform":"android","edition":"Basic","version":null,"artifact_url":null,"sha256":null,"signing_certificate_sha256":null,"source_commit":null,"status":"pending_signed_build_and_device_qa"},
-    {"platform":"android","edition":"Pro","version":null,"artifact_url":null,"sha256":null,"signing_certificate_sha256":null,"source_commit":null,"status":"pending_signed_build_and_device_qa"},
-    {"platform":"android","edition":"Business","version":null,"artifact_url":null,"sha256":null,"signing_certificate_sha256":null,"source_commit":null,"status":"pending_signed_build_and_device_qa"},
-    {"platform":"android","edition":"Enterprise","version":null,"artifact_url":null,"sha256":null,"signing_certificate_sha256":null,"source_commit":null,"status":"pending_signed_build_and_device_qa"},
-    {"platform":"windows","edition":"core","version":null,"artifact_url":null,"sha256":null,"signing_certificate_sha256":null,"source_commit":null,"status":"not_built_or_verified"}
+    {
+      "platform": "android",
+      "edition": "Basic",
+      "version": "2.3.9",
+      "artifact_url": null,
+      "sha256": "8f6c6769059dc6baa4ae28f1e68113ab5b2e4bfb49854fb9cee55aa7b5acf810",
+      "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
+      "source_commit": "b4eb27e19cf2ae7d1a42723b9f08a907999d8ed5",
+      "status": "signed_ci_candidate_pending_device_qa"
+    },
+    {
+      "platform": "android",
+      "edition": "Pro",
+      "version": "2.3.9",
+      "artifact_url": null,
+      "sha256": "0b7602ebc33126fa7942dbf9ea26228a084a53c0b90632edc1dad273568eb627",
+      "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
+      "source_commit": "b4eb27e19cf2ae7d1a42723b9f08a907999d8ed5",
+      "status": "signed_ci_candidate_pending_device_qa"
+    },
+    {
+      "platform": "android",
+      "edition": "Business",
+      "version": "2.3.9",
+      "artifact_url": null,
+      "sha256": "01cf2c904887ae523df29df7456cc1cee21d3ef12271d225c66440344562666e",
+      "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
+      "source_commit": "b4eb27e19cf2ae7d1a42723b9f08a907999d8ed5",
+      "status": "signed_ci_candidate_pending_device_qa"
+    },
+    {
+      "platform": "android",
+      "edition": "Enterprise",
+      "version": "2.3.9",
+      "artifact_url": null,
+      "sha256": "277173cd30a1242f0ee39143f42100fc85e002fe70d06fc613290829b55c2658",
+      "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
+      "source_commit": "b4eb27e19cf2ae7d1a42723b9f08a907999d8ed5",
+      "status": "signed_ci_candidate_pending_device_qa"
+    },
+    {
+      "platform": "windows",
+      "edition": "core",
+      "version": null,
+      "artifact_url": null,
+      "sha256": null,
+      "signing_certificate_sha256": null,
+      "source_commit": null,
+      "status": "not_built_or_verified"
+    }
   ],
-  "policy": "Only publish verified artifacts; never guess URLs, hashes, version numbers, or signing fingerprints."
+  "policy": "Only publish verified artifacts; never guess URLs, hashes, version numbers, or signing fingerprints. Do not enable public downloads until device update/install and accounting acceptance pass."
 }
