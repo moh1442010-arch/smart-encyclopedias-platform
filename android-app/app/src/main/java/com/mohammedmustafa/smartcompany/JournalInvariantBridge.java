@@ -41,8 +41,8 @@ public final class JournalInvariantBridge {
     private static long toMinorUnits(double value, int scale) {
         BigDecimal raw = BigDecimal.valueOf(value);
         BigDecimal rounded = raw.setScale(scale, RoundingMode.HALF_UP);
-        BigDecimal halfUnit = BigDecimal.ONE.movePointLeft(scale).divide(BigDecimal.valueOf(2));
-        if (raw.subtract(rounded).abs().compareTo(halfUnit) > 0) {
+        BigDecimal representationTolerance = new BigDecimal("0.000000001");
+        if (raw.subtract(rounded).abs().compareTo(representationTolerance) > 0) {
             throw new IllegalArgumentException("Journal amount exceeds configured currency precision");
         }
         return rounded.movePointRight(scale).longValueExact();
