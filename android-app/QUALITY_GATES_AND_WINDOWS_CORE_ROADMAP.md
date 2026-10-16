@@ -1,0 +1,76 @@
+# Al-Mizan release quality gates and shared-core roadmap
+
+Date: 2026-10-16  
+Status: engineering work plan; **not a release approval**.
+
+## Product decision
+
+Use the Android 2.3.9 development line as the candidate baseline, preserve it, and work on a separate branch. The shared core is a long-term architecture decision, not permission to copy incomplete behavior into every future product. Android remains the first delivery target; Windows must share accounting rules and acceptance tests, not a separately reimplemented ledger.
+
+## Evidence currently available
+
+- The Android app uses a monolithic `MainActivity.java` and SQLiteOpenHelper database schema version 11.
+- Monetary values and quantities are stored in SQLite `REAL` and are frequently read as Java `double`. This is a material precision risk and requires a migration plan before release.
+- The existing test suite includes database integrity and security-validation tests, but its existence does not establish end-to-end coverage for all business flows.
+- The release workflow reports successful builds, automated test tasks, and signing checks on the recorded run. A successful CI job is not proof of correct accounting, offline behavior, restore integrity, or real-device usability.
+- Existing commercial-readiness notes identify unresolved concerns around encrypted storage, backup protection, licensing, and device verification.
+
+## Competitor-derived opportunity map
+
+Sources reviewed:
+- Zoho Books mobile capabilities: https://www.zoho.com/us/books/accounting-mobile-apps/
+- Zoho Books Play listing and reports/approvals: https://play.google.com/store/apps/details?id=com.zoho.books
+- Odoo accounting scope (double-entry, bank reconciliation, inventory valuation, multi-company): https://www.odoo.com/documentation/18.0/applications/finance/accounting.html
+- Odoo offline mode: https://www.odoo.com/documentation/20.0/sv/applications/general/offline_mode.html
+- QuickBooks mobile/web split (mobile capture vs advanced web tools): https://quickbooks.intuit.com/learn-support/en-us/help-article/compare-products/get-done-quickbooks-mobile-app-web/L9YN5gwQw_US_en_US
+
+Do not label a competitor weakness as a verified defect without reproducing it. These are product positioning opportunities:
+1. **Offline-first reliability:** maintain local entry, posting, reports, and backup without connectivity; explicitly distinguish local operations from cloud licensing/sync.
+2. **Transparent auditability:** visible immutable posting history, reversals rather than destructive edits, period closing, and clear explanation of each balance.
+3. **Low-friction regional UX:** Arabic-first RTL, optional English, readable screens on modest Android devices, clear local currency/date formats, and robust receipt sharing/printing.
+4. **Trust and portability:** encrypted backups, tested restore, human-readable exports, and no vendor lock-in for a company's own records.
+5. **Desktop parity:** Windows interface for longer workflows and reports, backed by the same accounting rules and shared acceptance scenarios.
+6. **Predictable commercial licensing:** clear edition comparison, grace-period behavior, recovery after device replacement, and no loss of access to export company data when subscription status changes.
+
+Zoho advertises receivables, payables, banking, multi-currency, audit trails, scanning, and reports; Odoo documents double-entry accounting, bank reconciliation, inventory valuation and multi-company operation. Odoo's offline documentation distinguishes previously available local records from fully online capabilities and notes limitations. QuickBooks describes a mobile/web split. These sources demonstrate market expectations, not that Al-Mizan already matches them.
+
+## Mandatory accounting acceptance matrix
+
+Use a deterministic fixture and verify, after every scenario: source document, stock movement, customer/supplier balance, cash/bank, journal lines, general ledger, trial balance, profit/loss, and balance sheet.
+
+1. Cash sale; credit sale; partial collection; overpayment and unapplied receipt.
+2. Cash/credit purchase; partial payment; supplier advance.
+3. Discount, tax, rounding boundary, fractional quantities and unit conversion.
+4. Partial return, cumulative return limit, refund, return of damaged/non-restockable goods.
+5. Cancellation/reversal after posting; preserve original audit trail.
+6. Expense, payroll accrual/payment, salary advance and deduction.
+7. Incoming/outgoing cheque lifecycle: pending, cleared, returned, cancelled; bank reconciliation.
+8. Stock adjustment, negative-stock policy, valuation and cost-of-goods-sold.
+9. Opening balances, date boundaries, closed accounting period, duplicate submissions.
+10. Backup, restore, upgrade from prior schema, corrupted/incomplete backup rejection.
+
+For every journal entry, assert debits equal credits exactly at the configured currency scale. Verify invariants independently from displayed totals; do not use the same calculation routine for both expected and actual results.
+
+## Money precision migration gate
+
+A new `Money` value type was added as a foundation only. It is **not yet wired into the existing database or posting code**. Do not claim precision is fixed until:
+- Company currency and scale are explicit.
+- All monetary storage, calculations, input validation, posting and reports use integer minor units or an equivalently exact decimal model.
+- Existing REAL values are migrated transactionally with before/after balance reconciliation and a recoverable backup.
+- Quantities and unit prices use documented decimal precision separately from currency rounding.
+- All accounting scenarios pass at boundaries and with negative/large values.
+
+## Data protection and offline gate
+
+- Evaluate SQLCipher or a documented platform-keystore-based encryption design; SQLite by itself is not encrypted at rest.
+- Encrypt backup exports, verify integrity before restore, restore into a staging database first, and keep the current database untouched if validation fails.
+- Exercise airplane mode during launch, entry, posting, reports, export, and license checks. Queue only operations designed for sync; prevent duplicate posting on reconnect.
+- Define license grace period and clock/device replacement behavior. Do not present a client-only timer as tamper-proof.
+
+## Windows strategy
+
+Preferred: a Windows desktop client using a shared, platform-neutral accounting domain/API and the same golden test fixtures. Avoid porting Android UI code. Before choosing WinUI/WPF/.NET or a web-desktop shell, benchmark printing, Arabic RTL, offline persistence, update delivery, and signing. Keep local-first behavior consistent; do not introduce a second ledger implementation that can diverge.
+
+## Human review exit criteria
+
+Release only after all P0 issues are closed, CI passes for all editions, signed artifact hashes and certificate identity are recorded, upgrade/restore tests pass, and a human reviewer completes a documented test session on the target Samsung Android 16 device. Windows remains a separate release candidate and must pass its own tests. No honest process can guarantee 100% defect-free software; the goal is measurable coverage, zero known release-blocking defects, and explicit residual-risk acceptance.
