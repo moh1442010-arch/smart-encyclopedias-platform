@@ -86,6 +86,18 @@ public class MainActivitySecurityValidationTest {
     }
 
     @Test
+    public void restoreGateAcceptsCurrentSchemaAndRejectsFutureSchema() {
+        assertTrue("Backups from the current schema must pass the schema-version gate",
+                activity.supportedBackupSchemaVersion(MainActivity.DB.SCHEMA_VERSION));
+        assertTrue("Previously supported schema versions remain eligible for validation",
+                activity.supportedBackupSchemaVersion(8));
+        assertFalse("A backup from a future unknown schema must be rejected",
+                activity.supportedBackupSchemaVersion(MainActivity.DB.SCHEMA_VERSION + 1));
+        assertFalse("Negative schema versions must be rejected",
+                activity.supportedBackupSchemaVersion(-1));
+    }
+
+    @Test
     public void offlineLicenseGraceRejectsClockRollbackAndExpiredTrial() {
         SharedPreferences prefs = context.getSharedPreferences("test-offline-license-clock", Context.MODE_PRIVATE);
         prefs.edit().clear().commit();
