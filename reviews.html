@@ -120,7 +120,7 @@
         </div>
         <div class="form-actions">
           <button class="btn btn-gold" type="submit">📨 إرسال الرأي للمراجعة</button>
-          <a class="btn" href="index.html">العودة للصفحة الرئيسية</a>
+          <a class="btn" href="complaints.html">إرسال بلاغ أو شكوى</a>
         </div>
         <p id="review-status" class="status" role="status" aria-live="polite"></p>
         <p class="policy">تنبيه: لا تكتب كلمة مرور، رقم حساب، بيانات بطاقة، أو أي معلومات حساسة. إرسال الرأي لا يعني نشره تلقائيًا.</p>
@@ -139,7 +139,7 @@
       const rating=document.getElementById('review-rating').value;
       const review=document.getElementById('review-text').value.trim();
       if(!name||!rating||!review){status.textContent='يرجى إكمال الاسم والتقييم والرأي.';return;}
-      const text='طلب نشر رأي في الموسوعة\n\nالاسم: '+name+'\nالصفة: '+role+'\nالتقييم: '+rating+'\n\nالرأي:\n'+review+'\n\nأوافق على مراجعة الرأي قبل نشره.';
+      const text='طلب نشر رأي من صفحة العملاء والزوار\n\nالمنتج: '+product+'\nالاسم: '+name+'\nالصفة: '+role+'\nالتقييم: '+rating+'\n\nالرأي:\n'+review+'\n\nأوافق على مراجعة الرأي قبل نشره.';
       const url='https://wa.me/249121851285?text='+encodeURIComponent(text);
       status.innerHTML='تم تجهيز رأيك. افتح واتساب لإرساله للمراجعة ثم نتابع اعتماده للنشر.';
       window.open(url,'_blank','noopener');
