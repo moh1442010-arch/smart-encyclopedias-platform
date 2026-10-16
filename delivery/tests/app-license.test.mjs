@@ -190,8 +190,15 @@ test("activating an upgraded edition on the same device supersedes the old licen
     });
     const next = await nextCreated.json();
     assert.equal(nextCreated.status, 201);
+    const mismatch = await call(env, "/api/app-license/activate", {
+      method: "POST", device: "upgrade-device-0001", body: { activationCode: next.activationCode, edition: "basic" }
+    });
+    assert.equal(mismatch.status, 409);
+    assert.equal((await mismatch.json()).error, "license_plan_mismatch");
+    assert.equal(licenses.get("TEST-BASIC-01").status, "active");
+    assert.notEqual(licenses.get("TEST-BASIC-01").device_hash, null);
     const nextActivation = await call(env, "/api/app-license/activate", {
-      method: "POST", device: "upgrade-device-0001", body: { activationCode: next.activationCode }
+      method: "POST", device: "upgrade-device-0001", body: { activationCode: next.activationCode, edition: "pro" }
     });
     assert.equal(nextActivation.status, 200);
     const status = await (await call(env, "/api/app-license/status", { device: "upgrade-device-0001" })).json();
