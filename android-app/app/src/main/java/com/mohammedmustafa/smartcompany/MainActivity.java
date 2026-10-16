@@ -721,8 +721,11 @@ public class MainActivity extends Activity{
    newData.append("COALESCE(quote(NEW.").append(col).append("),'NULL')");
   }
   String oldId="CAST(OLD."+id+" AS TEXT)",newId="CAST(NEW."+id+" AS TEXT)";
+  StringBuilder changed=new StringBuilder();
+  for(String col:cols){if(changed.length()>0)changed.append(" OR ");changed.append("OLD.").append(col).append(" IS NOT NEW.").append(col);}
   d.execSQL("CREATE TRIGGER IF NOT EXISTS "+prefix+"insert AFTER INSERT ON "+table+" BEGIN INSERT INTO audit_events(entity,entity_id,operation,old_data,new_data,changed_at) VALUES('"+table+"',"+newId+",'INSERT',NULL,"+newData+",CAST(strftime('%s','now') AS INTEGER)*1000); END");
-  d.execSQL("CREATE TRIGGER IF NOT EXISTS "+prefix+"update AFTER UPDATE ON "+table+" BEGIN INSERT INTO audit_events(entity,entity_id,operation,old_data,new_data,changed_at) VALUES('"+table+"',"+newId+",'UPDATE',"+oldData+","+newData+",CAST(strftime('%s','now') AS INTEGER)*1000); END");
+  d.execSQL("DROP TRIGGER IF EXISTS "+prefix+"update");
+  d.execSQL("CREATE TRIGGER "+prefix+"update AFTER UPDATE ON "+table+" WHEN "+changed+" BEGIN INSERT INTO audit_events(entity,entity_id,operation,old_data,new_data,changed_at) VALUES('"+table+"',"+newId+",'UPDATE',"+oldData+","+newData+",CAST(strftime('%s','now') AS INTEGER)*1000); END");
   d.execSQL("CREATE TRIGGER IF NOT EXISTS "+prefix+"delete AFTER DELETE ON "+table+" BEGIN INSERT INTO audit_events(entity,entity_id,operation,old_data,new_data,changed_at) VALUES('"+table+"',"+oldId+",'DELETE',"+oldData+",NULL,CAST(strftime('%s','now') AS INTEGER)*1000); END");
  }
  d.execSQL("CREATE TRIGGER IF NOT EXISTS audit_events_no_update BEFORE UPDATE ON audit_events BEGIN SELECT RAISE(ABORT,'audit log is append-only'); END");
