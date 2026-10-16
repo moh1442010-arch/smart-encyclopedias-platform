@@ -17,7 +17,7 @@ main{padding:18px 14px 42px}.grid{display:grid;grid-template-columns:repeat(auto
 <section class="card">
 <h2>اتصال إداري آمن</h2>
 <div class="danger"><b>مهم:</b> هذه الصفحة واجهة إدارية. الحماية الفعلية تُفرض على الخادم. لا تضع مفتاح المشرف في ملفات الموقع أو المستودع. أدخل المفتاح عند الحاجة فقط، ولا تشاركه مع العملاء.</div>
-<label for="apiBase">عنوان خدمة الترخيص (Worker URL)</label><input id="apiBase" type="url" placeholder="https://اسم-الخدمة.workers.dev" autocomplete="url">
+<label for="apiBase">عنوان خدمة الترخيص (Worker URL)</label><input id="apiBase" type="url" value="https://smart-encyclopedias-delivery.moh1442010.workers.dev" placeholder="https://اسم-الخدمة.moh1442010.workers.dev" autocomplete="url">
 <label for="adminKey">مفتاح المشرف</label><input id="adminKey" type="password" autocomplete="off" placeholder="يُستخدم في الذاكرة لهذه الجلسة فقط">
 <div class="row"><button id="connect" class="green">الاتصال وجلب التراخيص</button><button id="forgetKey" type="button">مسح المفتاح من الصفحة</button></div>
 <div id="connectionStatus" class="status" role="status" aria-live="polite">لم يتم الاتصال بعد.</div>
