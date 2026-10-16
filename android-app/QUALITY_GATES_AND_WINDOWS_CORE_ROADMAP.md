@@ -98,3 +98,18 @@ The persisted-journal check called by the current transaction posting flows now 
 Focused bridge tests cover a representative sale journal, imbalance, excess precision, and invalid sides/negative values. The migration preflight now rejects NULL monetary values for explicit review instead of silently skipping them.
 
 **Important boundary:** this integration validates journal rows after they are inserted but before the surrounding SQLite transaction is marked successful in the posting flows that call `assertBalanced`. It does not yet replace all REAL/double arithmetic or normalize every transaction input, quantity, cost-of-goods-sold calculation, payment, bank movement, payroll, or report. Some legacy flows call their own validation or may not call this method; these paths still require inventory and tests. Because the posting layer now rejects genuine sub-minor-unit values instead of silently rounding them, test fractional quantities, unit costs, discounts, tax, and all currencies before any release. CI execution and actual device transactions have not yet been verified in this work session.
+
+
+## Subscription and download-store page preparation (2026-10-16)
+
+The in-app subscription page now lets a customer choose Basic, Pro, Business, or Enterprise, select the market/currency and perpetual/monthly/annual term, see the selected provisional price, enter company/contact details, and send a purchase request to support. The page also contains explicit Android APK and Windows download slots for each edition. These slots intentionally show status text instead of fake URLs until a storefront exists and the corresponding signed release artifact has passed approval.
+
+Current displayed Sudan/Saudi prices are **provisional draft prices**, not an approved public price list. Confirm pricing, taxes/refunds, support/update entitlement, and the exact distinction between perpetual licensing and recurring subscription before publishing. A request or transfer message is not proof of payment or automatic activation.
+
+### Storefront deployment target (proposal, not yet deployed)
+- A dedicated branded HTTPS storefront with separate product pages for Android and Windows and clear edition/term selection.
+- Keep release binaries in controlled object storage or a release-artifact service; the website must publish only approved signed files with SHA-256 hashes and version notes.
+- Integrate checkout/payment only after selecting a provider that can legally and practically receive payments from target countries; never hardcode an assumed payment success.
+- Connect order IDs to the existing licensing API only after server-side payment verification and idempotent license issuance are implemented and tested.
+- Add customer download entitlement, version history, privacy/terms/refund policy, support contact, and backup/data portability notes.
+- Until the storefront and artifacts are ready, do not expose download links or describe the page as a functioning online shop.
