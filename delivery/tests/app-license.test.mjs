@@ -99,6 +99,25 @@ test("missing device ID and invalid activation codes are rejected", async () => 
   assert.equal((await invalid.json()).error, "invalid_activation_code");
 });
 
+test("commercial app license creation requires admin authorization and explicit payment approval", async () => {
+  const { db, licenses } = makeDb();
+  const env = { DB: db, LICENSE_ADMIN_KEY: "test-admin-secret" };
+  const unauthenticated = await call(env, "/api/app-license/admin/create", {
+    method: "POST", device: "",
+    body: { approved: true, plan: "pro", termType: "annual", customerName: "Test Customer", licenseId: "TEST-GATE-01" }
+  });
+  assert.equal(unauthenticated.status, 403);
+  assert.equal((await unauthenticated.json()).error, "payment_approval_required");
+
+  const unapproved = await call(env, "/api/app-license/admin/create", {
+    method: "POST", device: "", admin: "test-admin-secret",
+    body: { approved: false, plan: "pro", termType: "annual", customerName: "Test Customer", licenseId: "TEST-GATE-02" }
+  });
+  assert.equal(unapproved.status, 400);
+  assert.equal((await unapproved.json()).error, "explicit_payment_approval_required");
+  assert.equal(licenses.size, 0);
+});
+
 test("paid activation is device-bound and a revoked license is not granted", async () => {
   const originalDate = globalThis.Date;
   globalThis.Date = TestDate;
