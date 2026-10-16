@@ -80,9 +80,12 @@ sealed class MainForm : Form
         LabelText("Basic: دائم 399 | شهري 29 | سنوي 290 ر.س");
         LabelText("Pro: دائم 799 | شهري 59 | سنوي 590 ر.س");
         LabelText("Business: دائم 1,499 | شهري 119 | سنوي 1,190 ر.س");
-        LabelText("USD — Basic: دائم $249 | شهري $9 | سنوي $90", 32, 12);\n        LabelText("USD — Pro: دائم $499 | شهري $19 | سنوي $190", 32, 12);\n        LabelText("USD — Business: دائم $999 | شهري $39 | سنوي $390", 32, 12);\n        LabelText("Enterprise: عرض سعر مخصص", 32, 11);
+        LabelText("USD — Basic: دائم $249 | شهري $9 | سنوي $90", 32, 12);
+        LabelText("USD — Pro: دائم $499 | شهري $19 | سنوي $190", 32, 12);
+        LabelText("USD — Business: دائم $999 | شهري $39 | سنوي $390", 32, 12);
+        LabelText("Enterprise: عرض سعر مخصص", 32, 11);
         var market = new ComboBox { Width = 720, DropDownStyle = ComboBoxStyle.DropDownList };
-        market.Items.AddRange(new object[] { "السودان — جنيه سوداني (بنكك)", "السعودية — ريال سعودي", "الدفع بالدولار الأمريكي — اطلب السعر" }); market.SelectedIndex = 0;
+        market.Items.AddRange(new object[] { "السودان — جنيه سوداني (بنكك)", "السعودية — ريال سعودي", "الدفع بالدولار الأمريكي" }); market.SelectedIndex = 0;
         var tier = new ComboBox { Width = 720, DropDownStyle = ComboBoxStyle.DropDownList };
         tier.Items.AddRange(new object[] { "Basic", "Pro", "Business", "Enterprise — عرض مخصص" }); tier.SelectedIndex = 0;
         var period = new ComboBox { Width = 720, DropDownStyle = ComboBoxStyle.DropDownList };
