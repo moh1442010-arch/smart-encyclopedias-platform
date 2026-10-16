@@ -106,15 +106,15 @@ test("commercial app license creation requires admin authorization and explicit 
     method: "POST", device: "",
     body: { approved: true, plan: "pro", termType: "annual", customerName: "Test Customer", licenseId: "TEST-GATE-01" }
   });
-  assert.equal(unauthenticated.status, 403);
-  assert.equal((await unauthenticated.json()).error, "payment_approval_required");
+  assert.equal(unauthenticated.status, 401);
+  assert.equal((await unauthenticated.json()).error, "unauthorized");
 
   const unapproved = await call(env, "/api/app-license/admin/create", {
     method: "POST", device: "", admin: "test-admin-secret",
     body: { approved: false, plan: "pro", termType: "annual", customerName: "Test Customer", licenseId: "TEST-GATE-02" }
   });
   assert.equal(unapproved.status, 400);
-  assert.equal((await unapproved.json()).error, "explicit_payment_approval_required");
+  assert.equal((await unapproved.json()).error, "explicit_payment_approval_and_valid_plan_required");
   assert.equal(licenses.size, 0);
 });
 
