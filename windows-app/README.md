@@ -32,3 +32,11 @@
 3. اختبر شراءً ثم بيعًا وتحقق من رصيد المخزون.
 4. صدّر نسخة احتياطية، ثم اختبر استعادتها على قاعدة تجريبية.
 5. طابق إجماليات العمليات مع قيود دفتر الأستاذ بعد إكمال الترحيل المحاسبي.
+
+## Release gate status — 2026-10-16
+
+The Windows project must be treated as a pre-commercial candidate until a real Windows build and install test passes. A successful CI compilation only proves that the executable can be produced; it does not certify accounting correctness, database encryption, update continuity, licensing, printer behavior, or backup/restore.
+
+Before customer distribution, record test evidence for: fresh install and upgrade; Arabic/English layout; sales and purchase posting; returns and partial payments; inventory valuation and cost of goods sold; customer/supplier balances; payroll and expenses; journal/ledger/trial balance/P&L/balance sheet reconciliation; corrupted-backup rejection and restore rollback; and license expiry, renewal, revocation, and offline policy.
+
+Do not put production customer data into this candidate, and do not publish a Windows download link until the release manifest is updated with the exact tested artifact, version, source commit, SHA-256, and publisher-signing status.
