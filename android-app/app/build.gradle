@@ -14,17 +14,14 @@ android {
  productFlavors {
   basic {
    dimension "edition"
-   applicationIdSuffix ".basic"
    buildConfigField "String", "EDITION", '"basic"'
   }
   pro {
    dimension "edition"
-   applicationIdSuffix ".pro"
    buildConfigField "String", "EDITION", '"pro"'
   }
   business {
    dimension "edition"
-   applicationIdSuffix ".business"
    buildConfigField "String", "EDITION", '"business"'
   }
  }
