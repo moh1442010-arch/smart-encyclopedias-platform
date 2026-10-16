@@ -48,7 +48,7 @@ jobs:
           cp "$aab" public-review/AlMizan-review-2.4.0-release.aab
           while IFS= read -r -d '' f; do
             case "$(basename "$f")" in
-              SHA256SUMS.txt|SIGNING-CERTIFICATE.txt|SIGNING-CERT-SHA256.txt)
+              SIGNING-CERTIFICATE.txt|SIGNING-CERT-SHA256.txt)
                 cp "$f" "public-review/AlMizan-review-2.4.0-$(basename "$f")"
                 ;;
             esac
@@ -61,6 +61,7 @@ jobs:
           test -s public-review/AlMizan-review-2.4.0-release.apk
           test -s public-review/AlMizan-review-2.4.0-release.aab
           test "$(find public-review -maxdepth 1 -type f -iname '*.exe' | wc -l)" -ge 1
+          (cd public-review && sha256sum AlMizan-review-2.4.0-release.apk AlMizan-review-2.4.0-release.aab > AlMizan-review-2.4.0-SHA256SUMS.txt)
           (cd public-review && sha256sum * > REVIEW-SHA256SUMS.txt)
           cat > public-review/REVIEW-NOTICE.txt <<'NOTICE'
           AL-MIZAN EXPERT REVIEW CANDIDATES — NOT APPROVED FOR COMMERCIAL SALE
