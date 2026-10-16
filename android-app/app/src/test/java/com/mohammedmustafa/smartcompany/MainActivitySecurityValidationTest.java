@@ -55,6 +55,37 @@ public class MainActivitySecurityValidationTest {
     }
 
     @Test
+    public void legacyPinVerifierIsUpgradedAfterSuccessfulAuthentication() throws Exception {
+        SharedPreferences prefs = context.getSharedPreferences("test-pin-legacy-migration", Context.MODE_PRIVATE);
+        prefs.edit().clear().commit();
+
+        byte[] salt = new byte[16];
+        new java.security.SecureRandom().nextBytes(salt);
+        String saltText = android.util.Base64.encodeToString(salt, android.util.Base64.NO_WRAP);
+        javax.crypto.spec.PBEKeySpec spec = new javax.crypto.spec.PBEKeySpec(
+                "2468".toCharArray(), salt, 120000, 256);
+        String legacyHash;
+        try {
+            legacyHash = android.util.Base64.encodeToString(
+                    javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+                            .generateSecret(spec).getEncoded(),
+                    android.util.Base64.NO_WRAP);
+        } finally {
+            spec.clearPassword();
+        }
+        prefs.edit().putString("pin_salt", saltText).putString("pin_hash", legacyHash).commit();
+
+        assertTrue("A correct legacy PIN must still authenticate", activity.verifyPin("2468", prefs));
+        assertFalse("A wrong PIN must not authenticate", activity.verifyPin("2469", prefs));
+        assertNotEquals("Successful legacy login must upgrade the stored verifier",
+                legacyHash, prefs.getString("pin_hash", ""));
+        assertTrue("The upgraded verifier must match the current PBKDF2-HMAC-SHA256 scheme",
+                prefs.getString("pin_hash", "").equals(activity.pinHash("2468",
+                        prefs.getString("pin_salt", ""))));
+        prefs.edit().clear().commit();
+    }
+
+    @Test
     public void chequeDatesRequireRealIsoCalendarDates() {
         assertTrue(activity.validIsoDate("2024-02-29", true));
         assertFalse(activity.validIsoDate("2025-02-29", true));
