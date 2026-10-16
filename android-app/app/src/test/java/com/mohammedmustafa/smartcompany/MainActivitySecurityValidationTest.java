@@ -83,4 +83,34 @@ public class MainActivitySecurityValidationTest {
         assertTrue(activity.verifyPin("1234", prefs));
         assertFalse(activity.verifyPin("1235", prefs));
     }
+
+    @Test
+    public void perpetualLicenseAllowsOnlyTheConfiguredOfflineGracePeriod() {
+        long now = System.currentTimeMillis();
+        MainActivity subject = new MainActivity();
+        assertTrue(subject.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
+                "perpetual", 0L, now - 60_000L, now));
+        assertFalse(subject.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
+                "perpetual", 0L, now - MainActivity.OFFLINE_GRACE_MS - 1L, now));
+        assertFalse(subject.offlineLicenseAllowed("licensed", "another-edition",
+                "perpetual", 0L, now - 60_000L, now));
+        assertFalse(subject.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
+                "monthly", 0L, now - 60_000L, now));
+    }
+
+    @Test
+    public void offlineTrialAndTimeLimitedLicensesMustStillBeUnexpired() {
+        long now = System.currentTimeMillis();
+        MainActivity subject = new MainActivity();
+        assertTrue(subject.offlineLicenseAllowed("trial", "", "", now + 60_000L,
+                now - 60_000L, now));
+        assertFalse(subject.offlineLicenseAllowed("trial", "", "", now - 1L,
+                now - 60_000L, now));
+        assertTrue(subject.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
+                "monthly", now + 60_000L, now - 60_000L, now));
+        assertFalse(subject.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
+                "monthly", now - 1L, now - 60_000L, now));
+        assertFalse(subject.offlineLicenseAllowed("licensed", BuildConfig.EDITION,
+                "monthly", now + 60_000L, 0L, now));
+    }
 }
