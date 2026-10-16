@@ -202,7 +202,8 @@ public class MainActivity extends Activity{
   Runnable updatePrice=()->{
    String m=String.valueOf(market.getSelectedItem()),p=String.valueOf(tier.getSelectedItem()),d=String.valueOf(period.getSelectedItem());
    String price="السعر غير محدد — تواصل مع الدعم لعرض سعر بالدولار.";
-   if(m.startsWith("السودان")){
+   if(p.equals("Enterprise"))price="عرض سعر مخصص — تواصل مع الدعم.";
+   else if(m.startsWith("السودان")){
     String[][] prices={{"150,000","15,000","150,000"},{"300,000","30,000","300,000"},{"600,000","60,000","600,000"}};
     int pi=p.equals("Basic")?0:p.equals("Pro")?1:2;int di=d.equals("ترخيص دائم")?0:d.equals("اشتراك شهري")?1:2;
     price=prices[pi][di]+" ج.س";
