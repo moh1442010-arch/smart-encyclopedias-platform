@@ -84,7 +84,7 @@ public final class MoneyMigrationAudit {
             while (cursor.moveToNext()) {
                 count++;
                 long rowId = cursor.getLong(0);
-                if (cursor.isNull(1)) continue;
+                if (cursor.isNull(1)) {\n                    rejected.add(new RejectedValue(rowId, "Null monetary value requires review"));\n                    continue;\n                }
                 double value = cursor.getDouble(1);
                 if (Double.isNaN(value) || Double.isInfinite(value)) {
                     rejected.add(new RejectedValue(rowId, "Non-finite legacy value"));
