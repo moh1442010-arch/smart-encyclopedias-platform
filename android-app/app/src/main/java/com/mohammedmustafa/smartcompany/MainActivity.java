@@ -660,5 +660,40 @@ public class MainActivity extends Activity{
  d.execSQL("CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT UNIQUE,name TEXT NOT NULL,type TEXT)");
  d.execSQL("CREATE TABLE IF NOT EXISTS journal_entries(id INTEGER PRIMARY KEY AUTOINCREMENT,transaction_id INTEGER,created_at INTEGER,description TEXT)");try{d.execSQL("ALTER TABLE journal_entries ADD COLUMN description TEXT");}catch(Exception ignored){}d.execSQL("CREATE TABLE IF NOT EXISTS party_payments(id INTEGER PRIMARY KEY AUTOINCREMENT,party_type TEXT NOT NULL,party_id INTEGER NOT NULL,direction TEXT NOT NULL,amount REAL NOT NULL,note TEXT,created_at INTEGER NOT NULL,journal_entry_id INTEGER NOT NULL)");d.execSQL("CREATE INDEX IF NOT EXISTS idx_party_payments_party_date ON party_payments(party_type,party_id,created_at)");
  d.execSQL("CREATE TABLE IF NOT EXISTS journal_lines(id INTEGER PRIMARY KEY AUTOINCREMENT,journal_entry_id INTEGER,account_id INTEGER,debit REAL NOT NULL DEFAULT 0,credit REAL NOT NULL DEFAULT 0)");
- String[][] ac={{"1010","الصندوق","ASSET"},{"1020","الحسابات البنكية","ASSET"},{"1100","العملاء","ASSET"},{"1200","المخزون","ASSET"},{"1300","سلف الموظفين","ASSET"},{"2100","الموردون","LIABILITY"},{"3000","رأس المال","EQUITY"},{"3100","الأرصدة الافتتاحية","EQUITY"},{"4000","المبيعات","REVENUE"},{"4100","مردودات المبيعات","CONTRA_REVENUE"},{"5100","تكلفة البضاعة المباعة","COST"},{"6000","المصروفات","EXPENSE"}};for(String[] a:ac){ContentValues v=new ContentValues();v.put("code",a[0]);v.put("name",a[1]);v.put("type",a[2]);d.insertWithOnConflict("accounts",null,v,SQLiteDatabase.CONFLICT_IGNORE);}d.execSQL("CREATE INDEX IF NOT EXISTS idx_journal_lines_account ON journal_lines(account_id)");d.execSQL("CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type)");d.execSQL("CREATE INDEX IF NOT EXISTS idx_invoice_items_tx ON invoice_items(transaction_id)");}void exec(String s,Object...a){tx(s,a);}void tx(String s,Object...a){SQLiteDatabase d=getWritableDatabase();SQLiteStatement q=d.compileStatement(s);for(int i=0;i<a.length;i++){Object v=a[i];if(v==null)q.bindNull(i+1);else if(v instanceof Number)q.bindDouble(i+1,((Number)v).doubleValue());else q.bindString(i+1,String.valueOf(v));}q.execute();}Cursor q(String s,String...a){return getReadableDatabase().rawQuery(s,a);}}
+ String[][] ac={{"1010","الصندوق","ASSET"},{"1020","الحسابات البنكية","ASSET"},{"1100","العملاء","ASSET"},{"1200","المخزون","ASSET"},{"1300","سلف الموظفين","ASSET"},{"2100","الموردون","LIABILITY"},{"3000","رأس المال","EQUITY"},{"3100","الأرصدة الافتتاحية","EQUITY"},{"4000","المبيعات","REVENUE"},{"4100","مردودات المبيعات","CONTRA_REVENUE"},{"5100","تكلفة البضاعة المباعة","COST"},{"6000","المصروفات","EXPENSE"}};for(String[] a:ac){ContentValues v=new ContentValues();v.put("code",a[0]);v.put("name",a[1]);v.put("type",a[2]);d.insertWithOnConflict("accounts",null,v,SQLiteDatabase.CONFLICT_IGNORE);}d.execSQL("CREATE INDEX IF NOT EXISTS idx_journal_lines_account ON journal_lines(account_id)");d.execSQL("CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type)");d.execSQL("CREATE INDEX IF NOT EXISTS idx_invoice_items_tx ON invoice_items(transaction_id)");installAuditTriggers(d);} 
+ void installAuditTriggers(SQLiteDatabase d){
+ d.execSQL("CREATE TABLE IF NOT EXISTS audit_events(id INTEGER PRIMARY KEY AUTOINCREMENT,entity TEXT NOT NULL,entity_id TEXT NOT NULL,operation TEXT NOT NULL,old_data TEXT,new_data TEXT,changed_at INTEGER NOT NULL)");
+ String[][] specs={
+ {"transactions","id","type,party,total,paid,remaining,created_at,original_transaction_id,invoice_no,customer_id,supplier_id"},
+ {"journal_entries","id","transaction_id,created_at,description"},
+ {"journal_lines","id","journal_entry_id,account_id,debit,credit"},
+ {"invoice_items","id","transaction_id,product_id,qty,price,cost,discount"},
+ {"party_payments","id","party_type,party_id,direction,amount,note,created_at,journal_entry_id"},
+ {"checks","id","direction,check_no,bank_name,party,amount,issue_date,due_date,status,created_at"},
+ {"payroll_events","id","employee_id,kind,amount,note,period_month,created_at,posted"},
+ {"products","id","name,qty,sale_price,cost,reorder,barcode"},
+ {"bank_accounts","id","bank_name,account_name,opening_balance"},
+ {"bank_movements","id","account_id,kind,amount,note,created_at"},
+ {"customers","id","name,credit_limit"},
+ {"suppliers","id","name"},
+ {"employees","id","name,job_title,salary"}
+ };
+ for(String[] spec:specs){
+  String table=spec[0],id=spec[1],prefix="audit_"+table+"_";
+  String[] cols=spec[2].split(",");
+  StringBuilder oldData=new StringBuilder(),newData=new StringBuilder();
+  for(String col:cols){
+   if(oldData.length()>0){oldData.append(" || '|' || ");newData.append(" || '|' || ");}
+   oldData.append("COALESCE(quote(OLD.").append(col).append("),'NULL')");
+   newData.append("COALESCE(quote(NEW.").append(col).append("),'NULL')");
+  }
+  String oldId="CAST(OLD."+id+" AS TEXT)",newId="CAST(NEW."+id+" AS TEXT)";
+  d.execSQL("CREATE TRIGGER IF NOT EXISTS "+prefix+"insert AFTER INSERT ON "+table+" BEGIN INSERT INTO audit_events(entity,entity_id,operation,old_data,new_data,changed_at) VALUES('"+table+"',"+newId+",'INSERT',NULL,"+newData+",CAST(strftime('%s','now') AS INTEGER)*1000); END");
+  d.execSQL("CREATE TRIGGER IF NOT EXISTS "+prefix+"update AFTER UPDATE ON "+table+" BEGIN INSERT INTO audit_events(entity,entity_id,operation,old_data,new_data,changed_at) VALUES('"+table+"',"+newId+",'UPDATE',"+oldData+","+newData+",CAST(strftime('%s','now') AS INTEGER)*1000); END");
+  d.execSQL("CREATE TRIGGER IF NOT EXISTS "+prefix+"delete AFTER DELETE ON "+table+" BEGIN INSERT INTO audit_events(entity,entity_id,operation,old_data,new_data,changed_at) VALUES('"+table+"',"+oldId+",'DELETE',"+oldData+",NULL,CAST(strftime('%s','now') AS INTEGER)*1000); END");
+ }
+ d.execSQL("CREATE TRIGGER IF NOT EXISTS audit_events_no_update BEFORE UPDATE ON audit_events BEGIN SELECT RAISE(ABORT,'audit log is append-only'); END");
+ d.execSQL("CREATE TRIGGER IF NOT EXISTS audit_events_no_delete BEFORE DELETE ON audit_events BEGIN SELECT RAISE(ABORT,'audit log is append-only'); END");
+ }
+ void exec(String s,Object...a){tx(s,a);}void tx(String s,Object...a){SQLiteDatabase d=getWritableDatabase();SQLiteStatement q=d.compileStatement(s);for(int i=0;i<a.length;i++){Object v=a[i];if(v==null)q.bindNull(i+1);else if(v instanceof Number)q.bindDouble(i+1,((Number)v).doubleValue());else q.bindString(i+1,String.valueOf(v));}q.execute();}Cursor q(String s,String...a){return getReadableDatabase().rawQuery(s,a);}}
 }
