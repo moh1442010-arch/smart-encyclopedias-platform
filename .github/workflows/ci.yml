@@ -26,6 +26,37 @@ jobs:
           node --check assets/qa-fixes.js
           node --check assets/agent-api.js
           node --check agent/worker.js
+      - name: Check inline JavaScript in admin and storefront pages
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          pages = [
+              "admin.html",
+              "smart-company-admin.html",
+              "accounting-subscriptions.html",
+              "store/index.html",
+          ]
+          for page in pages:
+              source = Path(page).read_text(encoding="utf-8")
+              scripts = [
+                  body for attrs, body in re.findall(
+                      r"<script\\b([^>]*)>(.*?)</script\\s*>",
+                      source, flags=re.IGNORECASE | re.DOTALL
+                  )
+                  if not re.search(r"\\bsrc\\s*=", attrs, flags=re.IGNORECASE)
+                  and body.strip()
+              ]
+              if not scripts:
+                  raise SystemExit(f"No inline JavaScript found in {page}")
+              Path(f"/tmp/{Path(page).stem}-inline.js").write_text(
+                  "\\n".join(scripts), encoding="utf-8"
+              )
+          PY
+          node --check /tmp/admin-inline.js
+          node --check /tmp/smart-company-admin-inline.js
+          node --check /tmp/accounting-subscriptions-inline.js
+          node --check /tmp/index-inline.js
       - name: Verify required files
         run: |
           test -s index.html
