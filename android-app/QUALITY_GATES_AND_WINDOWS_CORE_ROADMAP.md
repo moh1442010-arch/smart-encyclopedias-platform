@@ -89,3 +89,12 @@ Added `MoneyMigrationAudit`, a read-only SQLite column auditor. It checks that e
 ## Human review exit criteria
 
 Release only after all P0 issues are closed, CI passes for all editions, signed artifact hashes and certificate identity are recorded, upgrade/restore tests pass, and a human reviewer completes a documented test session on the target Samsung Android 16 device. Windows remains a separate release candidate and must pass its own tests. No honest process can guarantee 100% defect-free software; the goal is measurable coverage, zero known release-blocking defects, and explicit residual-risk acceptance.
+
+
+## Actual posting-path invariant integration (2026-10-16)
+
+The persisted-journal check called by the current transaction posting flows now delegates to `JournalInvariantBridge`, which converts the saved legacy debit/credit lines to the configured currency's minor units and validates them through `AccountingCore`. Zero/zero legacy lines are ignored; negative/non-finite amounts, lines with both sides populated, precision beyond a tiny floating-point representation tolerance, integer overflow, and unbalanced totals reject the transaction. This makes the invariant check part of the current posting boundary rather than a standalone helper.
+
+Focused bridge tests cover a representative sale journal, imbalance, excess precision, and invalid sides/negative values. The migration preflight now rejects NULL monetary values for explicit review instead of silently skipping them.
+
+**Important boundary:** this integration validates journal rows after they are inserted but before the surrounding SQLite transaction is marked successful in the posting flows that call `assertBalanced`. It does not yet replace all REAL/double arithmetic or normalize every transaction input, quantity, cost-of-goods-sold calculation, payment, bank movement, payroll, or report. Some legacy flows call their own validation or may not call this method; these paths still require inventory and tests. Because the posting layer now rejects genuine sub-minor-unit values instead of silently rounding them, test fractional quantities, unit costs, discounts, tax, and all currencies before any release. CI execution and actual device transactions have not yet been verified in this work session.
