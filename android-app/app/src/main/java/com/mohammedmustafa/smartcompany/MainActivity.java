@@ -173,7 +173,7 @@ public class MainActivity extends Activity{
   String[] markets={"السودان — جنيه سوداني (بنكك)","السعودية — ريال سعودي","الدفع بالدولار الأمريكي — اطلب السعر"};
   market.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,markets));
   content.addView(t("بلد/عملة الدفع",15));content.addView(market);
-  Spinner tier=new Spinner(this);String[] tiers={"Basic","Pro","Business","Enterprise — عرض مخصص"};
+  Spinner tier=new Spinner(this);String[] tiers={BuildConfig.EDITION.equals("basic")?"Basic":BuildConfig.EDITION.equals("pro")?"Pro":"Business"};
   tier.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,tiers));
   content.addView(t("الباقة",15));content.addView(tier);
   Spinner period=new Spinner(this);String[] periods={"ترخيص دائم","اشتراك شهري","اشتراك سنوي"};
@@ -183,8 +183,7 @@ public class MainActivity extends Activity{
   Runnable updatePrice=()->{
    String m=String.valueOf(market.getSelectedItem()),p=String.valueOf(tier.getSelectedItem()),d=String.valueOf(period.getSelectedItem());
    String price="السعر غير محدد — تواصل مع الدعم لعرض سعر بالدولار.";
-   if(p.equals("Enterprise — عرض مخصص"))price="عرض سعر مخصص — تواصل مع الدعم.";
-   else if(m.startsWith("السودان")){
+   if(m.startsWith("السودان")){
     String[][] prices={{"150,000","15,000","150,000"},{"300,000","30,000","300,000"},{"600,000","60,000","600,000"}};
     int pi=p.equals("Basic")?0:p.equals("Pro")?1:2;int di=d.equals("ترخيص دائم")?0:d.equals("اشتراك شهري")?1:2;
     price=prices[pi][di]+" ج.س";
