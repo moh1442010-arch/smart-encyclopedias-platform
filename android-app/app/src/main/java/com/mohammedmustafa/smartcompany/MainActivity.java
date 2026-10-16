@@ -110,8 +110,34 @@ public class MainActivity extends Activity{
  void recordPinFailure(android.content.SharedPreferences prefs){int attempts=prefs.getInt("pin_failures",0)+1;android.content.SharedPreferences.Editor e=prefs.edit().putInt("pin_failures",attempts);if(attempts>=5){int exponent=Math.min(5,attempts-5);long delay=Math.min(15L*60L*1000L,30000L*(1L<<exponent));e.putLong("pin_lock_until",System.currentTimeMillis()+delay);}e.commit();}
  void clearPinFailures(android.content.SharedPreferences prefs){prefs.edit().remove("pin_failures").remove("pin_lock_until").commit();}
  boolean savePin(String pin,android.content.SharedPreferences prefs){try{byte[] salt=new byte[16];new java.security.SecureRandom().nextBytes(salt);String saltText=android.util.Base64.encodeToString(salt,android.util.Base64.NO_WRAP);String hash=pinHash(pin,salt);prefs.edit().putString("pin_salt",saltText).putString("pin_hash",hash).remove("pin").commit();return prefs.contains("pin_hash")&&prefs.contains("pin_salt");}catch(Exception ex){toast("تعذر حفظ رمز الدخول بأمان");return false;}}
- boolean verifyPin(String pin,android.content.SharedPreferences prefs){try{if(prefs.contains("pin_hash")){byte[] salt=android.util.Base64.decode(prefs.getString("pin_salt",""),android.util.Base64.NO_WRAP);byte[] expected=android.util.Base64.decode(prefs.getString("pin_hash",""),android.util.Base64.NO_WRAP);byte[] actual=android.util.Base64.decode(pinHash(pin,salt),android.util.Base64.NO_WRAP);return java.security.MessageDigest.isEqual(expected,actual);}String legacy=prefs.getString("pin",null);if(legacy!=null&&legacy.equals(pin)){return savePin(pin,prefs);}return false;}catch(Exception ex){return false;}}
- String pinHash(String pin,byte[] salt)throws Exception{javax.crypto.spec.PBEKeySpec spec=new javax.crypto.spec.PBEKeySpec(pin.toCharArray(),salt,120000,256);try{return android.util.Base64.encodeToString(javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1").generateSecret(spec).getEncoded(),android.util.Base64.NO_WRAP);}finally{spec.clearPassword();}}
+ boolean verifyPin(String pin,android.content.SharedPreferences prefs){
+  try{
+   if(prefs.contains("pin_hash")){
+    byte[] salt=android.util.Base64.decode(prefs.getString("pin_salt",""),android.util.Base64.NO_WRAP);
+    byte[] expected=android.util.Base64.decode(prefs.getString("pin_hash",""),android.util.Base64.NO_WRAP);
+    byte[] modern=android.util.Base64.decode(pinHash(pin,salt),android.util.Base64.NO_WRAP);
+    if(java.security.MessageDigest.isEqual(expected,modern))return true;
+    // Backward-compatible verification: older installs used PBKDF2-HMAC-SHA1/120000.
+    // Upgrade the stored verifier only after the legacy hash matches the entered PIN.
+    byte[] legacy=android.util.Base64.decode(pinHashLegacy(pin,salt),android.util.Base64.NO_WRAP);
+    if(java.security.MessageDigest.isEqual(expected,legacy))return savePin(pin,prefs);
+    return false;
+   }
+   String legacyPlain=prefs.getString("pin",null);
+   if(legacyPlain!=null&&legacyPlain.equals(pin))return savePin(pin,prefs);
+   return false;
+  }catch(Exception ex){return false;}
+ }
+ String pinHash(String pin,byte[] salt)throws Exception{
+  javax.crypto.spec.PBEKeySpec spec=new javax.crypto.spec.PBEKeySpec(pin.toCharArray(),salt,600000,256);
+  try{return android.util.Base64.encodeToString(javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).getEncoded(),android.util.Base64.NO_WRAP);}
+  finally{spec.clearPassword();}
+ }
+ String pinHashLegacy(String pin,byte[] salt)throws Exception{
+  javax.crypto.spec.PBEKeySpec spec=new javax.crypto.spec.PBEKeySpec(pin.toCharArray(),salt,120000,256);
+  try{return android.util.Base64.encodeToString(javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1").generateSecret(spec).getEncoded(),android.util.Base64.NO_WRAP);}
+  finally{spec.clearPassword();}
+ }
  String pinHash(String pin,String salt)throws Exception{return pinHash(pin,android.util.Base64.decode(salt,android.util.Base64.NO_WRAP));}
  void dashboard(){
   android.content.SharedPreferences lic=getSharedPreferences("commercial_license",0);long licenseExpiry=lic.getLong("expires_at",0);if("trial".equals(lic.getString("mode",""))&&licenseExpiry>0&&licenseExpiry<=System.currentTimeMillis()){licensePage("انتهت التجربة المجانية. أدخل رمز الترخيص التجاري للمتابعة.");return;}
