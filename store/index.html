@@ -70,40 +70,31 @@
     if(!manifestResponse.ok)throw new Error('manifest_unavailable');
     const m=await manifestResponse.json();
     const androidVersion=String(m.android_candidate&&m.android_candidate.version||'');
-    const windows=(m.releases||[]).find(x=>x.platform==='windows');
-    const android=(m.releases||[]).filter(x=>x.platform==='android');
+    const android=(m.catalog_editions||[]).filter(x=>x.platform==='android');
+    const editions=['Basic','Pro','Business'];
     const approved=m.downloads_enabled===true&&m.channel==='approved-release'
       &&m.android_candidate&&m.android_candidate.device_update_test==='passed'
       &&m.android_candidate.end_to_end_accounting_acceptance==='passed'
-      &&android.length===4&&['Basic','Pro','Business','Enterprise'].every(e=>{
+      &&android.length===3&&editions.every(e=>{
         const item=android.find(x=>x.edition===e);
         return item&&item.version===androidVersion&&item.status==='approved'&&/^[a-f0-9]{64}$/i.test(item.sha256||'');
-      })
-      &&windows&&windows.status==='verified'&&windows.version&&/^[a-f0-9]{64}$/i.test(windows.sha256||'');
+      });
     if(!approved)return;
     const tag='al-mizan-v'+androidVersion;
     const response=await fetch('https://api.github.com/repos/'+repo+'/releases/tags/'+encodeURIComponent(tag),{headers:{Accept:'application/vnd.github+json'}});
     if(!response.ok){status.textContent='سجل الإصدار اجتاز شروط الاعتماد، لكن لم نعثر على إصدار عام منشور بعد. ستظهر الروابط بعد النشر والتحقق.';return;}
     const release=await response.json();
     const cards=[];
-    for(const edition of ['Basic','Pro','Business','Enterprise']){
+    for(const edition of editions){
       const name='AlMizan-'+edition+'-'+androidVersion+'-release.apk';
       const url=safeAsset(release,name);
       const expected=android.find(x=>x.edition===edition);
       if(!url||!expected)throw new Error('asset_missing');
       cards.push(makeCard('المحاسب الميزان — '+edition,'Android '+androidVersion+' — ملف APK موقّع، معتمد في سجل الإصدار.',[{url,label:'تنزيل APK مباشر'}]));
     }
-    const windowsUrl=safeAsset(release,'SmartCompany-Windows-'+windows.version+'-x64.exe');
-    const windowsZip=safeAsset(release,'SmartCompany-Windows-'+windows.version+'-x64.zip');
     const androidSums=safeAsset(release,'SHA256SUMS-Android.txt');
-    const windowsSums=safeAsset(release,'SHA256SUMS-Windows.txt');
-    if(!windowsUrl||!windowsZip||!androidSums||!windowsSums)throw new Error('release_assets_incomplete');
-    cards.push(makeCard('المحاسب الميزان — Windows','Windows '+windows.version+' x64 — نسخة منشورة بعد اعتماد ملفها.',[
-      {url:windowsUrl,label:'تنزيل EXE مباشر'},
-      {url:windowsZip,label:'تنزيل ZIP'},
-      {url:windowsSums,label:'بصمة Windows SHA-256'}
-    ]));
-    cards.push(makeCard('التحقق من سلامة الملفات','قارن بصمة الملف بعد التنزيل مع ملف التحقق المنشور.',[
+    if(!androidSums)throw new Error('release_assets_incomplete');
+    cards.push(makeCard('التحقق من سلامة الملفات','قارن بصمة كل ملف بعد التنزيل مع ملف التحقق المنشور.',[
       {url:androidSums,label:'بصمات Android SHA-256'}
     ]));
     grid.replaceChildren(...cards);
