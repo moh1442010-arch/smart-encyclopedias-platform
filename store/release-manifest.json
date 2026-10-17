@@ -75,15 +75,20 @@
   ],
   "policy": "Customer-facing product family contains four editions: Enterprise is the canonical full Al-Mizan 2.3.14 core; Basic, Pro, and Business derive from that same core. All share the accounting engine/schema/money behavior/security baseline and brand/UI quality. Historical artifacts and hashes are retained for audit but are not customer downloads. Do not enable public downloads until each Android edition is built or designated with a verified artifact, signed and hash-verified, and device/accounting/license/privacy gates pass. Windows editions require separate build and launch/update testing.",
   "windows_candidate": {
-    "version": null,
-    "source_commit": null,
-    "workflow_run": null,
-    "artifact_id": null,
-    "artifact_name": null,
-    "ci_status": "not_built_from_2.3.14_core",
-    "device_install_update_test": "pending",
+    "version": "2.2.8",
+    "source_commit": "e65c4ff1212ca24123fd091ce0aaa8da7dd587d4",
+    "workflow_run": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39041357416",
+    "artifact_id": 12103958286,
+    "artifact_name": "smart-company-windows-v2.2.8",
+    "ci_status": "passed",
+    "build_and_publish": "passed",
+    "launch_smoke_test": "passed_8_seconds_on_github_hosted_windows_runner",
+    "device_install_update_test": "pending_real_windows_device",
     "end_to_end_accounting_acceptance": "pending",
-    "public_download_url": null
+    "sha256": "not_independently_verified_from_artifact_contents",
+    "public_download_url": null,
+    "status": "expert_test_candidate_only_not_store_approved",
+    "note": "Windows app is a separate .NET/SQLite codebase; parity with Android 2.3.14 has not been established."
   },
   "android_main_branch_candidate": {
     "version": "2.3.8",
