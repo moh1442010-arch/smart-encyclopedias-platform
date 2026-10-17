@@ -2,22 +2,24 @@
   "product": "المحاسب الميزان",
   "channel": "prelaunch",
   "last_reviewed": "2026-10-17",
-  "storefront_status": "prelaunch_latest_candidate_build_pending_schema14_target36_device_qa_pending",
+  "storefront_status": "prelaunch_candidate_ci_passed_device_accounting_and_license_qa_pending",
   "downloads_enabled": false,
   "android_candidate": {
     "version": "2.3.14",
     "version_code": 2003014,
     "source_commit": "6f083339d09b553a69523afc809f4831f2b23c84",
     "workflow_run": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39035775924",
-    "artifact_id": null,
+    "artifact_id": 12102425426,
     "artifact_name": "al-mizan-android-signed-release-v2.3.14",
     "artifact_zip_sha256": null,
     "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
-    "ci_status": "pending",
+    "ci_status": "passed",
     "device_update_test": "not_verified",
     "end_to_end_accounting_acceptance": "not_verified",
     "public_download_url": null,
-    "source_branch": "repair/al-mizan-money-precision-2.3.14"
+    "source_branch": "repair/al-mizan-money-precision-2.3.14",
+    "apk_sha256": null,
+    "aab_sha256": null
   },
   "releases": [
     {
