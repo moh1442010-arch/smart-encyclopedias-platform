@@ -112,7 +112,12 @@ jobs:
           apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           expected="159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
           for edition in basic pro business enterprise; do
-            title="$(printf '%s' "$edition" | sed 's/.*/\u&/')"
+            case "$edition" in
+              basic) title="Basic"; expected_package="com.mohammedmustafa.smartcompany.basic" ;;
+              pro) title="Pro"; expected_package="com.mohammedmustafa.smartcompany.pro" ;;
+              business) title="Business"; expected_package="com.mohammedmustafa.smartcompany.business" ;;
+              enterprise) title="Enterprise"; expected_package="com.mohammedmustafa.smartcompany" ;;
+            esac
             apk_in="app/build/outputs/apk/$edition/release/app-$edition-release-unsigned.apk"
             aab_in="app/build/outputs/bundle/${edition}Release/app-$edition-release.aab"
             apk_out="release/AlMizan-$title-2.4.0-release.apk"
@@ -133,8 +138,8 @@ jobs:
             fi
             echo "$cert_sha" > "release/SIGNING-CERT-SHA256-$title.txt"
             badging="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk_out")"
-            echo "$badging" | grep -F "versionCode='41' versionName='2.4.0'"
-            echo "$badging" | grep -F "application-label:'المحاسب الميزان'"
+            echo "$badging" | grep -F "package: name='$expected_package' versionCode='41' versionName='2.4.0'"
+            echo "$badging" | grep -F "application-label:'المحاسب الميزان"
             permissions="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$apk_out")"
             echo "$permissions" | grep -q "android.permission.INTERNET"
           done
