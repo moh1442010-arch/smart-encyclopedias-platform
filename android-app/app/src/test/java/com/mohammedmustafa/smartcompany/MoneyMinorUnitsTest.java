@@ -34,7 +34,7 @@ public class MoneyMinorUnitsTest {
 
     @Test public void computesLineTotalsWithOneExplicitCurrencyRoundingBoundary() {
         assertEquals(1000L, MoneyMinorUnits.lineTotalMinor("3", "3.50", "0.50", 2));
-        assertEquals(1000L, MoneyMinorUnits.lineTotalMinor("3", "3.335", "0.00", 2));
+        assertEquals(1000L, MoneyMinorUnits.lineTotalMinor("3.003", "3.33", "0.00", 2));
     }
 
     @Test public void rejectsInvalidLineAmountsAndExcessPricePrecision() {
