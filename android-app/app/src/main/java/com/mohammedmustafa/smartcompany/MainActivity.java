@@ -37,7 +37,7 @@ public class MainActivity extends Activity{
    boolean allowed=false; String mode=""; String error="";
    try{
     java.net.HttpURLConnection c=(java.net.HttpURLConnection)new java.net.URL(LICENSE_API+"/api/app-license/status").openConnection();
-    c.setRequestMethod("GET");c.setConnectTimeout(7000);c.setReadTimeout(7000);c.setRequestProperty("x-app-device-id",appDeviceId());
+    c.setRequestMethod("GET");c.setConnectTimeout(7000);c.setReadTimeout(7000);c.setRequestProperty("x-app-device-id",appDeviceId());c.setRequestProperty("x-app-edition",BuildConfig.EDITION_NAME.toLowerCase(Locale.ROOT));
     int code=c.getResponseCode();java.io.InputStream in=code>=200&&code<300?c.getInputStream():c.getErrorStream();
     java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();byte[] buf=new byte[2048];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);in.close();
     org.json.JSONObject d=new org.json.JSONObject(out.toString("UTF-8"));
@@ -72,7 +72,7 @@ public class MainActivity extends Activity{
     try{
      java.net.HttpURLConnection c=(java.net.HttpURLConnection)new java.net.URL(LICENSE_API+"/api/app-license/activate").openConnection();
      c.setRequestMethod("POST");c.setConnectTimeout(8000);c.setReadTimeout(8000);c.setDoOutput(true);
-     c.setRequestProperty("Content-Type","application/json; charset=utf-8");c.setRequestProperty("x-app-device-id",appDeviceId());
+     c.setRequestProperty("Content-Type","application/json; charset=utf-8");c.setRequestProperty("x-app-device-id",appDeviceId());c.setRequestProperty("x-app-edition",BuildConfig.EDITION_NAME.toLowerCase(Locale.ROOT));
      org.json.JSONObject body=new org.json.JSONObject();body.put("activationCode",activation);
      try(java.io.OutputStream os=c.getOutputStream()){os.write(body.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));}
      int status=c.getResponseCode();java.io.InputStream in=status>=200&&status<300?c.getInputStream():c.getErrorStream();
