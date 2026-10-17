@@ -22,7 +22,7 @@ function headers(env, extra = {}) {
   return {
     "access-control-allow-origin": corsOrigin(env),
     "access-control-allow-methods": ALLOW_METHODS,
-    "access-control-allow-headers": "content-type, authorization, x-admin-key, x-device-id",
+    "access-control-allow-headers": "content-type, authorization, x-admin-key, x-device-id, x-app-device-id, x-app-edition",
     "vary": "Origin",
     ...extra
   };
@@ -253,6 +253,19 @@ async function appDeviceHash(request) {
   return sha256("smart-company-app-v1:" + id);
 }
 
+function appEdition(request) {
+  const value = String(request.headers.get("x-app-edition") || "enterprise").trim().toLowerCase();
+  return /^(basic|pro|business|enterprise)$/.test(value) ? value : null;
+}
+
+function appPlanLevel(plan) {
+  return ({ basic: 1, pro: 2, business: 3, enterprise: 4 })[String(plan || "").toLowerCase()] || 0;
+}
+
+function appEditionAllowed(plan, edition) {
+  return Boolean(edition && appPlanLevel(plan) >= appPlanLevel(edition));
+}
+
 function appLicenseActive(row) {
   return Boolean(row && row.status === "active" &&
     (!row.expires_at || new Date(row.expires_at).getTime() > Date.now()));
@@ -261,6 +274,8 @@ function appLicenseActive(row) {
 async function appLicenseStatus(request, env) {
   const deviceHash = await appDeviceHash(request);
   if (!deviceHash) return json({ ok: false, error: "device_id_required" }, 400, env);
+  const edition = appEdition(request);
+  if (!edition) return json({ ok: false, error: "invalid_app_edition" }, 400, env);
   await ensureAppLicenseTables(env);
 
   const license = await env.DB.prepare(
@@ -268,6 +283,9 @@ async function appLicenseStatus(request, env) {
   ).bind(deviceHash).first();
 
   if (appLicenseActive(license)) {
+    if (!appEditionAllowed(license.plan, edition)) {
+      return json({ ok: false, error: "license_plan_mismatch", requiredEdition: edition, licensePlan: license.plan }, 403, env);
+    }
     return json({
       ok: true, mode: "licensed", licenseId: license.id, plan: license.plan,
       termType: license.term_type, expiresAt: license.expires_at, serverTime: new Date().toISOString()
@@ -310,6 +328,8 @@ async function appLicenseStatus(request, env) {
 async function activateAppLicense(request, env) {
   const deviceHash = await appDeviceHash(request);
   if (!deviceHash) return json({ ok: false, error: "device_id_required" }, 400, env);
+  const edition = appEdition(request);
+  if (!edition) return json({ ok: false, error: "invalid_app_edition" }, 400, env);
   const body = await request.json().catch(() => null);
   const code = String(body && body.activationCode || "").trim().toUpperCase();
   if (!/^[A-Z0-9-]{12,64}$/.test(code)) {
@@ -324,6 +344,9 @@ async function activateAppLicense(request, env) {
   if (!license || license.status !== "active" ||
       (license.expires_at && new Date(license.expires_at).getTime() <= Date.now())) {
     return json({ ok: false, error: "license_invalid_or_expired" }, 403, env);
+  }
+  if (!appEditionAllowed(license.plan, edition)) {
+    return json({ ok: false, error: "license_plan_mismatch", requiredEdition: edition, licensePlan: license.plan }, 403, env);
   }
   if (license.device_hash && license.device_hash !== deviceHash) {
     return json({ ok: false, error: "license_bound_to_another_device" }, 403, env);
