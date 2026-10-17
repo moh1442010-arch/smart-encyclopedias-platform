@@ -40,5 +40,12 @@ Use 3–5 consenting testers representing different small-business workflows. Us
 - [ ] Obtain explicit permission before publishing a testimonial; publish critical and positive feedback fairly.
 - [ ] Link every defect to reproduction steps, severity, owner, fix commit, and retest evidence.
 
+## Current release-candidate status — 2026-10-17
+- [ ] Rebuild from the latest commit on `repair/al-mizan-money-precision-2.3.14`; verify the run SHA matches that branch head.
+- [ ] Confirm artifact metadata identifies version `2.3.14` and versionCode `2003014`.
+- [ ] Download and install the signed candidate on the user's Samsung SM-A165F / Android 16; test update-over-install without uninstalling first.
+- [ ] Record real-device login/dashboard result and sanitized logs; no claim of a fix until reproduced and retested.
+- [ ] Attach independent accounting review and consenting customer-pilot results before changing the release decision.
+
 ## Release rule
 Do not approve public sale while any critical/high defect is open, login/update behavior is unverified, accounting results do not reconcile, backup/restore is unsafe, or commercial licensing/payment is not validated. CI success alone is not product certification.
