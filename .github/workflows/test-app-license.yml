@@ -29,7 +29,7 @@ jobs:
           node-version: "22"
       - name: Run app license regression tests
         run: node --test delivery/tests/app-license.test.mjs
-      - name: Live license API read-only smoke test
+      - name: Live license API and seven-day trial smoke test
         shell: bash
         run: |
           set -euo pipefail
@@ -44,4 +44,28 @@ jobs:
             --data '{"activationCode":"BAD!"}')"
           test "$status" = "400"
           grep -q '"error":"invalid_activation_code"' /tmp/license-activate.json
-          echo "Live license API is reachable and rejects missing device IDs and invalid activation codes."
+
+          # A unique synthetic device verifies the deployed service without touching customer records.
+          trial_device="ci-live-trial-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          for attempt in 1 2; do
+            status="$(curl --silent --show-error --output "/tmp/trial-status-${attempt}.json" --write-out '%{http_code}' \
+              "$base/api/app-license/status" -H "x-app-device-id: ${trial_device}")"
+            test "$status" = "200"
+            node -e '
+              const fs=require("node:fs");
+              const d=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));
+              const start=Date.parse(d.trialStartedAt), end=Date.parse(d.expiresAt);
+              if(!d.ok || d.mode!=="trial" || !Number.isFinite(start) || !Number.isFinite(end) || end-start!==7*24*60*60*1000) {
+                console.error("Live trial did not report an exact seven-day window",d); process.exit(1);
+              }
+            ' "/tmp/trial-status-${attempt}.json"
+          done
+          node -e '
+            const fs=require("node:fs");
+            const a=JSON.parse(fs.readFileSync("/tmp/trial-status-1.json","utf8"));
+            const b=JSON.parse(fs.readFileSync("/tmp/trial-status-2.json","utf8"));
+            if(a.expiresAt!==b.expiresAt || a.trialStartedAt!==b.trialStartedAt) {
+              console.error("Live trial expiry changed on repeat status check",a,b); process.exit(1);
+            }
+          '
+          echo "Live license API rejects invalid requests; trial starts once and expires after exactly seven days."
