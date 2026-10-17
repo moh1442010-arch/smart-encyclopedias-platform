@@ -37,7 +37,7 @@
   const mr=await fetch('../store/release-manifest.json',{cache:'no-store'});
   if(!mr.ok)throw Error('manifest unavailable');
   const m=await mr.json();
-  const editions=['Basic','Pro','Business'];
+  const editions=['Enterprise','Basic','Pro','Business'];
   const android=(m.catalog_editions||[]).filter(x=>x.platform==='android');
   const gates=m.downloads_enabled===true&&m.channel==='approved-release'
    &&m.android_candidate&&m.android_candidate.device_update_test==='passed'
@@ -48,8 +48,8 @@
    });
   if(!gates){
    status.className='notice';
-   status.textContent='التنزيل العام معطّل. النسخ القديمة أُزيلت من واجهة التنزيلات. يجري تجهيز Basic وPro وBusiness من نواة Android 2.3.14؛ لن تظهر روابط حتى اجتياز التوقيع والتحقق من البصمات واختبارات الحسابات والترخيص.';
-   empty(ag,'لا توجد حالياً نسخ Android 2.3.14 معتمدة للتنزيل العام. النسخ الثلاث قيد البناء والتحقق.');
+   status.textContent='التنزيل العام معطّل. النسخ القديمة أُزيلت من واجهة التنزيلات. Enterprise هي النواة الأصلية 2.3.14، ويجري تجهيز Basic وPro وBusiness منها؛ لن تظهر روابط حتى اجتياز التوقيع والتحقق من البصمات واختبارات الحسابات والترخيص.';
+   empty(ag,'لا توجد حالياً نسخ Android 2.3.14 معتمدة للتنزيل العام. نسخة Enterprise مرشح بناء غير معتمد، والنسخ الثلاث الأخرى قيد البناء والتحقق.');
    empty(wg,'لا توجد حالياً نسخ Windows معتمدة من نواة 2.3.14. سيظهر Windows بعد البناء واختبار التشغيل والتحديث.');
    return;
   }
@@ -69,7 +69,7 @@
   ag.replaceChildren(...cards);
   empty(wg,'لا توجد نسخة Windows معتمدة من نواة 2.3.14 في هذا الإصدار.');
   status.className='notice good';
-  status.textContent='تم التحقق من اعتماد نسخ Android الثلاث. تحقق من بصمة الملف بعد التنزيل قبل التثبيت.';
+  status.textContent='تم التحقق من اعتماد نسخ Android الأربع. تحقق من بصمة الملف بعد التنزيل قبل التثبيت.';
  }catch(_){
   status.className='notice';
   status.textContent='تعذر التحقق من سجل الإصدار. أبقينا روابط التنزيل مخفية لحماية المستخدمين.';
