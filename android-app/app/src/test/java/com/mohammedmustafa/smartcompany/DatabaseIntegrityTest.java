@@ -612,7 +612,7 @@ public class DatabaseIntegrityTest {
     }
 
     @Test
-    public void upgradeFromSchemaTwelvePreservesRowsAndKeepsMinorUnitsConsistent() {
+    public void upgradeFromSchemaThirteenPreservesRowsAndKeepsMinorUnitsConsistent() {
         ContentValues original = new ContentValues();
         original.put("type", "SALE");
         original.put("party", "بيانات قبل الترحيل");
@@ -621,7 +621,7 @@ public class DatabaseIntegrityTest {
         original.put("remaining", 150.50);
         long originalId = database.insertOrThrow("transactions", null, original);
 
-        // Recreate the relevant schema-12 condition: old monetary columns exist,
+        // Recreate the relevant schema-13 condition: old monetary columns exist,
         // but no *_minor columns or triggers from the new migration are present.
         Cursor triggers = database.rawQuery(
                 "SELECT name FROM sqlite_master WHERE type='trigger'", null);
@@ -634,21 +634,21 @@ public class DatabaseIntegrityTest {
         database.execSQL("DROP TABLE IF EXISTS audit_events");
 
         // Robolectric's bundled SQLite does not support DROP COLUMN consistently.
-        // Model a version-12 reopen with the additive columns already present, and
+        // Model a version-13 reopen with the additive columns already present, and
         // verify schema() is idempotent and preserves the monetary values.
-        database.setVersion(12);
+        database.setVersion(13);
         helper.close();
 
         helper = new MainActivity.DB(context);
         database = helper.getWritableDatabase();
 
-        assertEquals(13, database.getVersion());
+        assertEquals(14, database.getVersion());
         assertTrue(tableExists("audit_events"));
         Cursor preserved = database.rawQuery(
                 "SELECT party,total,paid,remaining FROM transactions WHERE id=?",
                 new String[]{String.valueOf(originalId)});
         try {
-            assertTrue("Existing transaction must survive schema 12 to 13 upgrade", preserved.moveToFirst());
+            assertTrue("Existing transaction must survive schema 13 to 14 upgrade", preserved.moveToFirst());
             assertEquals("بيانات قبل الترحيل", preserved.getString(0));
             assertEquals(250.75, preserved.getDouble(1), 0.000001);
             assertEquals(100.25, preserved.getDouble(2), 0.000001);
