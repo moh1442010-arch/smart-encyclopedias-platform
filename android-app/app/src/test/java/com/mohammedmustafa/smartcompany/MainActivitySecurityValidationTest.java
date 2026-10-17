@@ -65,6 +65,29 @@ public class MainActivitySecurityValidationTest {
     }
 
     @Test
+    public void offlineGraceAllowsCachedPerpetualLicenseButNeverExpiredTrial() {
+        long now = 1_800_000_000_000L;
+        long verified = now - 60_000L;
+
+        assertTrue("A recently verified perpetual license has no expiry timestamp",
+                activity.cachedLicenseAllowsOffline("licensed", 0L, verified, now));
+        assertTrue("A recently verified time-limited license remains valid before expiry",
+                activity.cachedLicenseAllowsOffline("licensed", now + 60_000L, verified, now));
+        assertFalse("An expired paid license must not pass offline checks",
+                activity.cachedLicenseAllowsOffline("licensed", now - 1L, verified, now));
+        assertTrue("An unexpired trial remains within offline grace",
+                activity.cachedLicenseAllowsOffline("trial", now + 60_000L, verified, now));
+        assertFalse("An expired trial must remain locked even inside offline grace",
+                activity.cachedLicenseAllowsOffline("trial", now - 1L, verified, now));
+        assertFalse("Unknown cached modes must fail closed",
+                activity.cachedLicenseAllowsOffline("unknown", 0L, verified, now));
+        assertFalse("Stale verification must fail closed",
+                activity.cachedLicenseAllowsOffline("licensed", 0L, now - 3L * 24L * 60L * 60L * 1000L - 1L, now));
+        assertFalse("A clock earlier than the last verification must fail closed",
+                activity.cachedLicenseAllowsOffline("licensed", 0L, now + 1L, now));
+    }
+
+    @Test
     public void freshInstallDoesNotCreateAUniversalDefaultPin() {
         SharedPreferences prefs = activity.getSharedPreferences("security", Context.MODE_PRIVATE);
         assertFalse("Fresh install must not silently enable a known default PIN", prefs.contains("pin"));
