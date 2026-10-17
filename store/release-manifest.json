@@ -205,7 +205,7 @@
     "status": "archived_not_listed_in_customer_store"
   },
   "release_gates": {
-    "android_artifacts_and_signing": "pending_individual_apk_aab_sha256_and_real_device_install_update",
+    "android_artifacts_and_signing": "all_eight_individual_apk_aab_sha256_verified; aab_certificate_fingerprints_match; apk_signing_block_and_real_device_install_update_pending",
     "windows_device_and_accounting_acceptance": "pending_real_windows_device_install_update_accounting_backup_restore",
     "live_seven_day_trial": "automated_api_test_passed_live_worker_verification_pending",
     "expert_review_and_defect_closure": "pending",
