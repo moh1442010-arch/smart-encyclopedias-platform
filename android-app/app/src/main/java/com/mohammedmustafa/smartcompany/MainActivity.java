@@ -5,6 +5,26 @@ import android.app.*;import android.os.*;import android.content.*;import android
 public class MainActivity extends Activity{
  DB db; LinearLayout content; boolean authenticated=false; boolean needsRelogin=false; EditText pendingBarcodeTarget; android.net.Uri planLogoUri=null,planReceiptUri=null; final int green=Color.rgb(11,31,58);
  boolean english(){return getSharedPreferences("settings",0).getBoolean("english",false);}
+ // Edition gating is enforced at the navigation entry point as well as by hiding dashboard cards.
+ // Server-side license/entitlement validation remains a separate release requirement.
+ int editionLevel(){return BuildConfig.EDITION_LEVEL;}
+ boolean canAccessSection(String name){
+  if(name==null)return false;
+  int level=editionLevel();
+  switch(name){
+   case "المرتجعات": case "المحاسبة والتقارير": case "الحسابات الرئيسية":
+   case "القيود اليدوية": case "التقارير والتحليل": case "الحسابات البنكية": case "سجل الشيكات":
+    return level>=2;
+   case "الموظفون والرواتب": case "الموظفون":
+    return level>=3;
+   default:return true;
+  }
+ }
+ void showEditionRestriction(String name){
+  String message="هذه الوظيفة غير متاحة في باقة "+BuildConfig.EDITION_NAME+". راجع الباقات لمعرفة المزايا المتاحة.";
+  toast(message);
+ }
+
  String tr(String value){
   if(value==null||!english())return value;
   String[][] pairs={
@@ -129,6 +149,7 @@ public class MainActivity extends Activity{
   };
   LinearLayout row=null;
   for(int i=0;i<items.length;i++){
+   if(!canAccessSection(items[i][1]))continue;
    if(i%2==0){row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);content.addView(row,new LinearLayout.LayoutParams(-1,-2));}
    final String title=items[i][1];
    LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setGravity(Gravity.CENTER);card.setPadding(8,14,8,14);card.setBackgroundColor(Color.WHITE);card.setElevation(3f);
@@ -254,7 +275,7 @@ public class MainActivity extends Activity{
    toast(ok?"تم حفظ إعدادات الشركة":"تعذر حفظ الإعدادات");
   });
  }
- void openSection(String n){switch(n){
+ void openSection(String n){if(!canAccessSection(n)){showEditionRestriction(n);return;}switch(n){
  case"نقطة البيع والمبيعات":case"الفواتير والمبيعات":invoice(false);break;
  case"المشتريات":invoice(true);break;case"المرتجعات":returns();break;case"الأصناف والمخزون":products();break;
  case"العملاء والموردون":groupMenu(n,new String[][]{{"العملاء","العملاء"},{"الموردون","الموردون"}});break;
