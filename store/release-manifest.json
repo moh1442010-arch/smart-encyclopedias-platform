@@ -17,7 +17,7 @@
     "ci_status": "passed_all_four_edition_unit_tests_release_apk_aab_build_signing_certificate_and_metadata_checks",
     "device_update_test": "pending_real_android_device_install_update_and_fresh_install",
     "end_to_end_accounting_acceptance": "pending_independent_end_to_end_accounting_and_backup_restore",
-    "live_license_trial_test": "automated_regression_passed_live_trial_smoke_pending",
+    "live_license_trial_test": "live_worker_synthetic_device_exact_7_days_passed; real_android_client_expiry_and_offline_behavior_pending",
     "public_download_url": null,
     "status": "expert_test_candidate_only_not_store_approved",
     "note": "The artifact ZIP digest is verified by GitHub Actions metadata; individual APK/AAB SHA-256 values must be independently extracted and verified before store approval. CI does not prove real-device behavior or accounting acceptance."
@@ -201,7 +201,7 @@
   "release_gates": {
     "android_artifacts_and_signing": "pending_individual_apk_aab_sha256_and_real_device_install_update",
     "windows_device_and_accounting_acceptance": "pending_real_windows_device_install_update_accounting_backup_restore",
-    "live_seven_day_trial": "automated_regression_passed_live_trial_smoke_pending",
+    "live_seven_day_trial": "passed",
     "expert_review_and_defect_closure": "pending",
     "public_sale_approved": false
   }
