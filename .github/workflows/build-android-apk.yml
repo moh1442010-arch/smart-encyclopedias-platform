@@ -1,4 +1,4 @@
-name: Build Al-Mizan Accountant Android Release 2.3.13 - Signed
+name: Build Al-Mizan Accountant Android Release - Tag Versioned
 
 concurrency:
   group: smart-company-android-release
@@ -10,25 +10,62 @@ on:
     paths:
       - "android-app/**"
       - ".github/workflows/build-android-apk.yml"
+    tags:
+      - "v*.*.*"
 
 permissions:
   contents: read
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: temurin
           java-version: "17"
 
+      - name: Resolve version from release tag and synchronize Android metadata
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          REF_NAME="${GITHUB_REF_NAME}"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${REF_NAME}" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            VERSION_NAME="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
+          elif [[ "${REF_NAME}" =~ ([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            VERSION_NAME="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
+          else
+            VERSION_NAME="$(sed -nE "s/.*versionName ['\"]([^'\"]+)['\"].*/\1/p" android-app/app/build.gradle | head -n1)"
+          fi
+          if [[ ! "${VERSION_NAME}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error title=Invalid version::Use a release tag in the form vMAJOR.MINOR.PATCH."
+            exit 1
+          fi
+          MAJOR="${BASH_REMATCH[1]}"
+          MINOR="${BASH_REMATCH[2]}"
+          PATCH="${BASH_REMATCH[3]}"
+          if (( MINOR > 999 || PATCH > 999 )); then
+            echo "::error title=Version component too large::Minor and patch components must be below 1000."
+            exit 1
+          fi
+          VERSION_CODE=$((MAJOR * 1000000 + MINOR * 1000 + PATCH))
+          sed -i -E "s/versionCode [0-9]+/versionCode ${VERSION_CODE}/" android-app/app/build.gradle
+          sed -i -E "s/versionName ['\"][^'\"]+['\"]/versionName '${VERSION_NAME}'/" android-app/app/build.gradle
+          {
+            echo "VERSION_NAME=${VERSION_NAME}"
+            echo "VERSION_CODE=${VERSION_CODE}"
+          } >> "${GITHUB_ENV}"
+          echo "name=${VERSION_NAME}" >> "${GITHUB_OUTPUT}"
+          echo "code=${VERSION_CODE}" >> "${GITHUB_OUTPUT}"
+          echo "Resolved Android version: ${VERSION_NAME} (versionCode ${VERSION_CODE})"
+
       - name: Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4.0.4
         with:
           packages: platform-tools platforms;android-36 build-tools;36.0.0
 
@@ -57,9 +94,9 @@ jobs:
         run: ./gradlew assembleDebug
 
       - name: Upload clean-install test APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
-          name: al-mizan-2.3.13-clean-install-test-debug
+          name: al-mizan-${{ env.VERSION_NAME }}-clean-install-test-debug
           path: android-app/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
@@ -110,8 +147,8 @@ jobs:
             fi
           fi
           apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
-          "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out release/AlMizan-2.3.13-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
-          cp app/build/outputs/bundle/release/app-release.aab release/AlMizan-2.3.13-release.aab
+          "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out release/AlMizan-${VERSION_NAME}-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
+          cp app/build/outputs/bundle/release/app-release.aab release/AlMizan-${VERSION_NAME}-release.aab
           jarsigner -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" release/AlMizan-2.3.13-release.aab "$KEY_ALIAS"
           "$apksigner" verify --verbose release/AlMizan-2.3.13-release.apk
           jarsigner -verify -verbose release/AlMizan-2.3.13-release.aab
@@ -143,7 +180,7 @@ jobs:
           test -s "$aab"
           test -s "release/SHA256SUMS.txt"
           badging="$("$build_tools/aapt" dump badging "$apk")"
-          echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='45' versionName='2.3.13'"
+          echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='${VERSION_CODE}' versionName='${VERSION_NAME}'"
           echo "$badging" | grep -F "application-label:'المحاسب الميزان'"
           permissions="$("$build_tools/aapt" dump permissions "$apk")"
           echo "$permissions" | grep -q "android.permission.INTERNET" || { echo "Required INTERNET permission for server-side commercial licensing is missing"; exit 1; }
@@ -154,7 +191,7 @@ jobs:
       - name: Upload signed release artifacts only
         uses: actions/upload-artifact@v4
         with:
-          name: al-mizan-android-signed-release-v2.3.13
+          name: al-mizan-android-signed-release-v${{ env.VERSION_NAME }}
           path: |
             android-app/release/AlMizan-2.3.13-release.apk
             android-app/release/AlMizan-2.3.13-release.aab
