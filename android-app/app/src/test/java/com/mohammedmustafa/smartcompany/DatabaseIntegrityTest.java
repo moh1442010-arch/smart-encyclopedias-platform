@@ -151,6 +151,37 @@ public class DatabaseIntegrityTest {
 
 
     @Test
+    public void exactMinorUnitBalanceRejectsOneCentMismatch() {
+        long journalId;
+        ContentValues entry = new ContentValues();
+        entry.put("created_at", System.currentTimeMillis());
+        entry.put("description", "اختبار فرق وحدة نقدية صغرى");
+        journalId = database.insertOrThrow("journal_entries", null, entry);
+
+        ContentValues debit = new ContentValues();
+        debit.put("journal_entry_id", journalId);
+        debit.put("account_id", accountId("1010"));
+        debit.put("debit", 10.00);
+        debit.put("credit", 0.00);
+        database.insertOrThrow("journal_lines", null, debit);
+
+        ContentValues credit = new ContentValues();
+        credit.put("journal_entry_id", journalId);
+        credit.put("account_id", accountId("3000"));
+        credit.put("debit", 0.00);
+        credit.put("credit", 9.99);
+        database.insertOrThrow("journal_lines", null, credit);
+
+        try {
+            new MainActivity().assertBalanced(database, journalId);
+            fail("A one-minor-unit imbalance must be rejected");
+        } catch (IllegalStateException expected) {
+            assertTrue(expected.getMessage().contains("debit_minor="));
+            assertTrue(expected.getMessage().contains("credit_minor="));
+        }
+    }
+
+    @Test
     public void salesPurchasesAndExpensesPostBalancedAccountingEntries() {
         // Exercise the application's real posting routine, not only hand-built test rows.
         MainActivity activity = new MainActivity();
