@@ -332,31 +332,31 @@ public class MainActivity extends Activity{
     if(!validNumber(qty,true)||!validNumber(price,true)||!validNumber(discount,false)){toast("أدخل كمية وسعرًا وخصمًا رقميًا صحيحًا");return;}
     double q=num(qty),pr=num(price),disc=num(discount);
     if(q<=0||pr<0||disc<0||disc>q*pr){toast("تحقق من الكمية والسعر والخصم");return;}
-    total.setText(tr("الإجمالي: ")+fmt(q*pr-disc));
+    try{long minor=MoneyMinorUnits.lineTotalMinor(qty.getText().toString(),price.getText().toString(),discount.getText().toString().trim().isEmpty()?"0.00":discount.getText().toString(),2);total.setText(tr("الإجمالي: ")+fmt(java.math.BigDecimal.valueOf(minor,2).doubleValue()));}catch(IllegalArgumentException ex){toast("يجب أن يكون السعر والخصم بمنزلتين عشريتين كحد أقصى");}
    });
    Button save=b("حفظ وترحيل");content.addView(save);
    save.setOnClickListener(v->{
     String party=customer.getText().toString().trim(),lookup=item.getText().toString().trim();
     if(party.isEmpty()){toast("أدخل اسم العميل أو المورد");return;}
     if(lookup.isEmpty()||!validNumber(qty,true)||!validNumber(price,true)||!validNumber(discount,false)||!validNumber(paid,false)){toast("أكمل بيانات الفاتورة بأرقام صحيحة");return;}
-    double q=num(qty),pr=num(price),disc=num(discount),paidValue=num(paid);
+    double q=num(qty),pr=num(price),disc=num(discount),paidValue=num(paid);long totalMinor;try{totalMinor=MoneyMinorUnits.lineTotalMinor(qty.getText().toString(),price.getText().toString(),discount.getText().toString().trim().isEmpty()?"0.00":discount.getText().toString(),2);paidValue=MoneyMinorUnits.format(MoneyMinorUnits.parse(paid.getText().toString().trim().isEmpty()?"0.00":paid.getText().toString(),2),2).isEmpty()?0:java.math.BigDecimal.valueOf(MoneyMinorUnits.parse(paid.getText().toString().trim().isEmpty()?"0.00":paid.getText().toString(),2),2).doubleValue();}catch(IllegalArgumentException ex){toast("السعر والخصم والمدفوع يجب أن تكون مبالغ صحيحة بمنزلتين عشريتين كحد أقصى");return;}
     if(q<=0||pr<0||disc<0||disc>q*pr||paidValue<0||paidValue>q*pr-disc||(Double.isNaN(q*pr-disc)||Double.isInfinite(q*pr-disc))){toast("تحقق من الكمية والسعر والخصم والمدفوع");return;}
     Cursor c=db.q("SELECT id,qty,cost FROM products WHERE name=? OR barcode=?",lookup,lookup);
     if(!c.moveToFirst()){c.close();toast("الصنف غير موجود");return;}
     long pid=c.getLong(0);double old=c.getDouble(1),cost=c.getDouble(2);c.close();
     double next=purchase?old+q:old-q;
     if(next<0){toast("الرصيد غير كافٍ");return;}
-    double totalValue=q*pr-disc,pay=Math.min(paidValue,totalValue),remaining=totalValue-pay;
+    double totalValue=java.math.BigDecimal.valueOf(totalMinor,2).doubleValue(),pay=Math.min(paidValue,totalValue),remaining=totalValue-pay;
     SQLiteDatabase sq=db.getWritableDatabase();sq.beginTransaction();
     try{
      ContentValues pv=new ContentValues();pv.put("qty",next);
-     if(purchase)pv.put("cost",((old*cost)+(q*pr-disc))/Math.max(0.0000001,next));
+     if(purchase)pv.put("cost",((old*cost)+totalValue)/Math.max(0.0000001,next));
      int changed=sq.update("products",pv,"id=?",new String[]{String.valueOf(pid)});
      if(changed!=1)throw new IllegalStateException("Product update failed");
      ContentValues tv=new ContentValues();String type=purchase?"PURCHASE":"SALE";String partyTable=purchase?"suppliers":"customers";Cursor partyCursor=sq.rawQuery("SELECT id FROM "+partyTable+" WHERE name=? ORDER BY id LIMIT 1",new String[]{party});long partyId;if(partyCursor.moveToFirst()){partyId=partyCursor.getLong(0);partyCursor.close();}else{partyCursor.close();ContentValues partyValues=new ContentValues();partyValues.put("name",party);if(!purchase)partyValues.put("credit_limit",0);partyId=sq.insertOrThrow(partyTable,null,partyValues);}if(!purchase&&remaining>0){Cursor limc=sq.rawQuery("SELECT COALESCE(credit_limit,0) FROM customers WHERE id=?",new String[]{String.valueOf(partyId)});double creditLimit=limc.moveToFirst()?limc.getDouble(0):0;limc.close();if(creditLimit>0){Cursor bal=sq.rawQuery("SELECT COALESCE(SUM(remaining),0) FROM transactions WHERE type='SALE' AND (customer_id=? OR (customer_id IS NULL AND party=?))",new String[]{String.valueOf(partyId),party});double currentDue=bal.moveToFirst()?bal.getDouble(0):0;bal.close();if(currentDue+remaining>creditLimit+0.005)throw new IllegalArgumentException("تجاوزت الفاتورة حد ائتمان العميل. الرصيد الحالي "+fmt(currentDue)+" والحد "+fmt(creditLimit));}}tv.put("type",type);tv.put("party",party);if(purchase)tv.put("supplier_id",partyId);else tv.put("customer_id",partyId);tv.put("total",totalValue);tv.put("paid",pay);tv.put("remaining",remaining);tv.put("created_at",System.currentTimeMillis());
      long tid=sq.insertOrThrow("transactions",null,tv);String invoicePrefix=getSharedPreferences("company_profile",0).getString("invoice_prefix","INV");String invoiceNo=invoicePrefix+"-"+new java.text.SimpleDateFormat("yyyyMMdd",Locale.US).format(new Date())+"-"+String.format(Locale.US,"%06d",tid);sq.execSQL("UPDATE transactions SET invoice_no=? WHERE id=?",new Object[]{invoiceNo,tid});
      ContentValues iv=new ContentValues();iv.put("transaction_id",tid);iv.put("product_id",pid);iv.put("qty",q);iv.put("price",pr);iv.put("cost",cost);iv.put("discount",disc);sq.insertOrThrow("invoice_items",null,iv);
-     postJournal(sq,tid,type,totalValue,pay,remaining,q*cost);
+     double cogsValue=java.math.BigDecimal.valueOf(MoneyMinorUnits.extendedMinor(q,cost,2),2).doubleValue();postJournal(sq,tid,type,totalValue,pay,remaining,cogsValue);
      sq.setTransactionSuccessful();
     }catch(Exception ex){toast("لم تُحفظ الفاتورة. لم يتم اعتماد أي تغيير؛ راجع البيانات وحاول مجددًا.");return;}
     finally{sq.endTransaction();}
