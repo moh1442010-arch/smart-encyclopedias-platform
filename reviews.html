@@ -100,7 +100,11 @@
           </div>
           <div class="field">
             <label for="review-role">الصفة (اختيارية)</label>
-            <input id="review-role" name="role" maxlength="80" placeholder="طالب، معلم، باحث...">
+            <input id="review-role" name="role" maxlength="80" placeholder="محاسب، مراجع تقني، صاحب نشاط، قارئ...">
+          </div>
+          <div class="field full">
+            <label for="review-context">نسخة التطبيق والجهاز (اختياري لتقييم التطبيق)</label>
+            <input id="review-context" name="context" maxlength="140" placeholder="مثال: 2.3.14 — Samsung / Android 16">
           </div>
           <div class="field">
             <label for="review-rating">التقييم</label>
@@ -136,10 +140,11 @@
       const product=document.getElementById('review-product').value;
       const name=document.getElementById('review-name').value.trim();
       const role=document.getElementById('review-role').value.trim() || 'غير محدد';
+      const context=document.getElementById('review-context').value.trim() || 'لم يذكر';
       const rating=document.getElementById('review-rating').value;
       const review=document.getElementById('review-text').value.trim();
       if(!name||!rating||!review){status.textContent='يرجى إكمال الاسم والتقييم والرأي.';return;}
-      const text='طلب نشر رأي من صفحة العملاء والزوار\n\nالمنتج: '+product+'\nالاسم: '+name+'\nالصفة: '+role+'\nالتقييم: '+rating+'\n\nالرأي:\n'+review+'\n\nأوافق على مراجعة الرأي قبل نشره.';
+      const text='طلب مراجعة من صفحة العملاء والزوار\n\nالمنتج: '+product+'\nالاسم: '+name+'\nالصفة: '+role+'\nإصدار التطبيق والجهاز: '+context+'\nالتقييم: '+rating+'\n\nالرأي:\n'+review+'\n\nأوافق على مراجعة الرأي قبل نشره.';
       const url='https://wa.me/249121851285?text='+encodeURIComponent(text);
       status.innerHTML='تم تجهيز رأيك. افتح واتساب لإرساله للمراجعة ثم نتابع اعتماده للنشر.';
       window.open(url,'_blank','noopener');
