@@ -102,10 +102,17 @@
             <label for="review-role">الصفة (اختيارية)</label>
             <input id="review-role" name="role" maxlength="80" placeholder="محاسب، مراجع تقني، صاحب نشاط، قارئ...">
           </div>
-          <div class="field full">
-            <label for="review-context">نسخة التطبيق والجهاز (اختياري لتقييم التطبيق)</label>
-            <input id="review-context" name="context" maxlength="140" placeholder="مثال: 2.3.14 — Samsung / Android 16">
+          <div class="field">
+            <label for="review-platform">المنصة</label>
+            <select id="review-platform" name="platform" required><option value="">اختر المنصة</option><option>Android</option><option>Windows</option><option>الموقع / المتجر</option><option>أخرى</option></select>
           </div>
+          <div class="field"><label for="review-version">إصدار التطبيق (إن وجد)</label><input id="review-version" name="version" maxlength="60" placeholder="مثال: 2.4.0 أو غير معروف"></div>
+          <div class="field"><label for="review-device">نوع الهاتف أو الحاسوب</label><input id="review-device" name="device" maxlength="100" placeholder="مثال: Samsung Galaxy A16 / اسم الحاسوب"></div>
+          <div class="field"><label for="review-os">إصدار نظام التشغيل</label><input id="review-os" name="os" maxlength="80" placeholder="مثال: Android 16 أو Windows 11"></div>
+          <div class="field full"><label for="review-test">ماذا جرّبت؟</label><select id="review-test" name="test" required><option value="">اختر ما اختبرته</option><option>التثبيت وفتح التطبيق وتسجيل الدخول</option><option>إنشاء شركة أو إعداداتها</option><option>الفواتير والعملاء والموردون</option><option>المخزون وحركة الأصناف</option><option>القيود ودفتر الأستاذ والتقارير</option><option>الترخيص والاشتراك</option><option>النسخ الاحتياطي والاستعادة</option><option>الطباعة أو التصدير</option><option>التصفح العام فقط</option><option>اختبار آخر</option></select></div>
+          <div class="field"><label for="review-result">النتيجة العامة</label><select id="review-result" name="result" required><option value="">اختر النتيجة</option><option>عمل كما توقعت</option><option>عمل جزئياً</option><option>تعطّل أو أغلق</option><option>لم أتمكن من الاختبار</option></select></div>
+          <div class="field"><label for="review-severity">خطورة المشكلة (إن وجدت)</label><select id="review-severity" name="severity"><option>لا توجد مشكلة مبلّغ عنها</option><option>منخفضة — ملاحظة شكلية</option><option>متوسطة — تعيق جزءاً من العمل</option><option>عالية — تعطل وظيفة مهمة</option><option>حرجة — فقد بيانات أو خطأ مالي أو ثغرة أمنية</option></select></div>
+          <div class="field full"><label for="review-steps">خطوات إعادة المشكلة والنتيجة المتوقعة مقابل الفعلية (اختياري)</label><textarea id="review-steps" name="steps" maxlength="1200" placeholder="ما الخطوات التي نفذتها؟ ماذا توقعت؟ وماذا حدث فعلياً؟ لا تضع بيانات حقيقية أو أسراراً."></textarea></div>
           <div class="field">
             <label for="review-rating">التقييم</label>
             <select id="review-rating" name="rating" required>
@@ -140,14 +147,22 @@
       const product=document.getElementById('review-product').value;
       const name=document.getElementById('review-name').value.trim();
       const role=document.getElementById('review-role').value.trim() || 'غير محدد';
-      const context=document.getElementById('review-context').value.trim() || 'لم يذكر';
+      const platform=document.getElementById('review-platform').value;
+      const version=document.getElementById('review-version').value.trim() || 'لم يذكر';
+      const device=document.getElementById('review-device').value.trim() || 'لم يذكر';
+      const os=document.getElementById('review-os').value.trim() || 'لم يذكر';
+      const test=document.getElementById('review-test').value;
+      const result=document.getElementById('review-result').value;
+      const severity=document.getElementById('review-severity').value;
+      const steps=document.getElementById('review-steps').value.trim() || 'لم يذكر';
       const rating=document.getElementById('review-rating').value;
       const review=document.getElementById('review-text').value.trim();
-      if(!name||!rating||!review){status.textContent='يرجى إكمال الاسم والتقييم والرأي.';return;}
-      const text='طلب مراجعة من صفحة العملاء والزوار\n\nالمنتج: '+product+'\nالاسم: '+name+'\nالصفة: '+role+'\nإصدار التطبيق والجهاز: '+context+'\nالتقييم: '+rating+'\n\nالرأي:\n'+review+'\n\nأوافق على مراجعة الرأي قبل نشره.';
-      const url='https://wa.me/249121851285?text='+encodeURIComponent(text);
-      status.innerHTML='تم تجهيز رأيك. افتح واتساب لإرساله للمراجعة ثم نتابع اعتماده للنشر.';
-      window.open(url,'_blank','noopener');
+      if(!name||!platform||!test||!result||!rating||!review){status.textContent='يرجى إكمال الحقول المطلوبة: الاسم والمنصة وما اختبرته والنتيجة والتقييم والرأي.';return;}
+      const report='تقرير تجربة من صفحة العملاء والزوار\n\nالمنتج: '+product+'\nالاسم: '+name+'\nالصفة: '+role+'\nالمنصة: '+platform+'\nإصدار التطبيق: '+version+'\nنوع الجهاز: '+device+'\nنظام التشغيل: '+os+'\nما تم اختباره: '+test+'\nالنتيجة العامة: '+result+'\nخطورة المشكلة: '+severity+'\nخطوات إعادة المشكلة/المتوقع مقابل الفعلي: '+steps+'\nالتقييم: '+rating+'\n\nالرأي والملاحظات:\n'+review+'\n\nيرجى مراجعة التقرير قبل نشر أي رأي.';
+      const url='https://wa.me/249121851285?text='+encodeURIComponent(report);
+      status.textContent='تم تجهيز التقرير محلياً. اضغط زر واتساب لإرساله؛ لم يُحفظ في قاعدة بيانات الموقع، ولم يُرسل حتى تؤكد الإرسال داخل واتساب.';
+      const send=document.createElement('a');send.href=url;send.target='_blank';send.rel='noopener noreferrer';send.className='btn btn-gold';send.textContent='فتح واتساب وإرسال التقرير';
+      form.querySelector('.form-actions').appendChild(send);
     });
   </script>
 </body>
