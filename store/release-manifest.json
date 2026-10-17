@@ -112,7 +112,10 @@
       "status": "edition_build_pending",
       "artifact_url": null,
       "apk_sha256": null,
-      "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
+      "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
+      "version": "2.3.14",
+      "version_code": 2003014,
+      "sha256": null
     },
     {
       "platform": "android",
@@ -122,7 +125,10 @@
       "status": "edition_build_pending",
       "artifact_url": null,
       "apk_sha256": null,
-      "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
+      "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
+      "version": "2.3.14",
+      "version_code": 2003014,
+      "sha256": null
     },
     {
       "platform": "android",
@@ -132,7 +138,10 @@
       "status": "edition_build_pending",
       "artifact_url": null,
       "apk_sha256": null,
-      "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
+      "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
+      "version": "2.3.14",
+      "version_code": 2003014,
+      "sha256": null
     },
     {
       "platform": "windows",
