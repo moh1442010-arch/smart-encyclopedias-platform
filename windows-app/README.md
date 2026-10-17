@@ -33,7 +33,17 @@
 4. صدّر نسخة احتياطية، ثم اختبر استعادتها على قاعدة تجريبية.
 5. طابق إجماليات العمليات مع قيود دفتر الأستاذ بعد إكمال الترحيل المحاسبي.
 
-## Release gate status — 2026-10-16
+## الإصلاحات الجارية — فرع تجريبي فقط
+
+في فرع `fix/windows-release-blockers-2026-10` بدأنا معالجة عيوب المراجعة:
+- أزيلت أزرار «الباقات والأسعار» و«الدفع والتحويل البنكي» من القائمة الرئيسية حتى لا تعرض هذه النسخة كمنتج تجاري.
+- كل اتصال SQLite يفعّل `PRAGMA foreign_keys = ON` ويتحقق من تفعيله.
+- استُبدلت ترقيات `ALTER TABLE` التي كانت تبتلع أخطاء SQLite بفحص صريح لوجود العمود؛ الأخطاء الأخرى تتوقف وتظهر بدلًا من المرور بصمت.
+- لم تُحوّل مبالغ `REAL/double` إلى وحدات نقدية صحيحة بعد، ولم يُنفّذ بعد نظام الدخول/PIN أو الترخيص الفعلي أو توقيع EXE. لا يُسمح باعتبار هذه البنود مغلقة.
+
+هذه تعديلات أولية لم تُعتمد بعد. يلزم نجاح CI ومراجعة التغييرات واختبارات قاعدة بيانات فعلية قبل الدمج. لا تستخدم قاعدة بيانات إنتاج أو بيانات مالية حقيقية مع هذا الفرع.
+
+## Release gate status — 2026-10-17
 
 The Windows project must be treated as a pre-commercial candidate until a real Windows build and install test passes. A successful CI compilation only proves that the executable can be produced; it does not certify accounting correctness, database encryption, update continuity, licensing, printer behavior, or backup/restore.
 
