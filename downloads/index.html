@@ -16,8 +16,8 @@
 </div></header>
 <main class="wrap main">
 <div id="release-status" class="notice" role="status" aria-live="polite">جارٍ فحص ملفات الإصدارات العامة…</div>
-<section id="android"><div class="sectionhead"><h2>تطبيقات Android</h2><p>ملفات APK للتثبيت والمراجعة، وملفات AAB للمراجعة التقنية أو التوزيع المتوافق مع المتاجر.</p></div><div id="android-grid" class="grid"><div class="empty">جارٍ تحميل قائمة الإصدارات…</div></div></section>
-<section id="windows"><div class="sectionhead"><h2>تطبيق Windows</h2><p>ملفات التثبيت والنسخ المضغوطة المنشورة علناً.</p></div><div id="windows-grid" class="grid"><div class="empty">جارٍ تحميل قائمة الإصدارات…</div></div></section>
+<section id="android"><div class="sectionhead"><h2>نسخ Android من نواة 2.3.14</h2><p>ستظهر هنا نسخ Basic وPro وBusiness فقط بعد بناء كل نسخة وتوقيعها والتحقق من بصمتها واعتماد اختبارات الإصدار.</p></div><div id="android-grid" class="grid"><div class="empty">جارٍ تحميل قائمة الإصدارات…</div></div></section>
+<section id="windows"><div class="sectionhead"><h2>نسخ Windows</h2><p>نسخ Windows من نواة 2.3.14 لم تُبنَ وتُختبر بعد؛ لن نعرض إصدارات أقدم على أنها النسخة الحالية.</p></div><div id="windows-grid" class="grid"><div class="empty">جارٍ تحميل قائمة الإصدارات…</div></div></section>
 <section><div class="sectionhead"><h2>المراجعة والتواصل</h2><p>لا يحتاج العميل أو الخبير إلى إنشاء حساب لتصفح هذه الصفحات أو إرسال ملاحظة عبر القنوات المتاحة.</p></div><div class="links">
 <a class="linkcard" href="../reviews.html"><b>آراء العملاء والزوار</b><span>شارك تجربة حقيقية أو اقتراحاً؛ الآراء لا تنشر تلقائياً.</span></a>
 <a class="linkcard" href="../complaints.html"><b>بلاغات وشكاوى الزوار</b><span>أبلغ عن مشكلة تقنية أو خطأ أو اقتراح تحسين.</span></a>
@@ -28,38 +28,53 @@
 <footer>المحاسب الميزان · <a href="../store/">المتجر</a> · <a href="../reviews.html">آراء الزوار</a> · <a href="../complaints.html">البلاغات</a></footer>
 <script src="../assets/counters.js" defer></script>
 <script>
-(function(){
- const repo='moh1442010-arch/smart-encyclopedias-platform';
+(async function(){
  const status=document.getElementById('release-status'), ag=document.getElementById('android-grid'), wg=document.getElementById('windows-grid');
- const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e};
- function cardFor(release,platform,assets){
-   const c=make('article','card'),h=make('h3','',release.name||release.tag_name);
-   c.appendChild(h);
-   const label=release.prerelease?'نسخة مراجعة قبل الاعتماد التجاري':'إصدار منشور';
-   c.appendChild(make('span','status',label));
-   c.appendChild(make('p','muted','تاريخ النشر: '+(release.published_at?new Date(release.published_at).toLocaleDateString('ar'): 'غير محدد')+' · '+(release.tag_name||'')));
-   const list=make('div','assetlist');
-   assets.forEach(a=>{const row=make('div','asset'),name=make('span','asset-name',a.name),link=make('a','btn','تنزيل مباشر');link.href=a.browser_download_url;link.target='_blank';link.rel='noopener noreferrer';row.append(name,link);list.appendChild(row)});
-   c.appendChild(list);
-   if(release.html_url){const more=make('a','btn secondary','تفاصيل الإصدار');more.href=release.html_url;more.target='_blank';more.rel='noopener noreferrer';const r=make('div','btnrow');r.appendChild(more);c.appendChild(r)}
-   return c;
+ const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
+ const empty=(target,message)=>target.replaceChildren(make('div','empty',message));
+ try{
+  const mr=await fetch('../store/release-manifest.json',{cache:'no-store'});
+  if(!mr.ok)throw Error('manifest unavailable');
+  const m=await mr.json();
+  const editions=['Basic','Pro','Business'];
+  const android=(m.catalog_editions||[]).filter(x=>x.platform==='android');
+  const gates=m.downloads_enabled===true&&m.channel==='approved-release'
+   &&m.android_candidate&&m.android_candidate.device_update_test==='passed'
+   &&m.android_candidate.end_to_end_accounting_acceptance==='passed'
+   &&android.length===3&&editions.every(e=>{
+    const item=android.find(x=>x.edition===e);
+    return item&&item.version===String(m.android_candidate.version)&&item.status==='approved'&&/^[a-f0-9]{64}$/i.test(item.sha256||'');
+   });
+  if(!gates){
+   status.className='notice';
+   status.textContent='التنزيل العام معطّل. النسخ القديمة أُزيلت من واجهة التنزيلات. يجري تجهيز Basic وPro وBusiness من نواة Android 2.3.14؛ لن تظهر روابط حتى اجتياز التوقيع والتحقق من البصمات واختبارات الحسابات والترخيص.';
+   empty(ag,'لا توجد حالياً نسخ Android 2.3.14 معتمدة للتنزيل العام. النسخ الثلاث قيد البناء والتحقق.');
+   empty(wg,'لا توجد حالياً نسخ Windows معتمدة من نواة 2.3.14. سيظهر Windows بعد البناء واختبار التشغيل والتحديث.');
+   return;
+  }
+  const tag='al-mizan-v'+m.android_candidate.version;
+  const rr=await fetch('https://api.github.com/repos/'+m.repository+'/releases/tags/'+encodeURIComponent(tag),{headers:{Accept:'application/vnd.github+json'}});
+  if(!rr.ok)throw Error('approved release not found');
+  const release=await rr.json();
+  const cards=[];
+  for(const edition of editions){
+   const item=android.find(x=>x.edition===edition);
+   const asset=(release.assets||[]).find(a=>a.name==='AlMizan-'+edition+'-'+item.version+'-release.apk');
+   if(!asset)throw Error('approved APK missing');
+   const card=make('article','card'),title=make('h3','', 'المحاسب الميزان — '+edition),desc=make('p','muted','Android '+item.version+' — ملف موقّع معتمد.');
+   const link=make('a','btn','تنزيل APK مباشر');link.href=asset.browser_download_url;link.rel='noopener noreferrer';link.target='_blank';
+   card.append(title,desc,link);cards.push(card);
+  }
+  ag.replaceChildren(...cards);
+  empty(wg,'لا توجد نسخة Windows معتمدة من نواة 2.3.14 في هذا الإصدار.');
+  status.className='notice good';
+  status.textContent='تم التحقق من اعتماد نسخ Android الثلاث. تحقق من بصمة الملف بعد التنزيل قبل التثبيت.';
+ }catch(_){
+  status.className='notice';
+  status.textContent='تعذر التحقق من سجل الإصدار. أبقينا روابط التنزيل مخفية لحماية المستخدمين.';
+  empty(ag,'تعذر التحقق من ملفات Android؛ لا توجد روابط تنزيل معروضة.');
+  empty(wg,'لا توجد روابط Windows معتمدة معروضة.');
  }
- fetch('https://api.github.com/repos/'+repo+'/releases?per_page=100',{headers:{Accept:'application/vnd.github+json'}})
- .then(r=>{if(!r.ok)throw Error('release list unavailable');return r.json()})
- .then(releases=>{
-   ag.replaceChildren();wg.replaceChildren();let ac=0,wc=0;
-   releases.sort((a,b)=>new Date(b.published_at||b.created_at)-new Date(a.published_at||a.created_at));
-   for(const rel of releases){
-     const android=(rel.assets||[]).filter(a=>/\.(apk|aab)$/i.test(a.name));
-     const windows=(rel.assets||[]).filter(a=>/\.(exe|msi|msix|appx|zip)$/i.test(a.name)&&(/windows|win|smartcompany/i.test(a.name)||/\.exe$|\.msi$|\.msix$|\.appx$/i.test(a.name)));
-     if(android.length){ag.appendChild(cardFor(rel,'android',android));ac+=android.length}
-     if(windows.length){wg.appendChild(cardFor(rel,'windows',windows));wc+=windows.length}
-   }
-   if(!ag.children.length)ag.appendChild(make('div','empty','لا توجد حالياً ملفات APK/AAB مرفوعة في الإصدارات العامة. تُجهّز ملفات المراجعة؛ ستظهر هنا فور نشرها.'));
-   if(!wg.children.length)wg.appendChild(make('div','empty','لا توجد حالياً ملفات تثبيت Windows مرفوعة في الإصدارات العامة.'));
-   if(ac||wc){status.className='notice good';status.textContent='تم العثور على ملفات عامة قابلة للتنزيل دون حساب: '+ac+' ملف Android و'+wc+' ملف Windows. اختر تنزيل مباشر بجانب الملف.'}
-   else status.textContent='لم يُعثر بعد على ملفات تثبيت منشورة كأصول عامة. الروابط ستظهر تلقائياً عند نشر إصدار المراجعة أو الإصدار التجاري.';
- }).catch(()=>{ag.replaceChildren(make('div','empty','تعذر جلب قائمة الإصدارات تلقائياً. يمكنك فتح صفحة الإصدارات العامة من GitHub.'));wg.replaceChildren(make('div','empty','تعذر التحقق من ملفات Windows الآن.'));status.textContent='تعذر التحقق المباشر الآن. جرّب لاحقاً أو افتح صفحة الإصدارات العامة.'});
 })();
 </script>
 </body></html>
