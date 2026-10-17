@@ -132,20 +132,20 @@ public class MainActivity extends Activity{
   TextView summaryBox=t(summary(),15);summaryBox.setBackgroundColor(Color.rgb(232,242,236));content.addView(summaryBox);
   String[][] items={
    {"🧾","نقطة البيع والمبيعات","إنشاء فواتير البيع وتحصيل المبالغ"},{"🛒","المشتريات","فواتير الشراء وتحديث تكلفة المخزون"},{"🔄","المرتجعات","عكس فاتورة بيع أو شراء كاملة مرة واحدة"},
-   {"📦","الأصناف والمخزون","الأرصدة والأسعار وحركات المخزون"},{"👥","العملاء والموردون","العملاء والموردون والأرصدة"},
+   {"📦","الأصناف والمخزون","الأرصدة والأسعار وحركات المخزون"},{"📊","تقارير أساسية","ملخص المبيعات والمشتريات والمخزون والذمم"},{"👥","العملاء والموردون","العملاء والموردون والأرصدة"},
    {"💳","الخزينة والشيكات","الصندوق والبنوك والشيكات والتحصيلات"},{"📚","المحاسبة والتقارير","دليل الحسابات والقيود ودفتر الأستاذ والتقارير"},
    {"👔","الموظفون والرواتب","الموظفون والرواتب والسلف والخصومات"},{"⚙️","أدوات النظام","النسخ الاحتياطي وإعدادات الشركة والدعم"}
   };
-  LinearLayout row=null;
+  LinearLayout row=null;int visibleCount=0;
   for(int i=0;i<items.length;i++){
    if(!canAccessSection(items[i][1]))continue;
-   if(i%2==0){row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);content.addView(row,new LinearLayout.LayoutParams(-1,-2));}
+   if(visibleCount%2==0){row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);content.addView(row,new LinearLayout.LayoutParams(-1,-2));}
    final String title=items[i][1];
    LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setGravity(Gravity.CENTER);card.setPadding(8,14,8,14);card.setBackgroundColor(Color.WHITE);card.setElevation(3f);
    TextView icon=t(items[i][0],27);icon.setGravity(Gravity.CENTER);icon.setPadding(0,0,0,3);card.addView(icon,new LinearLayout.LayoutParams(-1,-2));
    TextView label=t(title,16);label.setGravity(Gravity.CENTER);label.setTextColor(green);card.addView(label,new LinearLayout.LayoutParams(-1,-2));
    TextView detail=t(items[i][2],12);detail.setGravity(Gravity.CENTER);detail.setTextColor(Color.DKGRAY);card.addView(detail,new LinearLayout.LayoutParams(-1,-2));
-   LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(6,6,6,6);row.addView(card,lp);card.setOnClickListener(v->openSection(title));
+   LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(6,6,6,6);row.addView(card,lp);card.setOnClickListener(v->openSection(title));visibleCount++;
   }
  }
  void plansPage(){
@@ -272,7 +272,7 @@ public class MainActivity extends Activity{
  case"الخزينة والشيكات":groupMenu(n,new String[][]{{"الصندوق والمصروفات","الصندوق والمصروفات"},{"الحسابات البنكية","الحسابات البنكية"},{"سجل الشيكات","سجل الشيكات"}});break;
  case"الصندوق والمصروفات":cash();break;case"الحسابات البنكية":banks();break;case"سجل الشيكات":checks();break;
  case"المحاسبة والتقارير":groupMenu(n,new String[][]{{"الحسابات الرئيسية ودفتر الأستاذ","الحسابات الرئيسية"},{"القيود اليدوية","القيود اليدوية"},{"التقارير والتحليل","التقارير والتحليل"}});break;
- case"القيود اليدوية":manualJournal();break;case"التقارير والتحليل":reports();break;case"الحسابات الرئيسية":mainAccounts();break;
+ case"القيود اليدوية":manualJournal();break;case"التقارير والتحليل":reports();break;case"تقارير أساسية":basicReports();break;case"الحسابات الرئيسية":mainAccounts();break;
  case"الموظفون والرواتب":case"الموظفون":employees();break;
  case"أدوات النظام":groupMenu(n,new String[][]{{"النسخ الاحتياطي والاستعادة","النسخ الاحتياطي"},{"إعدادات الشركة","إعدادات الشركة"},{"الدفع والتحويل البنكي","الدفع والتحويل البنكي"},{"تغيير رمز الدخول","تغيير رمز الدخول"},{"الدعم","الدعم"}});break;
  case"النسخ الاحتياطي":backup();break;case"إعدادات الشركة":companySettings();break;case"الدفع والتحويل البنكي":paymentDetails();break;case"تغيير رمز الدخول":changePin();break;case"الدعم":support();break;default:support();}}
@@ -461,6 +461,18 @@ public class MainActivity extends Activity{
   }
   void cash(){page("الصندوق والمصروفات");EditText desc=e("البيان"),amt=e("المبلغ");amt.setInputType(8194);content.addView(desc);content.addView(amt);Button add=b("تسجيل مصروف");content.addView(add);add.setOnClickListener(v->{double x=num(amt);if(!validNumber(amt,true)||x<=0){toast("أدخل مبلغًا موجبًا وصحيحًا للمصروف");return;}SQLiteDatabase sq=db.getWritableDatabase();sq.beginTransaction();try{ContentValues tv=new ContentValues();tv.put("type","EXPENSE");tv.put("party",desc.getText().toString());tv.put("total",x);tv.put("paid",x);tv.put("remaining",0);tv.put("created_at",System.currentTimeMillis());long tid=sq.insertOrThrow("transactions",null,tv);postJournal(sq,tid,"EXPENSE",x,x,0,0);sq.setTransactionSuccessful();}catch(Exception ex){toast("تعذر تسجيل المصروف؛ لم تُعتمد العملية");return;}finally{sq.endTransaction();}toast("تم تسجيل المصروف وترحيله محاسبيًا");dashboard();});}
 
+ void basicReports(){
+   page("تقارير أساسية");
+   content.addView(t("ملخص تشغيلي أولي للمبيعات والمشتريات والمصروفات والمخزون والذمم. لا يُعد بديلًا عن مراجعة دفتر الأستاذ وميزان المراجعة.",14));
+   content.addView(t(summary(),17));
+   Cursor stock=db.q("SELECT COUNT(*),COALESCE(SUM(qty),0) FROM products");
+   if(stock.moveToFirst())content.addView(t("عدد الأصناف: "+stock.getInt(0)+" | إجمالي الكميات المتاحة: "+fmt(stock.getDouble(1)),16));
+   stock.close();
+   Cursor balances=db.q("SELECT COALESCE(SUM(CASE WHEN type='SALE' THEN remaining ELSE 0 END),0),COALESCE(SUM(CASE WHEN type='PURCHASE' THEN remaining ELSE 0 END),0) FROM transactions");
+   if(balances.moveToFirst())content.addView(t("ذمم العملاء الأولية: "+fmt(balances.getDouble(0))+" | ذمم الموردين الأولية: "+fmt(balances.getDouble(1)),16));
+   balances.close();
+   Button refresh=b("تحديث الملخص");content.addView(refresh);refresh.setOnClickListener(v->basicReports());
+  }
  void reports(){
    page("التقارير والتحليل");
    content.addView(t("اختر الفترة بالتنسيق YYYY-MM-DD. اترك الحقلين فارغين لعرض كل السجل. النتائج أولية وليست قوائم مالية معتمدة لأن بعض حركات البنوك والرواتب والشيكات لم تكتمل ترحيلاتها.",14));
