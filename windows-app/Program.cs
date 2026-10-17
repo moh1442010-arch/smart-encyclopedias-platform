@@ -60,7 +60,7 @@ sealed class MainForm : Form
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
         Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("المرتجعات", Returns); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
-        Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("التقارير المالية", Reports); Add("الباقات والأسعار", SubscriptionPlans); Add("الدفع والتحويل البنكي", PaymentDetails); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
+        Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("التقارير المالية", Reports); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
         Add("اختيار اللغة / Language", ToggleLanguage);
         RefreshSummary();
     }
@@ -163,22 +163,53 @@ sealed class MainForm : Form
         var b = new Button { Text = UiLanguage.T(text), Width = 520, Height = 52, Font = new Font("Segoe UI", 13), Margin = new Padding(4) };
         b.Click += (_, _) => action(); menu.Controls.Add(b);
     }
-    SqliteConnection C() { var c = new SqliteConnection($"Data Source={dbPath}"); c.Open(); return c; }
+    SqliteConnection C()
+    {
+        var c = new SqliteConnection($"Data Source={dbPath}");
+        try
+        {
+            c.Open();
+            using var pragma = c.CreateCommand();
+            pragma.CommandText = "PRAGMA foreign_keys = ON; PRAGMA foreign_keys;";
+            if (Convert.ToInt32(pragma.ExecuteScalar()) != 1)
+                throw new InvalidOperationException("SQLite foreign-key enforcement could not be enabled.");
+            return c;
+        }
+        catch
+        {
+            c.Dispose();
+            throw;
+        }
+    }
+
+    static void EnsureColumn(SqliteConnection connection, string table, string column, string definition)
+    {
+        // Table and column names are internal constants at call sites; values are parameterized.
+        using var check = connection.CreateCommand();
+        check.CommandText = "SELECT COUNT(*) FROM pragma_table_info($table) WHERE name = $column";
+        check.Parameters.AddWithValue("$table", table);
+        check.Parameters.AddWithValue("$column", column);
+        if (Convert.ToInt32(check.ExecuteScalar()) > 0) return;
+
+        using var alter = connection.CreateCommand();
+        alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {definition}";
+        alter.ExecuteNonQuery(); // Fail loudly if the migration is invalid; do not swallow SQLite errors.
+    }
     void InitDb()
     {
         using var c = C(); using var x = c.CreateCommand();
         x.CommandText = "CREATE TABLE IF NOT EXISTS products(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,qty REAL NOT NULL DEFAULT 0,price REAL NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS sales(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS purchases(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS employees(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,job_title TEXT NOT NULL DEFAULT '',salary REAL NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS payroll_events(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,kind TEXT NOT NULL,amount REAL NOT NULL,note TEXT,period_month TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS expenses(id INTEGER PRIMARY KEY AUTOINCREMENT,description TEXT NOT NULL,amount REAL NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);";
         x.ExecuteNonQuery();
         // Additive schema migrations; never drop or rewrite existing transaction rows.
-        try { using var m = c.CreateCommand(); m.CommandText = "ALTER TABLE sales ADD COLUMN customer_id INTEGER"; m.ExecuteNonQuery(); } catch (SqliteException) { }
-        try { using var m = c.CreateCommand(); m.CommandText = "ALTER TABLE sales ADD COLUMN payment_mode TEXT NOT NULL DEFAULT 'CASH'"; m.ExecuteNonQuery(); } catch (SqliteException) { }
+        EnsureColumn(c, "sales", "customer_id", "INTEGER");
+        EnsureColumn(c, "sales", "payment_mode", "TEXT NOT NULL DEFAULT 'CASH'");
         // Store the cost at sale time so future returns can reverse COGS without guessing historical costs.
-        try { using var m = c.CreateCommand(); m.CommandText = "ALTER TABLE sales ADD COLUMN unit_cost REAL NOT NULL DEFAULT 0"; m.ExecuteNonQuery(); } catch (SqliteException) { }
-        try { using var m = c.CreateCommand(); m.CommandText = "ALTER TABLE purchases ADD COLUMN supplier_id INTEGER"; m.ExecuteNonQuery(); } catch (SqliteException) { }
-        try { using var m = c.CreateCommand(); m.CommandText = "ALTER TABLE purchases ADD COLUMN payment_mode TEXT NOT NULL DEFAULT 'CASH'"; m.ExecuteNonQuery(); } catch (SqliteException) { }
+        EnsureColumn(c, "sales", "unit_cost", "REAL NOT NULL DEFAULT 0");
+        EnsureColumn(c, "purchases", "supplier_id", "INTEGER");
+        EnsureColumn(c, "purchases", "payment_mode", "TEXT NOT NULL DEFAULT 'CASH'");
         // Additive, non-destructive schema changes preserve existing customer data and transactions.
-        try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE products ADD COLUMN barcode TEXT"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
-        try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE products ADD COLUMN unit_cost REAL NOT NULL DEFAULT 0"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
+        EnsureColumn(c, "products", "barcode", "TEXT");
+        EnsureColumn(c, "products", "unit_cost", "REAL NOT NULL DEFAULT 0");
         using (var ledger = c.CreateCommand())
         {
             ledger.CommandText = @"CREATE TABLE IF NOT EXISTS gl_accounts(id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT NOT NULL UNIQUE,name TEXT NOT NULL UNIQUE,kind TEXT NOT NULL);
@@ -187,9 +218,13 @@ CREATE TABLE IF NOT EXISTS gl_lines(id INTEGER PRIMARY KEY AUTOINCREMENT,entry_i
 INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1100','Accounts Receivable','ASSET'),('1200','Inventory','ASSET'),('2000','Accounts Payable','LIABILITY'),('2100','Salaries Payable','LIABILITY'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE'),('6200','Salaries Expense','EXPENSE'),('1300','Employee Advances','ASSET'),('6300','Payroll Deductions','EXPENSE'),('4100','Sales Returns','CONTRA_REVENUE'),('4200','Purchase Return Gain','OTHER_INCOME'),('6400','Purchase Return Loss','EXPENSE');";
             ledger.ExecuteNonQuery();
         }
-        try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE employees ADD COLUMN job_title TEXT NOT NULL DEFAULT ''"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
-        try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE employees ADD COLUMN salary REAL NOT NULL DEFAULT 0"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
-        try { using var migration = c.CreateCommand(); migration.CommandText = "CREATE TABLE IF NOT EXISTS payroll_events(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,kind TEXT NOT NULL,amount REAL NOT NULL,note TEXT,period_month TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
+        EnsureColumn(c, "employees", "job_title", "TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(c, "employees", "salary", "REAL NOT NULL DEFAULT 0");
+        using (var payrollEvents = c.CreateCommand())
+        {
+            payrollEvents.CommandText = "CREATE TABLE IF NOT EXISTS payroll_events(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,kind TEXT NOT NULL,amount REAL NOT NULL,note TEXT,period_month TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)";
+            payrollEvents.ExecuteNonQuery();
+        }
 // Additive registers preserve historical rows and support explicit settlement documents.
 using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF NOT EXISTS payroll_runs(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,period_month TEXT NOT NULL,base_salary REAL NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(employee_id,period_month))"; payroll.ExecuteNonQuery(); }
         // Explicit payroll settlements are additive and unique per employee/month; historical data remains untouched.
@@ -197,7 +232,11 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
         using (var settlements = c.CreateCommand()) { settlements.CommandText = "CREATE TABLE IF NOT EXISTS customer_receipts(id INTEGER PRIMARY KEY AUTOINCREMENT,customer_id INTEGER NOT NULL,amount REAL NOT NULL CHECK(amount>0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS supplier_payments(id INTEGER PRIMARY KEY AUTOINCREMENT,supplier_id INTEGER NOT NULL,amount REAL NOT NULL CHECK(amount>0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);"; settlements.ExecuteNonQuery(); }
         // Additive return registers; original sales/purchases are retained for auditability.
         using (var returns = c.CreateCommand()) { returns.CommandText = "CREATE TABLE IF NOT EXISTS sales_returns(id INTEGER PRIMARY KEY AUTOINCREMENT,sale_id INTEGER NOT NULL,product TEXT NOT NULL,qty REAL NOT NULL CHECK(qty>0),unit_price REAL NOT NULL CHECK(unit_price>=0),unit_cost REAL NOT NULL CHECK(unit_cost>=0),total REAL NOT NULL CHECK(total>=0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS purchase_returns(id INTEGER PRIMARY KEY AUTOINCREMENT,purchase_id INTEGER NOT NULL,product TEXT NOT NULL,qty REAL NOT NULL CHECK(qty>0),unit_price REAL NOT NULL CHECK(unit_price>=0),total REAL NOT NULL CHECK(total>=0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);"; returns.ExecuteNonQuery(); }
-        try { using var indexName = c.CreateCommand(); indexName.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS idx_products_name ON products(name COLLATE NOCASE)"; indexName.ExecuteNonQuery(); } catch (SqliteException) { }
+        using (var indexName = c.CreateCommand())
+        {
+            indexName.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS idx_products_name ON products(name COLLATE NOCASE)";
+            indexName.ExecuteNonQuery(); // Duplicate legacy names must be reconciled explicitly, not silently ignored.
+        }
         using var index = c.CreateCommand(); index.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode) WHERE barcode IS NOT NULL AND barcode != ''"; index.ExecuteNonQuery();
     }
     void Products()
