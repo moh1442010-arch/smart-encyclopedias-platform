@@ -60,9 +60,10 @@ function makeDb() {
   return { db, trials, licenses };
 }
 
-async function call(env, path, { method = "GET", device = "test-device-000001", admin, body } = {}) {
+async function call(env, path, { method = "GET", device = "test-device-000001", admin, body, edition = "enterprise" } = {}) {
   const headers = {};
   if (device) headers["x-app-device-id"] = device;
+  if (edition) headers["x-app-edition"] = edition;
   if (admin) headers["x-admin-key"] = admin;
   if (body !== undefined) headers["content-type"] = "application/json";
   return worker.fetch(new Request("https://test.local" + path, {
@@ -130,14 +131,14 @@ test("paid activation is device-bound and a revoked license is not granted", asy
     });
     assert.equal(createdResponse.status, 201);
     const created = await createdResponse.json();
-    const activated = await call(env, "/api/app-license/activate", { method: "POST", device: "device-0000000001", body: { activationCode: created.activationCode } });
+    const activated = await call(env, "/api/app-license/activate", { method: "POST", device: "device-0000000001", edition: "pro", body: { activationCode: created.activationCode } });
     assert.equal(activated.status, 200);
     assert.equal((await activated.json()).mode, "licensed");
-    const otherDevice = await call(env, "/api/app-license/activate", { method: "POST", device: "device-0000000002", body: { activationCode: created.activationCode } });
+    const otherDevice = await call(env, "/api/app-license/activate", { method: "POST", device: "device-0000000002", edition: "pro", body: { activationCode: created.activationCode } });
     assert.equal(otherDevice.status, 403);
     assert.equal((await otherDevice.json()).error, "license_bound_to_another_device");
     licenses.get("TEST-LICENSE-01").status = "revoked";
-    const revoked = await call(env, "/api/app-license/status", { device: "device-0000000001" });
+    const revoked = await call(env, "/api/app-license/status", { device: "device-0000000001", edition: "pro" });
     assert.equal((await revoked.json()).mode, "expired");
   } finally { globalThis.Date = originalDate; }
 });
@@ -157,13 +158,51 @@ test("expired monthly license stays locked instead of receiving a new trial", as
     assert.equal(createdResponse.status, 201);
     const created = await createdResponse.json();
     const activated = await call(env, "/api/app-license/activate", {
-      method: "POST", device: "monthly-device-0001", body: { activationCode: created.activationCode }
+      method: "POST", device: "monthly-device-0001", edition: "basic", body: { activationCode: created.activationCode }
     });
     assert.equal(activated.status, 200);
     clock += 31 * 86400000;
-    const status = await (await call(env, "/api/app-license/status", { device: "monthly-device-0001" })).json();
+    const status = await (await call(env, "/api/app-license/status", { device: "monthly-device-0001", edition: "basic" })).json();
     assert.equal(status.mode, "expired");
     assert.equal(status.licenseStatus, "active");
     assert.equal(status.licenseId, "TEST-MONTH-01");
   } finally { globalThis.Date = originalDate; }
+});
+
+test("server rejects a Basic license for Pro but accepts a higher-tier license for a lower edition", async () => {
+  const { db } = makeDb();
+  const env = { DB: db, LICENSE_ADMIN_KEY: "test-admin-secret" };
+  const basicCreated = await call(env, "/api/app-license/admin/create", {
+    method: "POST", device: "", admin: "test-admin-secret",
+    body: { approved: true, plan: "basic", termType: "annual", customerName: "Basic Buyer", licenseId: "TEST-BASIC-PLAN-01" }
+  });
+  assert.equal(basicCreated.status, 201);
+  const basic = await basicCreated.json();
+  const denied = await call(env, "/api/app-license/activate", {
+    method: "POST", device: "edition-test-device-0001", edition: "pro",
+    body: { activationCode: basic.activationCode }
+  });
+  assert.equal(denied.status, 403);
+  assert.equal((await denied.json()).error, "license_plan_mismatch");
+
+  const enterpriseCreated = await call(env, "/api/app-license/admin/create", {
+    method: "POST", device: "", admin: "test-admin-secret",
+    body: { approved: true, plan: "enterprise", termType: "annual", customerName: "Enterprise Buyer", licenseId: "TEST-ENT-PLAN-01" }
+  });
+  assert.equal(enterpriseCreated.status, 201);
+  const enterprise = await enterpriseCreated.json();
+  const allowed = await call(env, "/api/app-license/activate", {
+    method: "POST", device: "edition-test-device-0002", edition: "basic",
+    body: { activationCode: enterprise.activationCode }
+  });
+  assert.equal(allowed.status, 200);
+  assert.equal((await allowed.json()).plan, "enterprise");
+});
+
+test("invalid edition header is rejected by the license API", async () => {
+  const { db } = makeDb();
+  const env = { DB: db };
+  const response = await call(env, "/api/app-license/status", { edition: "premium" });
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error, "invalid_app_edition");
 });
