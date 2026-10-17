@@ -31,6 +31,27 @@ public class MoneyMinorUnitsTest {
         catch (IllegalArgumentException expected) { }
     }
 
+
+    @Test public void computesLineTotalsWithOneExplicitCurrencyRoundingBoundary() {
+        assertEquals(1000L, MoneyMinorUnits.lineTotalMinor("3", "3.50", "0.50", 2));
+        assertEquals(1000L, MoneyMinorUnits.lineTotalMinor("3", "3.335", "0.00", 2));
+    }
+
+    @Test public void rejectsInvalidLineAmountsAndExcessPricePrecision() {
+        try { MoneyMinorUnits.lineTotalMinor("0", "10.00", "0.00", 2); fail("Zero quantity must be rejected"); }
+        catch (IllegalArgumentException expected) { }
+        try { MoneyMinorUnits.lineTotalMinor("1", "10.001", "0.00", 2); fail("Price precision must be explicit"); }
+        catch (IllegalArgumentException expected) { }
+        try { MoneyMinorUnits.lineTotalMinor("1", "10.00", "10.01", 2); fail("Discount cannot exceed gross"); }
+        catch (IllegalArgumentException expected) { }
+    }
+
+    @Test public void roundsExtendedCostAtTheCurrencyBoundary() {
+        assertEquals(1001L, MoneyMinorUnits.extendedMinor(3, 3.335, 2));
+        try { MoneyMinorUnits.extendedMinor(Double.NaN, 1, 2); fail("Non-finite quantity must be rejected"); }
+        catch (IllegalArgumentException expected) { }
+    }
+
     @Test public void formatsMinorUnitsWithoutFloatingPointConversion() {
         assertEquals("1234.56", MoneyMinorUnits.format(123456L, 2));
         assertEquals("-0.05", MoneyMinorUnits.format(-5L, 2));
