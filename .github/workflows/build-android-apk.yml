@@ -44,17 +44,17 @@ jobs:
 
       - name: Automated database integrity tests
         working-directory: android-app
-        run: ./gradlew testDebugUnitTest
+        run: ./gradlew testBasicDebugUnitTest testProDebugUnitTest testBusinessDebugUnitTest testEnterpriseDebugUnitTest
 
       - name: Build release only
         working-directory: android-app
-        run: ./gradlew clean assembleRelease bundleRelease
+        run: ./gradlew clean assembleBasicRelease bundleBasicRelease assembleProRelease bundleProRelease assembleBusinessRelease bundleBusinessRelease assembleEnterpriseRelease bundleEnterpriseRelease
 
       # A fresh-install test APK is signed with Android's automatically generated debug key.
       # It is for device testing only, never for commercial distribution.
       - name: Build clean-install test APK
         working-directory: android-app
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleBasicDebug assembleProDebug assembleBusinessDebug assembleEnterpriseDebug
 
       - name: Upload clean-install test APK
         uses: actions/upload-artifact@v4
