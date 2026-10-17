@@ -2,7 +2,7 @@
   "product": "المحاسب الميزان",
   "channel": "prelaunch",
   "last_reviewed": "2026-10-17",
-  "storefront_status": "three_edition_catalog_updated; 2.3.14_core_candidate; edition_builds_and_release_gates_pending",
+  "storefront_status": "four_edition_catalog_enterprise_core_plus_basic_pro_business; 2.3.14_core_candidate; edition_builds_and_release_gates_pending",
   "downloads_enabled": false,
   "android_candidate": {
     "version": "2.3.14",
@@ -73,7 +73,7 @@
       "status": "archived_not_listed_in_customer_store"
     }
   ],
-  "policy": "Customer-facing catalog lists only the Al-Mizan 2.3.14 core release line and three planned editions (Basic, Pro, Business). Historical artifacts and hashes are retained for audit but are not customer downloads. Do not enable public downloads or publish a release until each edition is built from the approved core, signed and hash-verified, and device/accounting/license/privacy gates pass. Windows editions require separate build and launch/update testing; do not infer readiness from the prior Windows 2.2.7 artifact.",
+  "policy": "Customer-facing product family contains four editions: Enterprise is the canonical full Al-Mizan 2.3.14 core; Basic, Pro, and Business derive from that same core. All share the accounting engine/schema/money behavior/security baseline and brand/UI quality. Historical artifacts and hashes are retained for audit but are not customer downloads. Do not enable public downloads until each Android edition is built or designated with a verified artifact, signed and hash-verified, and device/accounting/license/privacy gates pass. Windows editions require separate build and launch/update testing.",
   "windows_candidate": {
     "version": null,
     "source_commit": null,
@@ -104,6 +104,22 @@
     "status": "archived_not_listed_in_customer_store"
   },
   "catalog_editions": [
+    {
+      "platform": "android",
+      "edition": "Enterprise",
+      "core_version": "2.3.14",
+      "source_commit": "6f083339d09b553a69523afc809f4831f2b23c84",
+      "version": "2.3.14",
+      "version_code": 2003014,
+      "status": "core_candidate_built_not_store_approved",
+      "artifact_url": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39035775924/artifacts/12102425426",
+      "artifact_id": 12102425426,
+      "artifact_name": "al-mizan-android-signed-release-v2.3.14",
+      "artifact_zip_sha256": "7d9a2d1052b72be609cad2e0b26744eaacbca61d6068608d89d4099c5528fbd6",
+      "apk_sha256": null,
+      "sha256": null,
+      "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
+    },
     {
       "platform": "android",
       "edition": "Basic",
