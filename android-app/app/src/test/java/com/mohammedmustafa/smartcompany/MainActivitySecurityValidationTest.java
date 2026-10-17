@@ -21,11 +21,19 @@ public class MainActivitySecurityValidationTest {
     private ActivityController<MainActivity> controller;
     private MainActivity activity;
 
+    // Keep unit tests deterministic: never let the live licensing network thread replace test screens.
+    public static class TestMainActivity extends MainActivity {
+        @Override
+        void checkCommercialAccess() {
+            // Intentionally disabled only in this test activity.
+        }
+    }
+
     @Before
     public void setUp() {
         context = RuntimeEnvironment.getApplication();
         context.deleteDatabase("smartcompany2.db");
-        controller = Robolectric.buildActivity(MainActivity.class).setup();
+        controller = Robolectric.buildActivity(TestMainActivity.class).setup();
         activity = controller.get();
     }
 
