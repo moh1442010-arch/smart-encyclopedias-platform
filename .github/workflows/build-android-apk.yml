@@ -1,4 +1,4 @@
-name: Build Al-Mizan Accountant Android Release 2.4.0 - Signed
+name: Build Al-Mizan Android Edition Expert Candidates 2.4.0
 
 concurrency:
   group: smart-company-android-release
@@ -46,7 +46,7 @@ jobs:
         working-directory: android-app
         run: ./gradlew testBasicDebugUnitTest testProDebugUnitTest testBusinessDebugUnitTest testEnterpriseDebugUnitTest
 
-      - name: Build release only
+      - name: Build all edition release variants
         working-directory: android-app
         run: ./gradlew clean assembleBasicRelease bundleBasicRelease assembleProRelease bundleProRelease assembleBusinessRelease bundleBusinessRelease assembleEnterpriseRelease bundleEnterpriseRelease
 
@@ -145,7 +145,7 @@ jobs:
           done
           sha256sum release/AlMizan-*-2.4.0-release.apk release/AlMizan-*-2.4.0-release.aab > release/SHA256SUMS.txt
 
-      - name: Upload signed release artifacts only
+      - name: Upload signed expert-test candidate artifacts
         uses: actions/upload-artifact@v4
         with:
           name: al-mizan-android-edition-candidates-v2.4.0
