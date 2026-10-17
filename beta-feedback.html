@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="بوابة تجربة المحاسب الميزان وإرسال تقييمات العملاء وملاحظات الأعطال.">
+<title>تجربة المحاسب الميزان وملاحظات العملاء</title>
+<style>
+:root{--navy:#0b1f3a;--gold:#d4af37;--bg:#f5f7fb;--ink:#18263a;--muted:#5d6b7d;--line:#dce3ec}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;line-height:1.7}
+header{background:linear-gradient(135deg,#0b1f3a,#173b65);color:#fff;padding:28px 16px;text-align:center;border-bottom:5px solid var(--gold)}header h1{margin:0 0 8px}header p{margin:0;color:#e7edf6}
+main{max-width:850px;margin:22px auto;padding:0 14px 40px}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;margin:14px 0}
+.notice{background:#fff7ed;border-right:4px solid #d97706;padding:12px;border-radius:8px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+label{display:block;font-weight:700;margin:8px 0 4px}input,select,textarea{font:inherit;width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:9px;background:white}textarea{min-height:115px}
+a.btn,button{display:inline-block;border:0;border-radius:9px;padding:11px 15px;background:var(--navy);color:white;text-decoration:none;font:inherit;font-weight:750;cursor:pointer;margin:5px 4px 5px 0}.gold{background:var(--gold)!important;color:#17243a!important}.muted{color:var(--muted);font-size:14px}.footer{text-align:center;color:var(--muted);font-size:13px}
+</style></head><body>
+<header><h1>المحاسب الميزان</h1><p>بوابة تجربة العملاء وتسجيل الانطباعات والملاحظات</p></header>
+<main>
+<section class="card"><h2>أهلاً بك في تجربة المحاسب الميزان</h2>
+<p>رأيك يساعدنا على تحسين التطبيق. بعد التثبيت وتجربة الوظائف، يرجى تسجيل انطباعك وأي خلل واجهته.</p>
+<p class="notice"><strong>حالة الإصدار:</strong> ملفات المراجعة الحالية مخصصة للاختبار والتقييم وليست إصدارًا تجاريًا معتمدًا للبيع. لا تحول أموالًا ولا تستخدم بيانات مالية حقيقية أو معلومات عملاء حساسة أثناء الاختبار.</p>
+<h3>رسالة التذكير بعد التنزيل</h3><blockquote>شكرًا لتجربة المحاسب الميزان. بعد استخدام النسخة، نرجو تسجيل تقييمك وانطباعك وملاحظاتك، مع ذكر نوع جهازك ورقم الإصدار والخطوات التي أدت إلى المشكلة إن وجدت. لا ترسل كلمات المرور أو رموز التفعيل أو بيانات مالية حقيقية.</blockquote>
+</section>
+<section class="card"><h2>تنزيل نسخ المراجعة</h2>
+<p class="muted">هذه ملفات مراجعة منشورة مسبقًا في مستودع المشروع. تحقّق من أن النسخة مناسبة لجهازك، ولا تعتبرها تأكيدًا على اجتياز جميع اختبارات الإطلاق.</p>
+<a class="btn gold" href="https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/tag/al-mizan-expert-review-2026-10-16">فتح ملفات Android وWindows للمراجعة</a>
+<a class="btn" href="https://github.com/moh1442010-arch/smart-encyclopedias-platform/issues/27">متابعة حالة الإطلاق</a>
+</section>
+<section class="card"><h2>أرسل تقييمك أو بلاغك</h2>
+<form id="feedbackForm">
+<div class="grid">
+<div><label for="kind">نوع الرسالة</label><select id="kind"><option>تقييم وانطباع عام</option><option>بلاغ عن خلل</option><option>اقتراح تطوير</option><option>ملاحظة محاسبية</option><option>ملاحظة ترخيص أو تفعيل</option></select></div>
+<div><label for="version">الإصدار</label><input id="version" placeholder="مثال: Android 2.4.0 أو Windows 2.2.7" required></div>
+<div><label for="device">الجهاز ونظام التشغيل</label><input id="device" placeholder="مثال: Samsung / Android 16" required></div>
+<div><label for="severity">شدة المشكلة (إن وجدت)</label><select id="severity"><option>لا توجد مشكلة</option><option>بسيطة</option><option>متوسطة</option><option>عالية</option><option>حرجة — فقد بيانات أو خلل مالي</option></select></div>
+</div>
+<label for="details">تقييمك وخطوات إعادة المشكلة والنتيجة المتوقعة والفعلية</label><textarea id="details" required placeholder="ما الذي جربته؟ ماذا توقعت؟ ماذا حدث؟"></textarea>
+<label for="contact">وسيلة تواصل اختيارية</label><input id="contact" placeholder="بريد إلكتروني أو رقم تواصل اختياري">
+<p class="muted">لا تكتب كلمات مرور أو رموز تفعيل أو أرقام حسابات أو أسماء عملاء أو بيانات محاسبية حقيقية.</p>
+<button type="submit">إرسال الملاحظة عبر واتساب الدعم</button>
+<a class="btn" href="mailto:moh1442010@gmail.com?subject=تقييم%20المحاسب%20الميزان">إرسال بالبريد الإلكتروني</a>
+</form>
+</section>
+<p class="footer">الدعم الفني: <a href="https://wa.me/249121851285">واتساب +249121851285</a> · <a href="mailto:moh1442010@gmail.com">moh1442010@gmail.com</a></p>
+</main>
+<script>
+document.getElementById("feedbackForm").addEventListener("submit",function(e){e.preventDefault();const val=id=>document.getElementById(id).value.trim();const msg="تقييم/بلاغ المحاسب الميزان\nالنوع: "+val("kind")+"\nالإصدار: "+val("version")+"\nالجهاز والنظام: "+val("device")+"\nالشدة: "+val("severity")+"\nالتفاصيل: "+val("details")+"\nوسيلة التواصل: "+val("contact")+"\nتنبيه: لا تتضمن هذه الرسالة بيانات حساسة.";window.location.href="https://wa.me/249121851285?text="+encodeURIComponent(msg);});
+</script></body></html>
