@@ -42,10 +42,11 @@ jobs:
           else
             VERSION_NAME="$(sed -nE "s/.*versionName ['\"]([^'\"]+)['\"].*/\1/p" android-app/app/build.gradle | head -n1)"
           fi
-          if [[ ! "${VERSION_NAME}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+          if [[ ! "${VERSION_NAME}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error title=Invalid version::Use a release tag in the form vMAJOR.MINOR.PATCH."
             exit 1
           fi
+          [[ "${VERSION_NAME}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]
           MAJOR="${BASH_REMATCH[1]}"
           MINOR="${BASH_REMATCH[2]}"
           PATCH="${BASH_REMATCH[3]}"
@@ -149,12 +150,12 @@ jobs:
           apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
           "$apksigner" sign --ks signing/release.jks --ks-key-alias "$KEY_ALIAS" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" --out release/AlMizan-${VERSION_NAME}-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
           cp app/build/outputs/bundle/release/app-release.aab release/AlMizan-${VERSION_NAME}-release.aab
-          jarsigner -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" release/AlMizan-2.3.13-release.aab "$KEY_ALIAS"
-          "$apksigner" verify --verbose release/AlMizan-2.3.13-release.apk
-          jarsigner -verify -verbose release/AlMizan-2.3.13-release.aab
-          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 release/AlMizan-2.3.13-release.apk
+          jarsigner -keystore signing/release.jks -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" release/AlMizan-${VERSION_NAME}-release.aab "$KEY_ALIAS"
+          "$apksigner" verify --verbose release/AlMizan-${VERSION_NAME}-release.apk
+          jarsigner -verify -verbose release/AlMizan-${VERSION_NAME}-release.aab
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 release/AlMizan-${VERSION_NAME}-release.apk
           # Record the release certificate fingerprint so installed-version update issues can be diagnosed.
-          "$apksigner" verify --print-certs release/AlMizan-2.3.13-release.apk > release/SIGNING-CERTIFICATE.txt
+          "$apksigner" verify --print-certs release/AlMizan-${VERSION_NAME}-release.apk > release/SIGNING-CERTIFICATE.txt
           cert_sha="$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2); exit}' release/SIGNING-CERTIFICATE.txt | tr -d ':[:space:]')"
           if [ -z "$cert_sha" ]; then
             echo "::error title=Signing certificate fingerprint missing::Could not extract the signed APK certificate fingerprint."
@@ -167,15 +168,15 @@ jobs:
             echo "::error title=Signing certificate changed::Expected the verified long-term release certificate. Android updates may fail if the signing key changed."
             exit 1
           fi
-          sha256sum release/AlMizan-2.3.13-release.apk release/AlMizan-2.3.13-release.aab > release/SHA256SUMS.txt
+          sha256sum release/AlMizan-${VERSION_NAME}-release.apk release/AlMizan-${VERSION_NAME}-release.aab > release/SHA256SUMS.txt
 
       - name: Final release QA
         working-directory: android-app
         run: |
           set -euo pipefail
           build_tools="$ANDROID_HOME/build-tools/36.0.0"
-          apk="release/AlMizan-2.3.13-release.apk"
-          aab="release/AlMizan-2.3.13-release.aab"
+          apk="release/AlMizan-${VERSION_NAME}-release.apk"
+          aab="release/AlMizan-${VERSION_NAME}-release.aab"
           test -s "$apk"
           test -s "$aab"
           test -s "release/SHA256SUMS.txt"
@@ -189,12 +190,12 @@ jobs:
           sha256sum --check release/SHA256SUMS.txt
 
       - name: Upload signed release artifacts only
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: al-mizan-android-signed-release-v${{ env.VERSION_NAME }}
           path: |
-            android-app/release/AlMizan-2.3.13-release.apk
-            android-app/release/AlMizan-2.3.13-release.aab
+            android-app/release/AlMizan-${{ env.VERSION_NAME }}-release.apk
+            android-app/release/AlMizan-${{ env.VERSION_NAME }}-release.aab
             android-app/release/SHA256SUMS.txt
             android-app/release/SIGNING-CERTIFICATE.txt
             android-app/release/SIGNING-CERT-SHA256.txt
