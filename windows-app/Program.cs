@@ -169,10 +169,17 @@ sealed class MainForm : Form
         try
         {
             c.Open();
-            using var pragma = c.CreateCommand();
-            pragma.CommandText = "PRAGMA foreign_keys = ON; PRAGMA foreign_keys;";
-            if (Convert.ToInt32(pragma.ExecuteScalar()) != 1)
-                throw new InvalidOperationException("SQLite foreign-key enforcement could not be enabled.");
+            using (var enableForeignKeys = c.CreateCommand())
+            {
+                enableForeignKeys.CommandText = "PRAGMA foreign_keys = ON";
+                enableForeignKeys.ExecuteNonQuery();
+            }
+            using (var verifyForeignKeys = c.CreateCommand())
+            {
+                verifyForeignKeys.CommandText = "PRAGMA foreign_keys";
+                if (Convert.ToInt32(verifyForeignKeys.ExecuteScalar()) != 1)
+                    throw new InvalidOperationException("SQLite foreign-key enforcement could not be enabled.");
+            }
             return c;
         }
         catch
