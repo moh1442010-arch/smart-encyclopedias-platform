@@ -2,7 +2,7 @@
   "product": "المحاسب الميزان",
   "channel": "prelaunch",
   "last_reviewed": "2026-10-17",
-  "storefront_status": "four_android_editions_built_signed_ci_passed; expert_device_accounting_live_license_and_windows_acceptance_pending; public_downloads_disabled",
+  "storefront_status": "four_android_editions_2.4.0_built_and_signed_ci_passed; seven_day_trial_api_unit_test_passed_live_worker_pending; device_accounting_windows_and_expert_acceptance_pending; public_downloads_disabled",
   "downloads_enabled": false,
   "android_candidate": {
     "version": "2.4.0",
@@ -74,7 +74,7 @@
       "status": "archived_not_listed_in_customer_store"
     }
   ],
-  "policy": "The four Android editions (Basic, Pro, Business, Enterprise) are built as signed expert-test candidates from the 2.4.0 edition branch. The combined Actions artifact is not a public release. Keep downloads disabled until all four APK/AAB files are extracted and individually hash/signature/package verified, real-device install/update and accounting/backup/restore tests pass, seven-day trial is validated against the live deployed Worker, Windows has real-device acceptance, and expert review signs off. Historical artifacts remain archived and must not be advertised as current releases.",
+  "policy": "The four Android editions (Basic, Pro, Business, Enterprise) are built as signed expert-test candidates from the 2.4.0 edition branch. The combined Actions artifact is not a public release. Keep downloads disabled until all four APK/AAB files are extracted and individually hash/signature/package verified, real-device install/update and accounting/backup/restore tests pass, the seven-day trial API test is supplemented by a successful check against the live deployed Worker and real device, Windows has real-device acceptance, and expert review signs off. After these gates pass, publish all approved editions together in the store and enable customer reviews, expert reports, and a tracked defect/update cycle. Historical artifacts remain archived and must not be advertised as current releases.",
   "windows_candidate": {
     "version": "2.2.8",
     "source_commit": "e65c4ff1212ca24123fd091ce0aaa8da7dd587d4",
@@ -201,7 +201,7 @@
   "release_gates": {
     "android_artifacts_and_signing": "pending_individual_apk_aab_sha256_and_real_device_install_update",
     "windows_device_and_accounting_acceptance": "pending_real_windows_device_install_update_accounting_backup_restore",
-    "live_seven_day_trial": "passed",
+    "live_seven_day_trial": "automated_api_test_passed_live_worker_verification_pending",
     "expert_review_and_defect_closure": "pending",
     "public_sale_approved": false
   }
