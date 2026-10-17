@@ -9,6 +9,7 @@ android {
   targetSdk 36
   versionCode 41
   versionName '2.4.0'
+  resValue 'string', 'app_name', 'المحاسب الميزان'
  }
  // Shared core/schema for all editions. Enterprise keeps the existing package ID
  // so current installs can update; other editions get distinct IDs for side-by-side QA.
@@ -17,22 +18,27 @@ android {
   basic {
    dimension 'edition'
    applicationIdSuffix '.basic'
+   resValue 'string', 'app_name', 'المحاسب الميزان — Basic'
    buildConfigField 'String', 'EDITION_NAME', '"Basic"'
    buildConfigField 'int', 'EDITION_LEVEL', '1'
   }
   pro {
    dimension 'edition'
    applicationIdSuffix '.pro'
+   resValue 'string', 'app_name', 'المحاسب الميزان — Pro'
    buildConfigField 'String', 'EDITION_NAME', '"Pro"'
    buildConfigField 'int', 'EDITION_LEVEL', '2'
   }
   business {
    dimension 'edition'
    applicationIdSuffix '.business'
+   resValue 'string', 'app_name', 'المحاسب الميزان — Business'
    buildConfigField 'String', 'EDITION_NAME', '"Business"'
    buildConfigField 'int', 'EDITION_LEVEL', '3'
   }
   enterprise {
+   dimension 'edition'
+   resValue 'string', 'app_name', 'المحاسب الميزان — Enterprise'
    buildConfigField 'String', 'EDITION_NAME', '"Enterprise"'
    buildConfigField 'int', 'EDITION_LEVEL', '4'
   }
