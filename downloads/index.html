@@ -29,6 +29,7 @@
 <script src="../assets/counters.js" defer></script>
 <script>
 (async function(){
+ const repo='moh1442010-arch/smart-encyclopedias-platform';
  const status=document.getElementById('release-status'), ag=document.getElementById('android-grid'), wg=document.getElementById('windows-grid');
  const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
  const empty=(target,message)=>target.replaceChildren(make('div','empty',message));
@@ -53,7 +54,7 @@
    return;
   }
   const tag='al-mizan-v'+m.android_candidate.version;
-  const rr=await fetch('https://api.github.com/repos/'+m.repository+'/releases/tags/'+encodeURIComponent(tag),{headers:{Accept:'application/vnd.github+json'}});
+  const rr=await fetch('https://api.github.com/repos/'+repo+'/releases/tags/'+encodeURIComponent(tag),{headers:{Accept:'application/vnd.github+json'}});
   if(!rr.ok)throw Error('approved release not found');
   const release=await rr.json();
   const cards=[];
