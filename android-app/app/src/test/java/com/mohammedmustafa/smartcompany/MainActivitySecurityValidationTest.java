@@ -164,4 +164,33 @@ public class MainActivitySecurityValidationTest {
         assertTrue(activity.verifyPin("1234", prefs));
         assertFalse(activity.verifyPin("1235", prefs));
     }
+
+    @Test
+    public void correctPinCanOpenDashboardWithoutThrowing() {
+        SharedPreferences prefs = activity.getSharedPreferences("security", Context.MODE_PRIVATE);
+        prefs.edit().clear().commit();
+        assertTrue("Test PIN must be stored before sign-in", activity.savePin("246810", prefs));
+
+        activity.login();
+        android.widget.EditText pinField = null;
+        android.widget.Button signIn = null;
+        for (int i = 0; i < activity.content.getChildCount(); i++) {
+            android.view.View child = activity.content.getChildAt(i);
+            if (child instanceof android.widget.EditText) {
+                pinField = (android.widget.EditText) child;
+            } else if (child instanceof android.widget.Button
+                    && "دخول".contentEquals(((android.widget.Button) child).getText())) {
+                signIn = (android.widget.Button) child;
+            }
+        }
+        assertNotNull("Sign-in PIN field must be visible", pinField);
+        assertNotNull("Sign-in button must be visible", signIn);
+        pinField.setText("246810");
+        signIn.performClick();
+
+        assertTrue("Correct PIN must authenticate and render the dashboard", activity.authenticated);
+        assertNotNull("Dashboard content must remain attached", activity.content);
+        assertTrue("Dashboard must render at least one view", activity.content.getChildCount() > 0);
+        prefs.edit().clear().commit();
+    }
 }
