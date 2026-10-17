@@ -185,6 +185,7 @@ jobs:
           badging="$("$build_tools/aapt" dump badging "$apk")"
           echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='${VERSION_CODE}' versionName='${VERSION_NAME}'"
           echo "$badging" | grep -F "application-label:'المحاسب الميزان'"
+          echo "$badging" | grep -F "targetSdkVersion:'36'"
           permissions="$("$build_tools/aapt" dump permissions "$apk")"
           echo "$permissions" | grep -q "android.permission.INTERNET" || { echo "Required INTERNET permission for server-side commercial licensing is missing"; exit 1; }
           "$build_tools/apksigner" verify --verbose "$apk"
