@@ -20,7 +20,9 @@
     "live_license_trial_test": "live_worker_synthetic_device_exact_7_days_passed; real_android_client_expiry_and_offline_behavior_pending",
     "public_download_url": null,
     "status": "expert_test_candidate_only_not_store_approved",
-    "note": "The artifact ZIP digest is verified by GitHub Actions metadata; individual APK/AAB SHA-256 values must be independently extracted and verified before store approval. CI does not prove real-device behavior or accounting acceptance."
+    "note": "The combined Actions artifact ZIP SHA-256 and all eight individual APK/AAB SHA-256 values were independently recomputed; all individual values match SHA256SUMS.txt inside the archive. AAB signer certificates all match the expected SHA-256 fingerprint. APK signing-block verification with apksigner and real-device installation/update remain pending. This remains an expert-test candidate, not an approved public release.",
+    "individual_artifact_sha256_status": "all_four_APK_and_all_four_AAB_SHA256_independently_recomputed_and_match_embedded_SHA256SUMS",
+    "signing_certificate_fingerprint_status": "AAB_signer_certificate_SHA256_matches_expected_fingerprint_for_all_four_editions; APK signing-block not independently reverified with apksigner in this environment"
   },
   "releases": [
     {
@@ -124,10 +126,11 @@
       "artifact_id": 12104837318,
       "artifact_name": "al-mizan-android-edition-candidates-v2.4.0",
       "artifact_zip_sha256": "335aa1d0ef515beb9ec4cdb8e356a31bf7fad4df3b170017ba2696553535f7f2",
-      "apk_sha256": null,
-      "aab_sha256": null,
+      "apk_sha256": "b0c7b8a2507ade5700c853582aea9c0ba99d090e65b667b774a3b780fe806851",
+      "aab_sha256": "ee126f7a48f49044d29a5bbd89f2fb13529fefe58efcd57605a073268e8e35ea",
       "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
-      "public_download_url": null
+      "public_download_url": null,
+      "individual_sha256_status": "independently_recomputed_and_matches_embedded_SHA256SUMS"
     },
     {
       "platform": "android",
@@ -142,10 +145,11 @@
       "artifact_id": 12104837318,
       "artifact_name": "al-mizan-android-edition-candidates-v2.4.0",
       "artifact_zip_sha256": "335aa1d0ef515beb9ec4cdb8e356a31bf7fad4df3b170017ba2696553535f7f2",
-      "apk_sha256": null,
-      "aab_sha256": null,
+      "apk_sha256": "133a70b6cc3e20f0bafb7c60448c9064e84b5fe29e6e33083971816fa867b893",
+      "aab_sha256": "23637e05777dd8dad52d423925fb62b2b9d4cc12c9baa3ffd707f8a60348a6d7",
       "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
-      "public_download_url": null
+      "public_download_url": null,
+      "individual_sha256_status": "independently_recomputed_and_matches_embedded_SHA256SUMS"
     },
     {
       "platform": "android",
@@ -160,10 +164,11 @@
       "artifact_id": 12104837318,
       "artifact_name": "al-mizan-android-edition-candidates-v2.4.0",
       "artifact_zip_sha256": "335aa1d0ef515beb9ec4cdb8e356a31bf7fad4df3b170017ba2696553535f7f2",
-      "apk_sha256": null,
-      "aab_sha256": null,
+      "apk_sha256": "b9a5bc2fe990ef74d4ec5803276f31f45cdb462e827beeace084b4208339fc88",
+      "aab_sha256": "44f655e56a616f10460e060872cc75cc4c996c7eeb1daf32e277b14688743ce1",
       "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
-      "public_download_url": null
+      "public_download_url": null,
+      "individual_sha256_status": "independently_recomputed_and_matches_embedded_SHA256SUMS"
     },
     {
       "platform": "android",
@@ -178,10 +183,11 @@
       "artifact_id": 12104837318,
       "artifact_name": "al-mizan-android-edition-candidates-v2.4.0",
       "artifact_zip_sha256": "335aa1d0ef515beb9ec4cdb8e356a31bf7fad4df3b170017ba2696553535f7f2",
-      "apk_sha256": null,
-      "aab_sha256": null,
+      "apk_sha256": "1869058325a678abbe585e9eb910895d245f247fbdb5b3cd3cd185b2c6567879",
+      "aab_sha256": "ae4c1f0f5ad5016eb2a0ea5ba1ecf16d8454bb3cb7d79d068135dcfdf3331e93",
       "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
-      "public_download_url": null
+      "public_download_url": null,
+      "individual_sha256_status": "independently_recomputed_and_matches_embedded_SHA256SUMS"
     }
   ],
   "historical_windows_candidate": {
