@@ -41,7 +41,10 @@ public class MainActivitySecurityValidationTest {
     public void tearDown() {
         if (activity != null && activity.db != null) activity.db.close();
         if (controller != null) controller.pause().stop().destroy();
-        if (context != null) context.deleteDatabase("smartcompany2.db");
+        if (context != null) {
+            context.getSharedPreferences("security", Context.MODE_PRIVATE).edit().clear().commit();
+            context.deleteDatabase("smartcompany2.db");
+        }
     }
 
     @Test
@@ -156,6 +159,7 @@ public class MainActivitySecurityValidationTest {
     @Test
     public void freshInstallDoesNotCreateAUniversalDefaultPin() {
         SharedPreferences prefs = activity.getSharedPreferences("security", Context.MODE_PRIVATE);
+        prefs.edit().clear().commit();
         assertFalse("Fresh install must not silently enable a known default PIN", prefs.contains("pin"));
         assertFalse("Fresh install must wait for the user to create a PIN", prefs.contains("pin_hash"));
     }
