@@ -10,6 +10,16 @@ API base URL: `https://smart-encyclopedias-delivery.moh1442010.workers.dev`
 - `POST /api/app-license/activate` — requires `x-app-device-id` and JSON `{"activationCode":"SC-..." }`. Binds a valid license to one Android ID.
 - `POST /api/app-license/admin/create` — owner-only. Requires header `x-admin-key: <LICENSE_ADMIN_KEY>` and JSON `approved: true`, `plan` (`basic|pro|business|enterprise`), `termType` (`perpetual|monthly|annual`), and `customerName`. Optional fields: `licenseId`, `customerEmail`, `orderId`, `approvedBy`. The response includes the activation code once; only its SHA-256 hash is stored.
 
+## Edition entitlements (added for Android edition candidates)
+
+The Android client sends `x-app-edition` with one of `basic`, `pro`, `business`, or `enterprise` on both status and activation requests. The Worker compares the requested edition with the stored license plan before granting activation/status:
+- Basic license: Basic only.
+- Pro license: Pro and Basic.
+- Business license: Business, Pro and Basic.
+- Enterprise license: all four editions.
+
+A lower-tier license must not activate a higher-tier package. Requests with an unknown edition are rejected. Clients that omit the header are treated as Enterprise for compatibility with the legacy full-feature application; this prevents a Basic license from unlocking the legacy full app. This is defense-in-depth for the official builds, not hardware DRM: local UI restrictions can be bypassed by a modified APK, so do not describe them as tamper-proof. The live Worker deployment and live D1 behavior must be verified before relying on this in customer sales.
+
 ## Owner dashboard and license administration
 
 Static owner dashboard: `https://moh1442010-arch.github.io/smart-encyclopedias-platform/smart-company-admin.html`
