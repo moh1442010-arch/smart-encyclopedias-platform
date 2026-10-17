@@ -8,18 +8,7 @@ public class MainActivity extends Activity{
  // Edition gating is enforced at the navigation entry point as well as by hiding dashboard cards.
  // Server-side license/entitlement validation remains a separate release requirement.
  int editionLevel(){return BuildConfig.EDITION_LEVEL;}
- boolean canAccessSection(String name){
-  if(name==null)return false;
-  int level=editionLevel();
-  switch(name){
-   case "المرتجعات": case "المحاسبة والتقارير": case "الحسابات الرئيسية":
-   case "القيود اليدوية": case "التقارير والتحليل": case "الحسابات البنكية": case "سجل الشيكات":
-    return level>=2;
-   case "الموظفون والرواتب": case "الموظفون":
-    return level>=3;
-   default:return true;
-  }
- }
+ boolean canAccessSection(String name){return EditionAccessPolicy.canAccess(editionLevel(),name);}
  void showEditionRestriction(String name){
   String message="هذه الوظيفة غير متاحة في باقة "+BuildConfig.EDITION_NAME+". راجع الباقات لمعرفة المزايا المتاحة.";
   toast(message);
