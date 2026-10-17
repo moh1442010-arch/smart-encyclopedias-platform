@@ -168,3 +168,41 @@ test("expired monthly license stays locked instead of receiving a new trial", as
     assert.equal(status.licenseId, "TEST-MONTH-01");
   } finally { globalThis.Date = originalDate; }
 });
+
+test("server rejects a Basic license for Pro but accepts a higher-tier license for a lower edition", async () => {
+  const { db } = makeDb();
+  const env = { DB: db, LICENSE_ADMIN_KEY: "test-admin-secret" };
+  const basicCreated = await call(env, "/api/app-license/admin/create", {
+    method: "POST", device: "", admin: "test-admin-secret",
+    body: { approved: true, plan: "basic", termType: "annual", customerName: "Basic Buyer", licenseId: "TEST-BASIC-PLAN-01" }
+  });
+  assert.equal(basicCreated.status, 201);
+  const basic = await basicCreated.json();
+  const denied = await call(env, "/api/app-license/activate", {
+    method: "POST", device: "edition-test-device-0001", edition: "pro",
+    body: { activationCode: basic.activationCode }
+  });
+  assert.equal(denied.status, 403);
+  assert.equal((await denied.json()).error, "license_plan_mismatch");
+
+  const enterpriseCreated = await call(env, "/api/app-license/admin/create", {
+    method: "POST", device: "", admin: "test-admin-secret",
+    body: { approved: true, plan: "enterprise", termType: "annual", customerName: "Enterprise Buyer", licenseId: "TEST-ENT-PLAN-01" }
+  });
+  assert.equal(enterpriseCreated.status, 201);
+  const enterprise = await enterpriseCreated.json();
+  const allowed = await call(env, "/api/app-license/activate", {
+    method: "POST", device: "edition-test-device-0002", edition: "basic",
+    body: { activationCode: enterprise.activationCode }
+  });
+  assert.equal(allowed.status, 200);
+  assert.equal((await allowed.json()).plan, "enterprise");
+});
+
+test("invalid edition header is rejected by the license API", async () => {
+  const { db } = makeDb();
+  const env = { DB: db };
+  const response = await call(env, "/api/app-license/status", { edition: "premium" });
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error, "invalid_app_edition");
+});
