@@ -18,7 +18,7 @@ import static org.junit.Assert.*;
 @Config(sdk = 28)
 public class MainActivitySecurityValidationTest {
     private Context context;
-    private ActivityController<MainActivity> controller;
+    private ActivityController<? extends MainActivity> controller;
     private MainActivity activity;
 
     // Keep unit tests deterministic: never let the live licensing network thread replace test screens.
