@@ -40,8 +40,15 @@
   const editions=['Enterprise','Basic','Pro','Business'];
   const android=(m.catalog_editions||[]).filter(x=>x.platform==='android');
   const gates=m.downloads_enabled===true&&m.channel==='approved-release'
+   &&m.release_gates&&m.release_gates.public_sale_approved===true
+   &&m.release_gates.android_artifacts_and_signing==='passed'
+   &&m.release_gates.windows_device_and_accounting_acceptance==='passed'
+   &&m.release_gates.live_seven_day_trial==='passed'
+   &&m.release_gates.expert_review_and_defect_closure==='passed'
    &&m.android_candidate&&m.android_candidate.device_update_test==='passed'
    &&m.android_candidate.end_to_end_accounting_acceptance==='passed'
+   &&m.windows_candidate&&m.windows_candidate.device_install_update_test==='passed'
+   &&m.windows_candidate.end_to_end_accounting_acceptance==='passed'
    &&android.length===4&&editions.every(e=>{
     const item=android.find(x=>x.edition===e);
     return item&&item.version===String(m.android_candidate.version)&&item.status==='approved'&&/^[a-f0-9]{64}$/i.test(item.sha256||'');
