@@ -138,7 +138,7 @@ jobs:
             fi
             echo "$cert_sha" > "release/SIGNING-CERT-SHA256-$title.txt"
             badging="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk_out")"
-            echo "$badging" | grep -F "package: name='$expected_package' versionCode='41' versionName='2.4.0'"
+            echo "$badging" | grep -F "package: name='$expected_package' versionCode='2004000' versionName='2.4.0'"
             echo "$badging" | grep -F "application-label:'المحاسب الميزان"
             permissions="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$apk_out")"
             echo "$permissions" | grep -q "android.permission.INTERNET"
