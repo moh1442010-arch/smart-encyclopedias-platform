@@ -23,6 +23,12 @@ public class MainActivity extends Activity{
  static final long OFFLINE_GRACE_MS=72L*60L*60L*1000L;
  long parseLicenseTime(String value){try{java.text.SimpleDateFormat f=new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",Locale.US);f.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));java.util.Date d=f.parse(value);return d==null?0:d.getTime();}catch(Exception e){try{java.text.SimpleDateFormat f=new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'",Locale.US);f.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));java.util.Date d=f.parse(value);return d==null?0:d.getTime();}catch(Exception ignored){return 0;}}}
  String appDeviceId(){String id=android.provider.Settings.Secure.getString(getContentResolver(),android.provider.Settings.Secure.ANDROID_ID);return id==null?"":id;}
+ boolean cachedLicenseAllowsOffline(String mode,long expiry,long verified,long now){
+  if(verified<=0||now<verified||now-verified>OFFLINE_GRACE_MS)return false;
+  if("licensed".equals(mode))return expiry==0||expiry>now;
+  if("trial".equals(mode))return expiry>now;
+  return false;
+ }
  void checkCommercialAccess(){
   new Thread(()->{
    boolean allowed=false; String mode=""; String error="";
@@ -41,8 +47,9 @@ public class MainActivity extends Activity{
     c.disconnect();
    }catch(Exception ex){
     android.content.SharedPreferences p=getSharedPreferences("commercial_license",0);
+    String cachedMode=p.getString("mode","");
     long expiry=p.getLong("expires_at",0),verified=p.getLong("last_verified_at",0);
-    allowed=expiry>System.currentTimeMillis()&&verified>0&&System.currentTimeMillis()-verified<=OFFLINE_GRACE_MS;
+    allowed=cachedLicenseAllowsOffline(cachedMode,expiry,verified,System.currentTimeMillis());
     error=allowed?"":"يلزم الاتصال بالإنترنت للتحقق من الترخيص أول مرة أو بعد انتهاء مهلة العمل دون اتصال.";
    }
    final boolean ok=allowed;final String message=error;
