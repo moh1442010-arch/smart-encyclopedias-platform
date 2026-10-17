@@ -1,4 +1,4 @@
-name: Build Al-Mizan Accountant Android Release - Tag Versioned
+name: Build Al-Mizan Accountant Android Release - Signed
 
 concurrency:
   group: smart-company-android-release
@@ -7,6 +7,8 @@ concurrency:
 on:
   workflow_dispatch:
   push:
+    branches:
+      - "repair/al-mizan-money-precision-2.3.14"
     paths:
       - "android-app/**"
       - ".github/workflows/build-android-apk.yml"
