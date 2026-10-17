@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="مركز تنزيلات المحاسب الميزان: إصدارات Android وWindows للمراجعة الفنية والتنزيل العام دون إنشاء حساب.">
+<meta name="description" content="مركز تنزيلات المحاسب الميزان: مرشحو إصدارات Android الأربعة للاختبار الفني، وروابط Windows بعد اجتياز الاعتماد.">
 <meta name="robots" content="index,follow"><meta name="theme-color" content="#0b1f3a">
 <title>التنزيلات | المحاسب الميزان</title>
 <style>
@@ -16,8 +16,8 @@
 </div></header>
 <main class="wrap main">
 <div id="release-status" class="notice" role="status" aria-live="polite">جارٍ فحص ملفات الإصدارات العامة…</div>
-<section id="android"><div class="sectionhead"><h2>نسخ Android من نواة 2.3.14</h2><p>ستظهر هنا نسخ Basic وPro وBusiness فقط بعد بناء كل نسخة وتوقيعها والتحقق من بصمتها واعتماد اختبارات الإصدار.</p></div><div id="android-grid" class="grid"><div class="empty">جارٍ تحميل قائمة الإصدارات…</div></div></section>
-<section id="windows"><div class="sectionhead"><h2>نسخ Windows</h2><p>نسخ Windows من نواة 2.3.14 لم تُبنَ وتُختبر بعد؛ لن نعرض إصدارات أقدم على أنها النسخة الحالية.</p></div><div id="windows-grid" class="grid"><div class="empty">جارٍ تحميل قائمة الإصدارات…</div></div></section>
+<section id="android"><div class="sectionhead"><h2>مرشحو Android 2.4.0 — أربع باقات</h2><p>بُنيت نسخ Basic وPro وBusiness وEnterprise 2.4.0 ونجحت فحوص CI والتوقيع. الملفات الحالية مرشحة لاختبار الخبراء فقط، وليست معتمدة للبيع.</p></div><div id="android-grid" class="grid"><div class="empty">جارٍ تحميل قائمة الإصدارات…</div></div></section>
+<section id="windows"><div class="sectionhead"><h2>نسخ Windows</h2><p>مرشح Windows 2.2.8 اجتاز فحص التشغيل الأولي في CI، لكن اختبار التثبيت والتحديث والحسابات على جهاز Windows حقيقي ما زال مطلوبًا.</p></div><div id="windows-grid" class="grid"><div class="empty">جارٍ تحميل قائمة الإصدارات…</div></div></section>
 <section><div class="sectionhead"><h2>المراجعة والتواصل</h2><p>لا يحتاج العميل أو الخبير إلى إنشاء حساب لتصفح هذه الصفحات أو إرسال ملاحظة عبر القنوات المتاحة.</p></div><div class="links">
 <a class="linkcard" href="../reviews.html"><b>آراء العملاء والزوار</b><span>شارك تجربة حقيقية أو اقتراحاً؛ الآراء لا تنشر تلقائياً.</span></a>
 <a class="linkcard" href="../complaints.html"><b>بلاغات وشكاوى الزوار</b><span>أبلغ عن مشكلة تقنية أو خطأ أو اقتراح تحسين.</span></a>
@@ -42,15 +42,15 @@
   const gates=m.downloads_enabled===true&&m.channel==='approved-release'
    &&m.android_candidate&&m.android_candidate.device_update_test==='passed'
    &&m.android_candidate.end_to_end_accounting_acceptance==='passed'
-   &&android.length===3&&editions.every(e=>{
+   &&android.length===4&&editions.every(e=>{
     const item=android.find(x=>x.edition===e);
     return item&&item.version===String(m.android_candidate.version)&&item.status==='approved'&&/^[a-f0-9]{64}$/i.test(item.sha256||'');
    });
   if(!gates){
    status.className='notice';
-   status.textContent='التنزيل العام معطّل. النسخ القديمة أُزيلت من واجهة التنزيلات. Enterprise هي النواة الأصلية 2.3.14، ويجري تجهيز Basic وPro وBusiness منها؛ لن تظهر روابط حتى اجتياز التوقيع والتحقق من البصمات واختبارات الحسابات والترخيص.';
-   empty(ag,'لا توجد حالياً نسخ Android 2.3.14 معتمدة للتنزيل العام. نسخة Enterprise مرشح بناء غير معتمد، والنسخ الثلاث الأخرى قيد البناء والتحقق.');
-   empty(wg,'لا توجد حالياً نسخ Windows معتمدة من نواة 2.3.14. سيظهر Windows بعد البناء واختبار التشغيل والتحديث.');
+   status.textContent='التنزيل العام معطّل. النسخ القديمة أُزيلت من واجهة التنزيلات. اكتمل بناء وتوقيع المرشحين الأربعة في CI؛ لا تزال اختبارات الجهاز الحقيقي والحسابات والترخيص المباشر ومراجعة الخبراء مطلوبة قبل فتح البيع.';
+   empty(ag,'توجد أربع نسخ Android 2.4.0 كمرشحات اختبار خبراء. التنزيل العام معطّل حتى اعتماد اختبارات الجهاز والحسابات والترخيص.');
+   empty(wg,'لا توجد نسخة Windows معتمدة للبيع؛ يلزم اختبار التثبيت والتحديث والحسابات والاستعادة على جهاز حقيقي.');
    return;
   }
   const tag='al-mizan-v'+m.android_candidate.version;
