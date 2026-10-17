@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /admin.html
+Disallow: /smart-company-admin.html
 Disallow: /agent-knowledge.html
 Disallow: /agent/
 Disallow: /checkout.html
