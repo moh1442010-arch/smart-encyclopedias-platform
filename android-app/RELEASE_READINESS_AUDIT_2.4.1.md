@@ -110,3 +110,50 @@ The CI release workflow enforces a known SHA-256 signing-certificate fingerprint
 ### P1 — Public review download workflow
 
 The previous publication workflow listened for the old Android 2.4.0 workflow and requested 2.4.0 artifact names. It failed because the selected run did not contain the expected named artifact. The review branch now changes publication to a manual, gated process requiring explicit successful main-branch Android 2.4.1 and Windows 2.2.8 run IDs. This workflow change itself must pass CI and must be merged before it affects the default branch. No public release was published by this edit.
+
+
+## Latest verification update — 2026-10-18 14:15 UTC
+
+This section supersedes the older publication-workflow status above where they conflict.
+
+### CI and publication facts now verified
+
+- PR #34 has been merged into `main`; merge source head: `42ab8b87d17ba090b2e8b9611c732a87cf8541b8`.
+- Main commit reviewed: `a9d5c10f51a02abc93232a7a7b28513ca6f7874c`.
+- Android signed build 2.4.1 succeeded: [run 39134945660](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39134945660). Database integrity checks, signed APK/AAB generation, final release QA, and artifact upload all completed successfully.
+- Windows 2.2.8 candidate succeeded: [run 39134945696](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39134945696). Package structure, executable hash manifest, and an eight-second process-alive smoke test passed. This is not a real-device functional or accounting acceptance test.
+- GitHub Pages deployment succeeded: [run 39134945668](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39134945668).
+- Static site checks succeeded: [run 39134945648](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39134945648).
+- Security and knowledge-content audit succeeded: [run 39134945646](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39134945646).
+- Android regression tests on the merged source branch succeeded: [run 39134791071](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39134791071).
+- The gated public review release was published as a prerelease, not a commercial release: [expert-review release](https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/tag/al-mizan-expert-review-2026-10-18). It contains Android APK/AAB, Windows EXE/ZIP, review notice, SHA-256 manifest and signing-certificate information.
+- Public review landing page: https://moh1442010-arch.github.io/smart-encyclopedias-platform/downloads/
+- Customer feedback pages: https://moh1442010-arch.github.io/smart-encyclopedias-platform/reviews.html and https://moh1442010-arch.github.io/smart-encyclopedias-platform/complaints.html
+- Commercial sales remain closed. The review release is explicitly labelled NOT FOR SALE.
+
+### Manual device evidence supplied by the project owner
+
+The owner reports that after clearing local test data on the Enterprise installation, they created a new PIN, opened the app successfully, and repeated the previously described inventory/sales/partial-payment scenario. They report the expected results and fast, correct behavior. This is useful positive manual evidence for that scenario, but it does not replace independent review, migration tests, or full accounting acceptance.
+
+### Remaining release blockers — do not bypass
+
+1. **Financial precision migration:** monetary storage and calculations still use SQLite `REAL` and Java `double`. Design and test a versioned migration to integer minor units or a decimal-safe model; reconcile old/new totals and test rollback/restore before applying to any customer database.
+2. **Four independent Android tiers:** current release workflow produces one generic Android package. Build and verify Basic, Pro, Business and Enterprise packages/entitlements explicitly, or revise the product offer so it does not claim independent packages/features that do not exist.
+3. **Enterprise PIN recovery:** clearing app data resolved the owner's test install, but it destroys local database/preferences and is not an acceptable customer recovery flow. Provide a documented recovery route that preserves recoverable data without a hidden bypass.
+4. **Windows acceptance:** the 2.2.8 candidate is old relative to Android 2.4.1. Test on a real Windows machine for login/PIN, company setup, accounting, inventory, reports, backup/restore, licensing and update behavior. Confirm the intended Windows release/version before selling.
+5. **Accounting coverage:** add deterministic tests for every posted journal balancing, purchase/sale, partial payments, receipts, supplier payments, expenses, returns, COGS/costing, stock movement, trial balance, ledger, profit, duplicate submissions, concurrency, decimal and zero-decimal currencies, and migrations from each supported version.
+6. **Backup/restore:** test wrong password, tampering, truncation, corrupt SQLite, interrupted restore, prior-database preservation, WAL/SHM handling and post-restore reconciliation.
+7. **Live licensing/payment:** verify activation, tier entitlements, expiry, revocation, offline grace, reinstall, device changes, clock rollback, network errors and manual payment approval against the live service. Do not accept screenshots or unit tests as proof of end-to-end payment.
+8. **Currency and tax:** company currency selection does not convert balances. Prevent accidental currency changes on an active company or require a clear confirmation/workflow. Tax percentage is currently stored as a setting and is not automatically applied to invoices; do not advertise automated tax compliance.
+9. **Signing/update continuity:** compare the published candidate certificate fingerprint to the trusted installed production APK before asking customers to update. Preserve the release key and verify update-over-install without losing data.
+10. **Privacy and operational policy:** publish clear privacy/data retention, backup, support, license-expiry/export, refund/payment-review, and vulnerability-reporting policies. Audit repository history and secrets before any broad public source exposure.
+11. **Independent reviewer sign-off:** collect reproducible reports from the accountant reviewers for Android and Windows, with device/OS, build SHA, steps, expected/actual result, screenshots or sanitized evidence, and severity. No fabricated ratings or testimonials.
+12. **Release process:** retain the prerelease channel for review only. Commercial publication must be a separate explicit approval after all P0 blockers close and evidence is recorded.
+
+### Recommended Enterprise differentiator
+
+Prioritize a **Financial Control & Period-Close Center** (suggested home icon: `shield-check` or `clipboard-check`). It should combine a month-end close checklist, cash/bank reconciliation, inventory-to-ledger reconciliation, trial-balance checks, unposted/imbalanced journal warnings, overdue receivables/payables, backup verification, and a tamper-evident audit trail. Every warning must link to the underlying record and must not silently alter data. This should be implemented only after the accounting posting model and monetary precision are stabilized.
+
+### Commercial release decision
+
+**Current decision: NOT APPROVED FOR SALE.** The build and review-download pipeline are functioning, and the public expert-review page is available. Commercial readiness still depends on closing the financial precision, tier packaging, live licensing/payment, backup/restore, Windows parity, security/privacy and independent accounting sign-off gates above.
