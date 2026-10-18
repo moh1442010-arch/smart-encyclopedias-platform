@@ -152,6 +152,14 @@ public class MainActivity extends Activity{
    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(6,6,6,6);row.addView(card,lp);card.setOnClickListener(v->openSection(title));
   }
  }
+ int countInvalidJournalEntries(SQLiteDatabase sq){
+  Cursor c=sq.rawQuery("SELECT COUNT(*) FROM (SELECT e.id FROM journal_entries e LEFT JOIN journal_lines l ON l.journal_entry_id=e.id GROUP BY e.id HAVING COUNT(l.id)<2 OR ABS(COALESCE(SUM(l.debit),0)-COALESCE(SUM(l.credit),0))>0.005)",null);
+  try{return c.moveToFirst()?c.getInt(0):0;}finally{c.close();}
+ }
+ int countOrphanJournalLines(SQLiteDatabase sq){
+  Cursor c=sq.rawQuery("SELECT COUNT(*) FROM journal_lines l LEFT JOIN journal_entries e ON e.id=l.journal_entry_id LEFT JOIN accounts a ON a.id=l.account_id WHERE e.id IS NULL OR a.id IS NULL",null);
+  try{return c.moveToFirst()?c.getInt(0):0;}finally{c.close();}
+ }
  void enterpriseControlCenter(){
    page("مركز الرقابة والإقفال المالي — Enterprise");
    content.addView(t("مركز رقابي للقراءة فقط: يعرض مؤشرات ومخاطر تحتاج مراجعة، ولا يعدّل القيود أو الأرصدة تلقائيًا.",15));
@@ -163,20 +171,21 @@ public class MainActivity extends Activity{
     double difference=debit-credit;
     content.addView(t("1) توازن إجمالي دفتر القيود: "+(Math.abs(difference)<=0.005?"متوازن حسابيًا":"يحتاج مراجعة"),18));
     content.addView(t("إجمالي المدين: "+fmt(debit)+" | إجمالي الدائن: "+fmt(credit)+" | الفرق: "+fmt(difference),14));
-    Cursor unbalanced=sq.rawQuery("SELECT COUNT(*) FROM (SELECT journal_entry_id FROM journal_lines GROUP BY journal_entry_id HAVING ABS(COALESCE(SUM(debit),0)-COALESCE(SUM(credit),0))>0.005)",null);
-    int bad=unbalanced.moveToFirst()?unbalanced.getInt(0):0;unbalanced.close();
-    content.addView(t("2) قيود غير متوازنة: "+bad+(bad==0?" — لم يظهر فرق يتجاوز حد الفحص":" — افتح دفتر القيود وراجع السجلات"),17));
+    int bad=countInvalidJournalEntries(sq);
+    content.addView(t("2) قيود ناقصة الأسطر أو غير متوازنة: "+bad+(bad==0?" — لم تظهر قيود ناقصة أو غير متوازنة":" — راجع القيود التي لا تحتوي سطرين على الأقل أو لا يتساوى مدينها ودائنها"),17));
+    int orphanLines=countOrphanJournalLines(sq);
+    content.addView(t("3) أسطر قيود بلا قيد رئيسي أو حساب صالح: "+orphanLines,17));
     Cursor missing=sq.rawQuery("SELECT COUNT(*) FROM transactions t WHERE t.type IN ('SALE','PURCHASE','EXPENSE','SALE_RETURN','PURCHASE_RETURN') AND NOT EXISTS (SELECT 1 FROM journal_entries j WHERE j.transaction_id=t.id)",null);
     int unposted=missing.moveToFirst()?missing.getInt(0):0;missing.close();
-    content.addView(t("3) حركات بيع/شراء/مصروف/مرتجع بلا قيد مرتبط: "+unposted,17));
+    content.addView(t("4) حركات بيع/شراء/مصروف/مرتجع بلا قيد مرتبط: "+unposted,17));
     long cutoff=System.currentTimeMillis()-30L*24L*60L*60L*1000L;
     Cursor receivables=sq.rawQuery("SELECT COUNT(*),COALESCE(SUM(remaining),0) FROM transactions WHERE type='SALE' AND remaining>0 AND created_at<?",new String[]{String.valueOf(cutoff)});
     int oldCount=0;double oldBalance=0;if(receivables.moveToFirst()){oldCount=receivables.getInt(0);oldBalance=receivables.getDouble(1);}receivables.close();
-    content.addView(t("4) ذمم مبيعات متبقية مضى على حركتها أكثر من 30 يومًا: "+oldCount+" | الرصيد: "+fmt(oldBalance),17));
+    content.addView(t("5) ذمم مبيعات متبقية مضى على حركتها أكثر من 30 يومًا: "+oldCount+" | الرصيد: "+fmt(oldBalance),17));
     Cursor stock=sq.rawQuery("SELECT COUNT(*) FROM products WHERE qty<=reorder",null);
     int low=stock.moveToFirst()?stock.getInt(0):0;stock.close();
-    content.addView(t("5) أصناف عند حد إعادة الطلب أو دونه: "+low,17));
-    content.addView(t("6) النسخ الاحتياطي: لا يُسجّل التطبيق بعد تحققًا آليًا من آخر نسخة؛ أنشئ نسخة مشفرة واختبر استعادتها في بيئة تجريبية.",14));
+    content.addView(t("6) أصناف عند حد إعادة الطلب أو دونه: "+low,17));
+    content.addView(t("7) النسخ الاحتياطي: لا يُسجّل التطبيق بعد تحققًا آليًا من آخر نسخة؛ أنشئ نسخة مشفرة واختبر استعادتها في بيئة تجريبية.",14));
     content.addView(t("قائمة إقفال الفترة: راجع القيود غير المتوازنة، الحركات غير المرحلة، الصندوق والبنوك، المخزون، الذمم، ثم أنشئ نسخة مشفرة قبل اعتماد الإقفال. لا يوجد قفل فترة آلي في هذه النسخة الأولية.",14));
     Button accounts=b("📚 مراجعة القيود وميزان المراجعة");content.addView(accounts);accounts.setOnClickListener(v->mainAccounts());
     Button stockButton=b("📦 مراجعة الأصناف والمخزون");content.addView(stockButton);stockButton.setOnClickListener(v->products());
