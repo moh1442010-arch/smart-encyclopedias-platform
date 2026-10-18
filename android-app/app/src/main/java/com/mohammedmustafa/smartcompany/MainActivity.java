@@ -26,7 +26,11 @@ public class MainActivity extends Activity{
  boolean hasEnterpriseEntitlement(android.content.SharedPreferences prefs){
    if(!"licensed".equals(prefs.getString("mode","")))return false;
    if(!"enterprise".equals(prefs.getString("plan","").trim().toLowerCase(Locale.ROOT)))return false;
+   String termType=prefs.getString("term_type","").trim().toLowerCase(Locale.ROOT);
    long expiry=prefs.getLong("expires_at",0),verified=prefs.getLong("last_verified_at",0),now=System.currentTimeMillis();
+   if("perpetual".equals(termType)){if(expiry!=0)return false;}
+   else if("monthly".equals(termType)||"annual".equals(termType)){if(expiry<=now)return false;}
+   else return false;
    return cachedLicenseAllowsOffline("licensed",expiry,verified,now);
   }
   boolean cachedLicenseAllowsOffline(String mode,long expiry,long verified,long now){
