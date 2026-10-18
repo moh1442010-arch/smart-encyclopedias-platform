@@ -1,4 +1,5 @@
 name: Build Al-Mizan Accountant Android Release 2.4.1 - Signed
+# Keep this workflow name stable: the Android review publisher consumes successful main-branch runs by exact name.
 
 concurrency:
   group: smart-company-android-release
