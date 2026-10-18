@@ -206,3 +206,30 @@ The Financial Control & Period-Close Center is a useful read-only warning dashbo
 ### Release disposition unchanged
 
 **NOT APPROVED FOR SALE.** Financial precision migration, four-tier package/entitlement proof, customer-safe PIN recovery, full backup/restore failure testing, live licensing/payment acceptance, Windows functional acceptance, signing continuity, privacy/operational policies and independent accountant sign-off remain release gates. Do not enable paid checkout or describe the product as fully secure or fully accounting-certified.
+
+
+## Execution update — 2026-10-18 15:04 UTC
+
+### Verified changes since the prior update
+
+- PR #37, [Strengthen Enterprise journal-integrity diagnostics](https://github.com/moh1442010-arch/smart-encyclopedias-platform/pull/37), is merged. The added diagnostics flag journal entries with fewer than two lines or debit/credit imbalance above the existing tolerance, and journal lines with a missing parent entry or account. Regression tests cover empty, one-line, balanced and orphaned records. This is detection, not automatic repair.
+- PR #38, [Test Enterprise license plan and term-type contract](https://github.com/moh1442010-arch/smart-encyclopedias-platform/pull/38), is merged. Worker regression tests verify that an Enterprise perpetual license returns the same `plan` and `termType` on creation, activation and status.
+- PR #39, [Validate Enterprise license term before unlocking controls](https://github.com/moh1442010-arch/smart-encyclopedias-platform/pull/39), is merged as `fcfdd738cc99fdaf7fdcdd2adf421ec2df6abca9`. Its Android regression tests and signed candidate build passed: [test run 39138293559](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39138293559), [signed build run 39138288038](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39138288038). The gate now rejects unknown term types, missing expiry for monthly/annual terms, expired terms and stale offline verification; a perpetual term must have no expiry.
+- On the resulting main commit, static-site checks and security/content audit passed: [static checks 39138723153](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39138723153), [security/content audit 39138723206](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39138723206). The post-merge signed Android build was still in progress at the time of this record: [run 39138723310](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39138723310).
+- Current source audit confirms a single Android `applicationId` (`com.mohammedmustafa.smartcompany`) and one generic release configuration. The Windows workflow still identifies its candidate as 2.2.8. Neither is evidence of four independently validated tiers or Windows parity.
+
+### Financial precision migration — explicit no-blind-conversion rule
+
+The current database helper is schema version 10 and its `onUpgrade` calls the generic schema routine. Money-like columns are stored as SQLite `REAL`, and SQL parameters are bound through `bindDouble`. A safe migration cannot be a type rename alone. Before implementation, inventory every money field and every read/write/reporting path; define currency exponent rules (including zero-decimal currencies), conversion/rounding rules, migration markers, backup-before-migration, row counts, old/new per-table totals, journal debit/credit reconciliation, restart/interruption recovery, rollback, and upgrade tests from every supported database version. The migration must run in a transaction and preserve the original database until verification passes. Do not bump the database version or deploy a partial conversion before these gates and deterministic tests exist.
+
+### Remaining owner/operator acceptance (not delegable to CI)
+
+1. Install the post-merge signed APK over a trusted previously installed copy on a real Android device, without clearing app data; verify the app opens and all existing test records remain. If any test records matter, export a backup first.
+2. Compare the signing certificate fingerprint of the APK with the trusted installed/previous release certificate before distributing any update.
+3. Arrange real Windows-device testing for the intended Windows candidate; capture OS/build and run the accountant test script.
+4. Obtain reviewer reports from the accountant panel with reproducible steps and sanitized evidence; record pass/fail per case.
+5. Only after engineering gates close, approve a separate explicit commercial launch and payment enablement.
+
+### Release decision
+
+**NOT APPROVED FOR SALE.** These merged changes improve the Enterprise warning dashboard and entitlement input validation; they do not close monetary precision, full backup/restore, customer-safe PIN recovery, live license/payment lifecycle, four-tier packaging, Windows acceptance, full accounting test coverage, signing continuity, privacy/operational policy or independent accountant sign-off. Keep the current prerelease review-only and do not enable paid checkout.
