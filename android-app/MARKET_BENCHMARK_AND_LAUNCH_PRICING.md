@@ -19,9 +19,9 @@ The product strategy is value-for-money launch pricing, not an unsupported claim
 - Public evidence found in this pass was insufficient to establish a reliable current Egypt-specific EGP price benchmark. Do not invent one. Obtain direct Egypt pricing from vendors before finalizing EGP prices.
 - Sudan's currency and purchasing power are volatile; do not hard-code an exchange-rate conversion from SAR, USD, or IQD.
 
-## Launch-pricing recommendation (not yet final)
-1. Use a low-friction founder launch price only after the core workflows and data safety pass release QA. Avoid making the app permanently cheap before costs and support load are known.
-2. Keep a free 7-day trial as a product goal, but do not claim secure enforcement until a server-side licensing service is implemented and tested. Current local-only trial controls can be reset or bypassed.
+## Final pricing decision and market positioning
+1. The approved price list is recorded in `COMMERCIAL_PACKAGING_AND_PRICING.md`: SDG for Sudan via Bankak and USD for international payments via IBAN. Keep sales and activation closed until release QA, licensing and payment verification pass.
+2. The Android client now calls a server-side license status endpoint, but live activation, expiry, device changes, offline grace and payment approval still require end-to-end verification before describing licensing as commercially complete.
 3. Keep the three commercial models distinct:
    - Permanent license: a clearly defined version/usage right; specify whether future major features are excluded, while defining security/compatibility fixes separately.
    - Monthly subscription: active features, updates and support only for the paid period.
@@ -29,8 +29,8 @@ The product strategy is value-for-money launch pricing, not an unsupported claim
 4. Do not list multi-branch sync, cloud backup, multi-user access, enterprise integrations, or advanced support as included until they exist and pass tests.
 5. Collect verified customer feedback only after real use; no fabricated testimonials, star ratings, or customer counts.
 
-## Required next steps before publishing prices
-- Obtain current official price quotes for Egypt and any target countries not covered above.
+## Required next steps before opening sales
+- Keep the approved SDG/USD prices consistent across Android and the website; do not add unapproved country-specific currency prices.
 - Run a feature-by-feature matrix against competitors: accounting core, inventory, customer/supplier balances, returns, payroll, checks, printing, backup/restore, encryption, offline behavior, language support, devices/users, support, and licensing.
 - Test the app with representative businesses and measure willingness to pay, support cost, conversion, refunds, and renewal.
 - Implement server-side licenses, entitlement checks, payment/receipt flow, cancellation/renewal, limited offline grace period, and a data-export path after expiry.
