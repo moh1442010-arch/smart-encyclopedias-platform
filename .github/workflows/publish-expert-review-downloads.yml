@@ -32,6 +32,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Resolve and validate matching successful main-branch builds
+        id: resolve
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT_ANDROID_RUN_ID: ${{ inputs.android_run_id }}
@@ -44,6 +45,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo "publish_ready=false" >> "$GITHUB_OUTPUT"
           android_run_id="$EVENT_ANDROID_RUN_ID"
           windows_run_id="$EVENT_WINDOWS_RUN_ID"
 
@@ -91,13 +93,17 @@ jobs:
           android_sha="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$android_run_id" --jq .head_sha)"
           windows_sha="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$windows_run_id" --jq .head_sha)"
           [[ "$android_sha" == "$windows_sha" ]] || { echo "::error::Android and Windows builds must come from the same main-branch commit."; exit 1; }
+          echo "android_run_id=$android_run_id" >> "$GITHUB_OUTPUT"
+          echo "windows_run_id=$windows_run_id" >> "$GITHUB_OUTPUT"
+          echo "publish_ready=true" >> "$GITHUB_OUTPUT"
           echo "Both candidates passed their build workflows on the same main commit. Publishing review-only prerelease; commercial sales remain disabled."
           
       - name: Download and verify named build artifacts
+        if: steps.resolve.outputs.publish_ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          ANDROID_RUN_ID: ${{ inputs.android_run_id }}
-          WINDOWS_RUN_ID: ${{ inputs.windows_run_id }}
+          ANDROID_RUN_ID: ${{ steps.resolve.outputs.android_run_id }}
+          WINDOWS_RUN_ID: ${{ steps.resolve.outputs.windows_run_id }}
         shell: bash
         run: |
           set -euo pipefail
@@ -132,6 +138,7 @@ jobs:
           NOTICE
 
       - name: Publish or update the public prerelease for expert review
+        if: steps.resolve.outputs.publish_ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
