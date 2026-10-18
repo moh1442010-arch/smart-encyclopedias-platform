@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="مركز تنزيلات المحاسب الميزان: مرشحو إصدارات Android الأربعة للاختبار الفني، وروابط Windows بعد اجتياز الاعتماد.">
+<meta name="description" content="مركز تنزيلات المحاسب الميزان: مرشح Android 2.4.1 ومرشح Windows 2.2.8 للمراجعة الفنية فقط.">
 <meta name="robots" content="index,follow"><meta name="theme-color" content="#0b1f3a">
 <title>التنزيلات | المحاسب الميزان</title>
 <style>
@@ -16,8 +16,8 @@
 </div></header>
 <main class="wrap main">
 <div id="release-status" class="notice" role="status" aria-live="polite">جارٍ تحميل روابط ملفات المراجعة العامة…</div>
-<section id="android"><div class="sectionhead"><h2>مرشحو Android — أربع باقات 2.3.9 ومرشح موحّد 2.4.0</h2><p>الباقات Basic وPro وBusiness وEnterprise المتاحة هنا إصدارها 2.3.9، ويوجد ملف مراجعة إضافي موحّد برقم 2.4.0. هذه ليست أربعة ملفات 2.4.0؛ اقرأ اسم الملف ورقمه قبل التثبيت، واستخدم بيانات اختبار فقط.</p></div><div id="android-grid" class="grid"><div class="empty">جارٍ تحميل قائمة الإصدارات…</div></div></section>
-<section id="windows"><div class="sectionhead"><h2>نسخ Windows</h2><p>مرشح Windows 2.2.7 متاح للتجربة والتنزيل المباشر؛ لم يعتمد للاستخدام التجاري ويحتاج اختبارًا على جهاز Windows حقيقي.</p></div><div id="windows-grid" class="grid"><div class="empty">جارٍ تحميل قائمة الإصدارات…</div></div></section>
+<section id="android"><div class="sectionhead"><h2>مرشح Android — الإصدار 2.4.1</h2><p>هذا ملف Android موحّد للمراجعة الفنية، وليس أربعة تطبيقات مستقلة للباقات Basic وPro وBusiness وEnterprise. لا تعتمد تمايز الباقات أو صلاحياتها قبل التحقق المستقل منها.</p></div><div id="android-grid" class="grid"><div class="empty">جارٍ تحميل قائمة الإصدارات…</div></div></section>
+<section id="windows"><div class="sectionhead"><h2>مرشح Windows — الإصدار 2.2.8</h2><p>مرشح Windows للمراجعة الفنية فقط. لم يثبت بعد تكافؤه المحاسبي مع Android أو اجتيازه اختبارًا شاملًا على جهاز حقيقي.</p></div><div id="windows-grid" class="grid"><div class="empty">جارٍ تحميل قائمة الإصدارات…</div></div></section>
 <section><div class="sectionhead"><h2>المراجعة والتواصل</h2><p>لا يحتاج العميل أو الخبير إلى إنشاء حساب لتصفح هذه الصفحات أو إرسال ملاحظة عبر القنوات المتاحة.</p></div><div class="links">
 <a class="linkcard" href="../reviews.html"><b>آراء العملاء والزوار</b><span>شارك تجربة حقيقية أو اقتراحاً؛ الآراء لا تنشر تلقائياً.</span></a>
 <a class="linkcard" href="../complaints.html"><b>بلاغات وشكاوى الزوار</b><span>أبلغ عن مشكلة تقنية أو خطأ أو اقتراح تحسين.</span></a>
@@ -44,28 +44,22 @@
    });
    c.append(list);return c;
  };
- const release='https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/al-mizan-expert-review-2026-10-16/';
- const editions=[
-  ['Basic','الأساسية','AlMizan-review-2.3.9-AlMizan-Basic-2.3.9-release.apk'],
-  ['Pro','المحترفة','AlMizan-review-2.3.9-AlMizan-Pro-2.3.9-release.apk'],
-  ['Business','الأعمال','AlMizan-review-2.3.9-AlMizan-Business-2.3.9-release.apk'],
-  ['Enterprise','المؤسسات','AlMizan-review-2.3.9-AlMizan-Enterprise-2.3.9-release.apk']
- ];
- ag.replaceChildren(...editions.map(([edition,ar,file])=>card('المحاسب الميزان — '+ar+' ('+edition+')','Android 2.3.9', 'حزمة APK مستقلة للتجربة وجمع الملاحظات. استخدم بيانات وهمية فقط.',[{label:'ملف APK مباشر',url:release+file}])));
- const latest=card('المحاسب الميزان — مرشح Android موحّد','Android 2.4.0','مرشح إضافي أحدث للمراجعة العامة؛ لا يفترض أنه بديل مثبت فوق أي إصدار سابق.',[
-  {label:'ملف APK',url:release+'AlMizan-review-2.4.0-release.apk'},
-  {label:'بصمات SHA-256',url:release+'AlMizan-review-2.4.0-SHA256SUMS.txt'},
-  {label:'بصمة شهادة التوقيع',url:release+'AlMizan-review-2.4.0-SIGNING-CERT-SHA256.txt'}
- ]);
- ag.append(latest);
- wg.replaceChildren(card('المحاسب الميزان — Windows','Windows 2.2.7','نسخة مراجعة كبيرة الحجم؛ اختبرها على جهاز غير إنتاجي، ولا تستخدم بيانات حقيقية.',[
-  {label:'مثبّت Windows x64 (EXE)',url:release+'Windows-review-2.2.7-SmartCompany-Windows-2.2.7-x64.exe'},
-  {label:'حزمة Windows (ZIP)',url:release+'Windows-review-2.2.7-SmartCompany-Windows-2.2.7-x64.zip'},
-  {label:'تعليمات النسخة',url:release+'Windows-review-2.2.7-README.txt'},
-  {label:'بصمات SHA-256',url:release+'Windows-review-2.2.7-SHA256SUMS.txt'}
+ const release='https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/al-mizan-expert-review-2026-10-18/';
+ ag.replaceChildren(card('المحاسب الميزان — Android','Android 2.4.1','مرشح موحّد للمراجعة الفنية. اختبر التثبيت والتحديث والعمليات الحسابية والترخيص والنسخ الاحتياطي ببيانات وهمية فقط.',[
+  {label:'ملف APK مباشر',url:release+'AlMizan-review-2.4.1-release.apk'},
+  {label:'بصمات SHA-256 لجميع الملفات',url:release+'REVIEW-SHA256SUMS.txt'},
+  {label:'شهادة التوقيع',url:release+'SIGNING-CERTIFICATE.txt'},
+  {label:'بصمة شهادة التوقيع SHA-256',url:release+'SIGNING-CERT-SHA256.txt'},
+  {label:'تنبيه وتعليمات المراجعة',url:release+'REVIEW-NOTICE.txt'}
+ ]));
+ wg.replaceChildren(card('المحاسب الميزان — Windows','Windows 2.2.8','مرشح غير معتمد تجاريًا؛ اختبره على جهاز Windows غير إنتاجي ولا تستخدم بيانات حقيقية.',[
+  {label:'مثبّت Windows x64 (EXE)',url:release+'Windows-review-2.2.8-x64.exe'},
+  {label:'حزمة Windows (ZIP)',url:release+'Windows-review-2.2.8-x64.zip'},
+  {label:'بصمات SHA-256 لجميع الملفات',url:release+'REVIEW-SHA256SUMS.txt'},
+  {label:'تنبيه وتعليمات المراجعة',url:release+'REVIEW-NOTICE.txt'}
  ]));
  status.className='notice good';
- status.textContent='روابط التنزيل العامة عُرضت من سجل الإصدار؛ تضم أربع باقات Android 2.3.9 ومرشح Android موحّد 2.4.0 ومرشح Windows 2.2.7. هذا العرض لا يثبت سلامة التثبيت أو التشغيل، والنسخ ليست للبيع. أرسلوا الملاحظات عبر آراء العملاء والبلاغات وبوابة الخبراء.';
+ status.textContent='روابط مرشحي Android 2.4.1 وWindows 2.2.8 للمراجعة الفنية فقط. هذا العرض لا يثبت سلامة التثبيت أو التشغيل، ولا يعني اعتماد الباقات أو فتح البيع. أرسلوا الملاحظات عبر آراء العملاء والبلاغات وبوابة الخبراء.';
 })();
 </script>
 </body></html>
