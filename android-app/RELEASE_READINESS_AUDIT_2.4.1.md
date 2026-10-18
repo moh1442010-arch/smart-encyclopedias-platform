@@ -157,3 +157,32 @@ Prioritize a **Financial Control & Period-Close Center** (suggested home icon: `
 ### Commercial release decision
 
 **Current decision: NOT APPROVED FOR SALE.** The build and review-download pipeline are functioning, and the public expert-review page is available. Commercial readiness still depends on closing the financial precision, tier packaging, live licensing/payment, backup/restore, Windows parity, security/privacy and independent accounting sign-off gates above.
+
+
+## Execution update — 2026-10-18: two-phase closeout and Enterprise differentiator
+
+### Phase 1 — source repair and Enterprise control-center candidate
+
+- Added a **read-only Enterprise Financial Control & Period-Close Center** to the Android dashboard on branch `feature/enterprise-financial-control-center`.
+- Initial checks display aggregate debit/credit difference, count of unbalanced journal entries, selected transaction types without a linked journal, sales receivables older than 30 days (an age-of-transaction proxy, not contractual aging), and products at/below reorder threshold.
+- Added navigation to the relevant accounting, inventory, customer and backup screens. The screen does not post, alter, or close any records.
+- Explicitly labels backup verification and automated period locking as not implemented; no false “all clear” is inferred from missing data.
+- The current generic Android package does **not** yet enforce Enterprise-only entitlement. This change is a feature candidate and must not be marketed as exclusive to Enterprise until package/plan enforcement is implemented and tested.
+- The source change has been committed on a review branch and must pass Android CI before it is considered build-verified.
+
+### Phase 2 — evidence-based release gate
+
+The latest main-branch Android signed build for report-only commit `3cbfa4aa07899da2856d4ff8735f53d7376dbf6e` passed all configured CI steps: database integrity tests, release APK/AAB build and signing, clean-install test APK build, final release QA and artifact upload ([run 39135445230](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39135445230)). This does not test the new branch feature or prove real-device/accounting acceptance.
+
+Commercial sales remain closed until the following critical evidence is obtained:
+1. Decimal-safe financial storage/migration plan with old/new reconciliation and rollback tests.
+2. Independently validated accounting cases, including returns, partial payments, costs, trial balance, ledger and profit.
+3. Backup/restore failure matrix and customer-safe PIN recovery that preserves data.
+4. Live license lifecycle tests and verified payment approval workflow.
+5. Signing-certificate continuity against a trusted previously installed customer build.
+6. Separate tier/package/entitlement proof for Basic, Pro, Business and Enterprise.
+7. Expert acceptance and privacy/support/refund/retention policies.
+
+Windows: automated package and short process-alive smoke checks are available, but they are not a substitute for an actual Windows functional/accounting review. Do not claim Windows has passed customer acceptance merely because an executable can be launched in CI.
+
+**Disposition:** review candidate only; no commercial release, no paid checkout activation, and no claims of full protection or complete accounting certification.
