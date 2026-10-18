@@ -107,4 +107,30 @@ public class MainActivitySecurityValidationTest {
         assertTrue(activity.verifyPin("1234", prefs));
         assertFalse(activity.verifyPin("1235", prefs));
     }
+
+    @Test
+    public void enterpriseControlCenterRequiresFreshLicensedEnterpriseEntitlement() {
+        SharedPreferences prefs = context.getSharedPreferences("test-enterprise-entitlement", Context.MODE_PRIVATE);
+        prefs.edit().clear().commit();
+        long now = System.currentTimeMillis();
+
+        prefs.edit().putString("mode", "trial").putString("plan", "enterprise")
+                .putLong("expires_at", now + 60_000L).putLong("last_verified_at", now).commit();
+        assertFalse("A trial must not unlock Enterprise-only controls", activity.hasEnterpriseEntitlement(prefs));
+
+        prefs.edit().putString("mode", "licensed").putString("plan", "pro")
+                .putLong("expires_at", 0L).putLong("last_verified_at", now).commit();
+        assertFalse("A non-Enterprise paid license must not unlock Enterprise-only controls", activity.hasEnterpriseEntitlement(prefs));
+
+        prefs.edit().putString("mode", "licensed").putString("plan", "enterprise")
+                .putLong("expires_at", now + 60_000L).putLong("last_verified_at", now).commit();
+        assertTrue("A recently verified active Enterprise license should unlock the control center", activity.hasEnterpriseEntitlement(prefs));
+
+        prefs.edit().putLong("expires_at", now - 1L).commit();
+        assertFalse("An expired Enterprise license must not unlock the control center", activity.hasEnterpriseEntitlement(prefs));
+
+        prefs.edit().putLong("expires_at", 0L).putLong("last_verified_at", now - 73L * 60L * 60L * 1000L).commit();
+        assertFalse("An Enterprise license beyond offline grace must fail closed", activity.hasEnterpriseEntitlement(prefs));
+        prefs.edit().clear().commit();
+    }
 }
