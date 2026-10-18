@@ -56,10 +56,10 @@ jobs:
             fi
             if [[ "$TRIGGER_RUN_NAME" == "Build Al-Mizan Accountant Android Release 2.4.1 - Signed" ]]; then
               android_run_id="$TRIGGER_RUN_ID"
-              windows_run_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?branch=main&status=success&per_page=100" | jq -r --arg sha "$TRIGGER_RUN_SHA" --arg name "Build Al-Mizan Windows Expert Test Candidate 2.2.8" '[.workflow_runs[] | select(.head_branch == "main" and .head_sha == $sha and .name == $name and .conclusion == "success")][0].id // empty')"
+              windows_run_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?branch=main&status=completed&per_page=100" | jq -r --arg sha "$TRIGGER_RUN_SHA" --arg name "Build Al-Mizan Windows Expert Test Candidate 2.2.8" '[.workflow_runs[] | select(.head_branch == "main" and .head_sha == $sha and .name == $name and .conclusion == "success")][0].id // empty')"
             elif [[ "$TRIGGER_RUN_NAME" == "Build Al-Mizan Windows Expert Test Candidate 2.2.8" ]]; then
               windows_run_id="$TRIGGER_RUN_ID"
-              android_run_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?branch=main&status=success&per_page=100" | jq -r --arg sha "$TRIGGER_RUN_SHA" --arg name "Build Al-Mizan Accountant Android Release 2.4.1 - Signed" '[.workflow_runs[] | select(.head_branch == "main" and .head_sha == $sha and .name == $name and .conclusion == "success")][0].id // empty')"
+              android_run_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?branch=main&status=completed&per_page=100" | jq -r --arg sha "$TRIGGER_RUN_SHA" --arg name "Build Al-Mizan Accountant Android Release 2.4.1 - Signed" '[.workflow_runs[] | select(.head_branch == "main" and .head_sha == $sha and .name == $name and .conclusion == "success")][0].id // empty')"
             else
               echo "Unexpected workflow_run source; no review release will be published."
               exit 0
