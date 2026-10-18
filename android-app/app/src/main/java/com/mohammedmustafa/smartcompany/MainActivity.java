@@ -128,6 +128,7 @@ public class MainActivity extends Activity{
   TextView heading=t("مركز إدارة النشاط",24);heading.setTextColor(green);content.addView(heading);
   Button plansButton=b("💼 الباقات والأسعار");plansButton.setTextSize(18);content.addView(plansButton,new LinearLayout.LayoutParams(-1,-2));plansButton.setOnClickListener(v->plansPage());
   TextView summaryBox=t(summary(),15);summaryBox.setBackgroundColor(Color.rgb(232,242,236));content.addView(summaryBox);
+  Button controlCenter=b("🛡️ مركز الرقابة والإقفال المالي — Enterprise");controlCenter.setTextSize(17);content.addView(controlCenter,new LinearLayout.LayoutParams(-1,-2));controlCenter.setOnClickListener(v->enterpriseControlCenter());
   String[][] items={
    {"🧾","نقطة البيع والمبيعات","إنشاء فواتير البيع وتحصيل المبالغ"},{"🛒","المشتريات","فواتير الشراء وتحديث تكلفة المخزون"},{"🔄","المرتجعات","عكس فاتورة بيع أو شراء كاملة مرة واحدة"},
    {"📦","الأصناف والمخزون","الأرصدة والأسعار وحركات المخزون"},{"👥","العملاء والموردون","العملاء والموردون والأرصدة"},
@@ -145,7 +146,41 @@ public class MainActivity extends Activity{
    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(6,6,6,6);row.addView(card,lp);card.setOnClickListener(v->openSection(title));
   }
  }
- void plansPage(){
+ void enterpriseControlCenter(){
+   page("مركز الرقابة والإقفال المالي — Enterprise");
+   content.addView(t("مركز رقابي للقراءة فقط: يعرض مؤشرات ومخاطر تحتاج مراجعة، ولا يعدّل القيود أو الأرصدة تلقائيًا.",15));
+   content.addView(t("تنبيه: هذه نسخة أولية للمراجعة. مؤشر الذمم يستخدم عمر الحركة (30 يومًا) لعدم وجود تاريخ استحقاق مستقل، ولا يُعد تقرير أعمار ديون معتمدًا.",13));
+   SQLiteDatabase sq=db.getReadableDatabase();
+   try{
+    Cursor j=sq.rawQuery("SELECT COALESCE(SUM(debit),0),COALESCE(SUM(credit),0) FROM journal_lines",null);
+    double debit=0,credit=0;if(j.moveToFirst()){debit=j.getDouble(0);credit=j.getDouble(1);}j.close();
+    double difference=debit-credit;
+    content.addView(t("1) توازن إجمالي دفتر القيود: "+(Math.abs(difference)<=0.005?"متوازن حسابيًا":"يحتاج مراجعة"),18));
+    content.addView(t("إجمالي المدين: "+fmt(debit)+" | إجمالي الدائن: "+fmt(credit)+" | الفرق: "+fmt(difference),14));
+    Cursor unbalanced=sq.rawQuery("SELECT COUNT(*) FROM (SELECT journal_entry_id FROM journal_lines GROUP BY journal_entry_id HAVING ABS(COALESCE(SUM(debit),0)-COALESCE(SUM(credit),0))>0.005)",null);
+    int bad=unbalanced.moveToFirst()?unbalanced.getInt(0):0;unbalanced.close();
+    content.addView(t("2) قيود غير متوازنة: "+bad+(bad==0?" — لم يظهر فرق يتجاوز حد الفحص":" — افتح دفتر القيود وراجع السجلات"),17));
+    Cursor missing=sq.rawQuery("SELECT COUNT(*) FROM transactions t WHERE t.type IN ('SALE','PURCHASE','EXPENSE','SALE_RETURN','PURCHASE_RETURN') AND NOT EXISTS (SELECT 1 FROM journal_entries j WHERE j.transaction_id=t.id)",null);
+    int unposted=missing.moveToFirst()?missing.getInt(0):0;missing.close();
+    content.addView(t("3) حركات بيع/شراء/مصروف/مرتجع بلا قيد مرتبط: "+unposted,17));
+    long cutoff=System.currentTimeMillis()-30L*24L*60L*60L*1000L;
+    Cursor receivables=sq.rawQuery("SELECT COUNT(*),COALESCE(SUM(remaining),0) FROM transactions WHERE type='SALE' AND remaining>0 AND created_at<?",new String[]{String.valueOf(cutoff)});
+    int oldCount=0;double oldBalance=0;if(receivables.moveToFirst()){oldCount=receivables.getInt(0);oldBalance=receivables.getDouble(1);}receivables.close();
+    content.addView(t("4) ذمم مبيعات متبقية مضى على حركتها أكثر من 30 يومًا: "+oldCount+" | الرصيد: "+fmt(oldBalance),17));
+    Cursor stock=sq.rawQuery("SELECT COUNT(*) FROM products WHERE qty<=reorder",null);
+    int low=stock.moveToFirst()?stock.getInt(0):0;stock.close();
+    content.addView(t("5) أصناف عند حد إعادة الطلب أو دونه: "+low,17));
+    content.addView(t("6) النسخ الاحتياطي: لا يُسجّل التطبيق بعد تحققًا آليًا من آخر نسخة؛ أنشئ نسخة مشفرة واختبر استعادتها في بيئة تجريبية.",14));
+    content.addView(t("قائمة إقفال الفترة: راجع القيود غير المتوازنة، الحركات غير المرحلة، الصندوق والبنوك، المخزون، الذمم، ثم أنشئ نسخة مشفرة قبل اعتماد الإقفال. لا يوجد قفل فترة آلي في هذه النسخة الأولية.",14));
+    Button accounts=b("📚 مراجعة القيود وميزان المراجعة");content.addView(accounts);accounts.setOnClickListener(v->mainAccounts());
+    Button stockButton=b("📦 مراجعة الأصناف والمخزون");content.addView(stockButton);stockButton.setOnClickListener(v->products());
+    Button debtButton=b("👥 مراجعة العملاء والذمم");content.addView(debtButton);debtButton.setOnClickListener(v->party("customers","العملاء"));
+    Button backupButton=b("🔐 النسخ الاحتياطي والاستعادة");content.addView(backupButton);backupButton.setOnClickListener(v->backup());
+   }catch(Exception ex){
+    content.addView(t("تعذر إكمال بعض فحوص الرقابة. لم تُجرَ أي تعديلات على البيانات؛ راجع قاعدة البيانات وسجل الأخطاء قبل اعتماد الإقفال.",15));
+   }
+  }
+  void plansPage(){
    page("الباقات والأسعار");
    content.addView(t("باقات المحاسب الميزان — الأسعار المعتمدة للمراجعة الفنية",21));
    content.addView(t("تجربة مجانية لمدة 7 أيام. هذه الأسعار وفق قائمة الباقات المعتمدة سابقًا. النسخة الحالية مخصصة للمراجعة الفنية فقط؛ لا تحوّل أي مبلغ ولا تعتبر طلب واتساب تفعيلًا للترخيص قبل اعتماد الإصدار وفتح البيع رسميًا.",14));
