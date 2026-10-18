@@ -91,3 +91,22 @@ Do not mark the release ready until all of the following are evidenced:
 8. Privacy, terms, support, refund, retention and release-download policies are ready before sales open.
 
 **Current disposition: Continue technical review and expert testing. Do not claim perfection or commercial readiness yet.**
+
+
+### P1 — Enterprise local PIN recovery
+
+The Enterprise login PIN is stored locally in Android app preferences (`security`), separate from the server-side commercial license. The current code has no authenticated self-service PIN reset. A rejected old PIN after update is not, by itself, proof of a bad password or a licensing failure.
+
+Safe recovery:
+- If any data must be preserved, do not clear app storage or uninstall. Export a backup and verify that the backup file is available before attempting recovery.
+- For a test installation with no data to keep, Android Settings → Apps → المحاسب الميزان Enterprise → Storage → Clear data resets the local PIN and database; the next launch should offer PIN creation. This is destructive to that app's local test data.
+- Do not add a hidden PIN bypass or silently reset the PIN during an upgrade.
+- Before any customer release, add and test a documented recovery workflow that preserves encrypted backups and does not allow unauthorized account takeover.
+
+### P0 — Release signing-key continuity
+
+The CI release workflow enforces a known SHA-256 signing-certificate fingerprint and the 2.4.1 signed build passed that check. Before future changes to keystore files or secrets, compare the certificate fingerprint against a trusted previously installed production APK and the current CI artifact. Never replace the signing key just to solve a login/PIN issue: a changed certificate can block Android updates and strand installed customers.
+
+### P1 — Public review download workflow
+
+The previous publication workflow listened for the old Android 2.4.0 workflow and requested 2.4.0 artifact names. It failed because the selected run did not contain the expected named artifact. The review branch now changes publication to a manual, gated process requiring explicit successful main-branch Android 2.4.1 and Windows 2.2.8 run IDs. This workflow change itself must pass CI and must be merged before it affects the default branch. No public release was published by this edit.
