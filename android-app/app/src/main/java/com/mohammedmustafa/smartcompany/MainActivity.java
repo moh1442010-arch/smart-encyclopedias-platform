@@ -23,7 +23,13 @@ public class MainActivity extends Activity{
  static final long OFFLINE_GRACE_MS=72L*60L*60L*1000L;
  long parseLicenseTime(String value){try{java.text.SimpleDateFormat f=new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",Locale.US);f.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));java.util.Date d=f.parse(value);return d==null?0:d.getTime();}catch(Exception e){try{java.text.SimpleDateFormat f=new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'",Locale.US);f.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));java.util.Date d=f.parse(value);return d==null?0:d.getTime();}catch(Exception ignored){return 0;}}}
  String appDeviceId(){String id=android.provider.Settings.Secure.getString(getContentResolver(),android.provider.Settings.Secure.ANDROID_ID);return id==null?"":id;}
- boolean cachedLicenseAllowsOffline(String mode,long expiry,long verified,long now){
+ boolean hasEnterpriseEntitlement(android.content.SharedPreferences prefs){
+   if(!"licensed".equals(prefs.getString("mode","")))return false;
+   if(!"enterprise".equals(prefs.getString("plan","").trim().toLowerCase(Locale.ROOT)))return false;
+   long expiry=prefs.getLong("expires_at",0),verified=prefs.getLong("last_verified_at",0),now=System.currentTimeMillis();
+   return cachedLicenseAllowsOffline("licensed",expiry,verified,now);
+  }
+  boolean cachedLicenseAllowsOffline(String mode,long expiry,long verified,long now){
   if(verified<=0||now<verified||now-verified>OFFLINE_GRACE_MS)return false;
   if("licensed".equals(mode))return expiry==0||expiry>now;
   if("trial".equals(mode))return expiry>now;
@@ -41,7 +47,7 @@ public class MainActivity extends Activity{
     if(code>=200&&code<300&&d.optBoolean("ok")){
      mode=d.optString("mode","");long expiry=0;try{expiry=parseLicenseTime(d.optString("expiresAt",""));}catch(Exception ignored){}
      allowed=("licensed".equals(mode)||("trial".equals(mode)&&expiry>System.currentTimeMillis()));
-     getSharedPreferences("commercial_license",0).edit().putString("mode",mode).putLong("expires_at",expiry).putLong("last_verified_at",System.currentTimeMillis()).putString("license_id",d.optString("licenseId","")).apply();
+     getSharedPreferences("commercial_license",0).edit().putString("mode",mode).putString("plan",d.optString("plan","").toLowerCase(Locale.ROOT)).putString("term_type",d.optString("termType","").toLowerCase(Locale.ROOT)).putLong("expires_at",expiry).putLong("last_verified_at",System.currentTimeMillis()).putString("license_id",d.optString("licenseId","")).apply();
      if(!allowed)error="انتهت التجربة المجانية. أدخل رمز الترخيص التجاري للمتابعة.";
     }else error="تعذر التحقق من الترخيص. حاول مرة أخرى.";
     c.disconnect();
@@ -78,7 +84,7 @@ public class MainActivity extends Activity{
      org.json.JSONObject d=new org.json.JSONObject(out.toString("UTF-8"));
      if(status>=200&&status<300&&d.optBoolean("ok")){
       long expiry=0;try{expiry=parseLicenseTime(d.optString("expiresAt",""));}catch(Exception ignored){}
-      getSharedPreferences("commercial_license",0).edit().putString("mode","licensed").putLong("expires_at",expiry).putLong("last_verified_at",System.currentTimeMillis()).putString("license_id",d.optString("licenseId","")).apply();ok=true;
+      getSharedPreferences("commercial_license",0).edit().putString("mode","licensed").putString("plan",d.optString("plan","").toLowerCase(Locale.ROOT)).putString("term_type",d.optString("termType","").toLowerCase(Locale.ROOT)).putLong("expires_at",expiry).putLong("last_verified_at",System.currentTimeMillis()).putString("license_id",d.optString("licenseId","")).apply();ok=true;
      }else resultMessage="تعذر التفعيل: "+d.optString("error","تحقق من الرمز وحالته.");
      c.disconnect();
     }catch(Exception ex){}
@@ -128,7 +134,7 @@ public class MainActivity extends Activity{
   TextView heading=t("مركز إدارة النشاط",24);heading.setTextColor(green);content.addView(heading);
   Button plansButton=b("💼 الباقات والأسعار");plansButton.setTextSize(18);content.addView(plansButton,new LinearLayout.LayoutParams(-1,-2));plansButton.setOnClickListener(v->plansPage());
   TextView summaryBox=t(summary(),15);summaryBox.setBackgroundColor(Color.rgb(232,242,236));content.addView(summaryBox);
-  Button controlCenter=b("🛡️ مركز الرقابة والإقفال المالي — Enterprise");controlCenter.setTextSize(17);content.addView(controlCenter,new LinearLayout.LayoutParams(-1,-2));controlCenter.setOnClickListener(v->enterpriseControlCenter());
+  if(hasEnterpriseEntitlement(getSharedPreferences("commercial_license",0))){Button controlCenter=b("🛡️ مركز الرقابة والإقفال المالي — Enterprise");controlCenter.setTextSize(17);content.addView(controlCenter,new LinearLayout.LayoutParams(-1,-2));controlCenter.setOnClickListener(v->enterpriseControlCenter());}
   String[][] items={
    {"🧾","نقطة البيع والمبيعات","إنشاء فواتير البيع وتحصيل المبالغ"},{"🛒","المشتريات","فواتير الشراء وتحديث تكلفة المخزون"},{"🔄","المرتجعات","عكس فاتورة بيع أو شراء كاملة مرة واحدة"},
    {"📦","الأصناف والمخزون","الأرصدة والأسعار وحركات المخزون"},{"👥","العملاء والموردون","العملاء والموردون والأرصدة"},
