@@ -150,18 +150,20 @@ public class MainActivity extends Activity{
    content.addView(t("باقات المحاسب الميزان — الأسعار المعتمدة للمراجعة الفنية",21));
    content.addView(t("تجربة مجانية لمدة 7 أيام. هذه الأسعار وفق قائمة الباقات المعتمدة سابقًا. النسخة الحالية مخصصة للمراجعة الفنية فقط؛ لا تحوّل أي مبلغ ولا تعتبر طلب واتساب تفعيلًا للترخيص قبل اعتماد الإصدار وفتح البيع رسميًا.",14));
    content.addView(t("🇸🇩 السودان — الجنيه السوداني (SDG) | بنكك",18));
-   content.addView(priceLine("Basic: شهري 25,000 ج.س | سنوي 250,000 ج.س"));
-   content.addView(priceLine("Pro: شهري 45,000 ج.س | سنوي 450,000 ج.س"));
-   content.addView(priceLine("Business: شهري 80,000 ج.س | سنوي 800,000 ج.س"));
-   content.addView(t("🌐 الدفع الدولي — الدولار الأمريكي (USD) | IBAN",18));
+   content.addView(priceLine("Basic: دائم 150,000 ج.س | شهري 25,000 ج.س | سنوي 250,000 ج.س"));
+   content.addView(priceLine("Pro: دائم 300,000 ج.س | شهري 45,000 ج.س | سنوي 450,000 ج.س"));
+   content.addView(priceLine("Business: دائم 600,000 ج.س | شهري 80,000 ج.س | سنوي 800,000 ج.س"));
+   content.addView(priceLine("Enterprise: دائم 1,200,000 ج.س | شهري 150,000 ج.س | سنوي 1,500,000 ج.س"));
+    content.addView(t("🌐 الدفع الدولي — الدولار الأمريكي (USD) | IBAN",18));
    content.addView(priceLine("Basic: دائم $249 | شهري $9 | سنوي $90"));
    content.addView(priceLine("Pro: دائم $499 | شهري $19 | سنوي $190"));
    content.addView(priceLine("Business: دائم $999 | شهري $39 | سنوي $390"));
+    content.addView(priceLine("Enterprise: دائم $1,999 | شهري $79 | سنوي $790"));
    Spinner market=new Spinner(this);
    String[] markets={"السودان — جنيه سوداني (بنكك)","الدفع بالدولار الأمريكي — IBAN"};
    market.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,markets));
    content.addView(t("عملة وطريقة الدفع",15));content.addView(market);
-   Spinner tier=new Spinner(this);String[] tiers={"Basic","Pro","Business","Enterprise — عرض مخصص"};
+   Spinner tier=new Spinner(this);String[] tiers={"Basic","Pro","Business","Enterprise"};
    tier.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,tiers));
    content.addView(t("الباقة",15));content.addView(tier);
    Spinner period=new Spinner(this);String[] periods={"اشتراك شهري","اشتراك سنوي","ترخيص دائم"};
@@ -170,18 +172,15 @@ public class MainActivity extends Activity{
    TextView selectedPrice=t("السعر المختار: 25,000 ج.س شهريًا",21);selectedPrice.setTextColor(green);content.addView(selectedPrice);
    Runnable updatePrice=()->{
     String m=String.valueOf(market.getSelectedItem()),p=String.valueOf(tier.getSelectedItem()),d=String.valueOf(period.getSelectedItem());
-    String price="عرض سعر مخصص — تواصل مع الدعم.";
-    if(!p.equals("Enterprise — عرض مخصص")){
-     int pi=p.equals("Basic")?0:p.equals("Pro")?1:2;
-     if(m.startsWith("السودان")){
-      String[][] prices={{"غير متاح","25,000","250,000"},{"غير متاح","45,000","450,000"},{"غير متاح","80,000","800,000"}};
-      int di=d.equals("ترخيص دائم")?0:d.equals("اشتراك شهري")?1:2;
-      price=di==0?"الترخيص الدائم غير متاح بالجنيه السوداني":prices[pi][di]+" ج.س"+(di==1?" شهريًا":" سنويًا");
-     }else{
-      String[][] prices={{"249","9","90"},{"499","19","190"},{"999","39","390"}};
-      int di=d.equals("ترخيص دائم")?0:d.equals("اشتراك شهري")?1:2;
-      price="$"+prices[pi][di]+(di==0?" — ترخيص دائم":di==1?" شهريًا":" سنويًا");
-     }
+    int pi=p.equals("Basic")?0:p.equals("Pro")?1:p.equals("Business")?2:3;
+    int di=d.equals("ترخيص دائم")?0:d.equals("اشتراك شهري")?1:2;
+    String price;
+    if(m.startsWith("السودان")){
+     String[][] prices={{"150,000","25,000","250,000"},{"300,000","45,000","450,000"},{"600,000","80,000","800,000"},{"1,200,000","150,000","1,500,000"}};
+     price=prices[pi][di]+" ج.س"+(di==0?" — ترخيص دائم":di==1?" شهريًا":" سنويًا");
+    }else{
+     String[][] prices={{"249","9","90"},{"499","19","190"},{"999","39","390"},{"1,999","79","790"}};
+     price="$"+prices[pi][di]+(di==0?" — ترخيص دائم":di==1?" شهريًا":" سنويًا");
     }
     selectedPrice.setText("السعر المختار: "+price);
    };
