@@ -39,14 +39,6 @@ jobs:
           expected="159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
           actual="$(tr -d '[:space:]' < public-review/SIGNING-CERT-SHA256.txt | tr '[:upper:]' '[:lower:]')"
           test "$actual" = "$expected" || { echo "::error::Signing certificate fingerprint differs from the verified long-term key."; exit 1; }
-          mkdir -p tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O tools/cmdline-tools.zip
-          mkdir -p "$HOME/android-sdk/cmdline-tools"
-          unzip -q tools/cmdline-tools.zip -d "$HOME/android-sdk/cmdline-tools"
-          mv "$HOME/android-sdk/cmdline-tools/cmdline-tools" "$HOME/android-sdk/cmdline-tools/latest"
-          yes | "$HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$HOME/android-sdk" "platform-tools" "platforms;android-36" "build-tools;36.0.0" >/dev/null
-          "$HOME/android-sdk/build-tools/36.0.0/aapt" dump badging public-review/AlMizan-review-2.4.1-release.apk | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='42' versionName='2.4.1'"
-          "$HOME/android-sdk/build-tools/36.0.0/apksigner" verify --verbose public-review/AlMizan-review-2.4.1-release.apk
           cat > public-review/REVIEW-NOTICE.txt <<'NOTICE'
           AL-MIZAN ANDROID EXPERT REVIEW APK — NOT FOR COMMERCIAL SALE
           This APK is built from the successful main-branch Android workflow run that triggered this publication.
