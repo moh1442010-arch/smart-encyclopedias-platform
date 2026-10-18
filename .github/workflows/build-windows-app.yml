@@ -68,6 +68,35 @@ jobs:
           Get-FileHash release/SmartCompany-Windows-2.2.8-x64.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  SmartCompany-Windows-2.2.8-x64.exe" } | Set-Content release/SHA256SUMS.txt
           Get-Item release/SmartCompany-Windows-2.2.8-x64.exe,release/SmartCompany-Windows-2.2.8-x64.zip,release/SHA256SUMS.txt | Format-Table Name,Length
 
+      - name: Verify Windows package contents and SHA-256 manifest
+        shell: powershell
+        run: |
+          $exe = "release/SmartCompany-Windows-2.2.8-x64.exe"
+          $zip = "release/SmartCompany-Windows-2.2.8-x64.zip"
+          $readme = "release/README.txt"
+          $manifest = "release/SHA256SUMS.txt"
+          foreach ($path in @($exe,$zip,$readme,$manifest)) {
+            if (!(Test-Path $path) -or (Get-Item $path).Length -le 0) {
+              throw "Required Windows release file is missing or empty: $path"
+            }
+          }
+          $expected = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          $line = Get-Content $manifest | Select-Object -First 1
+          if ($line -notmatch "^$expected\s+SmartCompany-Windows-2.2.8-x64\.exe$") {
+            throw "Windows executable SHA-256 manifest does not match the executable."
+          }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $zip).Path)
+          try {
+            $names = @($archive.Entries | ForEach-Object { $_.FullName })
+            if ($names -notcontains "SmartCompany-Windows-2.2.8-x64.exe" -or $names -notcontains "README.txt") {
+              throw "Windows ZIP package is missing the executable or README."
+            }
+          } finally {
+            $archive.Dispose()
+          }
+          Write-Output "Windows executable, README, ZIP contents and SHA-256 manifest verified."
+          
       - name: Windows executable launch smoke test
         shell: powershell
         run: |
