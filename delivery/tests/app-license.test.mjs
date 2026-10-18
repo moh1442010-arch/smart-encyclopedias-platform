@@ -118,6 +118,45 @@ test("commercial app license creation requires admin authorization and explicit 
   assert.equal(licenses.size, 0);
 });
 
+
+test("Enterprise plan and term type survive activation and status checks", async () => {
+  const { db } = makeDb();
+  const env = { DB: db, LICENSE_ADMIN_KEY: "test-admin-secret" };
+  const createdResponse = await call(env, "/api/app-license/admin/create", {
+    method: "POST", device: "", admin: "test-admin-secret",
+    body: {
+      approved: true, plan: "enterprise", termType: "perpetual",
+      customerName: "Enterprise Contract Test", licenseId: "TEST-ENTITLEMENT-01"
+    }
+  });
+  assert.equal(createdResponse.status, 201);
+  const created = await createdResponse.json();
+  assert.equal(created.plan, "enterprise");
+  assert.equal(created.termType, "perpetual");
+  assert.equal(created.expiresAt, null);
+
+  const activatedResponse = await call(env, "/api/app-license/activate", {
+    method: "POST", device: "enterprise-device-0001",
+    body: { activationCode: created.activationCode }
+  });
+  assert.equal(activatedResponse.status, 200);
+  const activated = await activatedResponse.json();
+  assert.equal(activated.mode, "licensed");
+  assert.equal(activated.plan, "enterprise");
+  assert.equal(activated.termType, "perpetual");
+  assert.equal(activated.expiresAt, null);
+
+  const statusResponse = await call(env, "/api/app-license/status", {
+    device: "enterprise-device-0001"
+  });
+  assert.equal(statusResponse.status, 200);
+  const status = await statusResponse.json();
+  assert.equal(status.mode, "licensed");
+  assert.equal(status.plan, "enterprise");
+  assert.equal(status.termType, "perpetual");
+  assert.equal(status.expiresAt, null);
+});
+
 test("paid activation is device-bound and a revoked license is not granted", async () => {
   const originalDate = globalThis.Date;
   globalThis.Date = TestDate;
