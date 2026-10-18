@@ -1,11 +1,16 @@
-name: Publish public expert-review downloads (pre-release only)
+name: Publish public expert-review downloads (manual, gated)
 
 on:
-  workflow_run:
-    workflows:
-      - Build Al-Mizan Accountant Android Release 2.4.0 - Signed
-    types: [completed]
   workflow_dispatch:
+    inputs:
+      android_run_id:
+        description: "Successful Android 2.4.1 build run ID from main (not a pull-request branch)"
+        required: true
+        type: string
+      windows_run_id:
+        description: "Successful Windows 2.2.8 candidate build run ID from main"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -17,59 +22,72 @@ concurrency:
 
 jobs:
   publish-review-candidates:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Download latest signed Android candidate and Windows candidate
+      - name: Validate explicitly selected successful main-branch builds
         env:
           GH_TOKEN: ${{ github.token }}
-          EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
+          ANDROID_RUN_ID: ${{ inputs.android_run_id }}
+          WINDOWS_RUN_ID: ${{ inputs.windows_run_id }}
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p staging/android-2.4.0 staging/windows-2.2.7 public-review
-          run_id="$EVENT_RUN_ID"
-          if [ -z "$run_id" ]; then
-            run_id="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build-android-apk.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
-          fi
-          test -n "$run_id" && test "$run_id" != "null"
-          echo "Downloading signed Android candidate from successful workflow run $run_id"
-          gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --name "al-mizan-android-signed-release-v2.4.0" --dir staging/android-2.4.0
+          validate_run() {
+            local id="$1" expected_path="$2" expected_name="$3"
+            local data
+            data="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id")"
+            echo "$data" | jq -e --arg path "$expected_path" --arg name "$expected_name" '
+              .status == "completed" and
+              .conclusion == "success" and
+              .head_branch == "main" and
+              .path == $path and
+              .name == $name
+            ' >/dev/null || {
+              echo "::error::Selected run must be a successful completed build from main with the exact expected workflow."
+              exit 1
+            }
+          }
+          [[ "$ANDROID_RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::Android run ID must be numeric"; exit 1; }
+          [[ "$WINDOWS_RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::Windows run ID must be numeric"; exit 1; }
+          validate_run "$ANDROID_RUN_ID" ".github/workflows/build-android-apk.yml" "Build Al-Mizan Accountant Android Release 2.4.1 - Signed"
+          validate_run "$WINDOWS_RUN_ID" ".github/workflows/build-windows-app.yml" "Build Al-Mizan Windows Expert Test Candidate 2.2.8"
+          echo "Selected builds are successful main-branch candidates. This is a review-only publication."
 
-          # Windows 2.2.7 remains a clearly labeled historical expert-review candidate.
-          gh run download 38950001396 --repo "$GITHUB_REPOSITORY" --name "smart-company-windows-v2.2.7" --dir staging/windows-2.2.7
+      - name: Download and verify named build artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ANDROID_RUN_ID: ${{ inputs.android_run_id }}
+          WINDOWS_RUN_ID: ${{ inputs.windows_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p staging/android-2.4.1 staging/windows-2.2.8 public-review
+          gh run download "$ANDROID_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "al-mizan-android-signed-release-v2.4.1" --dir staging/android-2.4.1
+          gh run download "$WINDOWS_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "smart-company-windows-v2.2.8" --dir staging/windows-2.2.8
 
-          apk="$(find staging/android-2.4.0 -type f -iname 'AlMizan-2.4.0-release.apk' -print -quit)"
-          aab="$(find staging/android-2.4.0 -type f -iname 'AlMizan-2.4.0-release.aab' -print -quit)"
+          apk="$(find staging/android-2.4.1 -type f -iname 'AlMizan-2.4.1-release.apk' -print -quit)"
+          aab="$(find staging/android-2.4.1 -type f -iname 'AlMizan-2.4.1-release.aab' -print -quit)"
+          exe="$(find staging/windows-2.2.8 -type f -iname 'SmartCompany-Windows-2.2.8-x64.exe' -print -quit)"
+          zip="$(find staging/windows-2.2.8 -type f -iname 'SmartCompany-Windows-2.2.8-x64.zip' -print -quit)"
           test -n "$apk" && test -s "$apk"
           test -n "$aab" && test -s "$aab"
-          cp "$apk" public-review/AlMizan-review-2.4.0-release.apk
-          cp "$aab" public-review/AlMizan-review-2.4.0-release.aab
-          while IFS= read -r -d '' f; do
-            case "$(basename "$f")" in
-              SIGNING-CERTIFICATE.txt|SIGNING-CERT-SHA256.txt)
-                cp "$f" "public-review/AlMizan-review-2.4.0-$(basename "$f")"
-                ;;
-            esac
-          done < <(find staging/android-2.4.0 -type f -print0)
-
-          while IFS= read -r -d '' f; do
-            cp "$f" "public-review/Windows-review-2.2.7-$(basename "$f")"
-          done < <(find staging/windows-2.2.7 -type f \( -iname '*.exe' -o -iname '*.zip' -o -iname '*.txt' \) -print0)
-
-          test -s public-review/AlMizan-review-2.4.0-release.apk
-          test -s public-review/AlMizan-review-2.4.0-release.aab
-          test "$(find public-review -maxdepth 1 -type f -iname '*.exe' | wc -l)" -ge 1
-          (cd public-review && sha256sum AlMizan-review-2.4.0-release.apk AlMizan-review-2.4.0-release.aab > AlMizan-review-2.4.0-SHA256SUMS.txt)
+          test -n "$exe" && test -s "$exe"
+          test -n "$zip" && test -s "$zip"
+          cp "$apk" public-review/AlMizan-review-2.4.1-release.apk
+          cp "$aab" public-review/AlMizan-review-2.4.1-release.aab
+          cp "$exe" public-review/Windows-review-2.2.8-x64.exe
+          cp "$zip" public-review/Windows-review-2.2.8-x64.zip
+          for f in staging/android-2.4.1/SIGNING-CERTIFICATE.txt staging/android-2.4.1/SIGNING-CERT-SHA256.txt; do
+            if [ -s "$f" ]; then cp "$f" "public-review/$(basename "$f")"; fi
+          done
           (cd public-review && sha256sum * > REVIEW-SHA256SUMS.txt)
           cat > public-review/REVIEW-NOTICE.txt <<'NOTICE'
           AL-MIZAN EXPERT REVIEW CANDIDATES — NOT APPROVED FOR COMMERCIAL SALE
-          Android 2.4.0 is the current subscription-pricing correction candidate.
-          Windows 2.2.7 is a historical review candidate and is not represented as current.
-          Review installation/update compatibility, accounting calculations and postings,
-          licensing, database integrity, backup/restore, privacy and Windows runtime behavior.
-          Do not use with real financial records. Do not treat CI success as independent QA.
+          Android 2.4.1 and Windows 2.2.8 are expert-review candidates only.
+          Do not use real customer financial records. Review installation/update compatibility,
+          accounting calculations and postings, licensing, database integrity, backup/restore,
+          privacy and Windows runtime behavior. CI success is not independent QA or sales approval.
           Submit evidence at:
           https://github.com/moh1442010-arch/smart-encyclopedias-platform/issues/18
           NOTICE
@@ -80,12 +98,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag="al-mizan-expert-review-2026-10-16"
+          tag="al-mizan-expert-review-2026-10-18"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$tag" public-review/* --repo "$GITHUB_REPOSITORY" --clobber
           else
             gh release create "$tag" public-review/* --repo "$GITHUB_REPOSITORY" \
               --title "Al-Mizan expert review candidates — NOT FOR SALE" \
-              --notes "Public no-account downloads for independent expert review only. Android 2.4.0 is a review candidate, not a commercial release. Windows 2.2.7 is a historical review candidate. Validate installation/update, accounting flows, licensing, backups, privacy and Windows behavior. Submit evidence to issue #18." \
+              --notes "Public no-account downloads for independent expert review only. Android 2.4.1 and Windows 2.2.8 are not commercial releases. Validate installation/update, accounting flows, licensing, backups, privacy and Windows behavior. Submit evidence to issue #18." \
               --prerelease
           fi
