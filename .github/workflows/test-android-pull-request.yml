@@ -45,4 +45,13 @@ jobs:
 
       - name: Run Android unit and Robolectric regression tests
         working-directory: android-app
-        run: ./gradlew testDebugUnitTest
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Upload Android test reports even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-regression-test-reports
+          path: android-app/app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
