@@ -107,9 +107,9 @@ Safe recovery:
 
 The CI release workflow enforces a known SHA-256 signing-certificate fingerprint and the 2.4.1 signed build passed that check. Before future changes to keystore files or secrets, compare the certificate fingerprint against a trusted previously installed production APK and the current CI artifact. Never replace the signing key just to solve a login/PIN issue: a changed certificate can block Android updates and strand installed customers.
 
-### P1 — Public review download workflow
+### P1 — Public review download workflow (historical issue, now resolved for review candidates)
 
-The previous publication workflow listened for the old Android 2.4.0 workflow and requested 2.4.0 artifact names. It failed because the selected run did not contain the expected named artifact. The review branch now changes publication to a manual, gated process requiring explicit successful main-branch Android 2.4.1 and Windows 2.2.8 run IDs. This workflow change itself must pass CI and must be merged before it affects the default branch. No public release was published by this edit.
+The old publication workflow expected Android 2.4.0 artifact names and failed. The gated workflow has since been merged to `main`, and the latest matching successful Android 2.4.1 and Windows 2.2.8 builds were published as the review-only prerelease documented in the latest verification section below. This resolves availability of public review downloads; it does not approve commercial sales.
 
 
 ## Latest verification update — 2026-10-18 14:15 UTC
