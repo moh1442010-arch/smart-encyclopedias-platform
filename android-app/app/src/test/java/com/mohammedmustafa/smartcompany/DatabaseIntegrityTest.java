@@ -36,6 +36,62 @@ public class DatabaseIntegrityTest {
         if (context != null) context.deleteDatabase("smartcompany2.db");
     }
 
+
+    @Test
+    public void enterpriseControlCenterFlagsEmptyAndUnbalancedJournalEntries() {
+        MainActivity activity = new MainActivity();
+
+        ContentValues empty = new ContentValues();
+        empty.put("created_at", System.currentTimeMillis());
+        empty.put("description", "قيد فارغ للاختبار");
+        database.insertOrThrow("journal_entries", null, empty);
+
+        ContentValues oneLineEntry = new ContentValues();
+        oneLineEntry.put("created_at", System.currentTimeMillis());
+        oneLineEntry.put("description", "قيد بسطر واحد للاختبار");
+        long oneLineId = database.insertOrThrow("journal_entries", null, oneLineEntry);
+        ContentValues loneLine = new ContentValues();
+        loneLine.put("journal_entry_id", oneLineId);
+        loneLine.put("account_id", accountId("1010"));
+        loneLine.put("debit", 10.00);
+        loneLine.put("credit", 0.00);
+        database.insertOrThrow("journal_lines", null, loneLine);
+
+        ContentValues balancedEntry = new ContentValues();
+        balancedEntry.put("created_at", System.currentTimeMillis());
+        balancedEntry.put("description", "قيد متوازن للاختبار");
+        long balancedId = database.insertOrThrow("journal_entries", null, balancedEntry);
+        ContentValues debit = new ContentValues();
+        debit.put("journal_entry_id", balancedId);
+        debit.put("account_id", accountId("1010"));
+        debit.put("debit", 10.00);
+        debit.put("credit", 0.00);
+        database.insertOrThrow("journal_lines", null, debit);
+        ContentValues credit = new ContentValues();
+        credit.put("journal_entry_id", balancedId);
+        credit.put("account_id", accountId("3000"));
+        credit.put("debit", 0.00);
+        credit.put("credit", 10.00);
+        database.insertOrThrow("journal_lines", null, credit);
+
+        assertEquals("Empty and one-line entries must be flagged; a balanced entry must not be flagged",
+                2, activity.countInvalidJournalEntries(database));
+    }
+
+    @Test
+    public void enterpriseControlCenterFlagsOrphanJournalLines() {
+        MainActivity activity = new MainActivity();
+        ContentValues orphan = new ContentValues();
+        orphan.put("journal_entry_id", 999999L);
+        orphan.put("account_id", 999999L);
+        orphan.put("debit", 5.00);
+        orphan.put("credit", 0.00);
+        database.insertOrThrow("journal_lines", null, orphan);
+
+        assertEquals("Journal lines without a valid entry or account must be flagged",
+                1, activity.countOrphanJournalLines(database));
+    }
+
     @Test
     public void createsCoreAccountingTablesAndDefaultAccounts() {
         assertTrue(tableExists("transactions"));

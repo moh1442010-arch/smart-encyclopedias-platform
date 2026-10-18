@@ -186,3 +186,23 @@ Commercial sales remain closed until the following critical evidence is obtained
 Windows: automated package and short process-alive smoke checks are available, but they are not a substitute for an actual Windows functional/accounting review. Do not claim Windows has passed customer acceptance merely because an executable can be launched in CI.
 
 **Disposition:** review candidate only; no commercial release, no paid checkout activation, and no claims of full protection or complete accounting certification.
+
+
+## Execution update — 2026-10-18 14:52 UTC
+
+### Current verified source and CI state
+
+- PR #36, **Gate Enterprise control center by license entitlement**, was merged to `main` as commit `bbe3afd4ecf5c1ebcfac0cf2f351db18ff1aec6e`.
+- The Android PR regression test run `39136934066` and signed Android build run `39136923489` both passed for the entitlement change.
+- The live Worker source inspected in `delivery/worker.mjs` returns `plan` and `termType` from both app-license status and activation endpoints. This verifies the expected response fields in source, not the complete live customer lifecycle.
+- The main-branch signed Android build after the merge passed: [run 39137622537](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39137622537). The run uploaded the clean-install test APK and signed 2.4.1 release artifacts. Artifact upload is not equivalent to real-device upgrade acceptance.
+- The Enterprise control center now hides its entry point unless the cached license is licensed, identifies the Enterprise plan, is unexpired, and remains inside the existing 72-hour offline verification window. This is client-side UI gating; it does not establish tamper-proof entitlement enforcement or separate signed packages for all four tiers.
+- PR #37 ([journal-integrity diagnostics](https://github.com/moh1442010-arch/smart-encyclopedias-platform/pull/37)) adds detection for empty/one-line/unbalanced journal entries and journal lines with missing parent entries or accounts. At the time of this update, its Android regression tests and signed build are still running; do not count this patch as merged or passed yet.
+
+### Updated Enterprise assessment
+
+The Financial Control & Period-Close Center is a useful read-only warning dashboard, not an automated accounting certification or period-close engine. It must not claim that the books are correct merely because aggregate debit and credit totals match. The added per-entry checks address empty and orphaned journal structures, but further acceptance is still required for reconciliation, inventory valuation, receivables/payables, backups and period locking. Backup verification and automated period locking remain unimplemented.
+
+### Release disposition unchanged
+
+**NOT APPROVED FOR SALE.** Financial precision migration, four-tier package/entitlement proof, customer-safe PIN recovery, full backup/restore failure testing, live licensing/payment acceptance, Windows functional acceptance, signing continuity, privacy/operational policies and independent accountant sign-off remain release gates. Do not enable paid checkout or describe the product as fully secure or fully accounting-certified.
