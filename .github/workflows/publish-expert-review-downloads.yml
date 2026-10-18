@@ -1,16 +1,22 @@
-name: Publish public expert-review downloads (manual, gated)
+name: Publish public expert-review downloads (gated prerelease)
 
 on:
   workflow_dispatch:
     inputs:
       android_run_id:
-        description: "Successful Android 2.4.1 build run ID from main (not a pull-request branch)"
-        required: true
+        description: "Optional successful Android 2.4.1 build run ID from main"
+        required: false
         type: string
       windows_run_id:
-        description: "Successful Windows 2.2.8 candidate build run ID from main"
-        required: true
+        description: "Optional successful Windows 2.2.8 candidate build run ID from main"
+        required: false
         type: string
+  workflow_run:
+    workflows:
+      - "Build Al-Mizan Accountant Android Release 2.4.1 - Signed"
+      - "Build Al-Mizan Windows Expert Test Candidate 2.2.8"
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: write
@@ -25,14 +31,46 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Validate explicitly selected successful main-branch builds
+      - name: Resolve and validate matching successful main-branch builds
         env:
           GH_TOKEN: ${{ github.token }}
-          ANDROID_RUN_ID: ${{ inputs.android_run_id }}
-          WINDOWS_RUN_ID: ${{ inputs.windows_run_id }}
+          EVENT_ANDROID_RUN_ID: ${{ inputs.android_run_id }}
+          EVENT_WINDOWS_RUN_ID: ${{ inputs.windows_run_id }}
+          TRIGGER_RUN_ID: ${{ github.event.workflow_run.id }}
+          TRIGGER_RUN_NAME: ${{ github.event.workflow_run.name }}
+          TRIGGER_RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          TRIGGER_RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          EVENT_NAME: ${{ github.event_name }}
         shell: bash
         run: |
           set -euo pipefail
+          android_run_id="$EVENT_ANDROID_RUN_ID"
+          windows_run_id="$EVENT_WINDOWS_RUN_ID"
+
+          if [[ "$EVENT_NAME" == "workflow_run" ]]; then
+            if [[ "$TRIGGER_RUN_CONCLUSION" != "success" || -z "$TRIGGER_RUN_ID" ]]; then
+              echo "Triggered build did not succeed; no review release will be published."
+              exit 0
+            fi
+            if [[ "$TRIGGER_RUN_NAME" == "Build Al-Mizan Accountant Android Release 2.4.1 - Signed" ]]; then
+              android_run_id="$TRIGGER_RUN_ID"
+              windows_run_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?branch=main&status=success&per_page=100" | jq -r --arg sha "$TRIGGER_RUN_SHA" --arg name "Build Al-Mizan Windows Expert Test Candidate 2.2.8" '[.workflow_runs[] | select(.head_branch == "main" and .head_sha == $sha and .name == $name and .conclusion == "success")][0].id // empty')"
+            elif [[ "$TRIGGER_RUN_NAME" == "Build Al-Mizan Windows Expert Test Candidate 2.2.8" ]]; then
+              windows_run_id="$TRIGGER_RUN_ID"
+              android_run_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?branch=main&status=success&per_page=100" | jq -r --arg sha "$TRIGGER_RUN_SHA" --arg name "Build Al-Mizan Accountant Android Release 2.4.1 - Signed" '[.workflow_runs[] | select(.head_branch == "main" and .head_sha == $sha and .name == $name and .conclusion == "success")][0].id // empty')"
+            else
+              echo "Unexpected workflow_run source; no review release will be published."
+              exit 0
+            fi
+            if [[ -z "$android_run_id" || -z "$windows_run_id" ]]; then
+              echo "No matching successful Android and Windows builds exist for the same main-branch commit yet. Waiting for the counterpart workflow; no release published."
+              exit 0
+            fi
+          fi
+
+          [[ "$android_run_id" =~ ^[0-9]+$ ]] || { echo "::error::Android run ID must be numeric"; exit 1; }
+          [[ "$windows_run_id" =~ ^[0-9]+$ ]] || { echo "::error::Windows run ID must be numeric"; exit 1; }
+
           validate_run() {
             local id="$1" expected_path="$2" expected_name="$3"
             local data
@@ -48,12 +86,13 @@ jobs:
               exit 1
             }
           }
-          [[ "$ANDROID_RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::Android run ID must be numeric"; exit 1; }
-          [[ "$WINDOWS_RUN_ID" =~ ^[0-9]+$ ]] || { echo "::error::Windows run ID must be numeric"; exit 1; }
-          validate_run "$ANDROID_RUN_ID" ".github/workflows/build-android-apk.yml" "Build Al-Mizan Accountant Android Release 2.4.1 - Signed"
-          validate_run "$WINDOWS_RUN_ID" ".github/workflows/build-windows-app.yml" "Build Al-Mizan Windows Expert Test Candidate 2.2.8"
-          echo "Selected builds are successful main-branch candidates. This is a review-only publication."
-
+          validate_run "$android_run_id" ".github/workflows/build-android-apk.yml" "Build Al-Mizan Accountant Android Release 2.4.1 - Signed"
+          validate_run "$windows_run_id" ".github/workflows/build-windows-app.yml" "Build Al-Mizan Windows Expert Test Candidate 2.2.8"
+          android_sha="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$android_run_id" --jq .head_sha)"
+          windows_sha="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$windows_run_id" --jq .head_sha)"
+          [[ "$android_sha" == "$windows_sha" ]] || { echo "::error::Android and Windows builds must come from the same main-branch commit."; exit 1; }
+          echo "Both candidates passed their build workflows on the same main commit. Publishing review-only prerelease; commercial sales remain disabled."
+          
       - name: Download and verify named build artifacts
         env:
           GH_TOKEN: ${{ github.token }}
