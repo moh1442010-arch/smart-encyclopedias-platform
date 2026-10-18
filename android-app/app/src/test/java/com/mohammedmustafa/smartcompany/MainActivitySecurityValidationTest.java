@@ -115,21 +115,36 @@ public class MainActivitySecurityValidationTest {
         long now = System.currentTimeMillis();
 
         prefs.edit().putString("mode", "trial").putString("plan", "enterprise")
+                .putString("term_type", "annual")
                 .putLong("expires_at", now + 60_000L).putLong("last_verified_at", now).commit();
         assertFalse("A trial must not unlock Enterprise-only controls", activity.hasEnterpriseEntitlement(prefs));
 
         prefs.edit().putString("mode", "licensed").putString("plan", "pro")
+                .putString("term_type", "perpetual")
                 .putLong("expires_at", 0L).putLong("last_verified_at", now).commit();
         assertFalse("A non-Enterprise paid license must not unlock Enterprise-only controls", activity.hasEnterpriseEntitlement(prefs));
 
         prefs.edit().putString("mode", "licensed").putString("plan", "enterprise")
-                .putLong("expires_at", now + 60_000L).putLong("last_verified_at", now).commit();
-        assertTrue("A recently verified active Enterprise license should unlock the control center", activity.hasEnterpriseEntitlement(prefs));
+                .putString("term_type", "")
+                .putLong("expires_at", 0L).putLong("last_verified_at", now).commit();
+        assertFalse("A missing license term must fail closed", activity.hasEnterpriseEntitlement(prefs));
+
+        prefs.edit().putString("term_type", "monthly")
+                .putLong("expires_at", 0L).commit();
+        assertFalse("A monthly license with a missing expiry must not be treated as perpetual", activity.hasEnterpriseEntitlement(prefs));
+
+        prefs.edit().putString("term_type", "annual")
+                .putLong("expires_at", now + 60_000L).commit();
+        assertTrue("A recently verified active Enterprise annual license should unlock the control center", activity.hasEnterpriseEntitlement(prefs));
 
         prefs.edit().putLong("expires_at", now - 1L).commit();
         assertFalse("An expired Enterprise license must not unlock the control center", activity.hasEnterpriseEntitlement(prefs));
 
-        prefs.edit().putLong("expires_at", 0L).putLong("last_verified_at", now - 73L * 60L * 60L * 1000L).commit();
+        prefs.edit().putString("term_type", "perpetual").putLong("expires_at", 0L)
+                .putLong("last_verified_at", now).commit();
+        assertTrue("A perpetual Enterprise license with no expiry should unlock the control center", activity.hasEnterpriseEntitlement(prefs));
+
+        prefs.edit().putLong("last_verified_at", now - 73L * 60L * 60L * 1000L).commit();
         assertFalse("An Enterprise license beyond offline grace must fail closed", activity.hasEnterpriseEntitlement(prefs));
         prefs.edit().clear().commit();
     }
