@@ -420,13 +420,13 @@ async function createAppLicense(request, env) {
   let expiresAt = null;
   if (termType === "monthly") expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
   if (termType === "annual") expiresAt = new Date(Date.now() + 365 * 86400000).toISOString();
+  const orderId = String(body.orderId || ("ORD-" + crypto.randomUUID().replaceAll("-", "").slice(0, 12))).trim().slice(0, 100);
   try {
     await env.DB.prepare(
       "INSERT INTO app_licenses (id, license_code_hash, plan, term_type, customer_name, customer_email, order_id, expires_at, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     ).bind(id, codeHash, plan, termType, customerName,
       String(body.customerEmail || "").trim().toLowerCase() || null,
-      String(body.orderId || "").trim() || null, expiresAt, approvedBy).run();
-    const orderId = String(body.orderId || ("ORD-" + crypto.randomUUID().replaceAll("-", "").slice(0, 12))).trim().slice(0, 100);
+      orderId, expiresAt, approvedBy).run();
     await env.DB.prepare(
       "INSERT INTO app_orders (id, license_id, customer_name, customer_email, plan, term_type, amount_minor, currency, payment_reference, payment_status, order_status, approved_at, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', 'completed', ?, ?)"
     ).bind(orderId, id, customerName, String(body.customerEmail || "").trim().toLowerCase() || null, plan, termType, amountMinor, currency, paymentReference || null, new Date().toISOString(), approvedBy).run();
@@ -437,7 +437,7 @@ async function createAppLicense(request, env) {
     return json({ ok: false, error: "license_create_failed_or_payment_reference_duplicate" }, 409, env);
   }
   return json({
-    ok: true, licenseId: id, orderId: String(body.orderId || ""), activationCode, plan, termType, expiresAt,
+    ok: true, licenseId: id, orderId, activationCode, plan, termType, expiresAt,
     amountMinor, currency, paymentReference, paymentApproved: true,
     note: "Show this code to the buyer once; only its hash is stored."
   }, 201, env);
