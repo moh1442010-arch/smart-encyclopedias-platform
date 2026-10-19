@@ -114,7 +114,7 @@ test("commercial app license creation requires admin authorization and explicit 
     body: { approved: false, plan: "pro", termType: "annual", customerName: "Test Customer", licenseId: "TEST-GATE-02" }
   });
   assert.equal(unapproved.status, 400);
-  assert.equal((await unapproved.json()).error, "explicit_payment_approval_and_valid_plan_required");
+  assert.equal((await unapproved.json()).error, "explicit_payment_approval_valid_plan_price_and_currency_required");
   assert.equal(licenses.size, 0);
 });
 
