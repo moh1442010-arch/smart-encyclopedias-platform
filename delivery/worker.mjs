@@ -391,7 +391,7 @@ async function createAppLicense(request, env) {
   const paymentReference = String(body && (body.paymentReference || body.orderId) || "").trim().slice(0, 120);
   if (!body || body.approved !== true || !/^(basic|pro|business|enterprise)$/.test(plan) ||
       !/^(perpetual|monthly|annual)$/.test(termType) || customerName.length < 2 ||
-      !Number.isSafeInteger(amountMinor) || amountMinor < 0 || !/^(SDG|USD)$/.test(currency)) {
+      !Number.isSafeInteger(amountMinor) || amountMinor < 1 || !/^(SDG|USD)$/.test(currency)) {
     return json({ ok: false, error: "explicit_payment_approval_valid_plan_price_and_currency_required" }, 400, env);
   }
   await ensureAppLicenseTables(env);
