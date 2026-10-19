@@ -43,6 +43,8 @@ Example request body (do not include a real secret here):
 ```json
 {
   "approved": true,
+  "amountMinor": 1900,
+  "currency": "USD",
   "plan": "pro",
   "termType": "annual",
   "customerName": "Customer Name",
