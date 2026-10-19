@@ -43,6 +43,8 @@ function makeDb() {
           return { meta: { changes: 0 } };
         },
         async first() {
+          if (sql.includes("FROM app_plan_prices")) return { amount_minor: 1 };
+          if (sql.includes("FROM app_orders WHERE payment_reference = ?")) return null;
           if (sql.includes("FROM app_licenses WHERE device_hash = ?")) return [...licenses.values()].find(x => x.device_hash === values[0]) || null;
           if (sql.includes("FROM app_licenses WHERE license_code_hash = ?")) return [...licenses.values()].find(x => x.license_code_hash === values[0]) || null;
           if (sql.includes("FROM app_licenses WHERE id = ?")) {
