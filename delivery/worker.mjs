@@ -468,7 +468,7 @@ async function renewAppLicense(request, env) {
   const currency = String(body?.currency || "SDG").toUpperCase();
   const amountMinor = Number(body?.amountMinor);
   if (!/^[A-Z0-9_-]{6,80}$/i.test(id) || !customerConfirmed ||
-      !Number.isSafeInteger(amountMinor) || amountMinor < 0 || !/^(SDG|USD)$/.test(currency) ||
+      !Number.isSafeInteger(amountMinor) || amountMinor < 1 || !/^(SDG|USD)$/.test(currency) ||
       !paymentReference) {
     return json({ ok: false, error: "owner_payment_approval_price_currency_and_reference_required" }, 400, env);
   }
