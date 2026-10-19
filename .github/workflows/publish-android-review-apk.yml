@@ -3,7 +3,7 @@ name: Publish latest Android expert-review APK
 on:
   workflow_run:
     workflows:
-      - "Build Al-Mizan Accountant Android Release 2.4.1 - Signed"
+      - "Build Al-Mizan Accountant Android Release 2.4.2 - Signed"
     types: [completed]
     branches: [main]
 
@@ -29,12 +29,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p staging public-review
-          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "al-mizan-android-signed-release-v2.4.1" --dir staging
-          apk="$(find staging -type f -name 'AlMizan-2.4.1-release.apk' -print -quit)"
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "al-mizan-android-signed-release-v2.4.2" --dir staging
+          apk="$(find staging -type f -name 'AlMizan-2.4.2-release.apk' -print -quit)"
           cert="$(find staging -type f -name 'SIGNING-CERT-SHA256.txt' -print -quit)"
           test -n "$apk" && test -s "$apk"
           test -n "$cert" && test -s "$cert"
-          cp "$apk" public-review/AlMizan-review-2.4.1-release.apk
+          cp "$apk" public-review/AlMizan-review-2.4.2-release.apk
           cp "$cert" public-review/SIGNING-CERT-SHA256.txt
           expected="159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
           actual="$(tr -d '[:space:]' < public-review/SIGNING-CERT-SHA256.txt | tr '[:upper:]' '[:lower:]')"
@@ -42,14 +42,14 @@ jobs:
           cat > public-review/REVIEW-NOTICE.txt <<'NOTICE'
           AL-MIZAN ANDROID EXPERT REVIEW APK — NOT FOR COMMERCIAL SALE
           This APK is built from the successful main-branch Android workflow run that triggered this publication.
-          Version: 2.4.1 (versionCode 42).
+          Version: 2.4.2 (versionCode 42).
           Expert review only. Do not use real customer financial records.
           Confirm installation/update compatibility on a test device before wider distribution.
           CI success is not independent accounting QA or commercial-release approval.
           Report findings at:
           https://github.com/moh1442010-arch/smart-encyclopedias-platform/issues/18
           NOTICE
-          (cd public-review && sha256sum AlMizan-review-2.4.1-release.apk SIGNING-CERT-SHA256.txt REVIEW-NOTICE.txt > REVIEW-SHA256SUMS.txt)
+          (cd public-review && sha256sum AlMizan-review-2.4.2-release.apk SIGNING-CERT-SHA256.txt REVIEW-NOTICE.txt > REVIEW-SHA256SUMS.txt)
 
       - name: Publish or update Android-only review prerelease
         env:
@@ -57,12 +57,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag="al-mizan-android-review-2026-10-18"
+          tag="al-mizan-android-review-2026-10-19"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$tag" public-review/* --repo "$GITHUB_REPOSITORY" --clobber
           else
             gh release create "$tag" public-review/* --repo "$GITHUB_REPOSITORY" \
-              --title "Al-Mizan Android 2.4.1 — expert review only" \
+              --title "Al-Mizan Android 2.4.2 — expert review only" \
               --notes "Android-only expert-review APK from a successful signed main-branch build. Not approved for commercial sale. Validate update installation on real devices and submit evidence to issue #18." \
               --prerelease
           fi
