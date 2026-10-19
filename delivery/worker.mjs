@@ -530,6 +530,8 @@ async function changeAppLicenseStatus(request, env) {
     "UPDATE app_licenses SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
   ).bind(status, id).run();
   if (!result.meta?.changes) return json({ ok: false, error: "license_not_found" }, 404, env);
+  await env.DB.prepare("INSERT INTO app_admin_events (id, event_type, license_id, details, actor) VALUES (?, ?, ?, ?, ?)")
+    .bind("EVT-" + crypto.randomUUID(), "license_status_" + status, id, "Owner changed license status; customer data preserved", "owner").run();
   return json({ ok: true, licenseId: id, status, dataPreserved: true }, 200, env);
 }
 
