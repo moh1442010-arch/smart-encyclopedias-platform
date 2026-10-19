@@ -42,7 +42,7 @@ jobs:
           cat > public-review/REVIEW-NOTICE.txt <<'NOTICE'
           AL-MIZAN ANDROID EXPERT REVIEW APK — NOT FOR COMMERCIAL SALE
           This APK is built from the successful main-branch Android workflow run that triggered this publication.
-          Version: 2.4.2 (versionCode 42).
+          Version: 2.4.2 (versionCode 43).
           Expert review only. Do not use real customer financial records.
           Confirm installation/update compatibility on a test device before wider distribution.
           CI success is not independent accounting QA or commercial-release approval.
