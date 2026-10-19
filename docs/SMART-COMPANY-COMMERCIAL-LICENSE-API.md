@@ -22,6 +22,17 @@ The page asks for `LICENSE_ADMIN_KEY` at runtime; the key is not embedded in the
 
 The dashboard does not verify Bankak receipts automatically, and it is not a payment gateway. The owner must independently confirm the payment before creating a license. Do not use a public/shared device for the dashboard; close the page when finished and never save the admin key in the browser.
 
+## Owner-approved payments, renewals, and audit ledger
+
+The owner dashboard uses these endpoints after the Worker deployment finishes:
+
+- `POST /api/app-license/admin/create` requires a positive integer `amountMinor` and `currency` (`SDG` or `USD`) alongside explicit owner payment approval. The dashboard sends whole SDG units and USD cents. A payment/order record and audit event are recorded with license creation.
+- `POST /api/app-license/admin/renew` requires owner authentication, `approved: true`, a positive amount, currency, and a unique payment reference. It renews monthly/annual licenses, preserves device binding, and extends from the later of current expiry or now. Revoked and perpetual licenses cannot be renewed by this endpoint.
+- `GET /api/app-license/admin/orders` returns recent order/payment rows and administrative audit events.
+- `POST /api/app-license/admin/status` records a status-change event.
+
+The free dashboard helper prepares a WhatsApp message; it does not verify transfers or send messages automatically. The owner must confirm the actual payment before creating or renewing a paid license. The static dashboard is not itself an authentication boundary: all API calls must enforce the server-side admin key. Never expose provider keys or the admin secret in the page, the app, a QR code, or to the helper.
+
 ## Issuing a license
 1. Confirm payment outside the app and record the order reference.
 2. Call the admin endpoint from a private trusted environment. Never place `LICENSE_ADMIN_KEY` in the Android app, website JavaScript, a public file, or a message to a buyer.
