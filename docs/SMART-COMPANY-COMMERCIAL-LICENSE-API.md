@@ -29,6 +29,7 @@ The owner dashboard uses these endpoints after the Worker deployment finishes:
 - `POST /api/app-license/admin/create` requires a positive integer `amountMinor` and `currency` (`SDG` or `USD`) alongside explicit owner payment approval. The dashboard sends whole SDG units and USD cents. A payment/order record and audit event are recorded with license creation.
 - `POST /api/app-license/admin/renew` requires owner authentication, `approved: true`, a positive amount, currency, and a unique payment reference. It renews monthly/annual licenses, preserves device binding, and extends from the later of current expiry or now. Revoked and perpetual licenses cannot be renewed by this endpoint.
 - `GET /api/app-license/admin/orders` returns recent order/payment rows and administrative audit events.
+- `GET /api/app-license/admin/prices` lists the server-side price catalog; `POST /api/app-license/admin/prices` sets a plan/term/currency price. License creation and renewal are rejected until a matching price is configured, and the amount must exactly match that price.
 - `POST /api/app-license/admin/status` records a status-change event.
 
 The free dashboard helper prepares a WhatsApp message; it does not verify transfers or send messages automatically. The owner must confirm the actual payment before creating or renewing a paid license. The static dashboard is not itself an authentication boundary: all API calls must enforce the server-side admin key. Never expose provider keys or the admin secret in the page, the app, a QR code, or to the helper.
