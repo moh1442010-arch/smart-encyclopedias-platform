@@ -2,6 +2,9 @@ name: Diagnose Al-Mizan Android upgrade installation
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - fix/android-upgrade-install-gate
 
 permissions:
   contents: read
