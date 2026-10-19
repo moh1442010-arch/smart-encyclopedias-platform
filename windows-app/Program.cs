@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Printing;
+using System.Security.Cryptography;
 
 namespace SmartCompany;
 
@@ -538,40 +539,113 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
     void BackupRestore()
     {
         using var f = new Form { Text = UiLanguage.T("النسخ الاحتياطي والاستعادة"), Width = 620, Height = 280, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
-        var export = new Button { Text = UiLanguage.T("تصدير نسخة احتياطية"), Dock = DockStyle.Top, Height = 55 };
-        var restore = new Button { Text = UiLanguage.T("استعادة نسخة احتياطية"), Dock = DockStyle.Top, Height = 55 };
+        var export = new Button { Text = UiLanguage.T("تصدير نسخة احتياطية مشفرة"), Dock = DockStyle.Top, Height = 55 };
+        var restore = new Button { Text = UiLanguage.T("استعادة نسخة احتياطية مشفرة"), Dock = DockStyle.Top, Height = 55 };
         export.Click += (_, _) =>
         {
-            using var dialog = new SaveFileDialog { Filter = "SQLite database (*.db)|*.db", FileName = "SmartCompany-backup.db" };
+            using var dialog = new SaveFileDialog { Filter = "Al-Mizan encrypted backup (*.almbak)|*.almbak", FileName = "AlMizan-backup.almbak" };
             if (dialog.ShowDialog(f) != DialogResult.OK) return;
-            try { using var source = C(); using var destination = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = dialog.FileName }.ToString()); destination.Open(); source.BackupDatabase(destination); MessageBox.Show(UiLanguage.T("تم تصدير النسخة الاحتياطية.")); }
-            catch (Exception) { MessageBox.Show(UiLanguage.T("تعذر تصدير النسخة الاحتياطية.")); }
+            string? password = PromptBackupPassword(f, true);
+            if (string.IsNullOrEmpty(password)) return;
+            string snapshot = Path.Combine(Path.GetTempPath(), "almizan-" + Guid.NewGuid().ToString("N") + ".db");
+            try
+            {
+                using (var source = C())
+                using (var destination = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = snapshot }.ToString()))
+                { destination.Open(); source.BackupDatabase(destination); }
+                EncryptBackupBytes(File.ReadAllBytes(snapshot), dialog.FileName, password);
+                MessageBox.Show(UiLanguage.T("تم تصدير نسخة احتياطية مشفرة. احتفظ بكلمة المرور منفصلة."));
+            }
+            catch (Exception) { MessageBox.Show(UiLanguage.T("تعذر تصدير النسخة الاحتياطية المشفرة.")); }
+            finally { try { if (File.Exists(snapshot)) File.Delete(snapshot); } catch { } }
         };
         restore.Click += (_, _) =>
         {
             if (MessageBox.Show(UiLanguage.T("ستستبدل الاستعادة بيانات الشركة الحالية. أنشئ نسخة احتياطية أولًا. هل تريد المتابعة؟"), UiLanguage.T("تأكيد الاستعادة"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-            using var dialog = new OpenFileDialog { Filter = "SQLite database (*.db)|*.db|All files (*.*)|*.*" };
+            using var dialog = new OpenFileDialog { Filter = "Al-Mizan encrypted backup (*.almbak)|*.almbak" };
             if (dialog.ShowDialog(f) != DialogResult.OK) return;
+            string? password = PromptBackupPassword(f, false);
+            if (string.IsNullOrEmpty(password)) return;
+            string restored = Path.Combine(Path.GetTempPath(), "almizan-restore-" + Guid.NewGuid().ToString("N") + ".db");
+            string safety = Path.Combine(Path.GetTempPath(), "almizan-safety-" + Guid.NewGuid().ToString("N") + ".db");
             try
             {
-                using (var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = dialog.FileName, Mode = SqliteOpenMode.ReadOnly }.ToString()))
-                {
-                    source.Open(); using var check = source.CreateCommand(); check.CommandText = "PRAGMA integrity_check";
-                    if (!string.Equals(Convert.ToString(check.ExecuteScalar()), "ok", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException();
-                    using var tables = source.CreateCommand(); tables.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('products','sales','purchases')";
-                    if (Convert.ToInt32(tables.ExecuteScalar()) != 3) throw new InvalidDataException();
-                }
-                // Preserve a verified point-in-time copy before replacing live data. The backup stays beside the local database.
-                var safetyBackupPath = dbPath + ".pre-restore-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".bak";
+                File.WriteAllBytes(restored, DecryptBackupFile(dialog.FileName, password));
+                ValidateBackupDatabase(restored);
                 using (var live = C())
-                using (var safety = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = safetyBackupPath }.ToString())) { safety.Open(); live.BackupDatabase(safety); }
-                using (var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = dialog.FileName, Mode = SqliteOpenMode.ReadOnly }.ToString()))
+                using (var destination = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = safety }.ToString()))
+                { destination.Open(); live.BackupDatabase(destination); }
+                var safetyEncrypted = dbPath + ".pre-restore-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".almbak";
+                EncryptBackupBytes(File.ReadAllBytes(safety), safetyEncrypted, password);
+                using (var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = restored, Mode = SqliteOpenMode.ReadOnly }.ToString()))
                 using (var destination = C()) { source.Open(); source.BackupDatabase(destination); }
-                InitDb(); RefreshSummary(); MessageBox.Show(UiLanguage.T("تمت الاستعادة. راجع الأرصدة والتقارير."));
+                InitDb(); RefreshSummary();
+                MessageBox.Show(UiLanguage.T("تمت الاستعادة. راجع الأرصدة والتقارير. حُفظت نسخة أمان مشفرة قبل الاستبدال."));
             }
+            catch (CryptographicException) { MessageBox.Show(UiLanguage.T("فشلت الاستعادة: كلمة المرور غير صحيحة أو الملف تالف.")); }
             catch (Exception) { MessageBox.Show(UiLanguage.T("فشلت الاستعادة: الملف غير صالح أو غير متوافق.")); }
+            finally { try { if (File.Exists(restored)) File.Delete(restored); } catch { } try { if (File.Exists(safety)) File.Delete(safety); } catch { } }
         };
         f.Controls.Add(restore); f.Controls.Add(export); f.ShowDialog();
+    }
+
+    static string? PromptBackupPassword(IWin32Window owner, bool confirm)
+    {
+        using var dialog = new Form { Text = UiLanguage.T(confirm ? "تعيين كلمة مرور النسخة الاحتياطية" : "كلمة مرور النسخة الاحتياطية"), Width = 440, Height = confirm ? 210 : 165, StartPosition = FormStartPosition.CenterParent, FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var password = new TextBox { Dock = DockStyle.Top, UseSystemPasswordChar = true, PlaceholderText = UiLanguage.T("كلمة مرور طويلة وفريدة") };
+        var repeat = new TextBox { Dock = DockStyle.Top, UseSystemPasswordChar = true, PlaceholderText = UiLanguage.T("أعد كتابة كلمة المرور") };
+        var save = new Button { Text = UiLanguage.T("متابعة"), Dock = DockStyle.Bottom, Height = 38, DialogResult = DialogResult.OK };
+        dialog.Controls.Add(save);
+        if (confirm) dialog.Controls.Add(repeat);
+        dialog.Controls.Add(password);
+        dialog.AcceptButton = save;
+        if (dialog.ShowDialog(owner) != DialogResult.OK) return null;
+        if (password.Text.Length < 12 || (confirm && !string.Equals(password.Text, repeat.Text, StringComparison.Ordinal)))
+        {
+            MessageBox.Show(UiLanguage.T("استخدم كلمة مرور لا تقل عن 12 حرفًا وتأكد من تطابقها."));
+            return null;
+        }
+        return password.Text;
+    }
+
+    static readonly byte[] BackupMagic = System.Text.Encoding.ASCII.GetBytes("ALMIZW01");
+
+    static void EncryptBackupBytes(byte[] plain, string path, string password)
+    {
+        byte[] salt = RandomNumberGenerator.GetBytes(16);
+        byte[] nonce = RandomNumberGenerator.GetBytes(12);
+        byte[] key = Rfc2898DeriveBytes.Pbkdf2(password, salt, 600000, HashAlgorithmName.SHA256, 32);
+        byte[] cipher = new byte[plain.Length];
+        byte[] tag = new byte[16];
+        using (var aes = new AesGcm(key, 16)) aes.Encrypt(nonce, plain, cipher, tag, BackupMagic);
+        using var output = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        output.Write(BackupMagic); output.Write(salt); output.Write(nonce); output.Write(tag); output.Write(cipher);
+        CryptographicOperations.ZeroMemory(key);
+    }
+
+    static byte[] DecryptBackupFile(string path, string password)
+    {
+        byte[] file = File.ReadAllBytes(path);
+        const int headerLength = 8 + 16 + 12 + 16;
+        if (file.Length < headerLength || !file.AsSpan(0, 8).SequenceEqual(BackupMagic)) throw new InvalidDataException("Unsupported encrypted backup format");
+        byte[] salt = file.AsSpan(8, 16).ToArray();
+        byte[] nonce = file.AsSpan(24, 12).ToArray();
+        byte[] tag = file.AsSpan(36, 16).ToArray();
+        byte[] cipher = file.AsSpan(headerLength).ToArray();
+        byte[] plain = new byte[cipher.Length];
+        byte[] key = Rfc2898DeriveBytes.Pbkdf2(password, salt, 600000, HashAlgorithmName.SHA256, 32);
+        try { using var aes = new AesGcm(key, 16); aes.Decrypt(nonce, cipher, tag, plain, BackupMagic); return plain; }
+        finally { CryptographicOperations.ZeroMemory(key); }
+    }
+
+    static void ValidateBackupDatabase(string path)
+    {
+        using var source = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Mode = SqliteOpenMode.ReadOnly }.ToString());
+        source.Open();
+        using var check = source.CreateCommand(); check.CommandText = "PRAGMA integrity_check";
+        if (!string.Equals(Convert.ToString(check.ExecuteScalar()), "ok", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Database integrity check failed");
+        using var tables = source.CreateCommand(); tables.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('products','sales','purchases')";
+        if (Convert.ToInt32(tables.ExecuteScalar()) != 3) throw new InvalidDataException("Not a compatible SmartCompany database");
     }
 
     void ReceiptPayment(bool supplierPayment)
