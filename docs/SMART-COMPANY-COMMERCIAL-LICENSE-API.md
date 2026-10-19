@@ -59,7 +59,7 @@ Example request body (do not include a real secret here):
 - Google Play Billing is not integrated. If selling app functionality through Google Play, review the current Play Billing policy and integrate its purchase verification/backend lifecycle appropriately.
 - The app uses Android ID for device binding; this is not hardware DRM and may change in some device/profile scenarios.
 - The app allows a cached valid entitlement for up to 72 hours without connectivity. Test clock changes, reinstall, device replacement, expired monthly/annual terms, and concurrent activation.
-- Monthly and annual terms currently expire after 30 and 365 days respectively; this initial implementation does not yet process renewals or payment-provider webhooks.
+- Monthly and annual terms expire after 30 and 365 days respectively. Owner-approved renewals are supported by the admin endpoint; automated payment-provider webhooks are not implemented.
 - A perpetual license has no expiry but is tied to one device.
 - Do not announce the commercial license system as production-ready until the Worker deployment is confirmed, API behavior is tested against the live D1 database, and release tests pass.
 - The app must preserve company data and allow data export after trial/subscription expiry.
