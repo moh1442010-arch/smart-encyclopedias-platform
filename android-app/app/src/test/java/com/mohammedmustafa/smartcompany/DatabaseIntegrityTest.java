@@ -780,16 +780,6 @@ public class DatabaseIntegrityTest {
         database.insertOrThrow("journal_lines", null, line);
     }
 
-    private int journalEntryCount() {
-        Cursor c = database.rawQuery("SELECT COUNT(*) FROM journal_entries", null);
-        try {
-            assertTrue(c.moveToFirst());
-            return c.getInt(0);
-        } finally {
-            c.close();
-        }
-    }
-
     private void insertInvoiceItem(long transactionId, double price, double cost) {
         ContentValues item = new ContentValues();
         item.put("transaction_id", transactionId);
