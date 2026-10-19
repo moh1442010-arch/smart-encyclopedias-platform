@@ -152,6 +152,31 @@ jobs:
           jarsigner -verify -verbose "$aab"
           sha256sum --check release/SHA256SUMS.txt
 
+      - name: Download prior signed release for upgrade compatibility test
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 --retry-all-errors --connect-timeout 20 \
+            "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/al-mizan-expert-review-2026-10-16/AlMizan-review-2.4.0-release.apk" \
+            -o android-app/release/AlMizan-2.4.0-prior.apk
+          test -s android-app/release/AlMizan-2.4.0-prior.apk
+          sha256sum android-app/release/AlMizan-2.4.0-prior.apk
+
+      - name: Test signed update installation and launch on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          script: |
+            set -eux
+            adb install android-app/release/AlMizan-2.4.0-prior.apk
+            adb shell pm path com.mohammedmustafa.smartcompany
+            adb install -r android-app/release/AlMizan-2.4.3-release.apk
+            adb shell dumpsys package com.mohammedmustafa.smartcompany | grep -F 'versionCode=44'
+            adb shell monkey -p com.mohammedmustafa.smartcompany 1
+            sleep 5
+            adb shell pidof com.mohammedmustafa.smartcompany
+
       - name: Upload signed release artifacts only
         uses: actions/upload-artifact@v4
         with:
