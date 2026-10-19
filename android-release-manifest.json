@@ -1,0 +1,22 @@
+{
+  "product": "المحاسب الميزان Enterprise",
+  "status": "expert-review-only-not-approved-for-commercial-sale",
+  "packageId": "com.mohammedmustafa.smartcompany",
+  "versionName": "2.4.1",
+  "versionCode": 42,
+  "releaseTag": "al-mizan-android-review-2026-10-18",
+  "releasePage": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/tag/al-mizan-android-review-2026-10-18",
+  "apkUrl": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/al-mizan-android-review-2026-10-18/AlMizan-review-2.4.1-release.apk",
+  "apkSha256": "c6beee42beda3a7a66225a0e76c58d9f57405a39a771ff2a7728edecfb7d4539",
+  "expectedSigningCertificateSha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
+  "signingCertificateStatus": "expected fingerprint enforced by release build workflow; verify artifact certificate before device install",
+  "updatePolicy": [
+    "Never change applicationId",
+    "Never change the release signing key without a documented Android signing-key rotation plan",
+    "Before publishing each APK, verify apksigner certificate SHA-256 against expected fingerprint",
+    "Verify APK SHA-256 and package/version metadata",
+    "Run update-install tests from the last public release and test on a physical Android device",
+    "Keep the private keystore encrypted and backed up separately; never embed it in this manifest or QR code"
+  ],
+  "note": "Public verification metadata only. No private key, keystore password, admin secret, or activation secret belongs here."
+}
