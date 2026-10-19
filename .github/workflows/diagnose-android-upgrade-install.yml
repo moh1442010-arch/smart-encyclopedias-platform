@@ -1,0 +1,35 @@
+name: Diagnose Al-Mizan Android upgrade installation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upgrade-install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download previously published 2.4.0 and candidate 2.4.1 APKs
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 \
+            "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/al-mizan-expert-review-2026-10-16/AlMizan-review-2.4.0-release.apk" \
+            -o old.apk
+          curl -fL --retry 3 \
+            "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/al-mizan-android-review-2026-10-18/AlMizan-review-2.4.1-release.apk" \
+            -o new.apk
+          sha256sum old.apk new.apk
+
+      - name: Test real Android package update in emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          script: |
+            set -euxo pipefail
+            adb install old.apk
+            adb shell pm path com.mohammedmustafa.smartcompany
+            adb install -r new.apk
+            adb shell dumpsys package com.mohammedmustafa.smartcompany | grep -E 'versionCode=|versionName='
