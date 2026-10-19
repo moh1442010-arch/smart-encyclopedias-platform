@@ -104,7 +104,7 @@ test("commercial app license creation requires admin authorization and explicit 
   const env = { DB: db, LICENSE_ADMIN_KEY: "test-admin-secret" };
   const unauthenticated = await call(env, "/api/app-license/admin/create", {
     method: "POST", device: "",
-    body: { approved: true, plan: "pro", termType: "annual", customerName: "Test Customer", licenseId: "TEST-GATE-01" }
+    body: { approved: true, amountMinor: 1, currency: 'SDG', plan: "pro", termType: "annual", customerName: "Test Customer", licenseId: "TEST-GATE-01" }
   });
   assert.equal(unauthenticated.status, 401);
   assert.equal((await unauthenticated.json()).error, "unauthorized");
@@ -125,7 +125,7 @@ test("Enterprise plan and term type survive activation and status checks", async
   const createdResponse = await call(env, "/api/app-license/admin/create", {
     method: "POST", device: "", admin: "test-admin-secret",
     body: {
-      approved: true, plan: "enterprise", termType: "perpetual",
+      approved: true, amountMinor: 1, currency: 'SDG', plan: "enterprise", termType: "perpetual",
       customerName: "Enterprise Contract Test", licenseId: "TEST-ENTITLEMENT-01"
     }
   });
@@ -165,7 +165,7 @@ test("paid activation is device-bound and a revoked license is not granted", asy
     const { db, licenses } = makeDb(); const env = { DB: db, LICENSE_ADMIN_KEY: "test-admin-secret" };
     const createdResponse = await call(env, "/api/app-license/admin/create", {
       method: "POST", device: "", admin: "test-admin-secret",
-      body: { approved: true, plan: "pro", termType: "annual", customerName: "Test Customer", licenseId: "TEST-LICENSE-01" }
+      body: { approved: true, amountMinor: 1, currency: 'SDG', plan: "pro", termType: "annual", customerName: "Test Customer", licenseId: "TEST-LICENSE-01" }
     });
     assert.equal(createdResponse.status, 201);
     const created = await createdResponse.json();
@@ -191,7 +191,7 @@ test("expired monthly license stays locked instead of receiving a new trial", as
     const env = { DB: db, LICENSE_ADMIN_KEY: "test-admin-secret" };
     const createdResponse = await call(env, "/api/app-license/admin/create", {
       method: "POST", device: "", admin: "test-admin-secret",
-      body: { approved: true, plan: "basic", termType: "monthly", customerName: "Monthly Test", licenseId: "TEST-MONTH-01" }
+      body: { approved: true, amountMinor: 1, currency: 'SDG', plan: "basic", termType: "monthly", customerName: "Monthly Test", licenseId: "TEST-MONTH-01" }
     });
     assert.equal(createdResponse.status, 201);
     const created = await createdResponse.json();
