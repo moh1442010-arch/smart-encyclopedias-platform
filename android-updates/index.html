@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1f3a">
+<meta name="description" content="مركز التحقق والتنزيل الرسمي لتطبيق المحاسب الميزان Android. تحقق من الإصدار وبصمة الملف قبل التنزيل.">
+<title>مركز تحديثات Android | المحاسب الميزان</title>
+<style>
+:root{--navy:#0b1f3a;--gold:#d4af37;--ink:#172438;--muted:#64748b;--line:#dce4ee;--bg:#f4f7fb;--white:#fff}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;line-height:1.8}.wrap{width:min(820px,calc(100% - 26px));margin:auto}header{background:var(--navy);color:white;border-bottom:5px solid var(--gold);padding:22px 0}h1{line-height:1.25;margin:6px 0 10px;font-size:clamp(28px,5vw,40px)}header p{color:#e0e9f4;margin:0}.card{background:white;border:1px solid var(--line);border-radius:18px;padding:20px;margin:18px 0;box-shadow:0 8px 25px #0b1f3a08}.notice{border-right:5px solid var(--gold);background:#fff7dc;padding:14px;border-radius:12px}.label{color:var(--muted);font-size:13px}.value{font-weight:800;overflow-wrap:anywhere;direction:ltr;text-align:left}.btn{display:inline-flex;justify-content:center;align-items:center;background:var(--gold);color:var(--ink);font-weight:850;text-decoration:none;border-radius:10px;padding:11px 16px;min-height:44px}.btn.secondary{background:#edf2f8;border:1px solid #d4deea}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.actions a{flex:1 1 190px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.item{padding:10px;border:1px solid var(--line);border-radius:10px;min-width:0}.status{font-weight:800;color:#785800}.small{font-size:13px;color:var(--muted)}footer{text-align:center;padding:20px;color:var(--muted);font-size:13px}code{overflow-wrap:anywhere;word-break:break-word}@media(max-width:580px){.grid{grid-template-columns:1fr}.card{padding:15px}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div>المحاسب الميزان · بوابة Android الرسمية</div><h1>مركز التحديث والتحقق</h1><p>عنوان ثابت يصلح للباركود؛ تتغير بيانات الإصدار هنا دون الحاجة إلى تغيير الرمز.</p></div></header>
+<main class="wrap">
+<div class="card">
+<div id="status" class="notice" role="status" aria-live="polite">جارٍ التحقق من بيانات الإصدار المنشورة…</div>
+<h2 id="product">المحاسب الميزان Enterprise</h2>
+<div class="grid">
+<div class="item"><div class="label">الإصدار المنشور</div><div id="version" class="value">—</div></div>
+<div class="item"><div class="label">رقم البناء</div><div id="versionCode" class="value">—</div></div>
+<div class="item"><div class="label">معرّف التطبيق</div><div id="packageId" class="value">—</div></div>
+<div class="item"><div class="label">حالة الإصدار</div><div id="releaseStatus" class="status">—</div></div>
+</div>
+<h3>التحقق قبل التنزيل</h3>
+<div class="label">SHA-256 لملف APK</div><div id="apkHash" class="value">—</div>
+<div class="label" style="margin-top:12px">بصمة شهادة التوقيع SHA-256 المتوقعة</div><div id="certHash" class="value">—</div>
+<div class="actions"><a id="download" class="btn" href="#" hidden>تنزيل APK</a><a id="release" class="btn secondary" href="#" target="_blank" rel="noopener noreferrer" hidden>تفاصيل الإصدار وملاحظاته</a></div>
+<p class="small">قبل التثبيت، قارن الإصدار وبصمة الملف مع البيانات أعلاه. تحديث Android يتطلب معرّف تطبيق وتوقيعاً متوافقين ورقم بناء أعلى. لا تحذف التطبيق الحالي لحل مشكلة تثبيت قبل التحقق من التوقيع والتوافق.</p>
+</div>
+<div class="card">
+<h2>سياسة التحديثات</h2>
+<ul>
+<li>هذا المركز يعرض الإصدار المسجل في بيان الإصدار الرسمي؛ لا يثبت وحده سلامة الحسابات أو جاهزية البيع.</li>
+<li>الإصدار الحالي مخصص للمراجعة الفنية فقط، وليس للبيع التجاري.</li>
+<li>لا يُنزّل التطبيق تلقائياً عند فتح هذه الصفحة. راجع رقم الإصدار أولاً لتجنب تنزيل الملف نفسه بلا داعٍ.</li>
+<li>الباركود يفتح هذا العنوان الثابت ولا يحتوي على مفاتيح التوقيع أو كلمات المرور أو رموز التفعيل.</li>
+<li>يجب اختبار كل تحديث على جهاز Android فعلي قبل إعلانه متاحاً للعملاء.</li>
+</ul>
+</div>
+<div class="small">بيانات التحقق: <a href="../android-release-manifest.json">android-release-manifest.json</a> · <a href="../downloads/">مركز التنزيلات</a></div>
+</main>
+<footer>المحاسب الميزان · بوابة التحقق العامة</footer>
+<script>
+(async function(){
+ const el=id=>document.getElementById(id);
+ const fmtStatus=s=>s==='expert-review-only-not-approved-for-commercial-sale'?'للمراجعة فقط — غير معتمد للبيع':s;
+ try{
+  const r=await fetch('../android-release-manifest.json',{cache:'no-store'});
+  if(!r.ok)throw new Error('تعذر جلب بيان الإصدار');
+  const m=await r.json();
+  el('product').textContent=m.product||'المحاسب الميزان';
+  el('version').textContent=m.versionName||'غير محدد';
+  el('versionCode').textContent=String(m.versionCode??'غير محدد');
+  el('packageId').textContent=m.packageId||'غير محدد';
+  el('releaseStatus').textContent=fmtStatus(m.status||'غير محدد');
+  el('apkHash').textContent=m.apkSha256||'غير متوفر';
+  el('certHash').textContent=m.expectedSigningCertificateSha256||'غير متوفر';
+  if(m.apkUrl&&/^https:\/\/github\.com\/moh1442010-arch\/smart-encyclopedias-platform\/releases\/download\//.test(m.apkUrl)){
+   el('download').href=m.apkUrl;el('download').hidden=false;
+  }
+  if(m.releasePage&&/^https:\/\/github\.com\/moh1442010-arch\/smart-encyclopedias-platform\/releases\/tag\//.test(m.releasePage)){
+   el('release').href=m.releasePage;el('release').hidden=false;
+  }
+  el('status').textContent='تم تحميل بيانات الإصدار من بيان المشروع. راجع الحالة والبصمات قبل أي تنزيل.';
+ }catch(e){
+  el('status').textContent='تعذر التحقق من بيان الإصدار الآن. لا تبدأ تنزيل ملف جديد حتى تتأكد من صفحة الإصدار الرسمية.';
+  el('status').className='notice';
+ }
+})();
+</script>
+</body>
+</html>
