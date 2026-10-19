@@ -130,7 +130,29 @@ public class MainActivity extends Activity{
  boolean verifyPin(String pin,android.content.SharedPreferences prefs){try{if(prefs.contains("pin_hash")){byte[] salt=android.util.Base64.decode(prefs.getString("pin_salt",""),android.util.Base64.NO_WRAP);byte[] expected=android.util.Base64.decode(prefs.getString("pin_hash",""),android.util.Base64.NO_WRAP);byte[] actual=android.util.Base64.decode(pinHash(pin,salt),android.util.Base64.NO_WRAP);return java.security.MessageDigest.isEqual(expected,actual);}String legacy=prefs.getString("pin",null);if(legacy!=null&&legacy.equals(pin)){return savePin(pin,prefs);}return false;}catch(Exception ex){return false;}}
  String pinHash(String pin,byte[] salt)throws Exception{javax.crypto.spec.PBEKeySpec spec=new javax.crypto.spec.PBEKeySpec(pin.toCharArray(),salt,120000,256);try{return android.util.Base64.encodeToString(javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1").generateSecret(spec).getEncoded(),android.util.Base64.NO_WRAP);}finally{spec.clearPassword();}}
  String pinHash(String pin,String salt)throws Exception{return pinHash(pin,android.util.Base64.decode(salt,android.util.Base64.NO_WRAP));}
- void dashboard(){
+   void checkForAppUpdate(){
+   toast("جارٍ فحص الإصدار المنشور…");
+   new Thread(()->{
+    java.net.HttpURLConnection connection=null;
+    try{
+     java.net.URL url=new java.net.URL("https://raw.githubusercontent.com/moh1442010-arch/smart-encyclopedias-platform/main/android-release-manifest.json");
+     connection=(java.net.HttpURLConnection)url.openConnection();connection.setRequestMethod("GET");connection.setConnectTimeout(6000);connection.setReadTimeout(6000);connection.setUseCaches(false);connection.setRequestProperty("Cache-Control","no-cache");
+     if(connection.getResponseCode()!=200)throw new java.io.IOException("manifest_http_"+connection.getResponseCode());
+     java.io.ByteArrayOutputStream bytes=new java.io.ByteArrayOutputStream();try(java.io.InputStream in=connection.getInputStream()){byte[] buffer=new byte[2048];int n;while((n=in.read(buffer))!=-1){bytes.write(buffer,0,n);if(bytes.size()>65536)throw new java.io.IOException("manifest_too_large");}}
+     org.json.JSONObject manifest=new org.json.JSONObject(bytes.toString("UTF-8"));
+     String packageId=manifest.optString("packageId","");int publishedCode=manifest.optInt("versionCode",-1);String publishedName=manifest.optString("versionName","");String status=manifest.optString("status","");String center=manifest.optString("updateCenterUrl","");
+     if(!"com.mohammedmustafa.smartcompany".equals(packageId)||publishedCode<1||publishedName.isEmpty()||!center.startsWith("https://moh1442010-arch.github.io/smart-encyclopedias-platform/android-updates/"))throw new java.io.IOException("invalid_release_manifest");
+     runOnUiThread(()->{
+      if(publishedCode>BuildConfig.VERSION_CODE){
+       new AlertDialog.Builder(this).setTitle(tr("يتوفر إصدار أحدث. هل تريد فتح مركز التحديث والتحقق؟")).setMessage(tr("الإصدار المثبت: ")+BuildConfig.VERSION_NAME+" ("+BuildConfig.VERSION_CODE+")\n"+tr("الإصدار المنشور: ")+publishedName+" ("+publishedCode+")\n"+tr("حالة الإصدار: ")+status+"\n\n"+tr("لن يبدأ التنزيل تلقائيًا. تحقق من بصمة الملف والتوقيع قبل التثبيت.")).setNegativeButton(tr("إلغاء"),(d,w)->{}).setPositiveButton(tr("فتح مركز التحديثات"),(d,w)->open(center)).show();
+      }else if(publishedCode==BuildConfig.VERSION_CODE){toast("أنت تستخدم أحدث إصدار منشور للمراجعة.");}
+      else{toast("تعذر التحقق من بيانات الإصدار؛ لم يتم تنزيل أي ملف.");}
+     });
+    }catch(Exception ex){runOnUiThread(()->toast("تعذر الاتصال بمركز التحديثات. تحقق من الإنترنت ثم أعد المحاولة."));}
+    finally{if(connection!=null)connection.disconnect();}
+   }).start();
+  }
+  void dashboard(){
   android.content.SharedPreferences lic=getSharedPreferences("commercial_license",0);long licenseExpiry=lic.getLong("expires_at",0);if("trial".equals(lic.getString("mode",""))&&licenseExpiry>0&&licenseExpiry<=System.currentTimeMillis()){licensePage("انتهت التجربة المجانية. أدخل رمز الترخيص التجاري للمتابعة.");return;}
   page("لوحة التحكم");content.setPadding(10,10,10,16);content.addView(languageButton());
   TextView brandTitle=t(english()?"Al-Mizan Accountant":"⚖ المحاسب الميزان",28);brandTitle.setTextColor(Color.rgb(11,31,58));brandTitle.setTypeface(null,android.graphics.Typeface.BOLD);brandTitle.setGravity(Gravity.CENTER);content.addView(brandTitle,new LinearLayout.LayoutParams(-1,-2));
