@@ -31,7 +31,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           script: |
-            set -euxo pipefail
+            set -eux
             adb install old.apk
             adb shell pm path com.mohammedmustafa.smartcompany
             adb install -r new.apk
