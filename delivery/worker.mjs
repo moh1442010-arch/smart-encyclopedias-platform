@@ -241,6 +241,42 @@ async function ensureAppLicenseTables(env) {
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `).run();
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS app_admin_events (
+      id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      license_id TEXT,
+      order_id TEXT,
+      customer_name TEXT,
+      plan TEXT,
+      term_type TEXT,
+      amount_minor INTEGER,
+      currency TEXT,
+      payment_reference TEXT,
+      details TEXT,
+      actor TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `).run();
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS app_orders (
+      id TEXT PRIMARY KEY,
+      license_id TEXT,
+      customer_name TEXT NOT NULL,
+      customer_email TEXT,
+      plan TEXT NOT NULL,
+      term_type TEXT NOT NULL,
+      amount_minor INTEGER NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'SDG',
+      payment_reference TEXT,
+      payment_status TEXT NOT NULL DEFAULT 'pending',
+      order_status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      approved_at TEXT,
+      approved_by TEXT
+    )
+  `).run();
+  await env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_app_orders_payment_reference ON app_orders(payment_reference) WHERE payment_reference IS NOT NULL AND payment_reference <> ''`).run();
 }
 
 function appDeviceId(request) {
@@ -350,11 +386,19 @@ async function createAppLicense(request, env) {
   const termType = String(body && body.termType || "").toLowerCase();
   const customerName = String(body && body.customerName || "").trim().slice(0, 160);
   const approvedBy = String(body && body.approvedBy || "owner").trim().slice(0, 120);
+  const currency = String(body && body.currency || "SDG").toUpperCase();
+  const amountMinor = Number(body && body.amountMinor);
+  const paymentReference = String(body && (body.paymentReference || body.orderId) || "").trim().slice(0, 120);
   if (!body || body.approved !== true || !/^(basic|pro|business|enterprise)$/.test(plan) ||
-      !/^(perpetual|monthly|annual)$/.test(termType) || customerName.length < 2) {
-    return json({ ok: false, error: "explicit_payment_approval_and_valid_plan_required" }, 400, env);
+      !/^(perpetual|monthly|annual)$/.test(termType) || customerName.length < 2 ||
+      !Number.isSafeInteger(amountMinor) || amountMinor < 0 || !/^(SDG|USD)$/.test(currency)) {
+    return json({ ok: false, error: "explicit_payment_approval_valid_plan_price_and_currency_required" }, 400, env);
   }
   await ensureAppLicenseTables(env);
+  if (paymentReference) {
+    const duplicate = await env.DB.prepare("SELECT id FROM app_orders WHERE payment_reference = ?").bind(paymentReference).first();
+    if (duplicate) return json({ ok: false, error: "payment_reference_already_used" }, 409, env);
+  }
   const id = String(body.licenseId || ("SC-" + crypto.randomUUID().replaceAll("-", "").slice(0, 16))).toUpperCase();
   if (!/^[A-Z0-9_-]{6,80}$/.test(id)) return json({ ok: false, error: "invalid_license_id" }, 400, env);
   const activationCode = ("SC-" + crypto.randomUUID() + "-" + crypto.randomUUID().slice(0, 8)).toUpperCase();
@@ -368,12 +412,20 @@ async function createAppLicense(request, env) {
     ).bind(id, codeHash, plan, termType, customerName,
       String(body.customerEmail || "").trim().toLowerCase() || null,
       String(body.orderId || "").trim() || null, expiresAt, approvedBy).run();
+    const orderId = String(body.orderId || ("ORD-" + crypto.randomUUID().replaceAll("-", "").slice(0, 12))).trim().slice(0, 100);
+    await env.DB.prepare(
+      "INSERT INTO app_orders (id, license_id, customer_name, customer_email, plan, term_type, amount_minor, currency, payment_reference, payment_status, order_status, approved_at, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', 'completed', ?, ?)"
+    ).bind(orderId, id, customerName, String(body.customerEmail || "").trim().toLowerCase() || null, plan, termType, amountMinor, currency, paymentReference || null, new Date().toISOString(), approvedBy).run();
+    await env.DB.prepare(
+      "INSERT INTO app_admin_events (id, event_type, license_id, order_id, customer_name, plan, term_type, amount_minor, currency, payment_reference, details, actor) VALUES (?, 'license_created_paid', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind("EVT-" + crypto.randomUUID(), id, orderId, customerName, plan, termType, amountMinor, currency, paymentReference || null, "Owner confirmed payment and created license", approvedBy).run();
   } catch (e) {
-    return json({ ok: false, error: "license_create_failed" }, 409, env);
+    return json({ ok: false, error: "license_create_failed_or_payment_reference_duplicate" }, 409, env);
   }
   return json({
-    ok: true, licenseId: id, activationCode, plan, termType, expiresAt,
-    paymentApproved: true, note: "Show this code to the buyer once; only its hash is stored."
+    ok: true, licenseId: id, orderId: String(body.orderId || ""), activationCode, plan, termType, expiresAt,
+    amountMinor, currency, paymentReference, paymentApproved: true,
+    note: "Show this code to the buyer once; only its hash is stored."
   }, 201, env);
 }
 
@@ -404,6 +456,65 @@ async function listAppLicenses(request, env) {
     },
     licenses: rows.results || []
   }, 200, env);
+}
+
+async function renewAppLicense(request, env) {
+  if (!isAdmin(request, env)) return json({ ok: false, error: "unauthorized" }, 401, env);
+  const body = await request.json().catch(() => null);
+  const id = String(body?.licenseId || "").trim();
+  const actor = String(body?.approvedBy || "owner").trim().slice(0, 120);
+  const paymentReference = String(body?.paymentReference || "").trim().slice(0, 120);
+  const customerConfirmed = body?.approved === true;
+  const currency = String(body?.currency || "SDG").toUpperCase();
+  const amountMinor = Number(body?.amountMinor);
+  if (!/^[A-Z0-9_-]{6,80}$/i.test(id) || !customerConfirmed ||
+      !Number.isSafeInteger(amountMinor) || amountMinor < 0 || !/^(SDG|USD)$/.test(currency) ||
+      !paymentReference) {
+    return json({ ok: false, error: "owner_payment_approval_price_currency_and_reference_required" }, 400, env);
+  }
+  await ensureAppLicenseTables(env);
+  const license = await env.DB.prepare(
+    "SELECT id, plan, term_type, customer_name, customer_email, order_id, status, expires_at FROM app_licenses WHERE id = ?"
+  ).bind(id).first();
+  if (!license) return json({ ok: false, error: "license_not_found" }, 404, env);
+  if (license.status === "revoked" || license.term_type === "perpetual") {
+    return json({ ok: false, error: "revoked_or_perpetual_license_cannot_be_renewed" }, 409, env);
+  }
+  const duplicate = await env.DB.prepare("SELECT id FROM app_orders WHERE payment_reference = ?").bind(paymentReference).first();
+  if (duplicate) return json({ ok: false, error: "payment_reference_already_used" }, 409, env);
+  const now = Date.now();
+  const oldExpiry = license.expires_at ? Date.parse(license.expires_at) : now;
+  const base = Number.isFinite(oldExpiry) ? Math.max(now, oldExpiry) : now;
+  const duration = license.term_type === "monthly" ? 30 * 86400000 : 365 * 86400000;
+  const expiresAt = new Date(base + duration).toISOString();
+  const orderId = "REN-" + crypto.randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase();
+  try {
+    const updated = await env.DB.prepare(
+      "UPDATE app_licenses SET status = 'active', expires_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status <> 'revoked'"
+    ).bind(expiresAt, id).run();
+    if (!updated.meta?.changes) return json({ ok: false, error: "license_not_renewed" }, 409, env);
+    await env.DB.prepare(
+      "INSERT INTO app_orders (id, license_id, customer_name, customer_email, plan, term_type, amount_minor, currency, payment_reference, payment_status, order_status, approved_at, approved_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', 'renewed', ?, ?)"
+    ).bind(orderId, id, license.customer_name, license.customer_email || null, license.plan, license.term_type, amountMinor, currency, paymentReference, new Date().toISOString(), actor).run();
+    await env.DB.prepare(
+      "INSERT INTO app_admin_events (id, event_type, license_id, order_id, customer_name, plan, term_type, amount_minor, currency, payment_reference, details, actor) VALUES (?, 'license_renewed_paid', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind("EVT-" + crypto.randomUUID(), id, orderId, license.customer_name, license.plan, license.term_type, amountMinor, currency, paymentReference, "Owner confirmed payment; expiry extended from later of current expiry or now", actor).run();
+  } catch (e) {
+    return json({ ok: false, error: "renewal_failed_or_payment_reference_duplicate" }, 409, env);
+  }
+  return json({ ok: true, licenseId: id, orderId, plan: license.plan, termType: license.term_type, expiresAt, amountMinor, currency, paymentReference, paymentApproved: true }, 200, env);
+}
+
+async function adminOrders(request, env) {
+  if (!isAdmin(request, env)) return json({ ok: false, error: "unauthorized" }, 401, env);
+  await ensureAppLicenseTables(env);
+  const rows = await env.DB.prepare(
+    "SELECT id, license_id, customer_name, customer_email, plan, term_type, amount_minor, currency, payment_reference, payment_status, order_status, created_at, approved_at, approved_by FROM app_orders ORDER BY created_at DESC LIMIT 500"
+  ).all();
+  const events = await env.DB.prepare(
+    "SELECT id, event_type, license_id, order_id, customer_name, plan, term_type, amount_minor, currency, payment_reference, details, actor, created_at FROM app_admin_events ORDER BY created_at DESC LIMIT 500"
+  ).all();
+  return json({ ok: true, orders: rows.results || [], events: events.results || [] }, 200, env);
 }
 
 async function changeAppLicenseStatus(request, env) {
@@ -736,6 +847,14 @@ export default {
 
       if (url.pathname === "/api/app-license/admin/status" && request.method === "POST") {
         return changeAppLicenseStatus(request, env);
+      }
+
+      if (url.pathname === "/api/app-license/admin/renew" && request.method === "POST") {
+        return renewAppLicense(request, env);
+      }
+
+      if (url.pathname === "/api/app-license/admin/orders" && request.method === "GET") {
+        return adminOrders(request, env);
       }
 
       if (url.pathname === "/api/license/create" && request.method === "POST") {
