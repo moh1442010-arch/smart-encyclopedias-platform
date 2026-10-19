@@ -728,6 +728,44 @@ public class DatabaseIntegrityTest {
     }
 
     @Test
+    public void emptyAndUnbalancedManualJournalsCannotBeReversed() {
+        MainActivity activity = new MainActivity();
+
+        ContentValues empty = new ContentValues();
+        empty.put("created_at", System.currentTimeMillis());
+        empty.put("description", "قيد فارغ");
+        long emptyId = database.insertOrThrow("journal_entries", null, empty);
+
+        ContentValues unbalanced = new ContentValues();
+        unbalanced.put("created_at", System.currentTimeMillis());
+        unbalanced.put("description", "قيد غير متوازن");
+        long unbalancedId = database.insertOrThrow("journal_entries", null, unbalanced);
+        insertJournalLine(unbalancedId, "1010", 30.0, 0.0);
+        insertJournalLine(unbalancedId, "3000", 0.0, 20.0);
+
+        int before = journalEntryCount();
+        for (long originalId : new long[]{emptyId, unbalancedId}) {
+            try {
+                activity.reverseManualJournal(database, originalId, "اختبار رفض القيد غير السليم", "جلسة محلية");
+                fail("Empty or unbalanced journals must not be reversed");
+            } catch (IllegalStateException expected) {
+                assertTrue(expected.getMessage().contains("فارغ أو غير متوازن"));
+            }
+        }
+
+        assertEquals(before, journalEntryCount());
+        Cursor audit = database.rawQuery(
+                "SELECT COUNT(*) FROM journal_reversal_audit WHERE original_entry_id IN (?,?)",
+                new String[]{String.valueOf(emptyId), String.valueOf(unbalancedId)});
+        try {
+            assertTrue(audit.moveToFirst());
+            assertEquals(0, audit.getInt(0));
+        } finally {
+            audit.close();
+        }
+    }
+
+    @Test
     public void failedAuditInsertRollsBackReversalAndOriginalLink() {
         MainActivity activity = new MainActivity();
         long originalId = createBalancedManualJournal();
