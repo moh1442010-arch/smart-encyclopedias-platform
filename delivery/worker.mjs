@@ -277,6 +277,17 @@ async function ensureAppLicenseTables(env) {
     )
   `).run();
   await env.DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_app_orders_payment_reference ON app_orders(payment_reference) WHERE payment_reference IS NOT NULL AND payment_reference <> ''`).run();
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS app_plan_prices (
+      plan TEXT NOT NULL,
+      term_type TEXT NOT NULL,
+      currency TEXT NOT NULL,
+      amount_minor INTEGER NOT NULL,
+      updated_by TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (plan, term_type, currency)
+    )
+  `).run();
 }
 
 function appDeviceId(request) {
@@ -395,6 +406,9 @@ async function createAppLicense(request, env) {
     return json({ ok: false, error: "explicit_payment_approval_valid_plan_price_and_currency_required" }, 400, env);
   }
   await ensureAppLicenseTables(env);
+  const configuredPrice = await env.DB.prepare("SELECT amount_minor FROM app_plan_prices WHERE plan = ? AND term_type = ? AND currency = ?").bind(plan, termType, currency).first();
+  if (!configuredPrice) return json({ ok: false, error: "plan_price_not_configured" }, 409, env);
+  if (Number(configuredPrice.amount_minor) !== amountMinor) return json({ ok: false, error: "amount_does_not_match_configured_price" }, 400, env);
   if (paymentReference) {
     const duplicate = await env.DB.prepare("SELECT id FROM app_orders WHERE payment_reference = ?").bind(paymentReference).first();
     if (duplicate) return json({ ok: false, error: "payment_reference_already_used" }, 409, env);
@@ -480,6 +494,9 @@ async function renewAppLicense(request, env) {
   if (license.status === "revoked" || license.term_type === "perpetual") {
     return json({ ok: false, error: "revoked_or_perpetual_license_cannot_be_renewed" }, 409, env);
   }
+  const configuredPrice = await env.DB.prepare("SELECT amount_minor FROM app_plan_prices WHERE plan = ? AND term_type = ? AND currency = ?").bind(license.plan, license.term_type, currency).first();
+  if (!configuredPrice) return json({ ok: false, error: "plan_price_not_configured" }, 409, env);
+  if (Number(configuredPrice.amount_minor) !== amountMinor) return json({ ok: false, error: "amount_does_not_match_configured_price" }, 400, env);
   const duplicate = await env.DB.prepare("SELECT id FROM app_orders WHERE payment_reference = ?").bind(paymentReference).first();
   if (duplicate) return json({ ok: false, error: "payment_reference_already_used" }, 409, env);
   const now = Date.now();
@@ -503,6 +520,35 @@ async function renewAppLicense(request, env) {
     return json({ ok: false, error: "renewal_failed_or_payment_reference_duplicate" }, 409, env);
   }
   return json({ ok: true, licenseId: id, orderId, plan: license.plan, termType: license.term_type, expiresAt, amountMinor, currency, paymentReference, paymentApproved: true }, 200, env);
+}
+
+async function adminPrices(request, env) {
+  if (!isAdmin(request, env)) return json({ ok: false, error: "unauthorized" }, 401, env);
+  await ensureAppLicenseTables(env);
+  const rows = await env.DB.prepare("SELECT plan, term_type, currency, amount_minor, updated_by, updated_at FROM app_plan_prices ORDER BY plan, term_type, currency").all();
+  return json({ ok: true, prices: rows.results || [] }, 200, env);
+}
+
+async function setAdminPrice(request, env) {
+  if (!isAdmin(request, env)) return json({ ok: false, error: "unauthorized" }, 401, env);
+  const body = await request.json().catch(() => null);
+  const plan = String(body?.plan || "").toLowerCase();
+  const termType = String(body?.termType || "").toLowerCase();
+  const currency = String(body?.currency || "").toUpperCase();
+  const amountMinor = Number(body?.amountMinor);
+  const actor = String(body?.approvedBy || "owner").trim().slice(0, 120);
+  if (!/^(basic|pro|business|enterprise)$/.test(plan) ||
+      !/^(monthly|annual|perpetual)$/.test(termType) ||
+      !/^(SDG|USD)$/.test(currency) ||
+      !Number.isSafeInteger(amountMinor) || amountMinor < 1) {
+    return json({ ok: false, error: "valid_plan_term_currency_and_positive_price_required" }, 400, env);
+  }
+  await ensureAppLicenseTables(env);
+  await env.DB.prepare("INSERT INTO app_plan_prices (plan, term_type, currency, amount_minor, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(plan, term_type, currency) DO UPDATE SET amount_minor = excluded.amount_minor, updated_by = excluded.updated_by, updated_at = CURRENT_TIMESTAMP")
+    .bind(plan, termType, currency, amountMinor, actor).run();
+  await env.DB.prepare("INSERT INTO app_admin_events (id, event_type, details, actor) VALUES (?, 'plan_price_updated', ?, ?)")
+    .bind("EVT-" + crypto.randomUUID(), plan + "/" + termType + "/" + currency + " amountMinor=" + amountMinor, actor).run();
+  return json({ ok: true, plan, termType, currency, amountMinor }, 200, env);
 }
 
 async function adminOrders(request, env) {
@@ -857,6 +903,14 @@ export default {
 
       if (url.pathname === "/api/app-license/admin/orders" && request.method === "GET") {
         return adminOrders(request, env);
+      }
+
+      if (url.pathname === "/api/app-license/admin/prices" && request.method === "GET") {
+        return adminPrices(request, env);
+      }
+
+      if (url.pathname === "/api/app-license/admin/prices" && request.method === "POST") {
+        return setAdminPrice(request, env);
       }
 
       if (url.pathname === "/api/license/create" && request.method === "POST") {
