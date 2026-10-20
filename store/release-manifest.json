@@ -1,26 +1,28 @@
 {
   "product": "المحاسب الميزان",
   "channel": "prelaunch",
-  "last_reviewed": "2026-10-18",
-  "storefront_status": "android_2.4.1_unified_review_candidate_build_pending; windows_2.2.8_review_candidate; public_downloads_disabled; sales_hold",
+  "last_reviewed": "2026-10-20",
+  "storefront_status": "android_2.4.3_signed_ci_passed_pending_real_device_and_business_acceptance; windows_2.2.8_review_candidate; public_downloads_disabled; sales_hold",
   "downloads_enabled": false,
   "android_candidate": {
-    "version": "2.4.1",
-    "version_code": 42,
-    "source_branch": "feature/company-currency-expansion",
-    "source_commit": "c3caa55954722905d9ea1b5a4a14826f8e1181b1",
-    "workflow_run": null,
-    "artifact_id": null,
-    "artifact_name": "al-mizan-android-signed-release-v2.4.1",
-    "artifact_zip_sha256": null,
+    "version": "2.4.3",
+    "version_code": 44,
+    "source_branch": "fix/audited-manual-journal-reversal",
+    "source_commit": "d4709be121a382894cfa219a16e41a30b49b7926",
+    "workflow_run": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39313826145",
+    "artifact_id": 12218215409,
+    "artifact_name": "al-mizan-android-signed-release-v2.4.3",
+    "artifact_zip_sha256": "389b6b5f52dd1efea546dcdb051abdac634e47223cf1252eadb8fd97d5313a90",
+    "apk_sha256": "f826a1846a1940eafba5eb44ad6f5b988b35e362f2d132be26b1d232f8c35b64",
+    "aab_sha256": "129630ec03a7acb3f687915c78958fe0beea579fc26d95067402996dc2c2b925",
     "signing_certificate_sha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
-    "ci_status": "pending_final_current_commit_build_and_regression_tests",
+    "ci_status": "passed_signed_build_release_qa_database_integrity_and_emulator_update_launch_smoke",
     "device_update_test": "pending_real_android_device_install_update_and_fresh_install",
     "end_to_end_accounting_acceptance": "pending_independent_end_to_end_accounting_and_backup_restore",
     "live_license_trial_test": "pending_live_worker_and_real_android_client_expiry_offline_behavior",
     "public_download_url": null,
     "status": "expert_test_candidate_only_not_store_approved",
-    "note": "Current candidate is one generic Android 2.4.1 build (versionCode 42), not four independently packaged Basic/Pro/Business/Enterprise APKs. Tier-specific entitlement/package separation must be independently implemented and verified before claiming four separate editions. Keep public downloads disabled until final CI, signing, real-device update, accounting, backup/restore, live licensing, and expert acceptance gates pass."
+    "note": "Single generic Android 2.4.3 package, not four independently packaged Basic/Pro/Business/Enterprise APKs. Emulator upgrade from signed 2.4.0 passed, but owner-reported real-device install failure remains unresolved. Keep downloads disabled and sales on hold until real-device update/fresh install, accounting reconciliation, backup/restore, 24 server catalog prices, live licensing/payment/trial, Windows real-device acceptance, and independent expert sign-off pass."
   },
   "releases": [
     {
@@ -74,7 +76,7 @@
       "status": "archived_not_listed_in_customer_store"
     }
   ],
-  "policy": "The current review candidate is a single generic Android 2.4.1 package (versionCode 42); the historical 2.4.0 four-edition artifact remains archived and is not the current candidate. Do not claim that four independent tier packages or entitlement boundaries are verified. Keep public downloads and commercial sales disabled until the final current build passes regression tests and signing checks, real Android update/fresh-install tests pass, accounting and backup/restore reconcile, the live licensing service and seven-day trial are verified end-to-end on a real device, Windows 2.2.8 passes real-device acceptance, and independent expert review signs off. Historical artifacts must not be advertised as current releases.",
+  "policy": "The current Android candidate is a single generic Android 2.4.3 package (versionCode 44) on fix/audited-manual-journal-reversal. CI, signing fingerprint, database-integrity checks, and emulator upgrade/launch smoke test passed. Real Android install/update and fresh install remain pending because a prior candidate was rejected on the owner’s phone. Do not claim four independently packaged tier builds or verified tier entitlement boundaries. Keep public downloads and sales disabled until real-device update/fresh-install, accounting and backup/restore reconciliation, live server catalog verification (24 prices), live licensing and seven-day trial/payment/offline behavior, Windows real-device install and accounting parity, and independent expert review pass.",
   "windows_candidate": {
     "version": "2.2.8",
     "source_commit": "e65c4ff1212ca24123fd091ce0aaa8da7dd587d4",

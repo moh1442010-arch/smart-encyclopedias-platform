@@ -99,6 +99,9 @@ public class DatabaseIntegrityTest {
         assertTrue(tableExists("accounts"));
         assertTrue(tableExists("journal_entries"));
         assertTrue(tableExists("journal_lines"));
+        assertTrue(tableExists("journal_reversal_audit"));
+        assertTrue(columnExists("journal_entries", "reversal_of_entry_id"));
+        assertTrue(columnExists("journal_entries", "reversed_by_entry_id"));
         assertTrue(tableExists("party_payments"));
         assertTrue(tableExists("checks"));
         assertTrue(tableExists("payroll_events"));
@@ -359,6 +362,114 @@ public class DatabaseIntegrityTest {
         }
     }
 
+    @Test
+    public void auditedManualJournalReversalIsBalancedLinkedAndTraceable() {
+        MainActivity activity = new MainActivity();
+        long originalId;
+        ContentValues original = new ContentValues();
+        original.put("created_at", System.currentTimeMillis());
+        original.put("description", "قيد يدوي قابل للعكس");
+        originalId = database.insertOrThrow("journal_entries", null, original);
+        ContentValues debit = new ContentValues();
+        debit.put("journal_entry_id", originalId);
+        debit.put("account_id", accountId("1010"));
+        debit.put("debit", 125.0);
+        debit.put("credit", 0.0);
+        database.insertOrThrow("journal_lines", null, debit);
+        ContentValues credit = new ContentValues();
+        credit.put("journal_entry_id", originalId);
+        credit.put("account_id", accountId("3000"));
+        credit.put("debit", 0.0);
+        credit.put("credit", 125.0);
+        database.insertOrThrow("journal_lines", null, credit);
+
+        long reversalId = activity.reverseManualJournal(database, originalId, "تصحيح إدخال تجريبي", "مراجع الاختبار");
+
+        assertNotEquals(originalId, reversalId);
+        assertJournalBalanced(originalId);
+        assertJournalBalanced(reversalId);
+        assertEquals(125.0, sumLine(reversalId, "1010", "credit"), 0.000001);
+        assertEquals(125.0, sumLine(reversalId, "3000", "debit"), 0.000001);
+        assertEquals(0.0, sumLine(reversalId, "1010", "debit"), 0.000001);
+        assertEquals(0.0, sumLine(reversalId, "3000", "credit"), 0.000001);
+
+        Cursor link = database.rawQuery(
+                "SELECT reversed_by_entry_id FROM journal_entries WHERE id=?",
+                new String[]{String.valueOf(originalId)});
+        try { assertTrue(link.moveToFirst()); assertEquals(reversalId, link.getLong(0)); }
+        finally { link.close(); }
+        Cursor audit = database.rawQuery(
+                "SELECT reason,actor FROM journal_reversal_audit WHERE original_entry_id=? AND reversal_entry_id=?",
+                new String[]{String.valueOf(originalId), String.valueOf(reversalId)});
+        try {
+            assertTrue(audit.moveToFirst());
+            assertEquals("تصحيح إدخال تجريبي", audit.getString(0));
+            assertEquals("مراجع الاختبار", audit.getString(1));
+        } finally { audit.close(); }
+        Cursor net = database.rawQuery(
+                "SELECT COALESCE(SUM(l.debit),0),COALESCE(SUM(l.credit),0) FROM journal_lines l WHERE l.account_id IN (?,?)",
+                new String[]{String.valueOf(accountId("1010")), String.valueOf(accountId("3000"))});
+        try {
+            assertTrue(net.moveToFirst());
+            assertEquals(net.getDouble(0), net.getDouble(1), 0.000001);
+        } finally { net.close(); }
+    }
+
+    @Test
+    public void manualJournalCannotBeReversedTwiceOrReverseAnAutomatedTransaction() {
+        MainActivity activity = new MainActivity();
+        ContentValues entry = new ContentValues();
+        entry.put("created_at", System.currentTimeMillis());
+        entry.put("description", "قيد اختبار منع التكرار");
+        long manualId = database.insertOrThrow("journal_entries", null, entry);
+        insertBalancedLines(manualId, 20.0);
+        activity.reverseManualJournal(database, manualId, "سبب أول", "اختبار");
+
+        try {
+            activity.reverseManualJournal(database, manualId, "سبب ثان", "اختبار");
+            fail("A manual journal must not be reversed more than once");
+        } catch (IllegalStateException expected) {
+            assertTrue(expected.getMessage().contains("سبق عكس"));
+        }
+
+        ContentValues automated = new ContentValues();
+        automated.put("transaction_id", 777L);
+        automated.put("created_at", System.currentTimeMillis());
+        automated.put("description", "قيد معاملة آلي");
+        long automatedId = database.insertOrThrow("journal_entries", null, automated);
+        insertBalancedLines(automatedId, 15.0);
+        try {
+            activity.reverseManualJournal(database, automatedId, "سبب", "اختبار");
+            fail("Automated transaction journals must be rejected by the manual-only reversal");
+        } catch (IllegalArgumentException expected) {
+            assertTrue(expected.getMessage().contains("معاملة آليًا"));
+        }
+    }
+
+    private void insertBalancedLines(long journalId, double amount) {
+        ContentValues debit = new ContentValues();
+        debit.put("journal_entry_id", journalId);
+        debit.put("account_id", accountId("1010"));
+        debit.put("debit", amount);
+        debit.put("credit", 0.0);
+        database.insertOrThrow("journal_lines", null, debit);
+        ContentValues credit = new ContentValues();
+        credit.put("journal_entry_id", journalId);
+        credit.put("account_id", accountId("3000"));
+        credit.put("debit", 0.0);
+        credit.put("credit", amount);
+        database.insertOrThrow("journal_lines", null, credit);
+    }
+
+    private double sumLine(long journalId, String accountCode, String column) {
+        if (!"debit".equals(column) && !"credit".equals(column)) throw new IllegalArgumentException("invalid column");
+        Cursor c = database.rawQuery(
+                "SELECT COALESCE(SUM(l." + column + "),0) FROM journal_lines l JOIN accounts a ON a.id=l.account_id WHERE l.journal_entry_id=? AND a.code=?",
+                new String[]{String.valueOf(journalId), accountCode});
+        try { assertTrue(c.moveToFirst()); return c.getDouble(0); }
+        finally { c.close(); }
+    }
+
     private int journalEntryCount() {
         Cursor c = database.rawQuery("SELECT COUNT(*) FROM journal_entries", null);
         try {
@@ -436,6 +547,9 @@ public class DatabaseIntegrityTest {
         assertTrue(columnExists("transactions", "customer_id"));
         assertTrue(columnExists("products", "barcode"));
         assertTrue(columnExists("journal_entries", "description"));
+        assertTrue(columnExists("journal_entries", "reversal_of_entry_id"));
+        assertTrue(columnExists("journal_entries", "reversed_by_entry_id"));
+        assertTrue(tableExists("journal_reversal_audit"));
         Cursor preserved = database.rawQuery(
                 "SELECT name FROM customers WHERE name='عميل قديم'", null);
         try {
@@ -548,6 +662,160 @@ public class DatabaseIntegrityTest {
         } finally {
             c.close();
         }
+    }
+
+    @Test
+    public void manualJournalCannotBeReversedTwice() {
+        MainActivity activity = new MainActivity();
+        long originalId = createBalancedManualJournal();
+        long reversalId = activity.reverseManualJournal(database, originalId, "تصحيح", "جلسة محلية");
+        int afterFirst = journalEntryCount();
+
+        try {
+            activity.reverseManualJournal(database, originalId, "محاولة ثانية", "جلسة محلية");
+            fail("A manual journal must not be reversed twice");
+        } catch (IllegalStateException expected) {
+            assertTrue(expected.getMessage().contains("سبق عكس"));
+        }
+
+        assertEquals(afterFirst, journalEntryCount());
+        Cursor c = database.rawQuery("SELECT reversed_by_entry_id FROM journal_entries WHERE id=?",
+                new String[]{String.valueOf(originalId)});
+        try {
+            assertTrue(c.moveToFirst());
+            assertEquals(reversalId, c.getLong(0));
+        } finally {
+            c.close();
+        }
+    }
+
+    @Test
+    public void automatedTransactionJournalCannotBeReversedAsManual() {
+        MainActivity activity = new MainActivity();
+        ContentValues entry = new ContentValues();
+        entry.put("created_at", System.currentTimeMillis());
+        entry.put("description", "قيد آلي");
+        entry.put("transaction_id", 9876L);
+        long originalId = database.insertOrThrow("journal_entries", null, entry);
+        insertJournalLine(originalId, "1010", 25.0, 0.0);
+        insertJournalLine(originalId, "3000", 0.0, 25.0);
+        int before = journalEntryCount();
+
+        try {
+            activity.reverseManualJournal(database, originalId, "تصحيح", "جلسة محلية");
+            fail("Automated transaction journals must not use manual reversal");
+        } catch (IllegalArgumentException expected) {
+            assertTrue(expected.getMessage().contains("آليًا"));
+        }
+
+        assertEquals(before, journalEntryCount());
+    }
+
+    @Test
+    public void manualJournalReversalRequiresNonEmptyReason() {
+        MainActivity activity = new MainActivity();
+        long originalId = createBalancedManualJournal();
+        int before = journalEntryCount();
+
+        try {
+            activity.reverseManualJournal(database, originalId, "   ", "جلسة محلية");
+            fail("A reversal reason is required");
+        } catch (IllegalArgumentException expected) {
+            assertTrue(expected.getMessage().contains("إلزامي"));
+        }
+
+        assertEquals(before, journalEntryCount());
+    }
+
+    @Test
+    public void emptyAndUnbalancedManualJournalsCannotBeReversed() {
+        MainActivity activity = new MainActivity();
+
+        ContentValues empty = new ContentValues();
+        empty.put("created_at", System.currentTimeMillis());
+        empty.put("description", "قيد فارغ");
+        long emptyId = database.insertOrThrow("journal_entries", null, empty);
+
+        ContentValues unbalanced = new ContentValues();
+        unbalanced.put("created_at", System.currentTimeMillis());
+        unbalanced.put("description", "قيد غير متوازن");
+        long unbalancedId = database.insertOrThrow("journal_entries", null, unbalanced);
+        insertJournalLine(unbalancedId, "1010", 30.0, 0.0);
+        insertJournalLine(unbalancedId, "3000", 0.0, 20.0);
+
+        int before = journalEntryCount();
+        for (long originalId : new long[]{emptyId, unbalancedId}) {
+            try {
+                activity.reverseManualJournal(database, originalId, "اختبار رفض القيد غير السليم", "جلسة محلية");
+                fail("Empty or unbalanced journals must not be reversed");
+            } catch (IllegalStateException expected) {
+                assertTrue(expected.getMessage().contains("فارغ أو غير متوازن"));
+            }
+        }
+
+        assertEquals(before, journalEntryCount());
+        Cursor audit = database.rawQuery(
+                "SELECT COUNT(*) FROM journal_reversal_audit WHERE original_entry_id IN (?,?)",
+                new String[]{String.valueOf(emptyId), String.valueOf(unbalancedId)});
+        try {
+            assertTrue(audit.moveToFirst());
+            assertEquals(0, audit.getInt(0));
+        } finally {
+            audit.close();
+        }
+    }
+
+    @Test
+    public void failedAuditInsertRollsBackReversalAndOriginalLink() {
+        MainActivity activity = new MainActivity();
+        long originalId = createBalancedManualJournal();
+        int before = journalEntryCount();
+        database.execSQL("CREATE TRIGGER fail_reversal_audit BEFORE INSERT ON journal_reversal_audit " +
+                "BEGIN SELECT RAISE(ABORT, 'forced audit failure'); END");
+
+        try {
+            activity.reverseManualJournal(database, originalId, "اختبار فشل سجل التدقيق", "جلسة محلية");
+            fail("The forced audit insert failure must propagate");
+        } catch (android.database.SQLException expected) {
+            // The transaction must roll back both the reversal and the original-entry link.
+        }
+
+        assertEquals(before, journalEntryCount());
+        Cursor c = database.rawQuery("SELECT reversed_by_entry_id FROM journal_entries WHERE id=?",
+                new String[]{String.valueOf(originalId)});
+        try {
+            assertTrue(c.moveToFirst());
+            assertTrue(c.isNull(0));
+        } finally {
+            c.close();
+        }
+        Cursor audit = database.rawQuery("SELECT COUNT(*) FROM journal_reversal_audit WHERE original_entry_id=?",
+                new String[]{String.valueOf(originalId)});
+        try {
+            assertTrue(audit.moveToFirst());
+            assertEquals(0, audit.getInt(0));
+        } finally {
+            audit.close();
+        }
+    }
+
+    private long createBalancedManualJournal() {
+        ContentValues entry = new ContentValues();
+        entry.put("created_at", System.currentTimeMillis());
+        entry.put("description", "قيد يدوي للاختبار");
+        long id = database.insertOrThrow("journal_entries", null, entry);
+        insertJournalLine(id, "1010", 25.0, 0.0);
+        insertJournalLine(id, "3000", 0.0, 25.0);
+        return id;
+    }
+
+    private void insertJournalLine(long journalId, String code, double debit, double credit) {
+        ContentValues line = new ContentValues();
+        line.put("journal_entry_id", journalId);
+        line.put("account_id", accountId(code));
+        line.put("debit", debit);
+        line.put("credit", credit);
+        database.insertOrThrow("journal_lines", null, line);
     }
 
     private void insertInvoiceItem(long transactionId, double price, double cost) {
