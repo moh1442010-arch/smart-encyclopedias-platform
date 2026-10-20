@@ -44,7 +44,7 @@ Do not put production customer data into this candidate, and do not publish a Wi
 
 ## New candidate 2.2.9 — reverse journal entries and capture mitigation
 
-The 2.2.9 candidate adds an audited reverse-entry workflow. It creates a new entry with debit and credit sides swapped, records the original/reversal relationship and a required reason, and leaves the original journal entry intact. It blocks duplicate reversals and does not allow reversing a reversal. This feature must still be tested against the full accounting scenarios before financial use.
+The 2.2.9 candidate adds a two-line manual journal form and an audited reverse-entry workflow for manual journals only. A reversal creates a new entry with debit and credit sides swapped, records the original/reversal relationship and a required reason, and leaves the original journal entry intact. It blocks duplicate reversals and does not allow reversing a reversal. Operational entries such as sales, purchases, expenses, payroll, receipts, and returns are intentionally excluded from this manual reversal screen; correct them through the relevant operational workflow so inventory and subledgers do not silently diverge. This feature must still be tested before financial use.
 
 The app also attempts to apply Windows `WDA_EXCLUDEFROMCAPTURE` to its visible windows. This is a **best-effort privacy mitigation only**, not a guarantee against screenshots or recording. Results depend on Windows version and capture method; it cannot prevent external cameras, privileged or kernel-level tools, remote-control software, or all recording paths. Do not display passwords, private keys, API tokens, license signing secrets, or real customer data in the app.
 
