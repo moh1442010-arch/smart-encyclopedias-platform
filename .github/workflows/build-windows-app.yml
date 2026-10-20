@@ -1,4 +1,4 @@
-name: Build Al-Mizan Windows Expert Test Candidate 2.2.8
+name: Build Al-Mizan Windows Expert Test Candidate 2.2.9
 
 on:
   workflow_dispatch:
@@ -49,11 +49,11 @@ jobs:
 
       - name: Build Release
         working-directory: windows-app
-        run: dotnet build SmartCompany.csproj -c Release --no-restore -p:Version=2.2.8
+        run: dotnet build SmartCompany.csproj -c Release --no-restore -p:Version=2.2.9
 
       - name: Publish self-contained Windows x64
         working-directory: windows-app
-        run: dotnet publish SmartCompany.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:Version=2.2.8
+        run: dotnet publish SmartCompany.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:Version=2.2.9
 
       - name: Package and verify
         shell: powershell
@@ -62,17 +62,17 @@ jobs:
           $exe = "windows-app/bin/Release/net8.0-windows/win-x64/publish/SmartCompany.exe"
           if (!(Test-Path $exe)) { throw "Published executable was not found." }
           if ((Get-Item $exe).Length -lt 1000000) { throw "Published executable is unexpectedly small." }
-          Copy-Item $exe release/SmartCompany-Windows-2.2.8-x64.exe
-          Set-Content release/README.txt "Smart Company Windows x64 - v2.2.8. Pre-commercial build. Operational reports are preliminary and are not approved financial statements. Test only with a backup." -Encoding utf8
-          Compress-Archive -Path release/SmartCompany-Windows-2.2.8-x64.exe,release/README.txt -DestinationPath release/SmartCompany-Windows-2.2.8-x64.zip -Force
-          Get-FileHash release/SmartCompany-Windows-2.2.8-x64.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  SmartCompany-Windows-2.2.8-x64.exe" } | Set-Content release/SHA256SUMS.txt
-          Get-Item release/SmartCompany-Windows-2.2.8-x64.exe,release/SmartCompany-Windows-2.2.8-x64.zip,release/SHA256SUMS.txt | Format-Table Name,Length
+          Copy-Item $exe release/SmartCompany-Windows-2.2.9-x64.exe
+          Set-Content release/README.txt "Smart Company Windows x64 - v2.2.9. Pre-commercial build. Operational reports are preliminary and are not approved financial statements. Test only with a backup." -Encoding utf8
+          Compress-Archive -Path release/SmartCompany-Windows-2.2.9-x64.exe,release/README.txt -DestinationPath release/SmartCompany-Windows-2.2.9-x64.zip -Force
+          Get-FileHash release/SmartCompany-Windows-2.2.9-x64.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  SmartCompany-Windows-2.2.9-x64.exe" } | Set-Content release/SHA256SUMS.txt
+          Get-Item release/SmartCompany-Windows-2.2.9-x64.exe,release/SmartCompany-Windows-2.2.9-x64.zip,release/SHA256SUMS.txt | Format-Table Name,Length
 
       - name: Verify Windows package contents and SHA-256 manifest
         shell: powershell
         run: |
-          $exe = "release/SmartCompany-Windows-2.2.8-x64.exe"
-          $zip = "release/SmartCompany-Windows-2.2.8-x64.zip"
+          $exe = "release/SmartCompany-Windows-2.2.9-x64.exe"
+          $zip = "release/SmartCompany-Windows-2.2.9-x64.zip"
           $readme = "release/README.txt"
           $manifest = "release/SHA256SUMS.txt"
           foreach ($path in @($exe,$zip,$readme,$manifest)) {
@@ -82,14 +82,14 @@ jobs:
           }
           $expected = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
           $line = Get-Content $manifest | Select-Object -First 1
-          if ($line -notmatch "^$expected\s+SmartCompany-Windows-2.2.8-x64\.exe$") {
+          if ($line -notmatch "^$expected\s+SmartCompany-Windows-2.2.9-x64\.exe$") {
             throw "Windows executable SHA-256 manifest does not match the executable."
           }
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $archive = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $zip).Path)
           try {
             $names = @($archive.Entries | ForEach-Object { $_.FullName })
-            if ($names -notcontains "SmartCompany-Windows-2.2.8-x64.exe" -or $names -notcontains "README.txt") {
+            if ($names -notcontains "SmartCompany-Windows-2.2.9-x64.exe" -or $names -notcontains "README.txt") {
               throw "Windows ZIP package is missing the executable or README."
             }
           } finally {
@@ -100,7 +100,7 @@ jobs:
       - name: Windows executable launch smoke test
         shell: powershell
         run: |
-          $exe = (Resolve-Path "release/SmartCompany-Windows-2.2.8-x64.exe").Path
+          $exe = (Resolve-Path "release/SmartCompany-Windows-2.2.9-x64.exe").Path
           $proc = Start-Process -FilePath $exe -PassThru
           Start-Sleep -Seconds 8
           $proc.Refresh()
@@ -111,7 +111,7 @@ jobs:
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
-          name: smart-company-windows-v2.2.8
+          name: smart-company-windows-v2.2.9
           path: release/*
           if-no-files-found: error
           retention-days: 90
