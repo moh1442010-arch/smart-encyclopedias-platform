@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - "windows-app/**"
+      - "windows-app.tests/**"
       - ".github/workflows/build-windows-app.yml"
 
 permissions:
@@ -50,6 +51,9 @@ jobs:
       - name: Build Release
         working-directory: windows-app
         run: dotnet build SmartCompany.csproj -c Release --no-restore -p:Version=2.2.9
+
+      - name: Run Windows accounting regression tests
+        run: dotnet run --project windows-app.tests/WindowsAccountingTests.csproj -c Release
 
       - name: Publish self-contained Windows x64
         working-directory: windows-app
