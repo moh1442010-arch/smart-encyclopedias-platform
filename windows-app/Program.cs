@@ -84,7 +84,7 @@ sealed class MainForm : Form
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
         Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("المرتجعات", Returns); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
-        Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("القيد العكسي", ReverseJournalEntry); Add("التقارير المالية", Reports); Add("الباقات والأسعار", SubscriptionPlans); Add("الدفع والتحويل البنكي", PaymentDetails); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
+        Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("قيد يومية يدوي (سطران)", ManualJournalEntry); Add("القيد العكسي", ReverseJournalEntry); Add("التقارير المالية", Reports); Add("الباقات والأسعار", SubscriptionPlans); Add("الدفع والتحويل البنكي", PaymentDetails); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
         Add("اختيار اللغة / Language", ToggleLanguage);
         RefreshSummary();
         var captureGuard = new System.Windows.Forms.Timer { Interval = 500 };
@@ -230,6 +230,11 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
         using (var settlements = c.CreateCommand()) { settlements.CommandText = "CREATE TABLE IF NOT EXISTS customer_receipts(id INTEGER PRIMARY KEY AUTOINCREMENT,customer_id INTEGER NOT NULL,amount REAL NOT NULL CHECK(amount>0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS supplier_payments(id INTEGER PRIMARY KEY AUTOINCREMENT,supplier_id INTEGER NOT NULL,amount REAL NOT NULL CHECK(amount>0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);"; settlements.ExecuteNonQuery(); }
         // Additive return registers; original sales/purchases are retained for auditability.
         using (var returns = c.CreateCommand()) { returns.CommandText = "CREATE TABLE IF NOT EXISTS sales_returns(id INTEGER PRIMARY KEY AUTOINCREMENT,sale_id INTEGER NOT NULL,product TEXT NOT NULL,qty REAL NOT NULL CHECK(qty>0),unit_price REAL NOT NULL CHECK(unit_price>=0),unit_cost REAL NOT NULL CHECK(unit_cost>=0),total REAL NOT NULL CHECK(total>=0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS purchase_returns(id INTEGER PRIMARY KEY AUTOINCREMENT,purchase_id INTEGER NOT NULL,product TEXT NOT NULL,qty REAL NOT NULL CHECK(qty>0),unit_price REAL NOT NULL CHECK(unit_price>=0),total REAL NOT NULL CHECK(total>=0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);"; returns.ExecuteNonQuery(); }
+        using (var manualJournals = c.CreateCommand())
+        {
+            manualJournals.CommandText = "CREATE TABLE IF NOT EXISTS manual_journals(id INTEGER PRIMARY KEY AUTOINCREMENT,memo TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)";
+            manualJournals.ExecuteNonQuery();
+        }
         using (var reversals = c.CreateCommand())
         {
             reversals.CommandText = "CREATE TABLE IF NOT EXISTS gl_reversals(id INTEGER PRIMARY KEY AUTOINCREMENT,original_entry_id INTEGER NOT NULL UNIQUE REFERENCES gl_entries(id),reversal_entry_id INTEGER NOT NULL UNIQUE REFERENCES gl_entries(id),reason TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)";
@@ -941,6 +946,63 @@ FROM gl_lines l JOIN gl_accounts a ON a.id=l.account_id WHERE a.name='Inventory'
         f.ShowDialog();
     }
 
+    void ManualJournalEntry()
+    {
+        using var f = new Form { Text = UiLanguage.T("قيد يومية يدوي من سطرين"), Width = 720, Height = 470, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var memo = new TextBox { Dock = DockStyle.Top, Height = 42, PlaceholderText = UiLanguage.T("بيان القيد — مطلوب") };
+        var debitAccount = new ComboBox { Dock = DockStyle.Top, Height = 38, DropDownStyle = ComboBoxStyle.DropDownList };
+        var creditAccount = new ComboBox { Dock = DockStyle.Top, Height = 38, DropDownStyle = ComboBoxStyle.DropDownList };
+        var amount = new TextBox { Dock = DockStyle.Top, Height = 40, PlaceholderText = UiLanguage.T("المبلغ — قيمة موجبة") };
+        var save = new Button { Dock = DockStyle.Top, Height = 48, Text = UiLanguage.T("حفظ القيد المرحّل") };
+        var note = new Label { Dock = DockStyle.Top, Height = 64, TextAlign = ContentAlignment.MiddleCenter, Text = UiLanguage.T("هذا النموذج ينشئ قيدًا متوازنًا من سطرين. استخدم وحدات المبيعات والمشتريات والمرتجعات لتصحيح العمليات المرتبطة بالمخزون والذمم.") };
+        using (var c = C())
+        using (var q = c.CreateCommand())
+        {
+            q.CommandText = "SELECT name FROM gl_accounts ORDER BY code";
+            using var r = q.ExecuteReader();
+            while (r.Read()) { debitAccount.Items.Add(r.GetString(0)); creditAccount.Items.Add(r.GetString(0)); }
+        }
+        if (debitAccount.Items.Count > 0) debitAccount.SelectedIndex = 0;
+        if (creditAccount.Items.Count > 1) creditAccount.SelectedIndex = 1;
+        save.Click += (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(memo.Text) || debitAccount.SelectedItem is not string debitName || creditAccount.SelectedItem is not string creditName ||
+                !double.TryParse(amount.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var value) ||
+                !double.IsFinite(value) || value <= 0 || debitName == creditName)
+            {
+                MessageBox.Show(UiLanguage.T("أدخل البيان والمبلغ الموجب واختر حسابين مختلفين."));
+                return;
+            }
+            using var c = C();
+            using var tx = c.BeginTransaction();
+            try
+            {
+                using (var insert = c.CreateCommand())
+                {
+                    insert.Transaction = tx;
+                    insert.CommandText = "INSERT INTO manual_journals(memo) VALUES($m)";
+                    insert.Parameters.AddWithValue("$m", memo.Text.Trim());
+                    insert.ExecuteNonQuery();
+                }
+                var journalId = LastId(c, tx);
+                PostEntry(c, tx, "MANUAL_JOURNAL", journalId, memo.Text.Trim(),
+                    (debitName, value, 0d), (creditName, 0d, value));
+                tx.Commit();
+                MessageBox.Show(UiLanguage.T("تم حفظ القيد اليدوي وترحيله. يمكنك عكسه لاحقًا من شاشة القيد العكسي."));
+                f.DialogResult = DialogResult.OK;
+                f.Close();
+                RefreshSummary();
+            }
+            catch (Exception ex)
+            {
+                try { tx.Rollback(); } catch { }
+                MessageBox.Show(UiLanguage.T("تعذر حفظ القيد؛ لم تُعتمد التغييرات. ") + ex.Message);
+            }
+        };
+        f.Controls.Add(save); f.Controls.Add(amount); f.Controls.Add(creditAccount); f.Controls.Add(debitAccount); f.Controls.Add(memo); f.Controls.Add(note);
+        f.ShowDialog(this);
+    }
+
     void ReverseJournalEntry()
     {
         using var f = new Form { Text = UiLanguage.T("القيد العكسي — عكس قيد مرحّل"), Width = 900, Height = 600, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
@@ -961,7 +1023,7 @@ COALESCE(SUM(l.debit),0),COALESCE(SUM(l.credit),0),COUNT(l.id)
 FROM gl_entries e
 LEFT JOIN gl_lines l ON l.entry_id=e.id
 LEFT JOIN gl_reversals rv ON rv.original_entry_id=e.id
-WHERE e.source_type <> 'REVERSAL' AND rv.id IS NULL
+WHERE e.source_type = 'MANUAL_JOURNAL' AND rv.id IS NULL
 GROUP BY e.id,e.created_at,e.source_type,e.source_id,e.memo
 HAVING COUNT(l.id)>=2 AND ABS(COALESCE(SUM(l.debit),0)-COALESCE(SUM(l.credit),0))<=0.005
 ORDER BY e.id DESC";
