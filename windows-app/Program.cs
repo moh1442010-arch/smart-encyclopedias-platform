@@ -83,7 +83,7 @@ sealed class MainForm : Form
         var head = new Label { Text = UiLanguage.T("المحاسب الميزان 2.2.9 — نسخة تجريبية"), Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(11,31,58), ForeColor = Color.FromArgb(212,175,55), Font = new Font("Segoe UI", 22, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
-        Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("المرتجعات", Returns); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
+        Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("القيد الثابت", RecurringEntries); Add("المرتجعات", Returns); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
         Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("قيد يومية يدوي (سطران)", ManualJournalEntry); Add("القيد العكسي", ReverseJournalEntry); Add("التقارير المالية", Reports); Add("الباقات والأسعار", SubscriptionPlans); Add("الدفع والتحويل البنكي", PaymentDetails); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
         Add("اختيار اللغة / Language", ToggleLanguage);
         RefreshSummary();
@@ -96,6 +96,101 @@ sealed class MainForm : Form
         Shown += (_, _) => FormCaptureProtection.Apply(this);
         FormClosed += (_, _) => captureGuard.Stop();
         captureGuard.Start();
+    }
+
+
+    void RecurringEntries()
+    {
+        using var f = new Form { Text = UiLanguage.T("القيد الثابت"), Width = 820, Height = 700, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var name = new TextBox { Dock = DockStyle.Top, Height = 34, PlaceholderText = UiLanguage.T("اسم القيد: إيجار أو كهرباء أو إنترنت") };
+        var amount = new TextBox { Dock = DockStyle.Top, Height = 34, PlaceholderText = UiLanguage.T("المبلغ الثابت؛ اتركه فارغًا للفواتير المتغيرة") };
+        var dueDay = new TextBox { Dock = DockStyle.Top, Height = 34, PlaceholderText = UiLanguage.T("يوم الاستحقاق من 1 إلى 31") };
+        var mode = new ComboBox { Dock = DockStyle.Top, Height = 34, DropDownStyle = ComboBoxStyle.DropDownList };
+        mode.Items.Add("مبلغ ثابت"); mode.Items.Add("مبلغ متغير — تأكيد شهري"); mode.SelectedIndex = 0;
+        var create = new Button { Dock = DockStyle.Top, Height = 40, Text = UiLanguage.T("حفظ إعداد القيد") };
+        var generate = new Button { Dock = DockStyle.Top, Height = 40, Text = UiLanguage.T("إنشاء مسودات الشهر الحالي") };
+        var confirmed = new TextBox { Dock = DockStyle.Top, Height = 34, PlaceholderText = UiLanguage.T("المبلغ الفعلي للمسودة المتغيرة") };
+        var post = new Button { Dock = DockStyle.Top, Height = 40, Text = UiLanguage.T("ترحيل المسودة المحددة") };
+        var list = new ListBox { Dock = DockStyle.Fill };
+        var occurrenceIds = new List<long>();
+        var period = DateTime.Now.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
+        void Reload()
+        {
+            list.Items.Clear(); occurrenceIds.Clear();
+            using var c = C(); RecurringEntryService.EnsureSchema(c);
+            using var q = c.CreateCommand();
+            q.CommandText = @"SELECT o.id,s.name,o.period_month,o.due_date,o.amount,s.amount_mode,o.state
+FROM recurring_occurrences o JOIN recurring_schedules s ON s.id=o.schedule_id
+WHERE o.state='DRAFT' ORDER BY o.due_date,o.id";
+            using var r = q.ExecuteReader();
+            while (r.Read())
+            {
+                occurrenceIds.Add(r.GetInt64(0));
+                var amountText = r.IsDBNull(4) ? "يتطلب المبلغ الفعلي" : r.GetDouble(4).ToString("N2");
+                list.Items.Add("#" + r.GetInt64(0) + " | " + r.GetString(1) + " | " + r.GetString(2) + " | " + r.GetString(3) + " | " + amountText);
+            }
+        }
+        create.Click += (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(name.Text) || !int.TryParse(dueDay.Text, out var day) || day < 1 || day > 31)
+            { MessageBox.Show(UiLanguage.T("أدخل اسمًا ويوم استحقاق صحيحًا.")); return; }
+            bool variable = mode.SelectedIndex == 1;
+            double? fixedAmount = null;
+            if (!variable)
+            {
+                if (!double.TryParse(amount.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var parsed) || !double.IsFinite(parsed) || parsed <= 0)
+                { MessageBox.Show(UiLanguage.T("أدخل مبلغًا ثابتًا موجبًا.")); return; }
+                fixedAmount = parsed;
+            }
+            try
+            {
+                using var c = C(); using var tx = c.BeginTransaction();
+                RecurringEntryService.EnsureSchema(c, tx);
+                RecurringEntryService.CreateSchedule(c, tx, name.Text.Trim(), "Operating Expense", "Cash", fixedAmount, variable, day, period);
+                tx.Commit(); name.Clear(); amount.Clear(); dueDay.Clear();
+                MessageBox.Show(UiLanguage.T("تم حفظ إعداد القيد. أنشئ مسودة الشهر وراجعها قبل الترحيل."));
+            }
+            catch (Exception ex) { MessageBox.Show(UiLanguage.T("تعذر حفظ إعداد القيد: ") + ex.Message); }
+        };
+        generate.Click += (_, _) =>
+        {
+            try
+            {
+                using var c = C(); using var tx = c.BeginTransaction();
+                RecurringEntryService.EnsureSchema(c, tx);
+                var ids = new List<long>();
+                using (var q = c.CreateCommand())
+                {
+                    q.Transaction = tx; q.CommandText = "SELECT id FROM recurring_schedules WHERE active=1";
+                    using var r = q.ExecuteReader(); while (r.Read()) ids.Add(r.GetInt64(0));
+                }
+                foreach (var id in ids) RecurringEntryService.EnsureOccurrence(c, tx, id, period);
+                tx.Commit(); Reload();
+                MessageBox.Show(UiLanguage.T("تم إنشاء المسودات دون تكرار؛ لم يتم ترحيلها تلقائيًا."));
+            }
+            catch (Exception ex) { MessageBox.Show(UiLanguage.T("تعذر إنشاء المسودات: ") + ex.Message); }
+        };
+        post.Click += (_, _) =>
+        {
+            if (list.SelectedIndex < 0) { MessageBox.Show(UiLanguage.T("اختر مسودة أولًا.")); return; }
+            double? actual = null;
+            if (!string.IsNullOrWhiteSpace(confirmed.Text))
+            {
+                if (!double.TryParse(confirmed.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var parsed) || !double.IsFinite(parsed) || parsed <= 0)
+                { MessageBox.Show(UiLanguage.T("أدخل مبلغًا موجبًا صحيحًا.")); return; }
+                actual = parsed;
+            }
+            try
+            {
+                using var c = C(); using var tx = c.BeginTransaction();
+                RecurringEntryService.PostOccurrence(c, tx, occurrenceIds[list.SelectedIndex], actual);
+                tx.Commit(); confirmed.Clear(); Reload(); RefreshSummary();
+                MessageBox.Show(UiLanguage.T("تم ترحيل القيد وتسجيله في دفتر الأستاذ."));
+            }
+            catch (Exception ex) { MessageBox.Show(UiLanguage.T("لم يُرحّل القيد: ") + ex.Message); }
+        };
+        f.Controls.Add(list); f.Controls.Add(post); f.Controls.Add(confirmed); f.Controls.Add(generate); f.Controls.Add(create); f.Controls.Add(mode); f.Controls.Add(dueDay); f.Controls.Add(amount); f.Controls.Add(name);
+        Reload(); f.ShowDialog();
     }
 
     void SubscriptionPlans()

@@ -111,6 +111,77 @@ INSERT INTO gl_accounts(code,name,kind) VALUES('1000','Cash','ASSET'),('4000','S
 
         Assert(Math.Abs(Convert.ToDouble(ScalarLong(c, "SELECT COUNT(*) FROM gl_reversals"))) == 1,
             "only one reversal audit record exists");
-        Console.WriteLine("ALL JOURNAL REGRESSION TESTS PASSED");
+        RunRecurringEntryRegressionTests(c);
+        Console.WriteLine("ALL JOURNAL AND RECURRING ENTRY REGRESSION TESTS PASSED");
+    }
+
+    static void RunRecurringEntryRegressionTests(SqliteConnection c)
+    {
+        RecurringEntryService.EnsureSchema(c);
+        long fixedSchedule;
+        long fixedOccurrence;
+        using (var tx = c.BeginTransaction())
+        {
+            fixedSchedule = RecurringEntryService.CreateSchedule(c, tx, "Monthly rent", "Operating Expense", "Cash", 500d, false, 31, "2027-01");
+            fixedOccurrence = RecurringEntryService.EnsureOccurrence(c, tx, fixedSchedule, "2027-02");
+            var duplicateId = RecurringEntryService.EnsureOccurrence(c, tx, fixedSchedule, "2027-02");
+            Assert(fixedOccurrence == duplicateId, "same schedule/month resolves to one recurring occurrence");
+            using var due = c.CreateCommand();
+            due.Transaction = tx;
+            due.CommandText = "SELECT due_date,amount,state FROM recurring_occurrences WHERE id=$id";
+            due.Parameters.AddWithValue("$id", fixedOccurrence);
+            using var r = due.ExecuteReader();
+            Assert(r.Read() && r.GetString(0) == "2027-02-28" && Math.Abs(r.GetDouble(1)-500d)<0.000001 && r.GetString(2)=="DRAFT",
+                "fixed schedule creates a reviewable draft and clamps day 31 to February's last day");
+            tx.Commit();
+        }
+        long fixedJournal;
+        using (var tx = c.BeginTransaction())
+        {
+            fixedJournal = RecurringEntryService.PostOccurrence(c, tx, fixedOccurrence);
+            tx.Commit();
+        }
+        Assert(ScalarLong(c, "SELECT COUNT(*) FROM gl_entries WHERE id=" + fixedJournal + " AND source_type='RECURRING_ENTRY'") == 1,
+            "posting recurring expense creates one linked journal");
+        var duplicatePostRejected = false;
+        using (var tx = c.BeginTransaction())
+        {
+            try { RecurringEntryService.PostOccurrence(c, tx, fixedOccurrence); }
+            catch (InvalidOperationException) { duplicatePostRejected = true; }
+            finally { tx.Rollback(); }
+        }
+        Assert(duplicatePostRejected && ScalarLong(c, "SELECT COUNT(*) FROM gl_entries WHERE source_type='RECURRING_ENTRY' AND source_id=" + fixedOccurrence) == 1,
+            "reposting an already-posted occurrence is rejected without duplicate journal");
+
+        long variableSchedule;
+        long variableOccurrence;
+        using (var tx = c.BeginTransaction())
+        {
+            variableSchedule = RecurringEntryService.CreateSchedule(c, tx, "Electricity bill", "Operating Expense", "Cash", null, true, 15, "2027-01");
+            variableOccurrence = RecurringEntryService.EnsureOccurrence(c, tx, variableSchedule, "2027-02");
+            tx.Commit();
+        }
+        var missingAmountRejected = false;
+        using (var tx = c.BeginTransaction())
+        {
+            try { RecurringEntryService.PostOccurrence(c, tx, variableOccurrence); }
+            catch (InvalidOperationException) { missingAmountRejected = true; }
+            finally { tx.Rollback(); }
+        }
+        Assert(missingAmountRejected && ScalarLong(c, "SELECT COUNT(*) FROM gl_entries WHERE source_type='RECURRING_ENTRY' AND source_id=" + variableOccurrence) == 0,
+            "variable utility bill cannot post without a confirmed amount");
+        using (var tx = c.BeginTransaction())
+        {
+            RecurringEntryService.PostOccurrence(c, tx, variableOccurrence, 42.75d);
+            tx.Commit();
+        }
+        using (var q = c.CreateCommand())
+        {
+            q.CommandText = "SELECT state,amount FROM recurring_occurrences WHERE id=$id";
+            q.Parameters.AddWithValue("$id", variableOccurrence);
+            using var r = q.ExecuteReader();
+            Assert(r.Read() && r.GetString(0)=="POSTED" && Math.Abs(r.GetDouble(1)-42.75d)<0.000001,
+                "confirmed variable bill posts its actual amount and marks the occurrence posted");
+        }
     }
 }
