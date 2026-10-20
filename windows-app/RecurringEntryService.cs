@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS recurring_occurrences(
         using var q = c.CreateCommand();
         q.Transaction = tx;
         q.CommandText = @"INSERT INTO recurring_schedules(name,debit_account,credit_account,amount,amount_mode,due_day,start_month,end_month)
-VALUES($name,$debit,$credit,$amount,$mode,$day,$start,$end); SELECT last_insert_rowid();";
+VALUES($name,$debit,$credit,$amount,$mode,$day,$start,$end)";
         q.Parameters.AddWithValue("$name", name.Trim());
         q.Parameters.AddWithValue("$debit", debitAccount.Trim());
         q.Parameters.AddWithValue("$credit", creditAccount.Trim());
@@ -73,7 +73,8 @@ VALUES($name,$debit,$credit,$amount,$mode,$day,$start,$end); SELECT last_insert_
         q.Parameters.AddWithValue("$day", dueDay);
         q.Parameters.AddWithValue("$start", startMonth);
         q.Parameters.AddWithValue("$end", endMonth is null ? DBNull.Value : endMonth);
-        return Convert.ToInt64(q.ExecuteScalar());
+        q.ExecuteNonQuery();
+        return JournalAccounting.LastId(c, tx);
     }
 
     public static long EnsureOccurrence(SqliteConnection c, SqliteTransaction tx, long scheduleId, string periodMonth)
