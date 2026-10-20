@@ -23,6 +23,9 @@ static class AccountingRegressionTests
         using (var schema = c.CreateCommand())
         {
             schema.CommandText = @"
+CREATE TABLE audit_events(id INTEGER PRIMARY KEY AUTOINCREMENT,event_type TEXT NOT NULL,entity_type TEXT NOT NULL,entity_id TEXT NOT NULL,actor_label TEXT NOT NULL,occurred_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,details TEXT NOT NULL);
+CREATE TRIGGER audit_events_no_update BEFORE UPDATE ON audit_events BEGIN SELECT RAISE(ABORT, 'audit events are append-only'); END;
+CREATE TRIGGER audit_events_no_delete BEFORE DELETE ON audit_events BEGIN SELECT RAISE(ABORT, 'audit events are append-only'); END;
 CREATE TABLE gl_accounts(id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT NOT NULL UNIQUE,name TEXT NOT NULL UNIQUE,kind TEXT NOT NULL);
 CREATE TABLE gl_entries(id INTEGER PRIMARY KEY AUTOINCREMENT,source_type TEXT NOT NULL,source_id INTEGER NOT NULL,memo TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(source_type,source_id));
 CREATE TABLE gl_lines(id INTEGER PRIMARY KEY AUTOINCREMENT,entry_id INTEGER NOT NULL REFERENCES gl_entries(id),account_id INTEGER NOT NULL REFERENCES gl_accounts(id),debit REAL NOT NULL DEFAULT 0,credit REAL NOT NULL DEFAULT 0,CHECK(debit>=0 AND credit>=0 AND NOT(debit>0 AND credit>0)));
@@ -47,6 +50,10 @@ INSERT INTO gl_accounts(code,name,kind) VALUES('1000','Cash','ASSET'),('4000','S
         }
 
         var originalId = ScalarLong(c, "SELECT id FROM gl_entries WHERE source_type='MANUAL_JOURNAL'");
+        Assert(ScalarLong(c, "SELECT COUNT(*) FROM audit_events WHERE event_type='JOURNAL_POSTED' AND entity_type='journal_entry' AND entity_id='" + originalId + "'") == 1,
+            "journal posting creates one audit event in the same transaction");
+        Assert(ScalarLong(c, "SELECT COUNT(*) FROM audit_events WHERE actor_label='local-session-unattributed'") == 1,
+            "audit identifies that authenticated actor attribution is not yet available");
         long reversalId;
         using (var tx = c.BeginTransaction())
         {

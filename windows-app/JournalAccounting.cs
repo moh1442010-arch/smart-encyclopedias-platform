@@ -52,6 +52,14 @@ public static class JournalAccounting
             detail.Parameters.AddWithValue("$c", line.Credit);
             detail.ExecuteNonQuery();
         }
+
+        using var audit = c.CreateCommand();
+        audit.Transaction = tx;
+        audit.CommandText = @"INSERT INTO audit_events(event_type,entity_type,entity_id,actor_label,details)
+VALUES('JOURNAL_POSTED','journal_entry',$entry,'local-session-unattributed',$details)";
+        audit.Parameters.AddWithValue("$entry", entryId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        audit.Parameters.AddWithValue("$details", $"source_type={sourceType};source_id={sourceId};debit_total={debit:R};credit_total={credit:R}");
+        audit.ExecuteNonQuery();
     }
 
     public static long ReverseManualJournal(SqliteConnection c, SqliteTransaction tx, long originalEntryId, string reason)
