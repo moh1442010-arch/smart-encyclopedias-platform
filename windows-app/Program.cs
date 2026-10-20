@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Printing;
+using System.Runtime.InteropServices;
 
 namespace SmartCompany;
 
@@ -45,6 +46,29 @@ internal static class Program
     }
 }
 
+static class FormCaptureProtection
+{
+    // Best-effort Windows capture exclusion. This is not a security boundary against
+    // external cameras, privileged capture tools, remote-control software, or OS/kernel access.
+    const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
+
+    public static void Apply(Form form)
+    {
+        try
+        {
+            if (form.IsHandleCreated && !form.IsDisposed && form.Visible)
+                _ = SetWindowDisplayAffinity(form.Handle, WDA_EXCLUDEFROMCAPTURE);
+        }
+        catch (Exception)
+        {
+            // Unsupported Windows versions or API failures must not crash the accounting app.
+        }
+    }
+}
+
 sealed class MainForm : Form
 {
     readonly string dbPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SmartCompany", "smartcompany.db");
@@ -54,15 +78,24 @@ sealed class MainForm : Form
     public MainForm()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!); InitDb();
-        Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.7"); Width = 1050; Height = 720; StartPosition = FormStartPosition.CenterScreen;
+        Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.9"); Width = 1050; Height = 720; StartPosition = FormStartPosition.CenterScreen;
         RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes; RightToLeftLayout = !UiLanguage.English;
-        var head = new Label { Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.7 — نسخة تجريبية"), Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(11,31,58), ForeColor = Color.FromArgb(212,175,55), Font = new Font("Segoe UI", 22, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
+        var head = new Label { Text = UiLanguage.T("شركة محمد مصطفى الذكية 2.2.9 — نسخة تجريبية"), Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(11,31,58), ForeColor = Color.FromArgb(212,175,55), Font = new Font("Segoe UI", 22, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
         Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("المرتجعات", Returns); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
-        Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("التقارير المالية", Reports); Add("الباقات والأسعار", SubscriptionPlans); Add("الدفع والتحويل البنكي", PaymentDetails); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
+        Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("القيد العكسي", ReverseJournalEntry); Add("التقارير المالية", Reports); Add("الباقات والأسعار", SubscriptionPlans); Add("الدفع والتحويل البنكي", PaymentDetails); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
         Add("اختيار اللغة / Language", ToggleLanguage);
         RefreshSummary();
+        var captureGuard = new System.Windows.Forms.Timer { Interval = 500 };
+        captureGuard.Tick += (_, _) =>
+        {
+            foreach (Form openForm in Application.OpenForms)
+                FormCaptureProtection.Apply(openForm);
+        };
+        Shown += (_, _) => FormCaptureProtection.Apply(this);
+        FormClosed += (_, _) => captureGuard.Stop();
+        captureGuard.Start();
     }
 
     void SubscriptionPlans()
@@ -197,6 +230,11 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
         using (var settlements = c.CreateCommand()) { settlements.CommandText = "CREATE TABLE IF NOT EXISTS customer_receipts(id INTEGER PRIMARY KEY AUTOINCREMENT,customer_id INTEGER NOT NULL,amount REAL NOT NULL CHECK(amount>0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS supplier_payments(id INTEGER PRIMARY KEY AUTOINCREMENT,supplier_id INTEGER NOT NULL,amount REAL NOT NULL CHECK(amount>0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);"; settlements.ExecuteNonQuery(); }
         // Additive return registers; original sales/purchases are retained for auditability.
         using (var returns = c.CreateCommand()) { returns.CommandText = "CREATE TABLE IF NOT EXISTS sales_returns(id INTEGER PRIMARY KEY AUTOINCREMENT,sale_id INTEGER NOT NULL,product TEXT NOT NULL,qty REAL NOT NULL CHECK(qty>0),unit_price REAL NOT NULL CHECK(unit_price>=0),unit_cost REAL NOT NULL CHECK(unit_cost>=0),total REAL NOT NULL CHECK(total>=0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS purchase_returns(id INTEGER PRIMARY KEY AUTOINCREMENT,purchase_id INTEGER NOT NULL,product TEXT NOT NULL,qty REAL NOT NULL CHECK(qty>0),unit_price REAL NOT NULL CHECK(unit_price>=0),total REAL NOT NULL CHECK(total>=0),note TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);"; returns.ExecuteNonQuery(); }
+        using (var reversals = c.CreateCommand())
+        {
+            reversals.CommandText = "CREATE TABLE IF NOT EXISTS gl_reversals(id INTEGER PRIMARY KEY AUTOINCREMENT,original_entry_id INTEGER NOT NULL UNIQUE REFERENCES gl_entries(id),reversal_entry_id INTEGER NOT NULL UNIQUE REFERENCES gl_entries(id),reason TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)";
+            reversals.ExecuteNonQuery();
+        }
         try { using var indexName = c.CreateCommand(); indexName.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS idx_products_name ON products(name COLLATE NOCASE)"; indexName.ExecuteNonQuery(); } catch (SqliteException) { }
         using var index = c.CreateCommand(); index.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode) WHERE barcode IS NOT NULL AND barcode != ''"; index.ExecuteNonQuery();
     }
@@ -901,6 +939,117 @@ FROM gl_lines l JOIN gl_accounts a ON a.id=l.account_id WHERE a.name='Inventory'
         var preview = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both, WordWrap = false, Dock = DockStyle.Fill, Font = new Font("Consolas", 11), Text = report };
         f.Controls.Add(preview);
         f.ShowDialog();
+    }
+
+    void ReverseJournalEntry()
+    {
+        using var f = new Form { Text = UiLanguage.T("القيد العكسي — عكس قيد مرحّل"), Width = 900, Height = 600, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var list = new ListBox { Dock = DockStyle.Fill, Font = new Font("Consolas", 10) };
+        var ids = new List<long>();
+        var reason = new TextBox { Dock = DockStyle.Top, Height = 38, PlaceholderText = UiLanguage.T("سبب العكس — مطلوب للتدقيق") };
+        var reload = new Button { Text = UiLanguage.T("تحديث القيود المتاحة"), Dock = DockStyle.Top, Height = 42 };
+        var reverse = new Button { Text = UiLanguage.T("إنشاء القيد العكسي"), Dock = DockStyle.Bottom, Height = 48 };
+
+        void LoadEntries()
+        {
+            ids.Clear();
+            list.Items.Clear();
+            using var c = C();
+            using var q = c.CreateCommand();
+            q.CommandText = @"SELECT e.id,e.created_at,e.source_type,e.source_id,e.memo,
+COALESCE(SUM(l.debit),0),COALESCE(SUM(l.credit),0),COUNT(l.id)
+FROM gl_entries e
+LEFT JOIN gl_lines l ON l.entry_id=e.id
+LEFT JOIN gl_reversals rv ON rv.original_entry_id=e.id
+WHERE e.source_type <> 'REVERSAL' AND rv.id IS NULL
+GROUP BY e.id,e.created_at,e.source_type,e.source_id,e.memo
+HAVING COUNT(l.id)>=2 AND ABS(COALESCE(SUM(l.debit),0)-COALESCE(SUM(l.credit),0))<=0.005
+ORDER BY e.id DESC";
+            using var r = q.ExecuteReader();
+            while (r.Read())
+            {
+                ids.Add(r.GetInt64(0));
+                list.Items.Add($"#{r.GetInt64(0)} | {r.GetString(1)} | {r.GetString(2)}:{r.GetInt64(3)} | مدين {r.GetDouble(5):N2} | دائن {r.GetDouble(6):N2} | {r.GetString(4)}");
+            }
+        }
+
+        reverse.Click += (_, _) =>
+        {
+            if (list.SelectedIndex < 0 || string.IsNullOrWhiteSpace(reason.Text))
+            {
+                MessageBox.Show(UiLanguage.T("اختر قيدًا واكتب سبب العكس أولًا."));
+                return;
+            }
+            var originalId = ids[list.SelectedIndex];
+            if (MessageBox.Show(UiLanguage.T($"سيُنشأ قيد عكسي مستقل للقيد رقم {originalId}. لن يُحذف القيد الأصلي. هل تريد المتابعة؟"),
+                UiLanguage.T("تأكيد القيد العكسي"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+
+            using var c = C();
+            using var tx = c.BeginTransaction();
+            try
+            {
+                using (var already = c.CreateCommand())
+                {
+                    already.Transaction = tx;
+                    already.CommandText = "SELECT COUNT(*) FROM gl_reversals WHERE original_entry_id=$id";
+                    already.Parameters.AddWithValue("$id", originalId);
+                    if (Convert.ToInt32(already.ExecuteScalar()) != 0)
+                        throw new InvalidOperationException("تم إنشاء قيد عكسي لهذا القيد مسبقًا.");
+                }
+
+                string memo;
+                using (var header = c.CreateCommand())
+                {
+                    header.Transaction = tx;
+                    header.CommandText = "SELECT memo,source_type FROM gl_entries WHERE id=$id";
+                    header.Parameters.AddWithValue("$id", originalId);
+                    using var r = header.ExecuteReader();
+                    if (!r.Read()) throw new InvalidOperationException("القيد الأصلي غير موجود.");
+                    memo = r.GetString(0);
+                    if (r.GetString(1) == "REVERSAL") throw new InvalidOperationException("لا يمكن عكس قيد عكسي.");
+                }
+
+                var reversedLines = new List<(string Account, double Debit, double Credit)>();
+                using (var q = c.CreateCommand())
+                {
+                    q.Transaction = tx;
+                    q.CommandText = @"SELECT a.name,l.debit,l.credit
+FROM gl_lines l JOIN gl_accounts a ON a.id=l.account_id
+WHERE l.entry_id=$id ORDER BY l.id";
+                    q.Parameters.AddWithValue("$id", originalId);
+                    using var r = q.ExecuteReader();
+                    while (r.Read()) reversedLines.Add((r.GetString(0), r.GetDouble(2), r.GetDouble(1)));
+                }
+                if (reversedLines.Count < 2 || Math.Abs(reversedLines.Sum(x => x.Debit) - reversedLines.Sum(x => x.Credit)) > 0.005)
+                    throw new InvalidOperationException("القيد الأصلي غير متوازن أو لا يحتوي أسطرًا كافية؛ أوقف العكس وراجع البيانات.");
+
+                PostEntry(c, tx, "REVERSAL", originalId, "عكس القيد #" + originalId + ": " + reason.Text.Trim() + " | الأصل: " + memo, reversedLines.ToArray());
+                var reversalId = LastId(c, tx);
+                using (var audit = c.CreateCommand())
+                {
+                    audit.Transaction = tx;
+                    audit.CommandText = "INSERT INTO gl_reversals(original_entry_id,reversal_entry_id,reason) VALUES($o,$r,$reason)";
+                    audit.Parameters.AddWithValue("$o", originalId);
+                    audit.Parameters.AddWithValue("$r", reversalId);
+                    audit.Parameters.AddWithValue("$reason", reason.Text.Trim());
+                    audit.ExecuteNonQuery();
+                }
+                tx.Commit();
+                MessageBox.Show(UiLanguage.T("تم إنشاء قيد عكسي مستقل. بقي القيد الأصلي محفوظًا لأغراض التدقيق."));
+                reason.Clear();
+                LoadEntries();
+                RefreshSummary();
+            }
+            catch (Exception ex)
+            {
+                try { tx.Rollback(); } catch { }
+                MessageBox.Show(UiLanguage.T("تعذر إنشاء القيد العكسي؛ لم تُعتمد التغييرات. ") + ex.Message);
+            }
+        };
+        reload.Click += (_, _) => LoadEntries();
+        f.Controls.Add(list); f.Controls.Add(reverse); f.Controls.Add(reason); f.Controls.Add(reload);
+        LoadEntries();
+        f.ShowDialog(this);
     }
 
     void Reports()
