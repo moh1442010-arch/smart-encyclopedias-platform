@@ -629,4 +629,18 @@ public class DatabaseIntegrityTest {
             assertEquals("DRAFT", c.getString(2));
         } finally { c.close(); }
     }
+
+    @Test
+    public void schemaVersionElevenIncludesRecurringTablesAndIsCurrent() {
+        Cursor version = database.rawQuery("PRAGMA user_version", null);
+        try {
+            assertTrue(version.moveToFirst());
+            assertEquals("recurring schema version must be accepted by encrypted restore validation", 11, version.getInt(0));
+        } finally { version.close(); }
+        Cursor tables = database.rawQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('recurring_schedules','recurring_occurrences')", null);
+        try {
+            assertTrue(tables.moveToFirst());
+            assertEquals("both recurring tables must be created", 2, tables.getInt(0));
+        } finally { tables.close(); }
+    }
 }
