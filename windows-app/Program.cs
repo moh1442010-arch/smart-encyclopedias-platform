@@ -1050,54 +1050,9 @@ ORDER BY e.id DESC";
             using var tx = c.BeginTransaction();
             try
             {
-                using (var already = c.CreateCommand())
-                {
-                    already.Transaction = tx;
-                    already.CommandText = "SELECT COUNT(*) FROM gl_reversals WHERE original_entry_id=$id";
-                    already.Parameters.AddWithValue("$id", originalId);
-                    if (Convert.ToInt32(already.ExecuteScalar()) != 0)
-                        throw new InvalidOperationException("تم إنشاء قيد عكسي لهذا القيد مسبقًا.");
-                }
-
-                string memo;
-                using (var header = c.CreateCommand())
-                {
-                    header.Transaction = tx;
-                    header.CommandText = "SELECT memo,source_type FROM gl_entries WHERE id=$id";
-                    header.Parameters.AddWithValue("$id", originalId);
-                    using var r = header.ExecuteReader();
-                    if (!r.Read()) throw new InvalidOperationException("القيد الأصلي غير موجود.");
-                    memo = r.GetString(0);
-                    if (r.GetString(1) == "REVERSAL") throw new InvalidOperationException("لا يمكن عكس قيد عكسي.");
-                }
-
-                var reversedLines = new List<(string Account, double Debit, double Credit)>();
-                using (var q = c.CreateCommand())
-                {
-                    q.Transaction = tx;
-                    q.CommandText = @"SELECT a.name,l.debit,l.credit
-FROM gl_lines l JOIN gl_accounts a ON a.id=l.account_id
-WHERE l.entry_id=$id ORDER BY l.id";
-                    q.Parameters.AddWithValue("$id", originalId);
-                    using var r = q.ExecuteReader();
-                    while (r.Read()) reversedLines.Add((r.GetString(0), r.GetDouble(2), r.GetDouble(1)));
-                }
-                if (reversedLines.Count < 2 || Math.Abs(reversedLines.Sum(x => x.Debit) - reversedLines.Sum(x => x.Credit)) > 0.005)
-                    throw new InvalidOperationException("القيد الأصلي غير متوازن أو لا يحتوي أسطرًا كافية؛ أوقف العكس وراجع البيانات.");
-
-                PostEntry(c, tx, "REVERSAL", originalId, "عكس القيد #" + originalId + ": " + reason.Text.Trim() + " | الأصل: " + memo, reversedLines.ToArray());
-                var reversalId = LastId(c, tx);
-                using (var audit = c.CreateCommand())
-                {
-                    audit.Transaction = tx;
-                    audit.CommandText = "INSERT INTO gl_reversals(original_entry_id,reversal_entry_id,reason) VALUES($o,$r,$reason)";
-                    audit.Parameters.AddWithValue("$o", originalId);
-                    audit.Parameters.AddWithValue("$r", reversalId);
-                    audit.Parameters.AddWithValue("$reason", reason.Text.Trim());
-                    audit.ExecuteNonQuery();
-                }
+                var reversalId = JournalAccounting.ReverseManualJournal(c, tx, originalId, reason.Text.Trim());
                 tx.Commit();
-                MessageBox.Show(UiLanguage.T("تم إنشاء قيد عكسي مستقل. بقي القيد الأصلي محفوظًا لأغراض التدقيق."));
+                MessageBox.Show(UiLanguage.T("تم إنشاء قيد عكسي مستقل. بقي القيد الأصلي محفوظًا لأغراض التدقيق.") + " #" + reversalId);
                 reason.Clear();
                 LoadEntries();
                 RefreshSummary();
@@ -1155,33 +1110,11 @@ WHERE l.entry_id=$id ORDER BY l.id";
         actions.Controls.Add(print); actions.Controls.Add(email);
         f.Controls.Add(preview); f.Controls.Add(actions); f.ShowDialog();
     }
-    long LastId(SqliteConnection c, SqliteTransaction tx)
-    {
-        using var q = c.CreateCommand(); q.Transaction = tx; q.CommandText = "SELECT last_insert_rowid()";
-        return Convert.ToInt64(q.ExecuteScalar());
-    }
+    long LastId(SqliteConnection c, SqliteTransaction tx) => JournalAccounting.LastId(c, tx);
 
-    void PostEntry(SqliteConnection c, SqliteTransaction tx, string sourceType, long sourceId, string memo, params (string Account, double Debit, double Credit)[] lines)
-    {
-        var debit = lines.Sum(x => x.Debit);
-        var credit = lines.Sum(x => x.Credit);
-        if (lines.Length < 2 || Math.Abs(debit - credit) > 0.005 || lines.Any(x => x.Debit < 0 || x.Credit < 0 || (x.Debit > 0 && x.Credit > 0)))
-            throw new InvalidOperationException("Unbalanced or invalid journal entry.");
-        using var header = c.CreateCommand(); header.Transaction = tx;
-        header.CommandText = "INSERT INTO gl_entries(source_type,source_id,memo) VALUES($s,$id,$m)";
-        header.Parameters.AddWithValue("$s", sourceType); header.Parameters.AddWithValue("$id", sourceId); header.Parameters.AddWithValue("$m", memo);
-        header.ExecuteNonQuery(); var entryId = LastId(c, tx);
-        foreach (var line in lines)
-        {
-            using var account = c.CreateCommand(); account.Transaction = tx;
-            account.CommandText = "SELECT id FROM gl_accounts WHERE name=$n"; account.Parameters.AddWithValue("$n", line.Account);
-            var accountId = Convert.ToInt64(account.ExecuteScalar() ?? throw new InvalidOperationException("Ledger account missing."));
-            using var detail = c.CreateCommand(); detail.Transaction = tx;
-            detail.CommandText = "INSERT INTO gl_lines(entry_id,account_id,debit,credit) VALUES($e,$a,$d,$c)";
-            detail.Parameters.AddWithValue("$e", entryId); detail.Parameters.AddWithValue("$a", accountId);
-            detail.Parameters.AddWithValue("$d", line.Debit); detail.Parameters.AddWithValue("$c", line.Credit); detail.ExecuteNonQuery();
-        }
-    }
+    void PostEntry(SqliteConnection c, SqliteTransaction tx, string sourceType, long sourceId, string memo,
+        params (string Account, double Debit, double Credit)[] lines)
+        => JournalAccounting.PostEntry(c, tx, sourceType, sourceId, memo, lines);
 
     void RefreshSummary()
     {
