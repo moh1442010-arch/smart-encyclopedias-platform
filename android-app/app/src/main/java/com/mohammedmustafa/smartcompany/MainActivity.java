@@ -698,7 +698,7 @@ public class MainActivity extends Activity{
      Cursor tables=check.rawQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('products','transactions','accounts','journal_entries','journal_lines')",null);
      try{valid=valid&&tables.moveToFirst()&&tables.getInt(0)==5;}finally{tables.close();}
      Cursor version=check.rawQuery("PRAGMA user_version",null);
-     try{valid=valid&&version.moveToFirst()&&version.getInt(0)>=0&&version.getInt(0)<=10;}finally{version.close();}
+     try{valid=valid&&version.moveToFirst()&&version.getInt(0)>=0&&version.getInt(0)<=11;}finally{version.close();}
     }finally{if(check!=null)check.close();}
     if(!valid)throw new IOException("Invalid or unauthenticated database backup");
     try(InputStream in=new FileInputStream(temp);FileOutputStream out=new FileOutputStream(staged)){byte[] buf=new byte[8192];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);out.getFD().sync();}
