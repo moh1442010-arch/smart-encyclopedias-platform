@@ -103,7 +103,17 @@ WHERE l.entry_id=$id ORDER BY l.id";
         PostEntry(c, tx, "REVERSAL", originalEntryId,
             "Reverse journal #" + originalEntryId + ": " + reason.Trim() + " | Original: " + memo,
             reversedLines.ToArray());
-        var reversalEntryId = LastId(c, tx);
+        long reversalEntryId;
+        using (var findReversal = c.CreateCommand())
+        {
+            findReversal.Transaction = tx;
+            findReversal.CommandText = "SELECT id FROM gl_entries WHERE source_type='REVERSAL' AND source_id=$id";
+            findReversal.Parameters.AddWithValue("$id", originalEntryId);
+            var value = findReversal.ExecuteScalar();
+            if (value is null || value is DBNull)
+                throw new InvalidOperationException("The reversal journal entry was not created.");
+            reversalEntryId = Convert.ToInt64(value);
+        }
 
         using (var audit = c.CreateCommand())
         {
