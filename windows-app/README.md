@@ -40,3 +40,14 @@ The Windows project must be treated as a pre-commercial candidate until a real W
 Before customer distribution, record test evidence for: fresh install and upgrade; Arabic/English layout; sales and purchase posting; returns and partial payments; inventory valuation and cost of goods sold; customer/supplier balances; payroll and expenses; journal/ledger/trial balance/P&L/balance sheet reconciliation; corrupted-backup rejection and restore rollback; and license expiry, renewal, revocation, and offline policy.
 
 Do not put production customer data into this candidate, and do not publish a Windows download link until the release manifest is updated with the exact tested artifact, version, source commit, SHA-256, and publisher-signing status.
+
+
+## New candidate 2.2.9 — reverse journal entries and capture mitigation
+
+The 2.2.9 candidate adds an audited reverse-entry workflow. It creates a new entry with debit and credit sides swapped, records the original/reversal relationship and a required reason, and leaves the original journal entry intact. It blocks duplicate reversals and does not allow reversing a reversal. This feature must still be tested against the full accounting scenarios before financial use.
+
+The app also attempts to apply Windows `WDA_EXCLUDEFROMCAPTURE` to its visible windows. This is a **best-effort privacy mitigation only**, not a guarantee against screenshots or recording. Results depend on Windows version and capture method; it cannot prevent external cameras, privileged or kernel-level tools, remote-control software, or all recording paths. Do not display passwords, private keys, API tokens, license signing secrets, or real customer data in the app.
+
+**Security blocker:** the current app stores its local SQLite database under `%LOCALAPPDATA%\\SmartCompany\\smartcompany.db`; this implementation does not establish that the database is encrypted at rest. Do not treat the app as resistant to a local administrator or a determined reverse engineer. Before production use, implement and independently test database encryption, protected secret storage, signed updates, and a threat-model review. Never embed private signing keys, service API secrets, or production credentials in the Windows executable or repository.
+
+The CI smoke test currently checks that the GUI process remains alive briefly. It is not an end-to-end GUI test and does not establish accounting correctness, successful installation on a customer device, screen-capture blocking, or production security.
