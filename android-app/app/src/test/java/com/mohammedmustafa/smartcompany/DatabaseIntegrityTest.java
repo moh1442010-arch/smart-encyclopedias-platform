@@ -598,4 +598,35 @@ public class DatabaseIntegrityTest {
             c.close();
         }
     }
+
+    @Test
+    public void recurringSchedulesCreateOnlyOneOccurrencePerMonthAndClampDueDate() {
+        ContentValues schedule = new ContentValues();
+        schedule.put("name", "Monthly rent test");
+        schedule.put("amount", 500.0);
+        schedule.put("amount_mode", "FIXED");
+        schedule.put("due_day", 31);
+        schedule.put("start_month", "2027-01");
+        schedule.put("active", 1);
+        long scheduleId = database.insertOrThrow("recurring_schedules", null, schedule);
+
+        ContentValues occurrence = new ContentValues();
+        occurrence.put("schedule_id", scheduleId);
+        occurrence.put("period_month", "2027-02");
+        occurrence.put("due_date", RecurringEntryRules.dueDate("2027-02", 31));
+        occurrence.put("amount", 500.0);
+        occurrence.put("state", "DRAFT");
+        long first = database.insertOrThrow("recurring_occurrences", null, occurrence);
+        long duplicate = database.insertWithOnConflict("recurring_occurrences", null, occurrence, SQLiteDatabase.CONFLICT_IGNORE);
+        assertTrue("first occurrence must be inserted", first > 0);
+        assertEquals("duplicate schedule/month must be ignored", -1, duplicate);
+        Cursor c = database.rawQuery("SELECT COUNT(*),MIN(due_date),MIN(state) FROM recurring_occurrences WHERE schedule_id=? AND period_month=?",
+                new String[]{String.valueOf(scheduleId), "2027-02"});
+        try {
+            assertTrue(c.moveToFirst());
+            assertEquals(1, c.getInt(0));
+            assertEquals("2027-02-28", c.getString(1));
+            assertEquals("DRAFT", c.getString(2));
+        } finally { c.close(); }
+    }
 }
