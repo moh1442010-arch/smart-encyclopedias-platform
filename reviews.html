@@ -55,9 +55,10 @@
     <header class="reviews-hero">
       <span class="badge">صفحة المجتمع والمصداقية</span>
       <h1>⭐ آراء العملاء والزوار</h1>
-      <p>شارك تجربتك مع تطبيق المحاسب الميزان أو الموسوعة الشاملة. لا ننشئ تقييمات وهمية؛ نراجع الآراء الحقيقية، بما فيها النقد والملاحظات، قبل نشرها.</p>
+      <p>شارك تجربتك مع تطبيق المحاسب الميزان أو الموسوعة الشاملة. نرحب بالنقد والملاحظات. اقرأ التعليقات العامة وشارك في النقاش المفتوح؛ أما نموذج واتساب أدناه فيرسل التقرير بشكل خاص ولا ينشره على الموقع تلقائيًا.</p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="downloads/">تنزيل تطبيق المحاسب الميزان</a>
+        <a class="btn btn-primary" href="https://github.com/moh1442010-arch/smart-encyclopedias-platform/issues/18">💬 قراءة التعليقات العامة وإضافة ملاحظة</a>
         <a class="btn btn-gold" href="https://wa.me/249121851285?text=%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%B9%D9%84%D9%8A%D9%83%D9%85%D8%8C%20%D8%A3%D8%B1%D8%BA%D8%A8%20%D9%81%D9%8A%20%D8%A7%D9%84%D8%A7%D8%B3%D8%AA%D9%81%D8%B3%D8%A7%D8%B1%20%D8%B9%D9%86%20%D8%A7%D9%84%D9%85%D9%88%D8%B3%D9%88%D8%B9%20%D9%88%D8%A7%D9%84%D8%B4%D8%B1%D8%A7%D8%A1.">💬 الاستفسار والشراء</a>
       </div>
     </header>
@@ -70,12 +71,13 @@
     </section>
 
     <section class="section" aria-labelledby="published-reviews">
-      <h2 id="published-reviews">تجارب القراء</h2>
+      <h2 id="published-reviews">التعليقات العامة وملاحظات الخبراء</h2>
       <article class="review-card empty-review">
         <div>
           <div class="icon">💬</div>
-          <h3>ننتظر أول تجربة حقيقية</h3>
-          <p>ستظهر هنا التقييمات التي تصلنا ويتم اعتمادها للنشر. وجود هذه المساحة الفارغة أفضل من اختلاق شهادة لا وجود لها.</p>
+          <h3>النقاش العام مفتوح</h3>
+          <p>يمكن للجميع قراءة الملاحظات المنشورة على سجل المراجعة العام، وإضافة النقد والتجارب الفنية عبر GitHub. قد يتطلب التعليق تسجيل الدخول إلى GitHub.</p>
+          <p><a class="btn btn-gold" href="https://github.com/moh1442010-arch/smart-encyclopedias-platform/issues/18">فتح سجل التعليقات العامة</a></p>
         </div>
       </article>
       <div class="review-note"><strong>كيف نتعامل مع الآراء؟</strong><br>نراجع المحتوى للتأكد من خلوه من بيانات الدفع أو المعلومات الحساسة أو الإساءة. قد ننشر النقد والملاحظات أيضًا؛ فالهدف هو بناء ثقة حقيقية وتحسين المنتج.</div>
@@ -83,7 +85,7 @@
 
     <section class="section review-form" aria-labelledby="send-review">
       <h2 id="send-review">شاركنا رأيك</h2>
-      <p class="form-help">اختر المنتج ثم اكتب تقييمك أو اقتراحك. لا تحتاج إلى إنشاء حساب في الموقع. بعد الإرسال تُجهز رسالة واتساب للمراجعة البشرية؛ ولن يُنشر الرأي تلقائياً.</p>
+      <p class="form-help">اختر المنتج ثم اكتب تقييمك أو اقتراحك. لا تحتاج إلى إنشاء حساب في الموقع. بعد الإرسال تُجهز رسالة واتساب خاصة للمراجعة البشرية. لن يُنشر الرأي تلقائيًا؛ لنشر تعليق يراه الجميع استخدم سجل التعليقات العامة أعلاه.</p>
       <form id="review-form">
         <div class="form-grid">
           <div class="field full">
@@ -134,7 +136,7 @@
           <a class="btn" href="complaints.html">إرسال بلاغ أو شكوى</a>
         </div>
         <p id="review-status" class="status" role="status" aria-live="polite"></p>
-        <p class="policy">تنبيه: لا تكتب كلمة مرور، رقم حساب، بيانات بطاقة، أو أي معلومات حساسة. إرسال الرأي لا يعني نشره تلقائيًا.</p>
+        <p class="policy">تنبيه: لا تكتب كلمة مرور، رقم حساب، بيانات بطاقة، أو أي معلومات حساسة. هذا النموذج يجهز رسالة واتساب خاصة فقط. لإضافة تعليق عام استخدم سجل المراجعة العام.</p>
       </form>
     </section>
   </main>
@@ -158,7 +160,7 @@
       const rating=document.getElementById('review-rating').value;
       const review=document.getElementById('review-text').value.trim();
       if(!name||!platform||!test||!result||!rating||!review){status.textContent='يرجى إكمال الحقول المطلوبة: الاسم والمنصة وما اختبرته والنتيجة والتقييم والرأي.';return;}
-      const report='تقرير تجربة من صفحة العملاء والزوار\n\nالمنتج: '+product+'\nالاسم: '+name+'\nالصفة: '+role+'\nالمنصة: '+platform+'\nإصدار التطبيق: '+version+'\nنوع الجهاز: '+device+'\nنظام التشغيل: '+os+'\nما تم اختباره: '+test+'\nالنتيجة العامة: '+result+'\nخطورة المشكلة: '+severity+'\nخطوات إعادة المشكلة/المتوقع مقابل الفعلي: '+steps+'\nالتقييم: '+rating+'\n\nالرأي والملاحظات:\n'+review+'\n\nيرجى مراجعة التقرير قبل نشر أي رأي.';
+      const report='تقرير تجربة من صفحة العملاء والزوار\n\nالمنتج: '+product+'\nالاسم: '+name+'\nالصفة: '+role+'\nالمنصة: '+platform+'\nإصدار التطبيق: '+version+'\nنوع الجهاز: '+device+'\nنظام التشغيل: '+os+'\nما تم اختباره: '+test+'\nالنتيجة العامة: '+result+'\nخطورة المشكلة: '+severity+'\nخطوات إعادة المشكلة/المتوقع مقابل الفعلي: '+steps+'\nالتقييم: '+rating+'\n\nالرأي والملاحظات:\n'+review+'\n\nهذا التقرير يرسل عبر واتساب بشكل خاص؛ لإتاحة الرأي للجميع، انسخه إلى سجل المراجعة العام إذا رغبت.';
       const url='https://wa.me/249121851285?text='+encodeURIComponent(report);
       status.textContent='تم تجهيز التقرير محلياً. اضغط زر واتساب لإرساله؛ لم يُحفظ في قاعدة بيانات الموقع، ولم يُرسل حتى تؤكد الإرسال داخل واتساب.';
       const send=document.createElement('a');send.href=url;send.target='_blank';send.rel='noopener noreferrer';send.className='btn btn-gold';send.textContent='فتح واتساب وإرسال التقرير';
