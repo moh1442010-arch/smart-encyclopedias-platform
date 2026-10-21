@@ -4,7 +4,6 @@ on:
   workflow_run:
     workflows:
       - "Build Al-Mizan Accountant Android Release 2.4.2 - Signed"
-      - "Build Al-Mizan Accountant Android Release 2.4.3 - Signed"
     types: [completed]
     branches: [main]
 
@@ -18,11 +17,11 @@ concurrency:
 
 jobs:
   publish-android-review:
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && (github.event.workflow_run.name == 'Build Al-Mizan Accountant Android Release 2.4.2 - Signed' || github.event.workflow_run.name == 'Build Al-Mizan Accountant Android Release 2.4.3 - Signed')
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.name == 'Build Al-Mizan Accountant Android Release 2.4.2 - Signed'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      VERSION: ${{ github.event.workflow_run.name == 'Build Al-Mizan Accountant Android Release 2.4.3 - Signed' && '2.4.3' || '2.4.2' }}
+      VERSION: 2.4.3
     steps:
       - name: Checkout main for release metadata
         uses: actions/checkout@v4
@@ -66,7 +65,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "$VERSION" == "2.4.2" ]]; then tag="al-mizan-android-review-2026-10-19"; else tag="al-mizan-android-review-${VERSION}-2026-10-19"; fi
+          tag="al-mizan-android-review-${VERSION}-2026-10-21"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$tag" public-review/* --repo "$GITHUB_REPOSITORY" --clobber
           else
