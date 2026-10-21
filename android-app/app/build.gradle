@@ -1,4 +1,5 @@
 plugins { id 'com.android.application' }
+// Android 2.4.3 review candidate: preserve the upgrade-compatible versionCode.
 android {
  namespace 'com.mohammedmustafa.smartcompany'
  buildFeatures { buildConfig true }
