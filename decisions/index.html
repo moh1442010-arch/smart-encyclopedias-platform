@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>قرارات واختبارات المحاسب الميزان</title>
+<style>
+  :root { --bg:#f7f7f5; --fg:#1d1d1b; --muted:#666; --card:#fff; --line:#ddd; --ok:#1b7f3b; --bad:#b3261e; --warn:#9a6700; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161616; --fg:#eee; --muted:#aaa; --card:#222; --line:#444; --ok:#4cc27a; --bad:#ff7b72; --warn:#e3b341; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, Tahoma, sans-serif; background:var(--bg); color:var(--fg); line-height:1.7; }
+  main { max-width: 900px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 1.5rem; margin: 8px 0; }
+  h2 { font-size: 1.2rem; margin-top: 28px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; margin:10px 0; overflow-x:auto; }
+  table { width:100%; border-collapse: collapse; font-size: .95rem; }
+  th, td { border-bottom:1px solid var(--line); padding:8px; text-align: right; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  input { width: 100%; padding: 6px; border:1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); direction: ltr; text-align: left; }
+  .ok { color: var(--ok); font-weight: 700; }
+  .bad { color: var(--bad); font-weight: 700; }
+  .pending { color: var(--warn); font-weight: 700; }
+  .muted { color: var(--muted); font-size: .9rem; }
+  .note { border-inline-start: 4px solid var(--warn); padding: 6px 10px; background: var(--card); border-radius: 6px; }
+  .actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin: 12px 0; }
+  .actions button { padding: 8px 14px; border-radius: 8px; border:1px solid var(--line); background: var(--card); color: var(--fg); font-size: .95rem; cursor: pointer; }
+  .actions button:active { opacity: .7; }
+  #msg { color: var(--muted); font-size: .9rem; }
+  footer { margin: 30px 0 10px; color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main id="content">
+
+<h1>قرارات واختبارات «المحاسب الميزان»</h1>
+<p class="muted">آخر تحديث: 21 أكتوبر 2026. هذه الصفحة توثّق ما اعتُمد، وما لم يُثبت بعد. لا تُعد شهادة مراجعة ولا دليلًا على نجاح التطبيق.</p>
+
+<div class="actions">
+  <button id="copyCode" type="button">نسخ كود الصفحة</button>
+  <button id="copySummary" type="button">نسخ الملخص كنص</button>
+  <span id="msg"></span>
+</div>
+
+<h2>1. القرارات المعتمدة</h2>
+<div class="card">
+<table>
+<tr><th>#</th><th>القرار</th><th>الحالة</th></tr>
+<tr><td>1</td><td>السوق المستهدف يبدأ من السودان ثم يتوسع عربيًا</td><td class="ok">معتمد كاتجاه</td></tr>
+<tr><td>2</td><td>أربع نسخ مستهدفة: Basic وPro وBusiness وEnterprise بمحرك محاسبي واحد</td><td class="pending">هيكل مستهدف، غير منفذ بعد</td></tr>
+<tr><td>3</td><td>Windows نسخة واحدة مرتبطة بمستوى الترخيص</td><td class="ok">معتمد</td></tr>
+<tr><td>4</td><td>محاسبة المصانع متعددة المراحل ميزة استراتيجية لـ Enterprise</td><td class="pending">لا تُسوَّق قبل الاختبار</td></tr>
+<tr><td>5</td><td>لا تُسوَّق أي ميزة غير متحقق منها</td><td class="ok">مبدأ معتمد</td></tr>
+<tr><td>6</td><td>لا تُعاد كتابة ميزة تعمل دون سبب فني واضح</td><td class="ok">مبدأ معتمد</td></tr>
+<tr><td>7</td><td>إعلان الفوترة الإلكترونية السودانية بتاريخ 4 مايو 2026</td><td class="bad">غير متحقق</td></tr>
+<tr><td>8</td><td>لا تسعير ولا تسويق مبني على الامتثال الضريبي السوداني</td><td class="ok">معتمد حتى إثبات المصدر الرسمي</td></tr>
+<tr><td>9</td><td>البريد وأرقام الاتصال المنسوبة للديوان</td><td class="bad">غير معتمدة</td></tr>
+</table>
+</div>
+
+<h2>2. الحالات المرجعية</h2>
+<div class="card">
+<p class="muted">المبالغ بالجنيه السوداني، والأرقام مرجعية مستقلة قبل تشغيل التطبيق.</p>
+<table>
+<tr><th>الحالة</th><th>المرجع</th><th>القيمة المرجعية</th></tr>
+<tr><td>الحالة 1: مرحلة واحدة</td><td>مخزون المواد المتبقي</td><td>40,000.00</td></tr>
+<tr><td>الحالة 1</td><td>تكلفة الإنتاج التام</td><td>90,000.00</td></tr>
+<tr><td>الحالة 2: مرحلتان</td><td>الإنتاج المكتمل (900 وحدة)</td><td>174,078.95</td></tr>
+<tr><td>الحالة 2</td><td>الإنتاج تحت التشغيل (100 وحدة)</td><td>17,921.05</td></tr>
+<tr><td>الحالة 2ب: المتوسط المرجح</td><td>الإنتاج المكتمل (800 وحدة)</td><td>126,222.22</td></tr>
+<tr><td>الحالة 2ب: المتوسط المرجح</td><td>الإنتاج تحت التشغيل (200 وحدة)</td><td>25,777.78</td></tr>
+<tr><td>الحالة 2ب: FIFO</td><td>الإنتاج المكتمل (800 وحدة)</td><td>126,418.60</td></tr>
+<tr><td>الحالة 2ب: FIFO</td><td>الإنتاج تحت التشغيل (200 وحدة)</td><td>25,581.40</td></tr>
+</table>
+<p class="note">ملاحظة تقريب: بنود FIFO المقرّبة كل على حدة تجمع إلى 126,418.61، بينما الإجمالي المحسوب بدقة كاملة 126,418.60. يُسجل الفرق 0.01 صراحة عند الاعتماد النهائي.</p>
+</div>
+
+<h2>3. أداة مقارنة نتائج التطبيق</h2>
+<div class="card">
+<p class="muted">أدخل نتيجة التطبيق الفعلية في الخانة المقابلة. تُحسب المقارنة في متصفحك فقط، ولا تُحفظ ولا تُرسل إلى أي مكان. سماحية المقارنة 0.01 جنيه.</p>
+<table>
+<tr><th>الاختبار</th><th>المرجع</th><th>نتيجة التطبيق</th><th>الحكم</th></tr>
+<tr><td>T01 مخزون المواد المتبقي</td><td>40000</td><td><input type="number" step="0.01" data-ref="40000" class="inp"></td><td class="res"></td></tr>
+<tr><td>T01 تكلفة الإنتاج التام</td><td>90000</td><td><input type="number" step="0.01" data-ref="90000" class="inp"></td><td class="res"></td></tr>
+<tr><td>T02 الإنتاج المكتمل (مرحلتان)</td><td>174078.95</td><td><input type="number" step="0.01" data-ref="174078.95" class="inp"></td><td class="res"></td></tr>
+<tr><td>T02 الإنتاج تحت التشغيل</td><td>17921.05</td><td><input type="number" step="0.01" data-ref="17921.05" class="inp"></td><td class="res"></td></tr>
+<tr><td>T03 المتوسط المرجح: المكتمل</td><td>126222.22</td><td><input type="number" step="0.01" data-ref="126222.22" class="inp"></td><td class="res"></td></tr>
+<tr><td>T03 المتوسط المرجح: تحت التشغيل</td><td>25777.78</td><td><input type="number" step="0.01" data-ref="25777.78" class="inp"></td><td class="res"></td></tr>
+<tr><td>T04 FIFO: المكتمل</td><td>126418.60</td><td><input type="number" step="0.01" data-ref="126418.60" class="inp"></td><td class="res"></td></tr>
+<tr><td>T04 FIFO: تحت التشغيل</td><td>25581.40</td><td><input type="number" step="0.01" data-ref="25581.40" class="inp"></td><td class="res"></td></tr>
+</table>
+</div>
+
+<h2>4. خطة اختبار التطبيق</h2>
+<div class="card">
+<table>
+<tr><th>الرقم</th><th>الاختبار</th><th>الحالة</th></tr>
+<tr><td>T01</td><td>الإنتاج بمرحلة واحدة</td><td class="pending">لم يُنفذ</td></tr>
+<tr><td>T02</td><td>إنتاج على مرحلتين</td><td class="pending">لم يُنفذ</td></tr>
+<tr><td>T03</td><td>المتوسط المرجح (حالة 2ب)</td><td class="pending">لم يُنفذ</td></tr>
+<tr><td>T04</td><td>FIFO (حالة 2ب)</td><td class="pending">لم يُنفذ</td></tr>
+<tr><td>T05</td><td>توازن التكاليف: الإجمالي 152,000.00</td><td class="pending">لم يُنفذ</td></tr>
+<tr><td>T06</td><td>توازن القيود وعدم الازدواج أو الفقد</td><td class="pending">لم يُنفذ</td></tr>
+<tr><td>T07</td><td>ثبات النتائج عند إعادة فتح التقارير</td><td class="pending">لم يُنفذ</td></tr>
+<tr><td>T08</td><td>إعادة الحساب عند تعديل المدخلات</td><td class="pending">لم يُنفذ</td></tr>
+<tr><td>T09</td><td>التالف والهدر</td><td class="pending">بانتظار حالة مرجعية مستقلة</td></tr>
+<tr><td>T10</td><td>العمل دون اتصال</td><td class="pending">يتوقف على دعم المسار في الإصدار</td></tr>
+</table>
+</div>
+
+<h2>5. ما لا يُعلن بعد</h2>
+<div class="card">
+<ul>
+<li>أن التطبيق يطبق FIFO أو المتوسط المرجح بصورة صحيحة.</li>
+<li>أن محاسبة تكاليف المصانع مكتملة.</li>
+<li>أن القيود والتقارير متطابقة مع المراجع.</li>
+<li>أن الإصدار اجتاز مراجعة مستقلة.</li>
+<li>أن التوافق مع الفوترة الإلكترونية السودانية متحقق.</li>
+</ul>
+</div>
+
+<footer>هذه الصفحة وثيقة عمل داخلية للمراجعة، وليست بيانًا تسويقيًا.</footer>
+
+</main>
+<script>
+  // مقارنة نتائج التطبيق بالمرجع
+  document.querySelectorAll('.inp').forEach(function (inp) {
+    inp.addEventListener('input', function () {
+      var cell = inp.closest('tr').querySelector('.res');
+      var ref = parseFloat(inp.dataset.ref);
+      var v = inp.value.trim();
+      if (v === '') { cell.textContent = 'لم يُدخل'; cell.className = 'res pending'; return; }
+      var diff = parseFloat(v) - ref;
+      if (isNaN(diff)) { cell.textContent = 'قيمة غير صحيحة'; cell.className = 'res bad'; return; }
+      if (Math.abs(diff) <= 0.01) { cell.textContent = 'مطابق'; cell.className = 'res ok'; }
+      else { cell.textContent = 'غير مطابق (الفرق ' + diff.toFixed(2) + ')'; cell.className = 'res bad'; }
+    });
+  });
+
+  // أدوات النسخ
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return fallbackCopy(text); });
+    }
+    return Promise.resolve(fallbackCopy(text));
+  }
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+  function showMsg(ok) {
+    var m = document.getElementById('msg');
+    m.textContent = ok ? 'تم النسخ' : 'تعذر النسخ، حاول مرة أخرى';
+    setTimeout(function () { m.textContent = ''; }, 2500);
+  }
+  document.getElementById('copyCode').addEventListener('click', function () {
+    var code = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    copyText(code).then(showMsg);
+  });
+  document.getElementById('copySummary').addEventListener('click', function () {
+    var text = document.getElementById('content').innerText;
+    copyText(text).then(showMsg);
+  });
+</script>
+</body>
+</html>
