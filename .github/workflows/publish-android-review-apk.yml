@@ -84,7 +84,7 @@ jobs:
           apk="public-review/AlMizan-review-${VERSION}-release.apk"
           test -s "$apk"
           apk_sha="$(sha256sum "$apk" | awk '{print $1}')"
-          if [[ "$VERSION" == "2.4.2" ]]; then tag="al-mizan-android-review-2026-10-19"; else tag="al-mizan-android-review-${VERSION}-2026-10-19"; fi
+          tag="al-mizan-android-review-${VERSION}-2026-10-21"
           export RELEASE_TAG="$tag"
           python3 - "$apk_sha" <<'PY'
           import json, pathlib, sys, os
@@ -95,7 +95,7 @@ jobs:
             "status": "expert-review-only-not-approved-for-commercial-sale",
             "packageId": "com.mohammedmustafa.smartcompany",
             "versionName": os.environ["VERSION"],
-            "versionCode": 44 if os.environ["VERSION"] == "2.4.3" else 43,
+            "versionCode": 2004003,
             "releaseTag": os.environ["RELEASE_TAG"],
             "releasePage": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/tag/" + os.environ["RELEASE_TAG"],
             "apkUrl": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/" + os.environ["RELEASE_TAG"] + "/AlMizan-review-" + os.environ["VERSION"] + "-release.apk",
