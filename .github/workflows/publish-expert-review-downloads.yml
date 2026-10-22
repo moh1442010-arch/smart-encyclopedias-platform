@@ -145,7 +145,7 @@ jobs:
             if [ -s "$f" ]; then cp "$f" "public-review/$(basename "$f")"; fi
           done
           (cd public-review && sha256sum * > REVIEW-SHA256SUMS.txt)
-          cat > public-review/REVIEW-NOTICE.txt <<'NOTICE'
+          cat > public-review/REVIEW-NOTICE.txt <<NOTICE
           AL-MIZAN EXPERT REVIEW CANDIDATES — NOT APPROVED FOR COMMERCIAL SALE
           Android ${VERSION} and Windows 2.3.0 are expert-review candidates only.
           Do not use real customer financial records. Review installation/update compatibility,
