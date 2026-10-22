@@ -150,6 +150,6 @@ jobs:
           else
             gh release create "$tag" public-review/* --repo "$GITHUB_REPOSITORY" \
               --title "Al-Mizan expert review candidates — NOT FOR SALE" \
-              --notes "Public no-account downloads for independent expert review only. Android 2.4.5 and Windows 2.3.0 are not commercial releases. Validate installation/update, accounting flows, licensing, backups, privacy and Windows behavior. Submit evidence to issue #57." \
+              --notes "Public no-account downloads for independent expert review only. Android 2.4.5 and Windows 2.3.0 are not commercial releases. Validate installation/update, accounting flows, licensing, backups, privacy and Windows behavior. Submit evidence to issue #18." \
               --prerelease
           fi
