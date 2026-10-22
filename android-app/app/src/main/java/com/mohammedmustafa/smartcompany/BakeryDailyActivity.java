@@ -195,13 +195,23 @@ public class BakeryDailyActivity extends Activity {
         return BakeryLedgerMath.valueForLoaves(productionLoaves(), perThousand);
     }
     private long categorizedValue() {
+        // Reconcile the full production value against all destinations:
+        // sales/collections + customer debt + price adjustment + spoilage + operating costs.
+        // Expenses are included exactly once; fuel/maintenance belong in work_expenses only.
         return BakeryLedgerMath.sum(
             amount("window_cash"), amount("window_bank"), amount("window_debt"),
             amount("distribution_cash"), amount("distribution_bank"), amount("distribution_debt"),
-            amount("price_difference"), spoiledValue());
+            amount("price_difference"), spoiledValue(), totalExpenses());
     }
     private long totalExpenses() {
-        long shop = BakeryLedgerMath.sum(amount("shop_meals"), amount("shop_tea_sugar"), amount("shop_other_expenses"));
+        long breadForWorkers = 0;
+        long loavesPerThousand = number("loaves_per_thousand");
+        if (loavesPerThousand > 0) {
+            breadForWorkers = BakeryLedgerMath.valueForLoaves(
+                Math.max(0, number("shop_bread_loaves")), loavesPerThousand);
+        }
+        long shop = BakeryLedgerMath.sum(
+            amount("shop_meals"), breadForWorkers, amount("shop_tea_sugar"), amount("shop_other_expenses"));
         return BakeryLedgerMath.sum(amount("workers_wages"), amount("work_expenses"), shop);
     }
     private void recalculate() {
