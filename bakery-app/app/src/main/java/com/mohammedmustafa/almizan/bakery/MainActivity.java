@@ -260,8 +260,7 @@ public class MainActivity extends Activity {
     private long bankTotal() { Totals d=distribution(); return Math.addExact(val("window","bank"),d.bank); }
     private long distributionDiff() { return distribution().diff; }
     private long accountedTotal() {
-        return Math.addExact(Math.addExact(Math.addExact(cashTotal(),debtTotal()),Math.addExact(bankTotal(),distributionDiff())),
-            Math.addExact(Math.addExact(wages(),expenseTotal()),spoilageValue()));
+        return BakeryMath.accountedTotal(cashTotal(),debtTotal(),bankTotal(),distributionDiff(),wages(),expenseTotal(),spoilageValue());
     }
     private String fmt(long n) { return String.format(Locale.US,"%,d",n); }
 
