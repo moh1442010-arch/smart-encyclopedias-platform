@@ -1,4 +1,4 @@
-name: Build Al-Mizan Windows Expert Test Candidate 2.3.1
+name: Build Al-Mizan Windows Expert Test Candidate 2.3.0
 # Review publication workflow alignment refresh, 2026-10-22: build paired review candidates from the same commit.
 
 on:
