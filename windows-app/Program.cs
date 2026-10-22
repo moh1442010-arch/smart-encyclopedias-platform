@@ -85,6 +85,7 @@ sealed class MainForm : Form
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
         Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("المرتجعات", Returns); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
         Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("قيد يومية يدوي (سطران)", ManualJournalEntry); Add("القيد العكسي", ReverseJournalEntry); Add("التقارير المالية", Reports); Add("الباقات والأسعار", SubscriptionPlans); Add("الدفع والتحويل البنكي", PaymentDetails); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
+        Add("الدليل الإرشادي والأسئلة الشائعة", UserGuide);
         Add("اختيار اللغة / Language", ToggleLanguage);
         RefreshSummary();
         var captureGuard = new System.Windows.Forms.Timer { Interval = 500 };
@@ -96,6 +97,51 @@ sealed class MainForm : Form
         Shown += (_, _) => FormCaptureProtection.Apply(this);
         FormClosed += (_, _) => captureGuard.Stop();
         captureGuard.Start();
+    }
+
+    void UserGuide()
+    {
+        using var f = new Form { Text = UiLanguage.T("الدليل الإرشادي والأسئلة الشائعة"), Width = 900, Height = 700, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var helpText = """
+المحاسب الميزان — الدليل الإرشادي المحلي
+
+ابدأ بأمان
+1. استخدم قاعدة تجريبية قبل تسجيل بيانات حقيقية.
+2. اضبط اسم المنشأة والعملة والسنة المالية.
+3. طابق الأرصدة الافتتاحية مع المستندات وميزان المصدر.
+4. اختبر شراءً وبيعًا وتحصيلًا وسدادًا ومرتجعًا.
+5. أنشئ نسخة احتياطية واختبر استعادتها على قاعدة تجريبية.
+
+المخزون والمبيعات
+• تحقق من الصنف والكمية والسعر والمخزن قبل الحفظ.
+• لا تبيع كمية تتجاوز المتاح.
+• افحص أثر البيع والشراء والمرتجع على الكمية والتكلفة والذمم.
+
+دفتر الأستاذ والقيد العكسي
+• القيد اليدوي يجب أن يتوازن مدينًا ودائنًا.
+• القيد العكسي ينشئ قيدًا جديدًا ولا يحذف القيد الأصلي؛ اكتب سببًا واضحًا.
+• لا تستخدم عكس القيد اليدوي لتصحيح بيع أو شراء مرتبط بالمخزون؛ صحح العملية من وحدتها الأصلية.
+• توازن المدين والدائن وحده لا يثبت اكتمال الترحيل أو صحة القوائم.
+
+النسخ الاحتياطي والاستعادة
+• صدّر نسخة قبل التحديث أو الاستعادة.
+• جرّب الاستعادة على قاعدة منفصلة أولًا؛ قد تستبدل الاستعادة البيانات الحالية.
+• احتفظ بالنسخة في مكان آمن ولا تشاركها مع غير المخولين.
+
+الأصول الثابتة والمصانع والعقارات
+• لا تعتمد أنظمة الإهلاك أو التصرف بالأصول، أو حساب التشغيل المرحلي، أو إدارة العقارات والإيجارات، ما لم تكن الوحدة موجودة ومختبرة في إصدارك.
+• إدارة الإيجار تتطلب سجل العقار والوحدة والعقد والاستحقاقات والتحصيلات والمتأخرات والتأمينات والصيانة وربطها بدفتر الأستاذ.
+
+العمل دون إنترنت
+• الإدخال المحلي قد يعمل دون اتصال، لكن التحقق من الترخيص والتحديثات وبعض الخدمات قد يتطلب الإنترنت. اختبر كل مسار قبل الاعتماد.
+• هذه المساعدة محلية ولا ترسل بياناتك تلقائيًا.
+
+حدود الإصدار
+• الملخص التشغيلي الحالي ليس قائمة دخل معتمدة، ولا يُستخدم لإقفال حسابات فعلية حتى اكتمال الترحيل المحاسبي واختبارات المصالحة المستقلة.
+""";
+        var box = new TextBox { Multiline = true, ReadOnly = true, WordWrap = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill, Font = new Font("Segoe UI", 12), Text = UiLanguage.T(helpText) };
+        f.Controls.Add(box);
+        f.ShowDialog(this);
     }
 
     void SubscriptionPlans()
