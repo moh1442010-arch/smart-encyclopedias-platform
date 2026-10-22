@@ -265,17 +265,17 @@ public class MainActivity extends Activity {
     private Totals distribution() { return rowTotals("distribution","rows",6); }
     private long productionValue() { return valueForLoaves(productionLoaves()); }
     private long costingTotal() {
-        return BakeryMath.sum(
-            Math.multiplyExact(val("costing","fuel_quantity"),val("costing","fuel_unit_price")),
-            Math.multiplyExact(val("costing","flour_bags"),val("costing","flour_bag_price")),
-            Math.multiplyExact(val("costing","yeast_count"),val("costing","yeast_piece_price")),
-            Math.multiplyExact(val("costing","oil_quantity"),val("costing","oil_pound_price")),
-            Math.multiplyExact(val("costing","salt_quantity"),val("costing","salt_unit_price")),
+        return BakeryMath.operatingCost(
+            val("costing","fuel_quantity"),val("costing","fuel_unit_price"),
+            val("costing","flour_bags"),val("costing","flour_bag_price"),
+            val("costing","yeast_count"),val("costing","yeast_piece_price"),
+            val("costing","oil_quantity"),val("costing","oil_pound_price"),
+            val("costing","salt_quantity"),val("costing","salt_unit_price"),
             val("costing","bags_total_price"));
     }
     private void showCosting() {
         try {
-            long production=productionValue(), cost=costingTotal(), margin=Math.subtractExact(production,cost);
+            long production=productionValue(), cost=costingTotal(), margin=BakeryMath.grossMargin(production,cost);
             String message="تاريخ التكلفة: "+day+
                 "\nقيمة الإنتاج حسب القطععيات: "+fmt(production)+" جنيه"+
                 "\nتكلفة الوقود: "+fmt(Math.multiplyExact(val("costing","fuel_quantity"),val("costing","fuel_unit_price")))+" جنيه"+
@@ -319,7 +319,7 @@ public class MainActivity extends Activity {
                 "\nمنصرفات المحل: "+fmt(expenseTotal())+" جنيه"+
                 "\nقيمة التالف: "+fmt(spoilageValue())+" جنيه"+
                 "\nتكلفة التشغيل التقديرية (للمقارنة فقط): "+fmt(costingTotal())+" جنيه"+
-                "\nهامش الربح التقديري: "+fmt(Math.subtractExact(expected,costingTotal()))+" جنيه"+
+                "\nهامش الربح التقديري: "+fmt(BakeryMath.grossMargin(expected,costingTotal()))+" جنيه"+
                 "\n\nإجمالي البنود المسجلة: "+fmt(actual)+" جنيه"+
                 "\nفرق التسوية (المطلوب صفر): "+fmt(difference)+" جنيه"+
                 "\nالنتيجة: "+status+
