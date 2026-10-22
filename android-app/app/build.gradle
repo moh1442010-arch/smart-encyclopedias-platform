@@ -1,5 +1,5 @@
 plugins { id 'com.android.application' }
-// Android 2.4.9 review candidate: preserve the package identity and monotonic versionCode.
+// Android 2.4.11 bakery reconciliation repair candidate: preserve the package identity and monotonic versionCode.
 // Paired Android/Windows rebuild after publisher compatibility fixes; do not publish until both builds pass.
 android {
  namespace 'com.mohammedmustafa.smartcompany'
@@ -9,8 +9,8 @@ android {
   applicationId 'com.mohammedmustafa.smartcompany'
   minSdk 23
   targetSdk 36
-  versionCode 2004010
-  versionName '2.4.10'
+  versionCode 2004011
+  versionName '2.4.11'
  }
  testOptions { unitTests.includeAndroidResources = true }
 }
