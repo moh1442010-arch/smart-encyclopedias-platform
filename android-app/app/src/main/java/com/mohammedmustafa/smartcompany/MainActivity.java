@@ -185,9 +185,11 @@ public class MainActivity extends Activity{
   }
   } catch (RuntimeException ex) {
    android.util.Log.e("AlMizanStartup", "Dashboard rendering failed after authentication", ex);
+   String failureStack = android.util.Log.getStackTraceString(ex);
    getSharedPreferences("startup_diagnostics", 0).edit()
     .putString("last_failure_class", ex.getClass().getName())
     .putString("last_failure_message", ex.getMessage() == null ? "(no message)" : ex.getMessage().substring(0, Math.min(240, ex.getMessage().length())))
+    .putString("last_failure_stack", failureStack.substring(0, Math.min(3500, failureStack.length())))
     .putLong("last_failure_at", System.currentTimeMillis()).apply();
    authenticated = false;
    try { login(); } catch (RuntimeException loginFailure) {
