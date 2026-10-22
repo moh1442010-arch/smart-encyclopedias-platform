@@ -25,7 +25,7 @@ public class DashboardStartupRegressionTest {
         app.deleteDatabase("smartcompany2.db");
         app.getSharedPreferences("startup_diagnostics", Context.MODE_PRIVATE).edit().clear().commit();
 
-        MainActivity activity = Robolectric.buildActivity(MainActivity.class).setup().get();
+        MainActivity activity = Robolectric.buildActivity(TestMainActivity.class).setup().get();
         try {
             activity.authenticated = true;
             activity.dashboard();
@@ -50,7 +50,7 @@ public class DashboardStartupRegressionTest {
         Context app = RuntimeEnvironment.getApplication();
         app.deleteDatabase("smartcompany2.db");
         app.getSharedPreferences("startup_diagnostics", Context.MODE_PRIVATE).edit().clear().commit();
-        MainActivity activity = Robolectric.buildActivity(MainActivity.class).setup().get();
+        MainActivity activity = Robolectric.buildActivity(TestMainActivity.class).setup().get();
         try {
             Context context = activity;
             assertTrue("Test PIN should be stored", activity.savePin("123456",
