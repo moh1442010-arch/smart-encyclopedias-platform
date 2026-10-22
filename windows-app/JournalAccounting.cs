@@ -15,6 +15,19 @@ public static class JournalAccounting
         return Convert.ToInt64(q.ExecuteScalar());
     }
 
+    public static void PostEntryAt(SqliteConnection c, SqliteTransaction tx, string sourceType, long sourceId, string memo, DateTime accountingDate,
+        params (string Account, double Debit, double Credit)[] lines)
+    {
+        PostEntry(c, tx, sourceType, sourceId, memo, lines);
+        using var date = c.CreateCommand();
+        date.Transaction = tx;
+        date.CommandText = "UPDATE gl_entries SET created_at=$date WHERE source_type=$source AND source_id=$id";
+        date.Parameters.AddWithValue("$date", accountingDate.Date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) + " 12:00:00");
+        date.Parameters.AddWithValue("$source", sourceType);
+        date.Parameters.AddWithValue("$id", sourceId);
+        if (date.ExecuteNonQuery() != 1) throw new InvalidOperationException("Could not apply accounting date to journal entry.");
+    }
+
     public static void PostEntry(SqliteConnection c, SqliteTransaction tx, string sourceType, long sourceId, string memo,
         params (string Account, double Debit, double Credit)[] lines)
     {
