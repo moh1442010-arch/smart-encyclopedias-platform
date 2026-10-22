@@ -111,6 +111,7 @@ public class DatabaseIntegrityTest {
         assertTrue(accountExists("2100"));
         assertTrue(accountExists("3100"));
         assertTrue(accountExists("4000"));
+        assertTrue(accountExists("4200"));
         assertTrue(accountExists("1210"));
         assertTrue(accountExists("1400"));
         assertTrue(accountExists("2200"));
@@ -503,6 +504,9 @@ public class DatabaseIntegrityTest {
         assertTrue(columnExists("transactions", "customer_id"));
         assertTrue(columnExists("products", "barcode"));
         assertTrue(columnExists("journal_entries", "description"));
+        assertTrue(tableExists("bread_counter_sales"));
+        assertTrue(tableExists("bread_distribution_sales"));
+        assertTrue(accountExists("4200"));
         Cursor preserved = database.rawQuery(
                 "SELECT name FROM customers WHERE name='عميل قديم'", null);
         try {
