@@ -11,6 +11,7 @@ on:
   push:
     paths:
       - "android-app/**"
+      - "windows-app/Program.cs"
       - ".github/workflows/build-android-apk.yml"
 
 permissions:
