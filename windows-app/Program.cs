@@ -206,7 +206,7 @@ sealed class MainForm : Form
         LabelText("Basic: دائم 150,000 | شهري 25,000 | سنوي 250,000 ج.س");
         LabelText("Pro: دائم 300,000 | شهري 45,000 | سنوي 450,000 ج.س");
         LabelText("Business: دائم 600,000 | شهري 80,000 | سنوي 800,000 ج.س");
-        LabelText("Enterprise: دائم 1,200,000 | شهري 150,000 | سنوي 1,500,000 ج.س");
+        LabelText("Enterprise: اشتراك شهري 30,000 | اشتراك سنوي 300,000 | شراء مرة واحدة 450,000 ج.س");
         LabelText("الدفع الدولي — الدولار الأمريكي (USD) | IBAN", 34, 14);
         LabelText("Basic: دائم $249 | شهري $9 | سنوي $90");
         LabelText("Pro: دائم $499 | شهري $19 | سنوي $190");
@@ -230,9 +230,9 @@ sealed class MainForm : Form
         {
             int p = tier.SelectedIndex, d = period.SelectedIndex;
             string[][] usd = { new[] { "249", "9", "90" }, new[] { "499", "19", "190" }, new[] { "999", "39", "390" }, new[] { "1,999", "79", "790" } };
-            string[][] sdg = { new[] { "150,000", "25,000", "250,000" }, new[] { "300,000", "45,000", "450,000" }, new[] { "600,000", "80,000", "800,000" }, new[] { "1,200,000", "150,000", "1,500,000" } };
+            string[][] sdg = { new[] { "150,000", "25,000", "250,000" }, new[] { "300,000", "45,000", "450,000" }, new[] { "600,000", "80,000", "800,000" }, new[] { "450,000", "30,000", "300,000" } };
             if (market.SelectedIndex == 1) return "$" + usd[p][d] + (d == 0 ? " — ترخيص دائم، دون تحديثات مستقبلية" : d == 1 ? " شهريًا" : " سنويًا");
-            return sdg[p][d] + " ج.س" + (d == 0 ? " — ترخيص دائم، دون تحديثات مستقبلية" : d == 1 ? " شهريًا" : " سنويًا");
+            return sdg[p][d] + " ج.س" + (d == 0 ? " — شراء مرة واحدة، دون تحديثات مستقبلية" : d == 1 ? " شهريًا" : " سنويًا");
         }
         void UpdatePrice(object? sender, EventArgs e) => price.Text = UiLanguage.T("السعر المختار: ") + PriceText();
         market.SelectedIndexChanged += UpdatePrice; tier.SelectedIndexChanged += UpdatePrice; period.SelectedIndexChanged += UpdatePrice; UpdatePrice(this, EventArgs.Empty);
