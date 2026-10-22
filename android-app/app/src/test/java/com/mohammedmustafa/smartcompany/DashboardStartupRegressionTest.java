@@ -79,6 +79,11 @@ public class DashboardStartupRegressionTest {
         }
     }
 
+    /** Avoid external licensing-network timing in UI regression tests. */
+    public static class TestMainActivity extends MainActivity {
+        @Override void checkCommercialAccess() { }
+    }
+
     private EditText firstEditText(View view) {
         if (view instanceof EditText) return (EditText) view;
         if (view instanceof ViewGroup) {
