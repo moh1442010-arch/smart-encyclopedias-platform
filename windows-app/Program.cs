@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 
 namespace SmartCompany;
 
+// Expert-review candidate refresh 2026-10-22: subscription pricing aligned with Android and public store.
+
 static class UiLanguage
 {
     static readonly string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SmartCompany", "language.txt");
