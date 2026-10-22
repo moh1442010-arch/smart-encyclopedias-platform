@@ -17,7 +17,46 @@ public class MainActivity extends Activity{
  }
  void toggleLanguage(){boolean next=!english();getSharedPreferences("settings",0).edit().putBoolean("english",next).apply();if(authenticated)dashboard();else login();}
  Button languageButton(){Button x=b(english()?"العربية":"ENGLISH");x.setOnClickListener(v->toggleLanguage());return x;}
- public void onCreate(Bundle b){super.onCreate(b);getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);db=new DB(this);checkCommercialAccess();}
+ public void onCreate(Bundle b){
+  super.onCreate(b);
+  getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
+  final Thread.UncaughtExceptionHandler previous=Thread.getDefaultUncaughtExceptionHandler();
+  Thread.setDefaultUncaughtExceptionHandler((thread,error)->{
+   try{
+    String stack=android.util.Log.getStackTraceString(error);
+    getSharedPreferences("startup_diagnostics",0).edit()
+     .putString("last_failure_class",error.getClass().getName())
+     .putString("last_failure_message",error.getMessage()==null?"(no message)":error.getMessage().substring(0,Math.min(240,error.getMessage().length())))
+     .putString("last_failure_stack",stack.substring(0,Math.min(6000,stack.length())))
+     .putLong("last_failure_at",System.currentTimeMillis()).commit();
+   }catch(Throwable ignored){}
+   if(previous!=null)previous.uncaughtException(thread,error);
+  });
+  try{
+   db=new DB(this);
+   // Initialize and migrate before login so schema failures are visible and diagnosable.
+   db.getWritableDatabase();
+  }catch(Throwable ex){
+   android.util.Log.e("AlMizanStartup","Database initialization failed",ex);
+   showStartupFailure(ex);
+   return;
+  }
+  checkCommercialAccess();
+ }
+ void showStartupFailure(Throwable ex){
+  String stack=android.util.Log.getStackTraceString(ex);
+  getSharedPreferences("startup_diagnostics",0).edit()
+   .putString("last_failure_class",ex.getClass().getName())
+   .putString("last_failure_message",ex.getMessage()==null?"(no message)":ex.getMessage().substring(0,Math.min(240,ex.getMessage().length())))
+   .putString("last_failure_stack",stack.substring(0,Math.min(6000,stack.length())))
+   .putLong("last_failure_at",System.currentTimeMillis()).commit();
+  page("تشخيص بدء التشغيل");
+  content.addView(t("تعذر تهيئة قاعدة بيانات التطبيق. لم يحاول التطبيق حذف البيانات أو إعادة إنشاء قاعدة البيانات تلقائيًا.",16));
+  content.addView(t("نوع الخطأ: "+ex.getClass().getName()+"\\nالتفاصيل: "+(ex.getMessage()==null?"(لا توجد رسالة)":ex.getMessage()),13));
+  Button copy=b("نسخ تقرير الخطأ للدعم");
+  content.addView(copy);
+  copy.setOnClickListener(v->{String report=getSharedPreferences("startup_diagnostics",0).getString("last_failure_stack",stack);((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Al-Mizan startup diagnostic",report));toast("تم نسخ تقرير الخطأ؛ أرسله للدعم دون إضافة كلمات مرور");});
+ }
 
  static final String LICENSE_API="https://smart-encyclopedias-delivery.moh1442010.workers.dev";
  static final long OFFLINE_GRACE_MS=72L*60L*60L*1000L;
@@ -183,7 +222,7 @@ public class MainActivity extends Activity{
    TextView detail=t(items[i][2],12);detail.setGravity(Gravity.CENTER);detail.setTextColor(Color.DKGRAY);card.addView(detail,new LinearLayout.LayoutParams(-1,-2));
    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(6,6,6,6);row.addView(card,lp);card.setOnClickListener(v->openSection(title));
   }
-  } catch (RuntimeException ex) {
+  } catch (Throwable ex) {
    android.util.Log.e("AlMizanStartup", "Dashboard rendering failed after authentication", ex);
    String failureStack = android.util.Log.getStackTraceString(ex);
    getSharedPreferences("startup_diagnostics", 0).edit()
@@ -325,7 +364,7 @@ public class MainActivity extends Activity{
   page("الحسابات الرئيسية");
   content.addView(t("دليل الحسابات والأرصدة",22));
   content.addView(t("الحسابات الرئيسية تجمع أرصدة القيود المحاسبية المرحّلة من وحدات البرنامج. أي حركة غير مرحّلة محاسبيًا لن تظهر هنا.",14));
-  String[][] links={{"فتح المبيعات","الفواتير والمبيعات"},{"فتح المشتريات","المشتريات"},{"فتح المخزون","الأصناف والمخزون"},{"فتح الصندوق والمصروفات","الصندوق والمصروفات"},{"فتح الحسابات البنكية","الحسابات البنكية"},{"فتح القيود اليدوية","القيود اليدوية"},{"فتح التقارير","التقارير والتحليل"}};
+  String[][] links={{"فتح المبيعات","الفواتير والمبيعات"},{"فتح المشتريات","المشتريات"},{"فتح المخزون","الأصناف والمخزون"},{"🏭 حساب التشغيل والتصنيع المرحلي","حساب التشغيل والتصنيع المرحلي"},{"فتح الصندوق والمصروفات","الصندوق والمصروفات"},{"فتح الحسابات البنكية","الحسابات البنكية"},{"فتح القيود اليدوية","القيود اليدوية"},{"فتح التقارير","التقارير والتحليل"}};
   for(String[] link:links){Button go=b(link[0]);content.addView(go);go.setOnClickListener(v->openSection(link[1]));}
   Cursor totals=db.q("SELECT COALESCE(SUM(debit),0),COALESCE(SUM(credit),0) FROM journal_lines");
   double totalDebit=0,totalCredit=0;if(totals.moveToFirst()){totalDebit=totals.getDouble(0);totalCredit=totals.getDouble(1);}totals.close();
@@ -383,6 +422,7 @@ public class MainActivity extends Activity{
  case"الصندوق والمصروفات":cash();break;case"الحسابات البنكية":banks();break;case"سجل الشيكات":checks();break;
  case"المحاسبة والتقارير":groupMenu(n,new String[][]{{"الحسابات الرئيسية ودفتر الأستاذ","الحسابات الرئيسية"},{"القيود اليدوية","القيود اليدوية"},{"التقارير والتحليل","التقارير والتحليل"}});break;
  case"القيود اليدوية":manualJournal();break;case"التقارير والتحليل":reports();break;case"الحسابات الرئيسية":mainAccounts();break;
+ case"حساب التشغيل والتصنيع المرحلي":factoryOperations();break;
  case"الموظفون والرواتب":case"الموظفون":employees();break;
  case"أدوات النظام":groupMenu(n,new String[][]{{"النسخ الاحتياطي والاستعادة","النسخ الاحتياطي"},{"إعدادات الشركة","إعدادات الشركة"},{"الدفع والتحويل البنكي","الدفع والتحويل البنكي"},{"تغيير رمز الدخول","تغيير رمز الدخول"},{"الدعم","الدعم"}});break;
  case"النسخ الاحتياطي":backup();break;case"إعدادات الشركة":companySettings();break;case"الدفع والتحويل البنكي":paymentDetails();break;case"تغيير رمز الدخول":changePin();break;case"الدعم":support();break;default:support();}}
@@ -593,7 +633,7 @@ public class MainActivity extends Activity{
    page("حساب التشغيل والتصنيع المرحلي");
    content.addView(t("سجل أمر التشغيل ومراحل الإنتاج مع المواد والعمالة والمصاريف والتالف. هذا السجل يثبت تكاليف المراحل؛ لا يُرحّل إلى مخزون المنتج النهائي آليًا في هذه النسخة، ويجب على الخبراء التحقق من مطابقة التكاليف قبل الاعتماد.",14));
    EditText order=e("رقم/اسم أمر التشغيل"),stage=e("اسم المرحلة"),material=e("تكلفة المواد المصروفة"),labor=e("العمالة"),overhead=e("المصاريف الصناعية"),good=e("كمية المنتج الجيد"),scrap=e("كمية التالف");for(EditText x:new EditText[]{material,labor,overhead,good,scrap})x.setInputType(8194);for(EditText x:new EditText[]{order,stage,material,labor,overhead,good,scrap})content.addView(x);
-   Button save=b("حفظ مرحلة التشغيل");content.addView(save);save.setOnClickListener(v->{String o=order.getText().toString().trim(),s=stage.getText().toString().trim();double m=num(material),l=num(labor),h=num(overhead),g=num(good),sc=num(scrap);if(o.isEmpty()||s.isEmpty()||m<0||l<0||h<0||g<0||sc<0||(Double.isNaN(m+l+h+g+sc)||Double.isInfinite(m+l+h+g+sc))||g+sc<=0){toast("أدخل أمرًا ومرحلة وتكاليف وكميات صحيحة");return;}SQLiteDatabase sq=db.getWritableDatabase();sq.beginTransaction();try{ContentValues ov=new ContentValues();ov.put("order_name",o);long oid=sq.insertWithOnConflict("factory_orders",null,ov,SQLiteDatabase.CONFLICT_IGNORE);Cursor q=sq.rawQuery("SELECT id FROM factory_orders WHERE order_name=?",new String[]{o});if(!q.moveToFirst())throw new IllegalStateException();oid=q.getLong(0);q.close();ContentValues ev=new ContentValues();ev.put("order_id",oid);ev.put("stage_name",s);ev.put("material_cost",m);ev.put("labor_cost",l);ev.put("overhead_cost",h);ev.put("good_qty",g);ev.put("scrap_qty",sc);ev.put("created_at",System.currentTimeMillis());long eventId=sq.insertOrThrow("factory_stage_events",null,ev);double totalCost=m+l+h;if(totalCost>0){long je=journal(sq);line(sq,je,accountId(sq,"1400"),totalCost,0);if(m>0)line(sq,je,accountId(sq,"1210"),0,m);if(l>0)line(sq,je,accountId(sq,"2200"),0,l);if(h>0)line(sq,je,accountId(sq,"2300"),0,h);assertBalanced(sq,je);ContentValues jv=new ContentValues();jv.put("journal_entry_id",je);sq.update("factory_stage_events",jv,"id=?",new String[]{String.valueOf(eventId)});}sq.setTransactionSuccessful();toast("تم حفظ مرحلة التشغيل وترحيل تكلفتها إلى مخزون تحت التشغيل؛ راجع كميات المواد والمصادر والتالف");factoryOperations();}catch(Exception ex){toast("تعذر حفظ المرحلة");}finally{sq.endTransaction();}});
+   Button save=b("حفظ مرحلة التشغيل");content.addView(save);save.setOnClickListener(v->{String o=order.getText().toString().trim(),s=stage.getText().toString().trim();double m=num(material),l=num(labor),h=num(overhead),g=num(good),sc=num(scrap);if(o.isEmpty()||s.isEmpty()||m<0||l<0||h<0||g<0||sc<0||(Double.isNaN(m+l+h+g+sc)||Double.isInfinite(m+l+h+g+sc))||g+sc<=0){toast("أدخل أمرًا ومرحلة وتكاليف وكميات صحيحة");return;}SQLiteDatabase sq=db.getWritableDatabase();sq.beginTransaction();try{ContentValues ov=new ContentValues();ov.put("order_name",o);long oid=sq.insertWithOnConflict("factory_orders",null,ov,SQLiteDatabase.CONFLICT_IGNORE);Cursor q=sq.rawQuery("SELECT id FROM factory_orders WHERE order_name=?",new String[]{o});if(!q.moveToFirst())throw new IllegalStateException();oid=q.getLong(0);q.close();ContentValues ev=new ContentValues();ev.put("order_id",oid);ev.put("stage_name",s);ev.put("material_cost",m);ev.put("labor_cost",l);ev.put("overhead_cost",h);ev.put("good_qty",g);ev.put("scrap_qty",sc);ev.put("created_at",System.currentTimeMillis());long eventId=sq.insertOrThrow("factory_stage_events",null,ev);double totalCost=m+l+h;if(totalCost>0){long wip=accountId(sq,"1400"),raw=accountId(sq,"1210"),laborPayable=accountId(sq,"2200"),overheadPayable=accountId(sq,"2300");if(wip<=0||(m>0&&raw<=0)||(l>0&&laborPayable<=0)||(h>0&&overheadPayable<=0))throw new IllegalStateException("Factory cost accounts are not configured");long je=journal(sq);line(sq,je,wip,totalCost,0);if(m>0)line(sq,je,raw,0,m);if(l>0)line(sq,je,laborPayable,0,l);if(h>0)line(sq,je,overheadPayable,0,h);assertBalanced(sq,je);ContentValues jv=new ContentValues();jv.put("journal_entry_id",je);sq.update("factory_stage_events",jv,"id=?",new String[]{String.valueOf(eventId)});}sq.setTransactionSuccessful();toast("تم حفظ مرحلة التشغيل وترحيل تكلفتها إلى مخزون تحت التشغيل؛ راجع كميات المواد والمصادر والتالف");factoryOperations();}catch(Exception ex){toast("تعذر حفظ المرحلة");}finally{sq.endTransaction();}});
    Cursor c=db.q("SELECT o.order_name,e.stage_name,e.material_cost,e.labor_cost,e.overhead_cost,e.good_qty,e.scrap_qty FROM factory_stage_events e JOIN factory_orders o ON o.id=e.order_id ORDER BY e.id DESC");while(c.moveToNext())content.addView(t(c.getString(0)+" | "+c.getString(1)+" | تكاليف "+fmt(c.getDouble(2)+c.getDouble(3)+c.getDouble(4))+" | جيد "+c.getDouble(5)+" | تالف "+c.getDouble(6),14));c.close();
   }
 
