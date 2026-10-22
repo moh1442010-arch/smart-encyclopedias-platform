@@ -1144,6 +1144,7 @@ FROM gl_lines l JOIN gl_accounts a ON a.id=l.account_id WHERE a.name='Inventory'
     void ManualJournalEntry()
     {
         using var f = new Form { Text = UiLanguage.T("قيد يومية يدوي من سطرين"), Width = 720, Height = 470, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var accountingDate = new DateTimePicker { Dock = DockStyle.Top, Height = 38, Format = DateTimePickerFormat.Short, Value = DateTime.Today };
         var memo = new TextBox { Dock = DockStyle.Top, Height = 42, PlaceholderText = UiLanguage.T("بيان القيد — مطلوب") };
         var debitAccount = new ComboBox { Dock = DockStyle.Top, Height = 38, DropDownStyle = ComboBoxStyle.DropDownList };
         var creditAccount = new ComboBox { Dock = DockStyle.Top, Height = 38, DropDownStyle = ComboBoxStyle.DropDownList };
@@ -1180,7 +1181,15 @@ FROM gl_lines l JOIN gl_accounts a ON a.id=l.account_id WHERE a.name='Inventory'
                     insert.ExecuteNonQuery();
                 }
                 var journalId = LastId(c, tx);
-                PostEntry(c, tx, "MANUAL_JOURNAL", journalId, memo.Text.Trim(),
+                using (var dateUpdate = c.CreateCommand())
+                {
+                    dateUpdate.Transaction = tx;
+                    dateUpdate.CommandText = "UPDATE manual_journals SET created_at=$date WHERE id=$id";
+                    dateUpdate.Parameters.AddWithValue("$date", accountingDate.Value.Date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) + " 12:00:00");
+                    dateUpdate.Parameters.AddWithValue("$id", journalId);
+                    dateUpdate.ExecuteNonQuery();
+                }
+                PostEntryAt(c, tx, "MANUAL_JOURNAL", journalId, memo.Text.Trim(), accountingDate.Value.Date,
                     (debitName, value, 0d), (creditName, 0d, value));
                 tx.Commit();
                 MessageBox.Show(UiLanguage.T("تم حفظ القيد اليدوي وترحيله. يمكنك عكسه لاحقًا من شاشة القيد العكسي."));
@@ -1194,7 +1203,7 @@ FROM gl_lines l JOIN gl_accounts a ON a.id=l.account_id WHERE a.name='Inventory'
                 MessageBox.Show(UiLanguage.T("تعذر حفظ القيد؛ لم تُعتمد التغييرات. ") + ex.Message);
             }
         };
-        f.Controls.Add(save); f.Controls.Add(amount); f.Controls.Add(creditAccount); f.Controls.Add(debitAccount); f.Controls.Add(memo); f.Controls.Add(note);
+        f.Controls.Add(save); f.Controls.Add(amount); f.Controls.Add(creditAccount); f.Controls.Add(debitAccount); f.Controls.Add(memo); f.Controls.Add(accountingDate); f.Controls.Add(note);
         f.ShowDialog(this);
     }
 
@@ -1310,6 +1319,10 @@ ORDER BY e.id DESC";
     void PostEntry(SqliteConnection c, SqliteTransaction tx, string sourceType, long sourceId, string memo,
         params (string Account, double Debit, double Credit)[] lines)
         => JournalAccounting.PostEntry(c, tx, sourceType, sourceId, memo, lines);
+
+    void PostEntryAt(SqliteConnection c, SqliteTransaction tx, string sourceType, long sourceId, string memo, DateTime accountingDate,
+        params (string Account, double Debit, double Credit)[] lines)
+        => JournalAccounting.PostEntryAt(c, tx, sourceType, sourceId, memo, accountingDate, lines);
 
     void RefreshSummary()
     {
