@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       android_run_id:
-        description: "Optional successful Android 2.4.4 build run ID from main"
+        description: "Optional successful Android 2.4.5 build run ID from main"
         required: false
         type: string
       windows_run_id:
@@ -107,29 +107,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p staging/android-2.4.4 staging/windows-2.3.0 public-review
-          gh run download "$ANDROID_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "al-mizan-android-signed-release-v2.4.4" --dir staging/android-2.4.4
+          mkdir -p staging/android-2.4.5 staging/windows-2.3.0 public-review
+          gh run download "$ANDROID_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "al-mizan-android-signed-release-v2.4.5" --dir staging/android-2.4.5
           gh run download "$WINDOWS_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "smart-company-windows-v2.3.0" --dir staging/windows-2.3.0
 
-          apk="$(find staging/android-2.4.4 -type f -iname 'AlMizan-2.4.4-release.apk' -print -quit)"
-          aab="$(find staging/android-2.4.4 -type f -iname 'AlMizan-2.4.4-release.aab' -print -quit)"
+          apk="$(find staging/android-2.4.5 -type f -iname 'AlMizan-2.4.5-release.apk' -print -quit)"
+          aab="$(find staging/android-2.4.5 -type f -iname 'AlMizan-2.4.5-release.aab' -print -quit)"
           exe="$(find staging/windows-2.3.0 -type f -iname 'SmartCompany-Windows-2.3.0-x64.exe' -print -quit)"
           zip="$(find staging/windows-2.3.0 -type f -iname 'SmartCompany-Windows-2.3.0-x64.zip' -print -quit)"
           test -n "$apk" && test -s "$apk"
           test -n "$aab" && test -s "$aab"
           test -n "$exe" && test -s "$exe"
           test -n "$zip" && test -s "$zip"
-          cp "$apk" public-review/AlMizan-review-2.4.4-release.apk
-          cp "$aab" public-review/AlMizan-review-2.4.4-release.aab
+          cp "$apk" public-review/AlMizan-review-2.4.5-release.apk
+          cp "$aab" public-review/AlMizan-review-2.4.5-release.aab
           cp "$exe" public-review/Windows-review-2.3.0-x64.exe
           cp "$zip" public-review/Windows-review-2.3.0-x64.zip
-          for f in staging/android-2.4.4/SIGNING-CERTIFICATE.txt staging/android-2.4.4/SIGNING-CERT-SHA256.txt; do
+          for f in staging/android-2.4.5/SIGNING-CERTIFICATE.txt staging/android-2.4.5/SIGNING-CERT-SHA256.txt; do
             if [ -s "$f" ]; then cp "$f" "public-review/$(basename "$f")"; fi
           done
           (cd public-review && sha256sum * > REVIEW-SHA256SUMS.txt)
           cat > public-review/REVIEW-NOTICE.txt <<'NOTICE'
           AL-MIZAN EXPERT REVIEW CANDIDATES — NOT APPROVED FOR COMMERCIAL SALE
-          Android 2.4.4 and Windows 2.3.0 are expert-review candidates only.
+          Android 2.4.5 and Windows 2.3.0 are expert-review candidates only.
           Do not use real customer financial records. Review installation/update compatibility,
           accounting calculations and postings, licensing, database integrity, backup/restore,
           privacy and Windows runtime behavior. CI success is not independent QA or sales approval.
@@ -150,6 +150,6 @@ jobs:
           else
             gh release create "$tag" public-review/* --repo "$GITHUB_REPOSITORY" \
               --title "Al-Mizan expert review candidates — NOT FOR SALE" \
-              --notes "Public no-account downloads for independent expert review only. Android 2.4.4 and Windows 2.3.0 are not commercial releases. Validate installation/update, accounting flows, licensing, backups, privacy and Windows behavior. Submit evidence to issue #57." \
+              --notes "Public no-account downloads for independent expert review only. Android 2.4.5 and Windows 2.3.0 are not commercial releases. Validate installation/update, accounting flows, licensing, backups, privacy and Windows behavior. Submit evidence to issue #57." \
               --prerelease
           fi
