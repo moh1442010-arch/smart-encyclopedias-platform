@@ -201,7 +201,7 @@ public class MainActivity extends Activity{
   Button plansButton=b("💼 الباقات والأسعار");plansButton.setTextSize(18);content.addView(plansButton,new LinearLayout.LayoutParams(-1,-2));plansButton.setOnClickListener(v->plansPage());
    Button updateButton=b("🔄 فحص التحديثات");updateButton.setTextSize(18);content.addView(updateButton,new LinearLayout.LayoutParams(-1,-2));updateButton.setOnClickListener(v->checkForAppUpdate());
   Button guideButton=b("📘 الدليل الإرشادي والأسئلة الشائعة");guideButton.setTextSize(18);content.addView(guideButton,new LinearLayout.LayoutParams(-1,-2));guideButton.setOnClickListener(v->openUserGuide());
-  TextView summaryBox=t(summary(),15);summaryBox.setBackgroundColor(Color.rgb(232,242,236));content.addView(summaryBox);
+  TextView summaryBox=t(safeDashboardSummary(),15);summaryBox.setBackgroundColor(Color.rgb(232,242,236));content.addView(summaryBox);
   Button recurringButton=b("🧾 المصروفات الدورية والإيجار والكهرباء");content.addView(recurringButton,new LinearLayout.LayoutParams(-1,-2));recurringButton.setOnClickListener(v->recurringExpenses());
   Button assetsButton=b("🏢 سجل الأصول الثابتة والإهلاك");content.addView(assetsButton,new LinearLayout.LayoutParams(-1,-2));assetsButton.setOnClickListener(v->fixedAssets());
   Button factoryButton=b("🏭 حساب التشغيل والتصنيع المرحلي");content.addView(factoryButton,new LinearLayout.LayoutParams(-1,-2));factoryButton.setOnClickListener(v->factoryOperations());
@@ -225,19 +225,53 @@ public class MainActivity extends Activity{
   } catch (Throwable ex) {
    android.util.Log.e("AlMizanStartup", "Dashboard rendering failed after authentication", ex);
    String failureStack = android.util.Log.getStackTraceString(ex);
-   getSharedPreferences("startup_diagnostics", 0).edit()
-    .putString("last_failure_class", ex.getClass().getName())
-    .putString("last_failure_message", ex.getMessage() == null ? "(no message)" : ex.getMessage().substring(0, Math.min(240, ex.getMessage().length())))
-    .putString("last_failure_stack", failureStack.substring(0, Math.min(3500, failureStack.length())))
-    .putLong("last_failure_at", System.currentTimeMillis()).apply();
-   authenticated = false;
-   try { login(); } catch (RuntimeException loginFailure) {
-    android.util.Log.e("AlMizanStartup", "Recovery login rendering also failed", loginFailure);
-    new AlertDialog.Builder(this).setTitle("تعذر فتح لوحة التحكم")
-     .setMessage("حدث خطأ أثناء تجهيز لوحة التحكم. لم تُحذف قاعدة البيانات. أعد فتح التطبيق، وإذا تكرر الخطأ أرسل سجل الأعطال للدعم.")
-     .setPositiveButton("حسنًا", (dialog, which) -> finish()).show();
+   try {
+    getSharedPreferences("startup_diagnostics", 0).edit()
+     .putString("last_failure_class", ex.getClass().getName())
+     .putString("last_failure_message", ex.getMessage() == null ? "(no message)" : ex.getMessage().substring(0, Math.min(240, ex.getMessage().length())))
+     .putString("last_failure_stack", failureStack.substring(0, Math.min(3500, failureStack.length())))
+     .putLong("last_failure_at", System.currentTimeMillis()).commit();
+   } catch (Throwable diagnosticFailure) {
+    android.util.Log.e("AlMizanStartup", "Could not persist dashboard failure diagnostics", diagnosticFailure);
    }
-   Toast.makeText(this, "تعذر تجهيز لوحة التحكم؛ تم تسجيل تفاصيل الخطأ للتشخيص.", Toast.LENGTH_LONG).show();
+   authenticated = false;
+   try {
+    page("تعذر فتح لوحة التحكم");
+    content.addView(t("لم تُحذف قاعدة البيانات أو بيانات الشركة. سجّل تفاصيل الخطأ أدناه لإرسالها للدعم، ولا تحذف التطبيق.", 16));
+    android.content.SharedPreferences diag = getSharedPreferences("startup_diagnostics", 0);
+    content.addView(t("نوع الخطأ: " + diag.getString("last_failure_class", ex.getClass().getName()), 14));
+    content.addView(t("التفاصيل: " + diag.getString("last_failure_message", ex.getMessage() == null ? "(no message)" : ex.getMessage()), 14));
+    Button copy = b("نسخ تفاصيل التشخيص");
+    content.addView(copy);
+    copy.setOnClickListener(v -> {
+     String report = "Al-Mizan dashboard failure\\nVersion: " + BuildConfig.VERSION_NAME +
+      "\\nClass: " + diag.getString("last_failure_class", "unknown") +
+      "\\nMessage: " + diag.getString("last_failure_message", "unknown") +
+      "\\nStack: " + diag.getString("last_failure_stack", "");
+     ((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(android.content.ClipData.newPlainText("Al-Mizan diagnostics", report));
+     toast("تم نسخ التشخيص؛ أرسله للدعم");
+    });
+    Button retry = b("إعادة محاولة فتح لوحة التحكم");
+    content.addView(retry);
+    retry.setOnClickListener(v -> dashboard());
+   } catch (Throwable recoveryFailure) {
+    android.util.Log.e("AlMizanStartup", "Dashboard recovery UI failed", recoveryFailure);
+    Toast.makeText(this, "تعذر فتح لوحة التحكم. لم تُحذف البيانات؛ أعد فتح التطبيق وأرسل سجل الأعطال للدعم.", Toast.LENGTH_LONG).show();
+   }
+  }
+ }
+ String safeDashboardSummary() {
+  try { return summary(); }
+  catch (Throwable ex) {
+   android.util.Log.e("AlMizanStartup", "Dashboard summary query failed", ex);
+   try {
+    getSharedPreferences("startup_diagnostics", 0).edit()
+     .putString("last_failure_class", ex.getClass().getName())
+     .putString("last_failure_message", ex.getMessage() == null ? "(no message)" : ex.getMessage().substring(0, Math.min(240, ex.getMessage().length())))
+     .putString("last_failure_stack", android.util.Log.getStackTraceString(ex).substring(0, Math.min(3500, android.util.Log.getStackTraceString(ex).length())))
+     .putLong("last_failure_at", System.currentTimeMillis()).commit();
+   } catch (Throwable ignored) {}
+   return "تعذر تحميل ملخص الأرصدة فقط؛ بقية لوحة التحكم متاحة. راجع سجل التشخيص قبل اعتماد البيانات.";
   }
  }
  int countInvalidJournalEntries(SQLiteDatabase sq){
