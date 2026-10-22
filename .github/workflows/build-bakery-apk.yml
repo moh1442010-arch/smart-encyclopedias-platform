@@ -93,12 +93,13 @@ jobs:
       - name: Publish review-only GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: al-mizan-bakery-2.5.0-review-${{ github.run_number }}
+          tag_name: al-mizan-bakery-2.5.0-review
           name: الميزان المحاسبي للمخابز 2.5.0 — مراجعة
           prerelease: true
           make_latest: false
           generate_release_notes: false
           body: |
+            رابط تنزيل مباشر: https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/al-mizan-bakery-2.5.0-review/AlMizan-Bakery-2.5.0-review.apk
             نسخة مراجعة فقط — ليست موافقة على البيع التجاري.
             - تطبيق Android مستقل بمعرّف حزمة منفصل عن المحاسب الميزان العام.
             - اختبارات حسابية آلية وبناء APK وتحقق من التوقيع والبصمة.
