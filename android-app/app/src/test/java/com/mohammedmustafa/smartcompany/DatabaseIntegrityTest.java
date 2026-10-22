@@ -104,6 +104,8 @@ public class DatabaseIntegrityTest {
         assertTrue(tableExists("payroll_events"));
         assertTrue(tableExists("factory_orders"));
         assertTrue(tableExists("factory_stage_events"));
+        assertTrue(tableExists("bread_counter_sales"));
+        assertTrue(tableExists("bread_distribution_sales"));
         assertTrue(accountExists("1010"));
         assertTrue(accountExists("1100"));
         assertTrue(accountExists("2100"));
@@ -115,6 +117,41 @@ public class DatabaseIntegrityTest {
         assertTrue(accountExists("2300"));
     }
 
+
+    @Test
+    public void distributorDiscountRegisterEnforcesCashDebtAndPriceDifferenceReconciliation() {
+        assertTrue(tableExists("bread_distribution_sales"));
+        ContentValues row = new ContentValues();
+        row.put("transaction_id", 7001L);
+        row.put("product_id", 1L);
+        row.put("distributor_name", "مطعم تجريبي");
+        row.put("qty", 90.0);
+        row.put("retail_total", 30000.0);
+        row.put("distribution_total", 28000.0);
+        row.put("cash_received", 20000.0);
+        row.put("debt_amount", 8000.0);
+        row.put("price_difference", 2000.0);
+        row.put("created_at", System.currentTimeMillis());
+        database.insertOrThrow("bread_distribution_sales", null, row);
+        Cursor c = database.rawQuery("SELECT cash_received+debt_amount,distribution_total,retail_total-distribution_total,price_difference FROM bread_distribution_sales WHERE transaction_id=7001", null);
+        try {
+            assertTrue(c.moveToFirst());
+            assertEquals(28000.0, c.getDouble(0), 0.001);
+            assertEquals(28000.0, c.getDouble(1), 0.001);
+            assertEquals(2000.0, c.getDouble(2), 0.001);
+            assertEquals(2000.0, c.getDouble(3), 0.001);
+        } finally { c.close(); }
+        ContentValues invalid = new ContentValues(row);
+        invalid.put("transaction_id", 7002L);
+        invalid.put("cash_received", 27000.0);
+        invalid.put("debt_amount", 2000.0);
+        try {
+            database.insertOrThrow("bread_distribution_sales", null, invalid);
+            fail("Cash plus debt must equal the distribution amount");
+        } catch (android.database.SQLException expected) {
+            // Database CHECK constraint prevents unreconciled distributor totals.
+        }
+    }
 
     @Test
     public void returnCanBeRecordedOnlyOnceForOriginalInvoice() {
