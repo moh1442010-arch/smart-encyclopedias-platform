@@ -3,6 +3,8 @@ package com.mohammedmustafa.smartcompany;
 import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import org.junit.Test;
@@ -25,35 +27,83 @@ public class DashboardStartupRegressionTest {
 
         MainActivity activity = Robolectric.buildActivity(MainActivity.class).setup().get();
         try {
-            // Exercise the exact destination called by the successful PIN handler.
             activity.authenticated = true;
             activity.dashboard();
 
             View root = activity.findViewById(android.R.id.content);
             assertNotNull("Activity content root must remain attached", root);
-            assertTrue(
-                "Dashboard must render its heading; falling back to login means startup still failed",
-                containsText(root, "مركز إدارة النشاط")
-            );
-            assertTrue(
-                "Factory work-in-progress must be reachable from the main dashboard",
-                containsText(root, "حساب التشغيل والتصنيع المرحلي")
-            );
-            assertTrue(
-                "The audited reversal screen must be reachable from the main dashboard",
-                containsText(root, "القيد العكسي")
-            );
-            assertNotNull("Database helper must remain available after login", activity.db);
-            assertFalse(
-                "Successful dashboard render must not leave a recorded startup failure",
-                app.getSharedPreferences("startup_diagnostics", Context.MODE_PRIVATE)
-                    .contains("last_failure_class")
-            );
+            assertTrue("Dashboard heading must render", containsText(root, "مركز إدارة النشاط"));
+            assertTrue("Factory WIP must be reachable", containsText(root, "حساب التشغيل والتصنيع المرحلي"));
+            assertTrue("Reversal entry must be reachable", containsText(root, "القيد العكسي"));
+            assertNotNull("Database helper must remain available", activity.db);
+            assertFalse("Successful dashboard must not leave a startup failure",
+                app.getSharedPreferences("startup_diagnostics", Context.MODE_PRIVATE).contains("last_failure_class"));
         } finally {
             if (activity.db != null) activity.db.close();
             activity.finish();
             app.deleteDatabase("smartcompany2.db");
         }
+    }
+
+    @Test
+    public void enteringCorrectPinThroughLoginButtonKeepsActivityOnDashboard() {
+        Context app = RuntimeEnvironment.getApplication();
+        app.deleteDatabase("smartcompany2.db");
+        app.getSharedPreferences("startup_diagnostics", Context.MODE_PRIVATE).edit().clear().commit();
+        MainActivity activity = Robolectric.buildActivity(MainActivity.class).setup().get();
+        try {
+            Context context = activity;
+            assertTrue("Test PIN should be stored", activity.savePin("123456",
+                context.getSharedPreferences("security", Context.MODE_PRIVATE)));
+
+            activity.login();
+            View rootBefore = activity.findViewById(android.R.id.content);
+            EditText pin = firstEditText(rootBefore);
+            Button signIn = buttonWithText(rootBefore, "دخول");
+            assertNotNull("PIN input should be present", pin);
+            assertNotNull("Sign-in button should be present", signIn);
+            pin.setText("123456");
+            signIn.performClick();
+
+            View rootAfter = activity.findViewById(android.R.id.content);
+            assertNotNull("Activity content must remain attached after sign-in", rootAfter);
+            assertTrue("Correct PIN must navigate to dashboard", containsText(rootAfter, "مركز إدارة النشاط"));
+            assertTrue("Dashboard must expose bakery daily book", containsText(rootAfter, "دفتر المخبز اليومي — القطعيات والتوزيع والتسوية"));
+            assertFalse("Successful login must not record a dashboard failure",
+                app.getSharedPreferences("startup_diagnostics", Context.MODE_PRIVATE).contains("last_failure_class"));
+        } finally {
+            if (activity.db != null) activity.db.close();
+            activity.finish();
+            app.deleteDatabase("smartcompany2.db");
+            app.getSharedPreferences("security", Context.MODE_PRIVATE).edit().clear().commit();
+        }
+    }
+
+    private EditText firstEditText(View view) {
+        if (view instanceof EditText) return (EditText) view;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                EditText found = firstEditText(group.getChildAt(i));
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private Button buttonWithText(View view, String expected) {
+        if (view instanceof Button) {
+            CharSequence text = ((Button) view).getText();
+            if (text != null && expected.contentEquals(text)) return (Button) view;
+        }
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                Button found = buttonWithText(group.getChildAt(i), expected);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     private boolean containsText(View view, String expected) {
