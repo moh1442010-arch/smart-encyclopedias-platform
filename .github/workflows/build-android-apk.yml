@@ -15,6 +15,10 @@ on:
       - "android-app/**"
       - "windows-app/Program.cs"
       - ".github/workflows/build-android-apk.yml"
+  pull_request:
+    paths:
+      - "android-app/**"
+      - ".github/workflows/build-android-apk.yml"
 
 permissions:
   contents: read
