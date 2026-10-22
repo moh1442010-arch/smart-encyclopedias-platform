@@ -699,7 +699,8 @@ public class MainActivity extends Activity{
   int readFully(InputStream in,byte[] bytes)throws IOException{int offset=0;while(offset<bytes.length){int n=in.read(bytes,offset,bytes.length-offset);if(n<0)break;offset+=n;}return offset;}
 
   void manualJournal(){
-   page("القيود اليدوية");
+   page("القيود اليدوية والقيد العكسي");
+   Button reverseButton=b("↩️ فتح شاشة القيد العكسي للقيود اليدوية");content.addView(reverseButton);reverseButton.setOnClickListener(v->reverseManualJournal());
    content.addView(t("أدخل سطرين على الأقل. يجب أن يكون كل سطر مدينًا أو دائنًا فقط، وأن يتساوى إجمالي الطرفين. القيود المحفوظة لا تُحذف من هذه الشاشة.",14));
    Cursor ac=db.q("SELECT id,code,name FROM accounts ORDER BY code");
    ArrayList<Long> accountIds=new ArrayList<>();ArrayList<String> accountLabels=new ArrayList<>();
@@ -719,6 +720,35 @@ public class MainActivity extends Activity{
    });
    Cursor recent=db.q("SELECT j.id,j.description,j.created_at,COALESCE(SUM(l.debit),0),COALESCE(SUM(l.credit),0) FROM journal_entries j JOIN journal_lines l ON l.journal_entry_id=j.id WHERE j.transaction_id IS NULL AND j.description IS NOT NULL GROUP BY j.id ORDER BY j.created_at DESC LIMIT 10");content.addView(t("آخر القيود اليدوية",17));while(recent.moveToNext()){content.addView(t("#"+recent.getLong(0)+" | "+recent.getString(1)+" | "+new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.US).format(new Date(recent.getLong(2)))+" | مدين "+fmt(recent.getDouble(3))+" | دائن "+fmt(recent.getDouble(4)),14));}recent.close();
   }
+  void reverseManualJournal(){
+   page("القيد العكسي للقيود اليدوية");
+   content.addView(t("هذه الشاشة تعكس القيود اليدوية المؤهلة فقط. لا تستخدمها لعكس فاتورة بيع أو شراء أو قيد أصل أو إهلاك أو تصنيع؛ استخدم مسار الإلغاء/المرتجع الخاص بالعملية الأصلية.",14));
+   Cursor cur=db.q("SELECT j.id,COALESCE(j.description,''),j.created_at,COALESCE(SUM(l.debit),0) FROM journal_entries j JOIN journal_lines l ON l.journal_entry_id=j.id WHERE j.transaction_id IS NULL AND j.description IS NOT NULL AND j.description NOT LIKE 'مرتجع%' AND j.description NOT LIKE 'قيد عكسي%' AND NOT EXISTS(SELECT 1 FROM journal_reversals r WHERE r.original_entry_id=j.id OR r.reversal_entry_id=j.id) AND NOT EXISTS(SELECT 1 FROM fixed_assets a WHERE a.acquisition_journal_id=j.id) AND NOT EXISTS(SELECT 1 FROM asset_depreciation d WHERE d.journal_entry_id=j.id) AND NOT EXISTS(SELECT 1 FROM factory_stage_events f WHERE f.journal_entry_id=j.id) GROUP BY j.id ORDER BY j.created_at DESC");
+   ArrayList<Long> ids=new ArrayList<>();ArrayList<String> labels=new ArrayList<>();
+   while(cur.moveToNext()){long id=cur.getLong(0);ids.add(id);labels.add("#"+id+" | "+cur.getString(1)+" | مدين "+fmt(cur.getDouble(3)));}
+   cur.close();
+   if(ids.isEmpty()){content.addView(t("لا توجد قيود يدوية مؤهلة للعكس حاليًا. أنشئ قيدًا يدويًا متوازنًا أولًا.",15));Button back=b("العودة إلى القيود اليدوية");content.addView(back);back.setOnClickListener(v->manualJournal());return;}
+   Spinner choices=new Spinner(this);choices.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,labels));content.addView(choices);
+   EditText reason=e("سبب القيد العكسي — مطلوب");content.addView(reason);
+   Button reverse=b("إنشاء القيد العكسي مرة واحدة");content.addView(reverse);
+   reverse.setOnClickListener(v->{
+    String why=reason.getText().toString().trim();if(why.isEmpty()){toast("اكتب سبب القيد العكسي");return;}
+    long original=ids.get(choices.getSelectedItemPosition());SQLiteDatabase sq=db.getWritableDatabase();sq.beginTransaction();
+    try{
+     Cursor check=sq.rawQuery("SELECT 1 FROM journal_entries j WHERE j.id=? AND j.transaction_id IS NULL AND j.description IS NOT NULL AND NOT EXISTS(SELECT 1 FROM journal_reversals r WHERE r.original_entry_id=j.id OR r.reversal_entry_id=j.id) AND NOT EXISTS(SELECT 1 FROM fixed_assets a WHERE a.acquisition_journal_id=j.id) AND NOT EXISTS(SELECT 1 FROM asset_depreciation d WHERE d.journal_entry_id=j.id) AND NOT EXISTS(SELECT 1 FROM factory_stage_events f WHERE f.journal_entry_id=j.id)",new String[]{String.valueOf(original)});
+     boolean eligible=check.moveToFirst();check.close();if(!eligible)throw new IllegalStateException("Journal is not eligible or has already been reversed");
+     Cursor lines=sq.rawQuery("SELECT account_id,debit,credit FROM journal_lines WHERE journal_entry_id=? ORDER BY id",new String[]{String.valueOf(original)});
+     ArrayList<double[]> entries=new ArrayList<>();while(lines.moveToNext())entries.add(new double[]{lines.getLong(0),lines.getDouble(1),lines.getDouble(2)});lines.close();
+     if(entries.size()<2)throw new IllegalStateException("Original journal has insufficient lines");
+     long reversal=journal(sq);ContentValues desc=new ContentValues();desc.put("description","قيد عكسي للقيد #"+original+" — "+why);sq.update("journal_entries",desc,"id=?",new String[]{String.valueOf(reversal)});
+     for(double[] line:entries)line(sq,reversal,(long)line[0],line[2],line[1]);assertBalanced(sq,reversal);
+     ContentValues audit=new ContentValues();audit.put("original_entry_id",original);audit.put("reversal_entry_id",reversal);audit.put("reason",why);audit.put("created_at",System.currentTimeMillis());sq.insertOrThrow("journal_reversals",null,audit);
+     sq.setTransactionSuccessful();toast("تم إنشاء القيد العكسي #"+reversal+" وحفظ سجل التدقيق");trialBalance();
+    }catch(Exception ex){toast("تعذر إنشاء القيد العكسي؛ لم تعتمد العملية أو سبق عكس القيد");}
+    finally{sq.endTransaction();}
+   });
+  }
+
  void trialBalance(){page("ميزان المراجعة");Cursor c=db.q("SELECT a.code,a.name,COALESCE(SUM(j.debit),0),COALESCE(SUM(j.credit),0) FROM accounts a LEFT JOIN journal_lines j ON j.account_id=a.id GROUP BY a.id ORDER BY a.code");double d=0,cr=0;while(c.moveToNext()){double x=c.getDouble(2),y=c.getDouble(3);d+=x;cr+=y;content.addView(t(c.getString(0)+" — "+c.getString(1)+" | مدين "+fmt(x)+" | دائن "+fmt(y),15));}c.close();content.addView(t("إجمالي المدين: "+fmt(d)+" | الدائن: "+fmt(cr)+" | الفرق: "+fmt(d-cr),18));}
  long journal(SQLiteDatabase sq){ContentValues j=new ContentValues();j.put("created_at",System.currentTimeMillis());return sq.insertOrThrow("journal_entries",null,j);}
  void postJournal(SQLiteDatabase sq,long tid,String type,double total,double paid,double remaining,double cogs){if(tid>0){Cursor existing=sq.rawQuery("SELECT 1 FROM journal_entries WHERE transaction_id=? LIMIT 1",new String[]{String.valueOf(tid)});boolean alreadyPosted=existing.moveToFirst();existing.close();if(alreadyPosted)throw new IllegalStateException("Transaction already has a journal entry: "+tid);}if(type==null||!(type.equals("SALE")||type.equals("PURCHASE")||type.equals("EXPENSE")))throw new IllegalArgumentException("Unsupported journal type");if((Double.isNaN(total)||Double.isInfinite(total))||(Double.isNaN(paid)||Double.isInfinite(paid))||(Double.isNaN(remaining)||Double.isInfinite(remaining))||(Double.isNaN(cogs)||Double.isInfinite(cogs))||total<0||paid<0||remaining<0||cogs<0||Math.abs(total-paid-remaining)>0.005)throw new IllegalArgumentException("Invalid journal amounts");long cash=accountId(sq,"1010"),recv=accountId(sq,"1100"),inv=accountId(sq,"1200"),sales=accountId(sq,"4000"),payable=accountId(sq,"2100"),expense=accountId(sq,"6000"),cogsAcc=accountId(sq,"5100");long je=sq.insertOrThrow("journal_entries",null,cv("transaction_id",tid,"created_at",System.currentTimeMillis()));if(type.equals("SALE")){line(sq,je,cash,paid,0);line(sq,je,recv,remaining,0);line(sq,je,sales,0,total);line(sq,je,cogsAcc,cogs,0);line(sq,je,inv,0,cogs);}else if(type.equals("PURCHASE")){line(sq,je,inv,total,0);line(sq,je,cash,0,paid);line(sq,je,payable,0,remaining);}else{line(sq,je,expense,total,0);line(sq,je,cash,0,paid);if(remaining>0)line(sq,je,payable,0,remaining);}assertBalanced(sq,je);}
@@ -740,6 +770,7 @@ public class MainActivity extends Activity{
  d.execSQL("CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT UNIQUE,name TEXT NOT NULL,type TEXT)");
  d.execSQL("CREATE TABLE IF NOT EXISTS journal_entries(id INTEGER PRIMARY KEY AUTOINCREMENT,transaction_id INTEGER,created_at INTEGER,description TEXT)");try{d.execSQL("ALTER TABLE journal_entries ADD COLUMN description TEXT");}catch(Exception ignored){}d.execSQL("CREATE TABLE IF NOT EXISTS party_payments(id INTEGER PRIMARY KEY AUTOINCREMENT,party_type TEXT NOT NULL,party_id INTEGER NOT NULL,direction TEXT NOT NULL,amount REAL NOT NULL,note TEXT,created_at INTEGER NOT NULL,journal_entry_id INTEGER NOT NULL)");d.execSQL("CREATE INDEX IF NOT EXISTS idx_party_payments_party_date ON party_payments(party_type,party_id,created_at)");
  d.execSQL("CREATE TABLE IF NOT EXISTS journal_lines(id INTEGER PRIMARY KEY AUTOINCREMENT,journal_entry_id INTEGER,account_id INTEGER,debit REAL NOT NULL DEFAULT 0,credit REAL NOT NULL DEFAULT 0)");
+ d.execSQL("CREATE TABLE IF NOT EXISTS journal_reversals(id INTEGER PRIMARY KEY AUTOINCREMENT,original_entry_id INTEGER NOT NULL UNIQUE,reversal_entry_id INTEGER NOT NULL UNIQUE,reason TEXT NOT NULL,created_at INTEGER NOT NULL)");
  d.execSQL("CREATE TABLE IF NOT EXISTS recurring_expenses(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,amount REAL NOT NULL CHECK(amount>0),frequency TEXT NOT NULL CHECK(frequency IN ('MONTHLY','YEARLY')),next_due TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1)");
  d.execSQL("CREATE TABLE IF NOT EXISTS recurring_expense_runs(id INTEGER PRIMARY KEY AUTOINCREMENT,recurring_id INTEGER NOT NULL,period_key TEXT NOT NULL,transaction_id INTEGER NOT NULL DEFAULT 0,UNIQUE(recurring_id,period_key))");
  d.execSQL("CREATE TABLE IF NOT EXISTS fixed_assets(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,cost REAL NOT NULL CHECK(cost>0),life_months INTEGER NOT NULL CHECK(life_months>0),ready_date TEXT NOT NULL,created_at INTEGER NOT NULL,acquisition_journal_id INTEGER)");
