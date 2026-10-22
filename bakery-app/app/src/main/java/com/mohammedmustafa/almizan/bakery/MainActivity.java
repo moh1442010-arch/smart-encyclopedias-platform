@@ -31,6 +31,11 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Calendar;
+import java.security.SecureRandom;
+import java.security.MessageDigest;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import android.util.Base64;
 
 public class MainActivity extends Activity {
     private static final int NAVY = Color.rgb(11,31,58), GOLD = Color.rgb(212,175,55), BG = Color.rgb(246,248,251);
@@ -52,8 +57,129 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         store = new Store();
         day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+        showPinGate();
+    }
+
+    private void showPinGate() {
+        android.content.SharedPreferences prefs = getPreferences(MODE_PRIVATE);
+        if (prefs.getString("pin_hash", null) == null || prefs.getString("pin_salt", null) == null) {
+            showPinSetup();
+        } else {
+            showPinLogin();
+        }
+    }
+
+    private void continueAfterPinAccepted() {
         if (trialExpired()) { showPaywall(); return; }
         buildHome();
+    }
+
+    private void showPinSetup() {
+        LinearLayout box = new LinearLayout(this);
+        box.setPadding(24, 12, 24, 4);
+        box.setOrientation(LinearLayout.VERTICAL);
+        TextView instructions = text("أنشئ كلمة مرور رقمية لا تقل عن 6 أرقام. احفظها جيدًا؛ لا تُرسلها للدعم ولا تضعها في واتساب.", 15);
+        box.addView(instructions);
+        EditText pin = new EditText(this);
+        pin.setHint("كلمة المرور الجديدة — 6 أرقام على الأقل");
+        pin.setSingleLine(true);
+        pin.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        box.addView(pin);
+        EditText confirm = new EditText(this);
+        confirm.setHint("تأكيد كلمة المرور");
+        confirm.setSingleLine(true);
+        confirm.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        box.addView(confirm);
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("🔐 إعداد كلمة مرور المخبز")
+            .setView(box).setCancelable(false)
+            .setPositiveButton("حفظ كلمة المرور", null).create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String p1 = normalizePin(pin.getText().toString());
+            String p2 = normalizePin(confirm.getText().toString());
+            if (p1.length() < 6 || !p1.matches("[0-9]+")) {
+                pin.setError("أدخل 6 أرقام على الأقل");
+                return;
+            }
+            if (!p1.equals(p2)) {
+                confirm.setError("كلمتا المرور غير متطابقتين");
+                return;
+            }
+            try {
+                byte[] salt = new byte[16];
+                new SecureRandom().nextBytes(salt);
+                byte[] hash = derivePinHash(p1, salt);
+                getPreferences(MODE_PRIVATE).edit()
+                    .putString("pin_salt", Base64.encodeToString(salt, Base64.NO_WRAP))
+                    .putString("pin_hash", Base64.encodeToString(hash, Base64.NO_WRAP))
+                    .apply();
+                dialog.dismiss();
+                toast("تم إنشاء كلمة المرور. احفظها في مكان آمن.");
+                continueAfterPinAccepted();
+            } catch (Exception ex) {
+                pin.setError("تعذر حفظ كلمة المرور. أعد المحاولة.");
+            }
+        }));
+        dialog.show();
+        dialog.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+    }
+
+    private void showPinLogin() {
+        EditText pin = new EditText(this);
+        pin.setHint("أدخل كلمة المرور الرقمية");
+        pin.setSingleLine(true);
+        pin.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        LinearLayout box = new LinearLayout(this);
+        box.setPadding(24, 8, 24, 4);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.addView(text("افتح دفاتر المخبز بكلمة المرور التي أنشأتها عند أول تشغيل.", 15));
+        box.addView(pin);
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("🔐 تسجيل الدخول")
+            .setView(box).setCancelable(false)
+            .setPositiveButton("دخول", null).create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String entered = normalizePin(pin.getText().toString());
+            if (entered.length() < 6 || !entered.matches("[0-9]+")) {
+                pin.setError("أدخل كلمة المرور المكوّنة من 6 أرقام على الأقل");
+                return;
+            }
+            try {
+                android.content.SharedPreferences prefs = getPreferences(MODE_PRIVATE);
+                byte[] salt = Base64.decode(prefs.getString("pin_salt", ""), Base64.NO_WRAP);
+                byte[] expected = Base64.decode(prefs.getString("pin_hash", ""), Base64.NO_WRAP);
+                byte[] actual = derivePinHash(entered, salt);
+                if (!MessageDigest.isEqual(expected, actual)) {
+                    pin.setText("");
+                    pin.setError("كلمة المرور غير صحيحة");
+                    return;
+                }
+                dialog.dismiss();
+                continueAfterPinAccepted();
+            } catch (Exception ex) {
+                pin.setError("تعذر التحقق. أعد المحاولة.");
+            }
+        }));
+        dialog.show();
+        dialog.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+    }
+
+    private String normalizePin(String input) {
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+            if (c >= '٠' && c <= '٩') out.append((char)('0' + c - '٠'));
+            else if (c >= '۰' && c <= '۹') out.append((char)('0' + c - '۰'));
+            else out.append(c);
+        }
+        return out.toString();
+    }
+
+    private byte[] derivePinHash(String pin, byte[] salt) throws Exception {
+        PBEKeySpec spec = new PBEKeySpec(pin.toCharArray(), salt, 120000, 256);
+        try {
+            return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1").generateSecret(spec).getEncoded();
+        } finally {
+            spec.clearPassword();
+        }
     }
 
     private boolean trialExpired() {
