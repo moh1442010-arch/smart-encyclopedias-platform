@@ -1,5 +1,5 @@
 plugins { id 'com.android.application' }
-// Android 2.4.12 journal date-picker and support shortcut candidate: preserve the package identity and monotonic versionCode.
+// Android 2.4.13 journal date-picker and support shortcut candidate: preserve the package identity and monotonic versionCode.
 // Paired Android/Windows rebuild after publisher compatibility fixes; do not publish until both builds pass.
 android {
  namespace 'com.mohammedmustafa.smartcompany'
@@ -9,8 +9,8 @@ android {
   applicationId 'com.mohammedmustafa.smartcompany'
   minSdk 23
   targetSdk 36
-  versionCode 2004012
-  versionName '2.4.12'
+  versionCode 2004013
+  versionName '2.4.13'
  }
  testOptions { unitTests.includeAndroidResources = true }
 }
