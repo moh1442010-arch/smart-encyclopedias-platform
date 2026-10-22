@@ -42,7 +42,24 @@ jobs:
           print("VERSION_CODE=" + code.group(1))
           PY
 
+      - name: Confirm this run contains the current source version artifact
+        id: artifact-compatibility
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          names="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[].name')"
+          if printf '%s\n' "$names" | grep -Fxq "al-mizan-android-signed-release-v${VERSION}"; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping stale build run: it does not contain the current source version ${VERSION}; no release or manifest update will occur."
+          fi
+
       - name: Download signed Android artifact from this exact run
+        if: steps.artifact-compatibility.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
@@ -73,6 +90,7 @@ jobs:
           (cd public-review && sha256sum "AlMizan-review-${VERSION}-release.apk" SIGNING-CERT-SHA256.txt REVIEW-NOTICE.txt > REVIEW-SHA256SUMS.txt)
 
       - name: Publish or update Android-only review prerelease
+        if: steps.artifact-compatibility.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -89,6 +107,7 @@ jobs:
           fi
 
       - name: Update stable public manifest after successful signed publication
+        if: steps.artifact-compatibility.outputs.ready == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
