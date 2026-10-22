@@ -24,6 +24,7 @@ public class DashboardStartupRegressionTest {
         Context app = RuntimeEnvironment.getApplication();
         app.deleteDatabase("smartcompany2.db");
         app.getSharedPreferences("startup_diagnostics", Context.MODE_PRIVATE).edit().clear().commit();
+        app.getSharedPreferences("commercial_license", Context.MODE_PRIVATE).edit().clear().commit();
 
         MainActivity activity = Robolectric.buildActivity(TestMainActivity.class).setup().get();
         try {
@@ -50,6 +51,7 @@ public class DashboardStartupRegressionTest {
         Context app = RuntimeEnvironment.getApplication();
         app.deleteDatabase("smartcompany2.db");
         app.getSharedPreferences("startup_diagnostics", Context.MODE_PRIVATE).edit().clear().commit();
+        app.getSharedPreferences("commercial_license", Context.MODE_PRIVATE).edit().clear().commit();
         MainActivity activity = Robolectric.buildActivity(TestMainActivity.class).setup().get();
         try {
             Context context = activity;
