@@ -80,9 +80,9 @@ sealed class MainForm : Form
     public MainForm()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!); InitDb();
-        Text = UiLanguage.T("المحاسب الميزان 2.2.9"); Width = 1050; Height = 720; StartPosition = FormStartPosition.CenterScreen;
+        Text = UiLanguage.T("المحاسب الميزان 2.3.0"); Width = 1050; Height = 720; StartPosition = FormStartPosition.CenterScreen;
         RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes; RightToLeftLayout = !UiLanguage.English;
-        var head = new Label { Text = UiLanguage.T("المحاسب الميزان 2.2.9 — نسخة تجريبية"), Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(11,31,58), ForeColor = Color.FromArgb(212,175,55), Font = new Font("Segoe UI", 22, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
+        var head = new Label { Text = UiLanguage.T("المحاسب الميزان 2.3.0 — نسخة تجريبية"), Dock = DockStyle.Top, Height = 75, BackColor = Color.FromArgb(11,31,58), ForeColor = Color.FromArgb(212,175,55), Font = new Font("Segoe UI", 22, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter };
         Controls.Add(menu); Controls.Add(summary); Controls.Add(head);
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
         Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("المرتجعات", Returns); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
