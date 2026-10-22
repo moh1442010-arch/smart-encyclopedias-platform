@@ -1,5 +1,5 @@
 plugins { id 'com.android.application' }
-// Android 2.4.5 review candidate: preserve the upgrade-compatible versionCode.
+// Android 2.4.8 review candidate: preserve the package identity and monotonic versionCode.
 android {
  namespace 'com.mohammedmustafa.smartcompany'
  buildFeatures { buildConfig true }
