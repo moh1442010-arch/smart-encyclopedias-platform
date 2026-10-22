@@ -365,6 +365,7 @@ public class MainActivity extends Activity {
         Button copy=button("نسخ رقم حساب بنكك"); copy.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("Bankak",BANKAK));toast("تم نسخ رقم بنكك");}); content.addView(copy);
         Button wa=button("إرسال إشعار التحويل عبر واتساب"); wa.setOnClickListener(v->openWhatsApp("السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.0.\nالتاريخ: "+day+"\nالباقة المطلوبة: [شهري/سنوي/شراء مرة واحدة]\nالمبلغ المحول: [اكتب المبلغ]\nرقم عملية بنكك: [اكتب الرقم]. سأرفق الإيصال هنا.")); content.addView(wa);
         content.addView(text("التفعيل بعد مراجعة التحويل من الدعم فقط. لا تدخل رمز بنكك أو كلمة مرورك في التطبيق أو ترسلها لأي شخص.",14));
+        Button backup=button("🗂️ تصدير / استعادة بياناتك"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         if (!trialExpired()) { Button back=button("العودة إلى التطبيق"); back.setOnClickListener(v->buildHome()); content.addView(back); }
     }
     private void openWhatsApp(String message) {
