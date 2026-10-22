@@ -204,13 +204,12 @@ public class MainActivity extends Activity{
   TextView summaryBox=t(safeDashboardSummary(),15);summaryBox.setBackgroundColor(Color.rgb(232,242,236));content.addView(summaryBox);
   Button recurringButton=b("🧾 المصروفات الدورية والإيجار والكهرباء");content.addView(recurringButton,new LinearLayout.LayoutParams(-1,-2));recurringButton.setOnClickListener(v->recurringExpenses());
   Button assetsButton=b("🏢 سجل الأصول الثابتة والإهلاك");content.addView(assetsButton,new LinearLayout.LayoutParams(-1,-2));assetsButton.setOnClickListener(v->fixedAssets());
-  Button factoryButton=b("🏭 حساب التشغيل والتصنيع المرحلي");content.addView(factoryButton,new LinearLayout.LayoutParams(-1,-2));factoryButton.setOnClickListener(v->factoryOperations());
   if(hasEnterpriseEntitlement(getSharedPreferences("commercial_license",0))){Button controlCenter=b("🛡️ مركز الرقابة والإقفال المالي — Enterprise");controlCenter.setTextSize(17);content.addView(controlCenter,new LinearLayout.LayoutParams(-1,-2));controlCenter.setOnClickListener(v->enterpriseControlCenter());}
   String[][] items={
    {"🧾","نقطة البيع والمبيعات","إنشاء فواتير البيع وتحصيل المبالغ"},{"🛒","المشتريات","فواتير الشراء وتحديث تكلفة المخزون"},{"🔄","المرتجعات","عكس فاتورة بيع أو شراء كاملة مرة واحدة"},
    {"📦","الأصناف والمخزون","الأرصدة والأسعار وحركات المخزون"},{"👥","العملاء والموردون","العملاء والموردون والأرصدة"},
    {"💳","الخزينة والشيكات","الصندوق والبنوك والشيكات والتحصيلات"},{"📚","المحاسبة والتقارير","دليل الحسابات والقيود ودفتر الأستاذ والتقارير"},
-   {"👔","الموظفون والرواتب","الموظفون والرواتب والسلف والخصومات"},{"⚙️","أدوات النظام","النسخ الاحتياطي وإعدادات الشركة والدعم"}
+   {"👔","الموظفون والرواتب","الموظفون والرواتب والسلف والخصومات"},{"🏭","حساب التشغيل والتصنيع المرحلي","أوامر التشغيل وتكاليف المراحل ومخزون تحت التشغيل"},{"↩️","القيد العكسي","عكس القيد اليدوي المؤهل مع حفظ القيد الأصلي"},{"⚙️","أدوات النظام","النسخ الاحتياطي وإعدادات الشركة والدعم"}
   };
   LinearLayout row=null;
   for(int i=0;i<items.length;i++){
@@ -398,7 +397,7 @@ public class MainActivity extends Activity{
   page("الحسابات الرئيسية");
   content.addView(t("دليل الحسابات والأرصدة",22));
   content.addView(t("الحسابات الرئيسية تجمع أرصدة القيود المحاسبية المرحّلة من وحدات البرنامج. أي حركة غير مرحّلة محاسبيًا لن تظهر هنا.",14));
-  String[][] links={{"فتح المبيعات","الفواتير والمبيعات"},{"فتح المشتريات","المشتريات"},{"فتح المخزون","الأصناف والمخزون"},{"🏭 حساب التشغيل والتصنيع المرحلي","حساب التشغيل والتصنيع المرحلي"},{"فتح الصندوق والمصروفات","الصندوق والمصروفات"},{"فتح الحسابات البنكية","الحسابات البنكية"},{"فتح القيود اليدوية","القيود اليدوية"},{"فتح التقارير","التقارير والتحليل"}};
+  String[][] links={{"فتح المبيعات","الفواتير والمبيعات"},{"فتح المشتريات","المشتريات"},{"فتح المخزون","الأصناف والمخزون"},{"🏭 حساب التشغيل والتصنيع المرحلي","حساب التشغيل والتصنيع المرحلي"},{"فتح الصندوق والمصروفات","الصندوق والمصروفات"},{"فتح الحسابات البنكية","الحسابات البنكية"},{"فتح القيود اليدوية","القيود اليدوية"},{"↩️ القيد العكسي","القيد العكسي"},{"فتح التقارير","التقارير والتحليل"}};
   for(String[] link:links){Button go=b(link[0]);content.addView(go);go.setOnClickListener(v->openSection(link[1]));}
   Cursor totals=db.q("SELECT COALESCE(SUM(debit),0),COALESCE(SUM(credit),0) FROM journal_lines");
   double totalDebit=0,totalCredit=0;if(totals.moveToFirst()){totalDebit=totals.getDouble(0);totalCredit=totals.getDouble(1);}totals.close();
@@ -454,8 +453,8 @@ public class MainActivity extends Activity{
  case"العملاء":party("customers","العملاء");break;case"الموردون":party("suppliers","الموردون");break;
  case"الخزينة والشيكات":groupMenu(n,new String[][]{{"الصندوق والمصروفات","الصندوق والمصروفات"},{"الحسابات البنكية","الحسابات البنكية"},{"سجل الشيكات","سجل الشيكات"}});break;
  case"الصندوق والمصروفات":cash();break;case"الحسابات البنكية":banks();break;case"سجل الشيكات":checks();break;
- case"المحاسبة والتقارير":groupMenu(n,new String[][]{{"الحسابات الرئيسية ودفتر الأستاذ","الحسابات الرئيسية"},{"القيود اليدوية","القيود اليدوية"},{"التقارير والتحليل","التقارير والتحليل"}});break;
- case"القيود اليدوية":manualJournal();break;case"التقارير والتحليل":reports();break;case"الحسابات الرئيسية":mainAccounts();break;
+ case"المحاسبة والتقارير":groupMenu(n,new String[][]{{"الحسابات الرئيسية ودفتر الأستاذ","الحسابات الرئيسية"},{"القيود اليدوية","القيود اليدوية"},{"القيد العكسي","القيد العكسي"},{"التقارير والتحليل","التقارير والتحليل"}});break;
+ case"القيود اليدوية":manualJournal();break;case"القيد العكسي":reverseManualJournal();break;case"التقارير والتحليل":reports();break;case"الحسابات الرئيسية":mainAccounts();break;
  case"حساب التشغيل والتصنيع المرحلي":factoryOperations();break;
  case"الموظفون والرواتب":case"الموظفون":employees();break;
  case"أدوات النظام":groupMenu(n,new String[][]{{"النسخ الاحتياطي والاستعادة","النسخ الاحتياطي"},{"إعدادات الشركة","إعدادات الشركة"},{"الدفع والتحويل البنكي","الدفع والتحويل البنكي"},{"تغيير رمز الدخول","تغيير رمز الدخول"},{"الدعم","الدعم"}});break;
