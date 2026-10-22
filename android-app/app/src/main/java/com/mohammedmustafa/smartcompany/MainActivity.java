@@ -160,6 +160,7 @@ public class MainActivity extends Activity{
   TextView heading=t("مركز إدارة النشاط",24);heading.setTextColor(green);content.addView(heading);
   Button plansButton=b("💼 الباقات والأسعار");plansButton.setTextSize(18);content.addView(plansButton,new LinearLayout.LayoutParams(-1,-2));plansButton.setOnClickListener(v->plansPage());
    Button updateButton=b("🔄 فحص التحديثات");updateButton.setTextSize(18);content.addView(updateButton,new LinearLayout.LayoutParams(-1,-2));updateButton.setOnClickListener(v->checkForAppUpdate());
+  Button guideButton=b("📘 الدليل الإرشادي والأسئلة الشائعة");guideButton.setTextSize(18);content.addView(guideButton,new LinearLayout.LayoutParams(-1,-2));guideButton.setOnClickListener(v->openUserGuide());
   TextView summaryBox=t(summary(),15);summaryBox.setBackgroundColor(Color.rgb(232,242,236));content.addView(summaryBox);
   if(hasEnterpriseEntitlement(getSharedPreferences("commercial_license",0))){Button controlCenter=b("🛡️ مركز الرقابة والإقفال المالي — Enterprise");controlCenter.setTextSize(17);content.addView(controlCenter,new LinearLayout.LayoutParams(-1,-2));controlCenter.setOnClickListener(v->enterpriseControlCenter());}
   String[][] items={
@@ -187,6 +188,16 @@ public class MainActivity extends Activity{
   Cursor c=sq.rawQuery("SELECT COUNT(*) FROM journal_lines l LEFT JOIN journal_entries e ON e.id=l.journal_entry_id LEFT JOIN accounts a ON a.id=l.account_id WHERE e.id IS NULL OR a.id IS NULL",null);
   try{return c.moveToFirst()?c.getInt(0):0;}finally{c.close();}
  }
+ void openUserGuide(){
+   page("الدليل الإرشادي والأسئلة الشائعة");
+   content.addView(t("مساعدة محلية: لا تحتاج إلى اتصال بالإنترنت بعد تثبيت التطبيق. هذه النسخة التمهيدية محدودة؛ راجع النسخة الموسعة من الدليل قبل اعتماد خطوات غير مطابقة لواجهتك.",14));
+   WebView guide=new WebView(this);
+   guide.getSettings().setJavaScriptEnabled(false);
+   guide.getSettings().setAllowFileAccess(true);
+   guide.setWebViewClient(new WebViewClient());
+   guide.loadUrl("file:///android_asset/guide/index.html");
+   content.addView(guide,new LinearLayout.LayoutParams(-1,0,1f));
+  }
  void enterpriseControlCenter(){
    page("مركز الرقابة والإقفال المالي — Enterprise");
    content.addView(t("مركز رقابي للقراءة فقط: يعرض مؤشرات ومخاطر تحتاج مراجعة، ولا يعدّل القيود أو الأرصدة تلقائيًا.",15));
