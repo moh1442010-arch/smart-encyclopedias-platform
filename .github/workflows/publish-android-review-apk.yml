@@ -21,13 +21,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      VERSION: 2.4.7
     steps:
       - name: Checkout main for release metadata
         uses: actions/checkout@v4
         with:
           ref: main
           token: ${{ github.token }}
+
+      - name: Resolve release version from Android source of truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          import pathlib, re
+          text = pathlib.Path("android-app/app/build.gradle").read_text(encoding="utf-8")
+          name = re.search(r"versionName\s+'([^']+)'", text)
+          code = re.search(r"versionCode\s+(\d+)", text)
+          if not name or not code:
+              raise SystemExit("Could not resolve Android versionName/versionCode from Gradle.")
+          print("VERSION=" + name.group(1))
+          print("VERSION_CODE=" + code.group(1))
+          PY
 
       - name: Download signed Android artifact from this exact run
         env:
@@ -95,7 +109,7 @@ jobs:
             "status": "expert-review-only-not-approved-for-commercial-sale",
             "packageId": "com.mohammedmustafa.smartcompany",
             "versionName": os.environ["VERSION"],
-            "versionCode": 2004007,
+            "versionCode": int(os.environ["VERSION_CODE"]),
             "releaseTag": os.environ["RELEASE_TAG"],
             "releasePage": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/tag/" + os.environ["RELEASE_TAG"],
             "apkUrl": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/" + os.environ["RELEASE_TAG"] + "/AlMizan-review-" + os.environ["VERSION"] + "-release.apk",
