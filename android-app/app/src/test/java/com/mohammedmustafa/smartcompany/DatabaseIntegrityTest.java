@@ -669,4 +669,93 @@ public class DatabaseIntegrityTest {
             c.close();
         }
     }
+
+    @Test
+    public void cashCounterTransferSchemaAndBalancedBankJournalAreCorrect() {
+        Cursor columns = database.rawQuery("PRAGMA table_info(bread_counter_sales)", null);
+        java.util.Set<String> names = new java.util.HashSet<>();
+        while (columns.moveToNext()) names.add(columns.getString(1));
+        columns.close();
+        assertTrue("Payment method must be persisted", names.contains("payment_method"));
+        assertTrue("Bank operation reference must be persisted", names.contains("operation_ref"));
+        assertTrue("Bank account relation must be persisted", names.contains("bank_account_id"));
+
+        long bankAccount = database.insertOrThrow("bank_accounts", null, values(
+                "bank_name", "Test Bank", "account_name", "Test Operating Account", "opening_balance", 0));
+        ContentValues tx = values("type", "SALE", "party", "Cash counter bank transfer",
+                "total", 100, "paid", 100, "remaining", 0, "created_at", System.currentTimeMillis());
+        long transactionId = database.insertOrThrow("transactions", null, tx);
+        ContentValues sale = values("transaction_id", transactionId, "product_id", 1,
+                "qty", 2, "unit_price", 50, "total", 100, "payment_method", "BANK_TRANSFER",
+                "operation_ref", "TX-TEST-001", "bank_account_id", bankAccount,
+                "created_at", System.currentTimeMillis());
+        database.insertOrThrow("bread_counter_sales", null, sale);
+
+        MainActivity activity = new MainActivity();
+        activity.postBreadCounterJournal(database, transactionId, 100, 40, true);
+        Cursor totals = database.rawQuery(
+                "SELECT COALESCE(SUM(debit),0),COALESCE(SUM(credit),0) FROM journal_lines " +
+                "WHERE journal_entry_id=(SELECT id FROM journal_entries WHERE transaction_id=?)",
+                new String[]{String.valueOf(transactionId)});
+        assertTrue(totals.moveToFirst());
+        assertEquals("Bank transfer journal must balance", totals.getDouble(0), totals.getDouble(1), 0.005);
+        totals.close();
+
+        assertEquals("Bank transfer must debit bank account 1020",
+                100.0, accountBalanceForEntry(transactionId, "1020", true), 0.005);
+        assertEquals("Sale revenue must be credited",
+                100.0, accountBalanceForEntry(transactionId, "4000", false), 0.005);
+        assertEquals("Cost of sales must be debited",
+                40.0, accountBalanceForEntry(transactionId, "5100", true), 0.005);
+        assertEquals("Inventory must be credited at cost",
+                40.0, accountBalanceForEntry(transactionId, "1200", false), 0.005);
+    }
+
+    @Test
+    public void bankTransferReferenceCannotBeRecordedTwiceForSameBankAccount() {
+        long bankAccount = database.insertOrThrow("bank_accounts", null, values(
+                "bank_name", "Test Bank", "account_name", "Duplicate Ref Account", "opening_balance", 0));
+        ContentValues first = values("transaction_id", 901, "product_id", 1, "qty", 1,
+                "unit_price", 10, "total", 10, "payment_method", "BANK_TRANSFER",
+                "operation_ref", "DUP-REF-1", "bank_account_id", bankAccount,
+                "created_at", System.currentTimeMillis());
+        database.insertOrThrow("bread_counter_sales", null, first);
+        ContentValues second = values("transaction_id", 902, "product_id", 1, "qty", 1,
+                "unit_price", 10, "total", 10, "payment_method", "BANK_TRANSFER",
+                "operation_ref", "DUP-REF-1", "bank_account_id", bankAccount,
+                "created_at", System.currentTimeMillis());
+        try {
+            database.insertOrThrow("bread_counter_sales", null, second);
+            fail("Duplicate bank operation reference should be rejected");
+        } catch (android.database.sqlite.SQLiteConstraintException expected) {
+            // Expected: prevents accidental double-posting of a bank transfer.
+        }
+    }
+
+    private double accountBalanceForEntry(long transactionId, String code, boolean debit) {
+        Cursor c = database.rawQuery(
+                "SELECT COALESCE(SUM(l." + (debit ? "debit" : "credit") + "),0) " +
+                "FROM journal_lines l JOIN accounts a ON a.id=l.account_id " +
+                "JOIN journal_entries j ON j.id=l.journal_entry_id " +
+                "WHERE j.transaction_id=? AND a.code=?",
+                new String[]{String.valueOf(transactionId), code});
+        double result = c.moveToFirst() ? c.getDouble(0) : 0;
+        c.close();
+        return result;
+    }
+
+    private ContentValues values(Object... pairs) {
+        ContentValues values = new ContentValues();
+        for (int i = 0; i < pairs.length; i += 2) {
+            String key = String.valueOf(pairs[i]);
+            Object value = pairs[i + 1];
+            if (value instanceof String) values.put(key, (String) value);
+            else if (value instanceof Integer) values.put(key, (Integer) value);
+            else if (value instanceof Long) values.put(key, (Long) value);
+            else if (value instanceof Double) values.put(key, (Double) value);
+            else if (value == null) values.putNull(key);
+        }
+        return values;
+    }
+
 }
