@@ -42,7 +42,7 @@ public class DashboardStartupRegressionTest {
                     .contains("last_failure_class")
             );
         } finally {
-            Robolectric.buildActivity(MainActivity.class).get().finish();
+            activity.finish();
             app.deleteDatabase("smartcompany2.db");
         }
     }
