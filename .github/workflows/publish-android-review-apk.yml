@@ -20,7 +20,6 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.name == 'Build Al-Mizan Accountant Android Release 2.4.2 - Signed'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
     steps:
       - name: Checkout main for release metadata
         uses: actions/checkout@v4
