@@ -102,11 +102,17 @@ public class DatabaseIntegrityTest {
         assertTrue(tableExists("party_payments"));
         assertTrue(tableExists("checks"));
         assertTrue(tableExists("payroll_events"));
+        assertTrue(tableExists("factory_orders"));
+        assertTrue(tableExists("factory_stage_events"));
         assertTrue(accountExists("1010"));
         assertTrue(accountExists("1100"));
         assertTrue(accountExists("2100"));
         assertTrue(accountExists("3100"));
         assertTrue(accountExists("4000"));
+        assertTrue(accountExists("1210"));
+        assertTrue(accountExists("1400"));
+        assertTrue(accountExists("2200"));
+        assertTrue(accountExists("2300"));
     }
 
 
