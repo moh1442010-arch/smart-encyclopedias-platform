@@ -3,6 +3,7 @@
  <uses-permission android:name="android.permission.INTERNET"/>
  <uses-feature android:name="android.hardware.camera" android:required="false"/>
  <application android:allowBackup="false" android:label="المحاسب الميزان" android:icon="@drawable/ic_smart_company" android:roundIcon="@drawable/ic_smart_company" android:supportsRtl="true" android:usesCleartextTraffic="false" android:theme="@style/AppTheme">
+  <activity android:name=".BakeryDailyActivity" android:screenOrientation="unspecified" android:exported="false" />
   <activity android:name=".MainActivity" android:screenOrientation="unspecified" android:exported="true">
    <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
   </activity>
