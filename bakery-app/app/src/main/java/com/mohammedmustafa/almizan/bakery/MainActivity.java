@@ -89,7 +89,7 @@ public class MainActivity extends Activity {
         addCard("🧾 6. منصرفات المحل","وجبات العمال، الصيانة، المشتريات والمنصرفات الأخرى",()->openModule("expenses"));
         addCard("♻️ 7. التالف","عدد العيش التالف وسبب التلف",()->openModule("spoilage"));
         addCard("🧮 8. المحاسب والحساب","جمع القطععيات ومراجعة الكاش والديون والتحويلات واليوميات والمنصرفات والتالف",this::showAccounts);
-        addCard("🏭 9. حساب التشغيل والتكلفة","تكلفة الوقود والدقيق والخميرة والزيت والملح والأكياس، وتقدير هامش الربح",()->openModule("costing"));
+        addCard("🏭 9. حساب التشغيل والتكلفة","تكلفة الوقود والدقيق والخميرة والزيت والملح والأكياس، وتقدير هامش الربح",this::showCosting);
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
@@ -264,6 +264,35 @@ public class MainActivity extends Activity {
     private long spoilageValue() { return valueForLoaves(val("spoilage","loaves")); }
     private Totals distribution() { return rowTotals("distribution","rows",6); }
     private long productionValue() { return valueForLoaves(productionLoaves()); }
+    private long costingTotal() {
+        return BakeryMath.sum(
+            Math.multiplyExact(val("costing","fuel_quantity"),val("costing","fuel_unit_price")),
+            Math.multiplyExact(val("costing","flour_bags"),val("costing","flour_bag_price")),
+            Math.multiplyExact(val("costing","yeast_count"),val("costing","yeast_piece_price")),
+            Math.multiplyExact(val("costing","oil_quantity"),val("costing","oil_pound_price")),
+            Math.multiplyExact(val("costing","salt_quantity"),val("costing","salt_unit_price")),
+            val("costing","bags_total_price"));
+    }
+    private void showCosting() {
+        try {
+            long production=productionValue(), cost=costingTotal(), margin=Math.subtractExact(production,cost);
+            String message="تاريخ التكلفة: "+day+
+                "\nقيمة الإنتاج حسب القطععيات: "+fmt(production)+" جنيه"+
+                "\nتكلفة الوقود: "+fmt(Math.multiplyExact(val("costing","fuel_quantity"),val("costing","fuel_unit_price")))+" جنيه"+
+                "\nتكلفة الدقيق: "+fmt(Math.multiplyExact(val("costing","flour_bags"),val("costing","flour_bag_price")))+" جنيه"+
+                "\nتكلفة الخميرة: "+fmt(Math.multiplyExact(val("costing","yeast_count"),val("costing","yeast_piece_price")))+" جنيه"+
+                "\nتكلفة الزيت: "+fmt(Math.multiplyExact(val("costing","oil_quantity"),val("costing","oil_pound_price")))+" جنيه"+
+                "\nتكلفة الملح: "+fmt(Math.multiplyExact(val("costing","salt_quantity"),val("costing","salt_unit_price")))+" جنيه"+
+                "\nتكلفة الأكياس: "+fmt(val("costing","bags_total_price"))+" جنيه"+
+                "\n\nإجمالي تكلفة التشغيل المدخلة: "+fmt(cost)+" جنيه"+
+                "\nهامش الربح التقديري = قيمة الإنتاج - تكلفة التشغيل: "+fmt(margin)+" جنيه"+
+                "\n\nتنبيه: الهامش تقديري للمواد والوقود المدخلين فقط؛ أضف كل التكاليف الأخرى التي تنطبق على المخبز. لا تكرر نفس التكلفة في تسوية المحاسب والمنصرفات.";
+            new AlertDialog.Builder(this).setTitle("🏭 حساب التشغيل والتكلفة — "+day).setMessage(message)
+                .setNegativeButton("إغلاق",null)
+                .setNeutralButton("تعديل بيانات التكلفة",(d,w)->openModule("costing"))
+                .setPositiveButton("مشاركة التقرير",(d,w)->shareReport(message)).show();
+        } catch(Exception ex) { toast("تعذر حساب تكلفة التشغيل بسبب رقم كبير جدًا أو بيانات غير صحيحة. راجع الكميات والأسعار."); }
+    }
     private long cashTotal() { Totals d=distribution(); return Math.addExact(val("window","cash"),d.cash); }
     private long debtTotal() { Totals d=distribution(); return Math.addExact(val("window","debt"),d.debt); }
     private long bankTotal() { Totals d=distribution(); return Math.addExact(val("window","bank"),d.bank); }
@@ -289,6 +318,8 @@ public class MainActivity extends Activity {
                 "\nيومية العمال المحسوبة من السطور: "+fmt(wages())+" جنيه"+
                 "\nمنصرفات المحل: "+fmt(expenseTotal())+" جنيه"+
                 "\nقيمة التالف: "+fmt(spoilageValue())+" جنيه"+
+                "\nتكلفة التشغيل التقديرية (للمقارنة فقط): "+fmt(costingTotal())+" جنيه"+
+                "\nهامش الربح التقديري: "+fmt(Math.subtractExact(expected,costingTotal()))+" جنيه"+
                 "\n\nإجمالي البنود المسجلة: "+fmt(actual)+" جنيه"+
                 "\nفرق التسوية (المطلوب صفر): "+fmt(difference)+" جنيه"+
                 "\nالنتيجة: "+status+
