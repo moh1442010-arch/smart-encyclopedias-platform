@@ -87,7 +87,7 @@ sealed class MainForm : Form
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
         Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("المرتجعات", Returns); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
         Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("قيد يومية يدوي (سطران)", ManualJournalEntry); Add("القيد العكسي", ReverseJournalEntry); Add("التقارير المالية", Reports); Add("الباقات والأسعار", SubscriptionPlans); Add("الدفع والتحويل البنكي", PaymentDetails); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
-        Add("الدليل الإرشادي والأسئلة الشائعة", UserGuide);
+        Add("المصروفات الدورية والإيجار والكهرباء", RecurringExpenses); Add("الأصول الثابتة والإهلاك", FixedAssets); Add("حساب التشغيل والتصنيع المرحلي", FactoryOperations); Add("الدليل الإرشادي والأسئلة الشائعة", UserGuide);
         Add("اختيار اللغة / Language", ToggleLanguage);
         RefreshSummary();
         var captureGuard = new System.Windows.Forms.Timer { Interval = 500 };
@@ -266,7 +266,14 @@ sealed class MainForm : Form
     void InitDb()
     {
         using var c = C(); using var x = c.CreateCommand();
-        x.CommandText = "CREATE TABLE IF NOT EXISTS products(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,qty REAL NOT NULL DEFAULT 0,price REAL NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS sales(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS purchases(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS employees(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,job_title TEXT NOT NULL DEFAULT '',salary REAL NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS payroll_events(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,kind TEXT NOT NULL,amount REAL NOT NULL,note TEXT,period_month TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS expenses(id INTEGER PRIMARY KEY AUTOINCREMENT,description TEXT NOT NULL,amount REAL NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);";
+        x.CommandText = "CREATE TABLE IF NOT EXISTS products(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,qty REAL NOT NULL DEFAULT 0,price REAL NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS sales(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS purchases(id INTEGER PRIMARY KEY AUTOINCREMENT,product TEXT,qty REAL,price REAL,total REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS employees(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,job_title TEXT NOT NULL DEFAULT '',salary REAL NOT NULL DEFAULT 0); CREATE TABLE IF NOT EXISTS payroll_events(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,kind TEXT NOT NULL,amount REAL NOT NULL,note TEXT,period_month TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP); CREATE TABLE IF NOT EXISTS expenses(id INTEGER PRIMARY KEY AUTOINCREMENT,description TEXT NOT NULL,amount REAL NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS recurring_expenses(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,amount REAL NOT NULL CHECK(amount>0),frequency TEXT NOT NULL CHECK(frequency IN ('MONTHLY','YEARLY')),next_due TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE IF NOT EXISTS recurring_expense_runs(id INTEGER PRIMARY KEY AUTOINCREMENT,recurring_id INTEGER NOT NULL,period_key TEXT NOT NULL,expense_id INTEGER NOT NULL,UNIQUE(recurring_id,period_key));
+CREATE TABLE IF NOT EXISTS fixed_assets(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,cost REAL NOT NULL CHECK(cost>0),life_months INTEGER NOT NULL CHECK(life_months>0),ready_date TEXT NOT NULL,acquisition_entry_id INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS asset_depreciation(id INTEGER PRIMARY KEY AUTOINCREMENT,asset_id INTEGER NOT NULL,period TEXT NOT NULL,amount REAL NOT NULL CHECK(amount>0),journal_entry_id INTEGER,UNIQUE(asset_id,period));
+CREATE TABLE IF NOT EXISTS factory_orders(id INTEGER PRIMARY KEY AUTOINCREMENT,order_name TEXT NOT NULL UNIQUE,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS factory_stage_events(id INTEGER PRIMARY KEY AUTOINCREMENT,order_id INTEGER NOT NULL,stage_name TEXT NOT NULL,material_cost REAL NOT NULL,labor_cost REAL NOT NULL,overhead_cost REAL NOT NULL,good_qty REAL NOT NULL,scrap_qty REAL NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+";
         x.ExecuteNonQuery();
         // Additive schema migrations; never drop or rewrite existing transaction rows.
         try { using var m = c.CreateCommand(); m.CommandText = "ALTER TABLE sales ADD COLUMN customer_id INTEGER"; m.ExecuteNonQuery(); } catch (SqliteException) { }
@@ -283,7 +290,7 @@ sealed class MainForm : Form
             ledger.CommandText = @"CREATE TABLE IF NOT EXISTS gl_accounts(id INTEGER PRIMARY KEY AUTOINCREMENT,code TEXT NOT NULL UNIQUE,name TEXT NOT NULL UNIQUE,kind TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS gl_entries(id INTEGER PRIMARY KEY AUTOINCREMENT,source_type TEXT NOT NULL,source_id INTEGER NOT NULL,memo TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(source_type,source_id));
 CREATE TABLE IF NOT EXISTS gl_lines(id INTEGER PRIMARY KEY AUTOINCREMENT,entry_id INTEGER NOT NULL REFERENCES gl_entries(id),account_id INTEGER NOT NULL REFERENCES gl_accounts(id),debit REAL NOT NULL DEFAULT 0,credit REAL NOT NULL DEFAULT 0,CHECK(debit>=0 AND credit>=0 AND NOT(debit>0 AND credit>0)));
-INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1100','Accounts Receivable','ASSET'),('1200','Inventory','ASSET'),('2000','Accounts Payable','LIABILITY'),('2100','Salaries Payable','LIABILITY'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE'),('6200','Salaries Expense','EXPENSE'),('1300','Employee Advances','ASSET'),('6300','Payroll Deductions','EXPENSE'),('4100','Sales Returns','CONTRA_REVENUE'),('4200','Purchase Return Gain','OTHER_INCOME'),('6400','Purchase Return Loss','EXPENSE');";
+INSERT OR IGNORE INTO gl_accounts(code,name,kind) VALUES ('1000','Cash','ASSET'),('1100','Accounts Receivable','ASSET'),('1200','Inventory','ASSET'),('2000','Accounts Payable','LIABILITY'),('2100','Salaries Payable','LIABILITY'),('3000','Opening Equity','EQUITY'),('4000','Sales Revenue','REVENUE'),('5000','Cost of Goods Sold','EXPENSE'),('6100','Operating Expense','EXPENSE'),('6200','Salaries Expense','EXPENSE'),('1300','Employee Advances','ASSET'),('6300','Payroll Deductions','EXPENSE'),('4100','Sales Returns','CONTRA_REVENUE'),('4200','Purchase Return Gain','OTHER_INCOME'),('6400','Purchase Return Loss','EXPENSE'),('1500','Fixed Assets','ASSET'),('1590','Accumulated Depreciation','CONTRA_ASSET'),('6100','Depreciation Expense','EXPENSE');";
             ledger.ExecuteNonQuery();
         }
         try { using var migration = c.CreateCommand(); migration.CommandText = "ALTER TABLE employees ADD COLUMN job_title TEXT NOT NULL DEFAULT ''"; migration.ExecuteNonQuery(); } catch (SqliteException) { }
@@ -612,6 +619,99 @@ using (var payroll = c.CreateCommand()) { payroll.CommandText = "CREATE TABLE IF
         };
         f.Controls.Add(list); f.Controls.Add(save); f.Controls.Add(note); f.Controls.Add(quantity); f.Controls.Add(original); f.Controls.Add(kind);
         LoadOriginals(); ReloadReturns(); f.ShowDialog();
+    }
+
+    void RecurringExpenses()
+    {
+        using var f = new Form { Text = UiLanguage.T("المصروفات الدورية والإيجار والكهرباء"), Width = 900, Height = 700, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var name = new TextBox { Dock = DockStyle.Top, PlaceholderText = UiLanguage.T("البيان: إيجار / كهرباء / إنترنت"), Height = 38 };
+        var amount = new TextBox { Dock = DockStyle.Top, PlaceholderText = UiLanguage.T("قيمة الاستحقاق"), Height = 38 };
+        var frequency = new ComboBox { Dock = DockStyle.Top, DropDownStyle = ComboBoxStyle.DropDownList, Height = 36 }; frequency.Items.AddRange(new object[] { "شهري", "سنوي" }); frequency.SelectedIndex = 0;
+        var due = new TextBox { Dock = DockStyle.Top, PlaceholderText = "YYYY-MM-DD — تاريخ الاستحقاق", Height = 38 };
+        var list = new ListBox { Dock = DockStyle.Fill };
+        var save = new Button { Dock = DockStyle.Top, Height = 42, Text = UiLanguage.T("حفظ تعريف المصروف الدوري") };
+        var generate = new Button { Dock = DockStyle.Top, Height = 42, Text = UiLanguage.T("إنشاء استحقاقات الفترة الحالية مرة واحدة") };
+        f.Controls.Add(list); f.Controls.Add(generate); f.Controls.Add(save); f.Controls.Add(due); f.Controls.Add(frequency); f.Controls.Add(amount); f.Controls.Add(name);
+        void Refresh()
+        {
+            list.Items.Clear(); using var c = C(); using var x = c.CreateCommand(); x.CommandText = "SELECT id,name,amount,frequency,next_due FROM recurring_expenses WHERE active=1 ORDER BY id DESC";
+            using var r = x.ExecuteReader(); while (r.Read()) list.Items.Add($"#{r.GetInt64(0)} | {r.GetString(1)} | {r.GetDouble(2):N2} | {r.GetString(3)} | {r.GetString(4)}");
+        }
+        save.Click += (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(name.Text) || !double.TryParse(amount.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.CurrentCulture, out var value) || !double.IsFinite(value) || value <= 0 || !DateTime.TryParseExact(due.Text.Trim(), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
+            { MessageBox.Show(UiLanguage.T("أدخل بيانًا ومبلغًا موجبًا وتاريخًا بصيغة YYYY-MM-DD.")); return; }
+            using var c = C(); using var x = c.CreateCommand(); x.CommandText = "INSERT INTO recurring_expenses(name,amount,frequency,next_due) VALUES($n,$a,$f,$d)"; x.Parameters.AddWithValue("$n", name.Text.Trim()); x.Parameters.AddWithValue("$a", value); x.Parameters.AddWithValue("$f", frequency.SelectedIndex == 1 ? "YEARLY" : "MONTHLY"); x.Parameters.AddWithValue("$d", due.Text.Trim()); x.ExecuteNonQuery(); Refresh();
+        };
+        generate.Click += (_, _) =>
+        {
+            int created = 0; using var c = C(); using var tx = c.BeginTransaction();
+            try
+            {
+                using var q = c.CreateCommand(); q.Transaction = tx; q.CommandText = "SELECT id,name,amount,frequency,next_due FROM recurring_expenses WHERE active=1 ORDER BY id";
+                var rows = new List<(long Id,string Name,double Amount,string Frequency,string Due)>(); using (var r=q.ExecuteReader()) while(r.Read()) rows.Add((r.GetInt64(0),r.GetString(1),r.GetDouble(2),r.GetString(3),r.GetString(4)));
+                foreach(var item in rows)
+                {
+                    if(!DateTime.TryParseExact(item.Due,"yyyy-MM-dd",System.Globalization.CultureInfo.InvariantCulture,System.Globalization.DateTimeStyles.None,out var date)) continue;
+                    var now=DateTime.Today; if(date.Year>now.Year || (item.Frequency=="MONTHLY" && date.Year==now.Year && date.Month>now.Month)) continue;
+                    string key=item.Frequency=="YEARLY"?now.Year.ToString("0000"):now.ToString("yyyy-MM");
+                    using var insert=c.CreateCommand();insert.Transaction=tx;insert.CommandText="INSERT OR IGNORE INTO expenses(description,amount,created_at) VALUES($n,$a,$d)";insert.Parameters.AddWithValue("$n",item.Name+" — "+key);insert.Parameters.AddWithValue("$a",item.Amount);insert.Parameters.AddWithValue("$d",now.ToString("yyyy-MM-dd"));if(insert.ExecuteNonQuery()==0)continue;
+                    long id=LastId(c,tx);PostEntry(c,tx,"EXPENSE",id,"Recurring expense: "+item.Name+" / "+key,new (string Account,double Debit,double Credit)[]{("Operating Expense",item.Amount,0d),("Accounts Payable",0d,item.Amount)});
+                    using var run=c.CreateCommand();run.Transaction=tx;run.CommandText="INSERT INTO recurring_expense_runs(recurring_id,period_key,expense_id) VALUES($r,$p,$e)";run.Parameters.AddWithValue("$r",item.Id);run.Parameters.AddWithValue("$p",key);run.Parameters.AddWithValue("$e",id);run.ExecuteNonQuery();created++;
+                }
+                tx.Commit(); MessageBox.Show(UiLanguage.T("عدد الاستحقاقات المنشأة: ")+created); Refresh();
+            }
+            catch(Exception ex){try{tx.Rollback();}catch{} MessageBox.Show(UiLanguage.T("تعذر إنشاء الاستحقاقات؛ أُلغيت العملية كاملة.")+"\n"+ex.Message);}
+        };
+        Refresh(); f.ShowDialog(this);
+    }
+
+    void FixedAssets()
+    {
+        using var f = new Form { Text = UiLanguage.T("الأصول الثابتة والإهلاك"), Width = 900, Height = 700, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var name = new TextBox { Dock = DockStyle.Top, PlaceholderText = UiLanguage.T("اسم الأصل"), Height = 38 };
+        var cost = new TextBox { Dock = DockStyle.Top, PlaceholderText = UiLanguage.T("تكلفة الاقتناء"), Height = 38 };
+        var life = new TextBox { Dock = DockStyle.Top, PlaceholderText = UiLanguage.T("العمر الإنتاجي بالأشهر"), Height = 38 };
+        var date = new TextBox { Dock = DockStyle.Top, PlaceholderText = "YYYY-MM-DD — تاريخ الجاهزية للاستخدام", Height = 38 };
+        var list = new ListBox { Dock = DockStyle.Fill };
+        var add = new Button { Dock = DockStyle.Top, Height = 42, Text = UiLanguage.T("تسجيل الأصل وترحيل الاقتناء") };
+        var dep = new Button { Dock = DockStyle.Top, Height = 42, Text = UiLanguage.T("احتساب وترحيل إهلاك الشهر الحالي") };
+        f.Controls.Add(list); f.Controls.Add(dep); f.Controls.Add(add); f.Controls.Add(date); f.Controls.Add(life); f.Controls.Add(cost); f.Controls.Add(name);
+        void Refresh()
+        {
+            list.Items.Clear(); using var c=C(); using var x=c.CreateCommand(); x.CommandText="SELECT a.id,a.name,a.cost,a.life_months,COALESCE(SUM(d.amount),0) FROM fixed_assets a LEFT JOIN asset_depreciation d ON d.asset_id=a.id GROUP BY a.id ORDER BY a.id DESC";
+            using var r=x.ExecuteReader(); while(r.Read()) list.Items.Add($"#{r.GetInt64(0)} | {r.GetString(1)} | cost {r.GetDouble(2):N2} | accumulated depreciation {r.GetDouble(4):N2} | net {r.GetDouble(2)-r.GetDouble(4):N2}");
+        }
+        add.Click += (_, _) =>
+        {
+            if(string.IsNullOrWhiteSpace(name.Text)||!double.TryParse(cost.Text,System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.CurrentCulture,out var value)||!double.IsFinite(value)||value<=0||!int.TryParse(life.Text,out var months)||months<1||months>1200||!DateTime.TryParseExact(date.Text.Trim(),"yyyy-MM-dd",System.Globalization.CultureInfo.InvariantCulture,System.Globalization.DateTimeStyles.None,out _))
+            {MessageBox.Show(UiLanguage.T("تحقق من الاسم والتكلفة والعمر والتاريخ."));return;}
+            using var c=C();using var tx=c.BeginTransaction();try{using var x=c.CreateCommand();x.Transaction=tx;x.CommandText="INSERT INTO fixed_assets(name,cost,life_months,ready_date) VALUES($n,$c,$m,$d)";x.Parameters.AddWithValue("$n",name.Text.Trim());x.Parameters.AddWithValue("$c",value);x.Parameters.AddWithValue("$m",months);x.Parameters.AddWithValue("$d",date.Text.Trim());x.ExecuteNonQuery();long id=LastId(c,tx);PostEntry(c,tx,"FIXED_ASSET",id,"Asset acquisition: "+name.Text.Trim(),new (string Account,double Debit,double Credit)[]{("Fixed Assets",value,0d),("Cash",0d,value)});tx.Commit();Refresh();}catch(Exception ex){try{tx.Rollback();}catch{}MessageBox.Show(UiLanguage.T("تعذر تسجيل الأصل؛ لم تُعتمد العملية.")+"\n"+ex.Message);}
+        };
+        dep.Click += (_, _) =>
+        {
+            int count=0;using var c=C();using var tx=c.BeginTransaction();try{using var q=c.CreateCommand();q.Transaction=tx;q.CommandText="SELECT id,name,cost,life_months,ready_date FROM fixed_assets ORDER BY id";var rows=new List<(long Id,string Name,double Cost,int Life,string Ready)>();using(var r=q.ExecuteReader())while(r.Read())rows.Add((r.GetInt64(0),r.GetString(1),r.GetDouble(2),r.GetInt32(3),r.GetString(4)));var period=DateTime.Today.ToString("yyyy-MM");foreach(var a in rows){if(!DateTime.TryParseExact(a.Ready,"yyyy-MM-dd",System.Globalization.CultureInfo.InvariantCulture,System.Globalization.DateTimeStyles.None,out var ready)||ready>DateTime.Today)continue;double monthly=a.Cost/a.Life;if(monthly<=0)continue;using var x=c.CreateCommand();x.Transaction=tx;x.CommandText="INSERT OR IGNORE INTO asset_depreciation(asset_id,period,amount) VALUES($a,$p,$v)";x.Parameters.AddWithValue("$a",a.Id);x.Parameters.AddWithValue("$p",period);x.Parameters.AddWithValue("$v",monthly);if(x.ExecuteNonQuery()==0)continue;long id=LastId(c,tx);PostEntry(c,tx,"DEPRECIATION",id,"Monthly depreciation: "+a.Name+" / "+period,new (string Account,double Debit,double Credit)[]{("Depreciation Expense",monthly,0d),("Accumulated Depreciation",0d,monthly)});using var up=c.CreateCommand();up.Transaction=tx;up.CommandText="UPDATE asset_depreciation SET journal_entry_id=(SELECT id FROM gl_entries WHERE source_type='DEPRECIATION' AND source_id=$id) WHERE id=$id";up.Parameters.AddWithValue("$id",id);up.ExecuteNonQuery();count++;}tx.Commit();MessageBox.Show(UiLanguage.T("عدد قيود الإهلاك المنشأة: ")+count);Refresh();}catch(Exception ex){try{tx.Rollback();}catch{}MessageBox.Show(UiLanguage.T("تعذر ترحيل الإهلاك؛ أُلغيت العملية كاملة.")+"\n"+ex.Message);}
+        };
+        Refresh(); f.ShowDialog(this);
+    }
+
+    void FactoryOperations()
+    {
+        using var f = new Form { Text = UiLanguage.T("حساب التشغيل والتصنيع المرحلي"), Width = 920, Height = 700, StartPosition = FormStartPosition.CenterParent, RightToLeft = UiLanguage.English ? RightToLeft.No : RightToLeft.Yes, RightToLeftLayout = !UiLanguage.English };
+        var order = new TextBox { Dock = DockStyle.Top, PlaceholderText = UiLanguage.T("رقم/اسم أمر التشغيل"), Height = 38 };
+        var stage = new TextBox { Dock = DockStyle.Top, PlaceholderText = UiLanguage.T("اسم المرحلة"), Height = 38 };
+        var material = new TextBox { Dock = DockStyle.Top, PlaceholderText = UiLanguage.T("تكلفة المواد المصروفة"), Height = 38 };
+        var labor = new TextBox { Dock = DockStyle.Top, PlaceholderText = UiLanguage.T("العمالة المباشرة"), Height = 38 };
+        var overhead = new TextBox { Dock = DockStyle.Top, PlaceholderText = UiLanguage.T("المصاريف الصناعية"), Height = 38 };
+        var good = new TextBox { Dock = DockStyle.Top, PlaceholderText = UiLanguage.T("كمية المنتج الجيد"), Height = 38 };
+        var scrap = new TextBox { Dock = DockStyle.Top, PlaceholderText = UiLanguage.T("كمية التالف"), Height = 38 };
+        foreach(var t in new[]{material,labor,overhead,good,scrap}) t.Text="0";
+        var list = new ListBox { Dock = DockStyle.Fill };
+        var save = new Button { Dock = DockStyle.Top, Height = 42, Text = UiLanguage.T("حفظ مرحلة التشغيل") };
+        f.Controls.Add(list);f.Controls.Add(save);f.Controls.Add(scrap);f.Controls.Add(good);f.Controls.Add(overhead);f.Controls.Add(labor);f.Controls.Add(material);f.Controls.Add(stage);f.Controls.Add(order);
+        void Refresh(){list.Items.Clear();using var c=C();using var x=c.CreateCommand();x.CommandText="SELECT o.order_name,e.stage_name,e.material_cost,e.labor_cost,e.overhead_cost,e.good_qty,e.scrap_qty FROM factory_stage_events e JOIN factory_orders o ON o.id=e.order_id ORDER BY e.id DESC";using var r=x.ExecuteReader();while(r.Read())list.Items.Add($"{r.GetString(0)} | {r.GetString(1)} | cost {(r.GetDouble(2)+r.GetDouble(3)+r.GetDouble(4)):N2} | good {r.GetDouble(5):N2} | scrap {r.GetDouble(6):N2}");}
+        save.Click+=(_,_)=>{if(string.IsNullOrWhiteSpace(order.Text)||string.IsNullOrWhiteSpace(stage.Text)||!double.TryParse(material.Text,out var m)||!double.TryParse(labor.Text,out var l)||!double.TryParse(overhead.Text,out var h)||!double.TryParse(good.Text,out var g)||!double.TryParse(scrap.Text,out var s)||new[]{m,l,h,g,s}.Any(v=>!double.IsFinite(v)||v<0)||g+s<=0){MessageBox.Show(UiLanguage.T("أدخل أمرًا ومرحلة وتكاليف وكميات صحيحة."));return;}using var c=C();using var tx=c.BeginTransaction();try{using var x=c.CreateCommand();x.Transaction=tx;x.CommandText="INSERT OR IGNORE INTO factory_orders(order_name) VALUES($n)";x.Parameters.AddWithValue("$n",order.Text.Trim());x.ExecuteNonQuery();using var q=c.CreateCommand();q.Transaction=tx;q.CommandText="SELECT id FROM factory_orders WHERE order_name=$n";q.Parameters.AddWithValue("$n",order.Text.Trim());long id=Convert.ToInt64(q.ExecuteScalar());using var ev=c.CreateCommand();ev.Transaction=tx;ev.CommandText="INSERT INTO factory_stage_events(order_id,stage_name,material_cost,labor_cost,overhead_cost,good_qty,scrap_qty) VALUES($o,$s,$m,$l,$h,$g,$d)";ev.Parameters.AddWithValue("$o",id);ev.Parameters.AddWithValue("$s",stage.Text.Trim());ev.Parameters.AddWithValue("$m",m);ev.Parameters.AddWithValue("$l",l);ev.Parameters.AddWithValue("$h",h);ev.Parameters.AddWithValue("$g",g);ev.Parameters.AddWithValue("$d",s);ev.ExecuteNonQuery();tx.Commit();Refresh();}catch(Exception ex){try{tx.Rollback();}catch{}MessageBox.Show(UiLanguage.T("تعذر حفظ المرحلة.")+"\n"+ex.Message);}};
+        Refresh();f.ShowDialog(this);
     }
 
     void CashExpense()
