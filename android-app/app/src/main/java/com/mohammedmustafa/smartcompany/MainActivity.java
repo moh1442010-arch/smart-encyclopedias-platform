@@ -201,6 +201,7 @@ public class MainActivity extends Activity{
   Button plansButton=b("💼 الباقات والأسعار");plansButton.setTextSize(18);content.addView(plansButton,new LinearLayout.LayoutParams(-1,-2));plansButton.setOnClickListener(v->plansPage());
    Button updateButton=b("🔄 فحص التحديثات");updateButton.setTextSize(18);content.addView(updateButton,new LinearLayout.LayoutParams(-1,-2));updateButton.setOnClickListener(v->checkForAppUpdate());
   Button guideButton=b("📘 الدليل الإرشادي والأسئلة الشائعة");guideButton.setTextSize(18);content.addView(guideButton,new LinearLayout.LayoutParams(-1,-2));guideButton.setOnClickListener(v->openUserGuide());
+  Button bakeryButton=b("🥖 دفتر المخبز اليومي — القطعيات والتوزيع والتسوية");bakeryButton.setTextSize(17);content.addView(bakeryButton,new LinearLayout.LayoutParams(-1,-2));bakeryButton.setOnClickListener(v->startActivity(new Intent(this,BakeryDailyActivity.class)));
   TextView summaryBox=t(safeDashboardSummary(),15);summaryBox.setBackgroundColor(Color.rgb(232,242,236));content.addView(summaryBox);
   Button recurringButton=b("🧾 المصروفات الدورية والإيجار والكهرباء");content.addView(recurringButton,new LinearLayout.LayoutParams(-1,-2));recurringButton.setOnClickListener(v->recurringExpenses());
   Button assetsButton=b("🏢 سجل الأصول الثابتة والإهلاك");content.addView(assetsButton,new LinearLayout.LayoutParams(-1,-2));assetsButton.setOnClickListener(v->fixedAssets());
