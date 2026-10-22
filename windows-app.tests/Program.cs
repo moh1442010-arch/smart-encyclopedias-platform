@@ -28,7 +28,8 @@ CREATE TABLE gl_entries(id INTEGER PRIMARY KEY AUTOINCREMENT,source_type TEXT NO
 CREATE TABLE gl_lines(id INTEGER PRIMARY KEY AUTOINCREMENT,entry_id INTEGER NOT NULL REFERENCES gl_entries(id),account_id INTEGER NOT NULL REFERENCES gl_accounts(id),debit REAL NOT NULL DEFAULT 0,credit REAL NOT NULL DEFAULT 0,CHECK(debit>=0 AND credit>=0 AND NOT(debit>0 AND credit>0)));
 CREATE TABLE manual_journals(id INTEGER PRIMARY KEY AUTOINCREMENT,memo TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE gl_reversals(id INTEGER PRIMARY KEY AUTOINCREMENT,original_entry_id INTEGER NOT NULL UNIQUE REFERENCES gl_entries(id),reversal_entry_id INTEGER NOT NULL UNIQUE REFERENCES gl_entries(id),reason TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-INSERT INTO gl_accounts(code,name,kind) VALUES('1000','Cash','ASSET'),('4000','Sales Revenue','REVENUE'),('6100','Operating Expense','EXPENSE');
+INSERT INTO gl_accounts(code,name,kind) VALUES('1000','Cash','ASSET'),('4000','Sales Revenue','REVENUE'),('6100','Depreciation Expense','EXPENSE'),('1500','Fixed Assets','ASSET'),('1590','Accumulated Depreciation','CONTRA_ASSET'),('1400','Work in Process','ASSET'),('1210','Raw Materials','ASSET'),('2200','Salaries Payable','LIABILITY'),('2300','Manufacturing Overhead Payable','LIABILITY'),('6400','Operating Expense','EXPENSE');
+CREATE TABLE recurring_expense_runs(id INTEGER PRIMARY KEY AUTOINCREMENT,recurring_id INTEGER NOT NULL,period_key TEXT NOT NULL,expense_id INTEGER NOT NULL,UNIQUE(recurring_id,period_key));
 ";
             schema.ExecuteNonQuery();
         }
@@ -111,6 +112,35 @@ INSERT INTO gl_accounts(code,name,kind) VALUES('1000','Cash','ASSET'),('4000','S
 
         Assert(Math.Abs(Convert.ToDouble(ScalarLong(c, "SELECT COUNT(*) FROM gl_reversals"))) == 1,
             "only one reversal audit record exists");
+        using (var tx = c.BeginTransaction())
+        {
+            JournalAccounting.PostEntry(c, tx, "FIXED_ASSET", 1001, "Asset acquisition",
+                ("Fixed Assets", 1200d, 0d), ("Cash", 0d, 1200d));
+            JournalAccounting.PostEntry(c, tx, "DEPRECIATION", 1002, "Monthly depreciation",
+                ("Depreciation Expense", 100d, 0d), ("Accumulated Depreciation", 0d, 100d));
+            JournalAccounting.PostEntry(c, tx, "FACTORY_STAGE", 1003, "Factory stage cost",
+                ("Work in Process", 500d, 0d), ("Raw Materials", 0d, 300d),
+                ("Salaries Payable", 0d, 100d), ("Manufacturing Overhead Payable", 0d, 100d));
+            tx.Commit();
+        }
+        Assert(ScalarLong(c, "SELECT COUNT(*) FROM gl_entries WHERE source_type IN ('FIXED_ASSET','DEPRECIATION','FACTORY_STAGE')") == 3,
+            "fixed asset acquisition, depreciation and factory WIP costs post to the ledger");
+        Assert(ScalarLong(c, "SELECT COUNT(*) FROM (SELECT e.id FROM gl_entries e JOIN gl_lines l ON l.entry_id=e.id WHERE e.source_type IN ('FIXED_ASSET','DEPRECIATION','FACTORY_STAGE') GROUP BY e.id HAVING ABS(SUM(l.debit)-SUM(l.credit))>0.005)") == 0,
+            "new fixed asset, depreciation and factory stage entries balance");
+        using (var tx = c.BeginTransaction())
+        {
+            using var q = c.CreateCommand(); q.Transaction = tx;
+            q.CommandText = "INSERT INTO recurring_expense_runs(recurring_id,period_key,expense_id) VALUES(1,'2026-10',2001)";
+            q.ExecuteNonQuery(); tx.Commit();
+        }
+        var duplicatePeriodRejected = false;
+        using (var tx = c.BeginTransaction())
+        {
+            try { using var q = c.CreateCommand(); q.Transaction = tx; q.CommandText = "INSERT INTO recurring_expense_runs(recurring_id,period_key,expense_id) VALUES(1,'2026-10',2002)"; q.ExecuteNonQuery(); }
+            catch (SqliteException) { duplicatePeriodRejected = true; }
+            finally { tx.Rollback(); }
+        }
+        Assert(duplicatePeriodRejected, "recurring expenses cannot be generated twice for the same definition and period");
         Console.WriteLine("ALL JOURNAL REGRESSION TESTS PASSED");
     }
 }
