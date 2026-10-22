@@ -200,7 +200,15 @@ public class MainActivity extends Activity {
     }
 
     private long parseLong(String value) {
-        String s=value.trim().replace(",","").replace("٬","");
+        StringBuilder normalized=new StringBuilder();
+        for(int i=0;i<value.length();i++) {
+            char ch=value.charAt(i);
+            if(ch>='٠' && ch<='٩') normalized.append((char)('0'+(ch-'٠')));
+            else if(ch>='۰' && ch<='۹') normalized.append((char)('0'+(ch-'۰')));
+            else if(ch==',' || ch=='٬' || Character.isWhitespace(ch)) { /* ignore grouping spaces */ }
+            else normalized.append(ch);
+        }
+        String s=normalized.toString().trim();
         if(s.isEmpty()) return 0L;
         return new BigDecimal(s).setScale(0,RoundingMode.UNNECESSARY).longValueExact();
     }
@@ -268,6 +276,7 @@ public class MainActivity extends Activity {
                 "\nالكاش (الشباك والتوزيع): "+fmt(cashTotal())+" جنيه"+
                 "\nالديون المستحقة: "+fmt(debtTotal())+" جنيه"+
                 "\nالتحويلات البنكية: "+fmt(bankTotal())+" جنيه"+
+                "\nكمية التوزيع المسجلة: "+fmt(dist.qty)+" رغيف"+
                 "\nفرق السعر: "+fmt(distributionDiff())+" جنيه"+
                 "\nيومية العمال المحسوبة من السطور: "+fmt(wages())+" جنيه"+
                 "\nمنصرفات المحل: "+fmt(expenseTotal())+" جنيه"+
