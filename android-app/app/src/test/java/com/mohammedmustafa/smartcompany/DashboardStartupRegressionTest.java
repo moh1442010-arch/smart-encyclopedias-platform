@@ -42,6 +42,7 @@ public class DashboardStartupRegressionTest {
                     .contains("last_failure_class")
             );
         } finally {
+            if (activity.db != null) activity.db.close();
             activity.finish();
             app.deleteDatabase("smartcompany2.db");
         }
