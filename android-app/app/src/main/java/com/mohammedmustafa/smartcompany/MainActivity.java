@@ -135,6 +135,7 @@ public class MainActivity extends Activity{
     runOnUiThread(()->{activate.setEnabled(true);if(activated){toast("تم تفعيل الترخيص بنجاح");login();}else{toast(msg);}});
    }).start();
   });
+  Button whatsappActivation=b("📲 طلب مراجعة التفعيل عبر واتساب");content.addView(whatsappActivation);whatsappActivation.setOnClickListener(v->{String message="السلام عليكم، أطلب مراجعة شراء/تفعيل المحاسب الميزان.\nالإصدار: "+BuildConfig.VERSION_NAME+"\nمعرّف التطبيق: "+getPackageName()+"\nيرجى إرسال تعليمات الدفع المعتمدة ومراجعة الطلب يدويًا. أفهم أن إرسال الرسالة لا يفعّل الترخيص تلقائيًا، ولا يتم التفعيل إلا بعد اعتماد الطلب وإصدار رمز صالح من الخادم.";open("https://wa.me/249121851285?text="+android.net.Uri.encode(message));});
   Button retry=b("إعادة التحقق من الترخيص");content.addView(retry);retry.setOnClickListener(v->checkCommercialAccess());
   Button contact=b("التواصل مع الدعم");content.addView(contact);contact.setOnClickListener(v->support());
   content.addView(t("لا تحذف بيانات الشركة عند انتهاء التجربة أو الترخيص. يجب أن تبقى بياناتك قابلة للتصدير.",14));
@@ -256,6 +257,13 @@ public class MainActivity extends Activity{
     Button retry = b("إعادة محاولة فتح لوحة التحكم");
     content.addView(retry);
     retry.setOnClickListener(v -> dashboard());
+    Button supportAfterFailure = b("🛟 إرسال المشكلة إلى الدعم عبر واتساب");
+    content.addView(supportAfterFailure);
+    supportAfterFailure.setOnClickListener(v -> {
+     android.content.SharedPreferences diagPrefs = getSharedPreferences("startup_diagnostics", 0);
+     String message = "السلام عليكم، أواجه مشكلة في فتح لوحة التحكم في المحاسب الميزان.\nالإصدار: " + BuildConfig.VERSION_NAME + "\nنوع الخطأ: " + diagPrefs.getString("last_failure_class", "غير معروف") + "\nالتفاصيل: " + diagPrefs.getString("last_failure_message", "غير متاحة") + "\nسأرسل تقرير التشخيص بعد مراجعته، ولا يتضمن هذا البلاغ بيانات الحسابات المالية.";
+     open("https://wa.me/249121851285?text=" + android.net.Uri.encode(message));
+    });
    } catch (Throwable recoveryFailure) {
     android.util.Log.e("AlMizanStartup", "Dashboard recovery UI failed", recoveryFailure);
     Toast.makeText(this, "تعذر فتح لوحة التحكم. لم تُحذف البيانات؛ أعد فتح التطبيق وأرسل سجل الأعطال للدعم.", Toast.LENGTH_LONG).show();
@@ -648,8 +656,8 @@ public class MainActivity extends Activity{
   void recurringExpenses(){
    page("المصروفات الدورية والإيجار والكهرباء");
    content.addView(t("أنشئ استحقاقًا دوريًا ثم أنشئ استحقاق الفترة مرة واحدة. تُرحّل الاستحقاقات إلى المصروفات والذمم؛ راجع الحسابات قبل اعتمادها.",14));
-   EditText name=e("البيان: إيجار / كهرباء / إنترنت"),amount=e("قيمة الاستحقاق"),frequency=e("التكرار: شهري أو سنوي"),due=e("تاريخ الاستحقاق YYYY-MM-DD");
-   amount.setInputType(8194);content.addView(name);content.addView(amount);content.addView(frequency);content.addView(due);
+   EditText name=e("البيان: إيجار / كهرباء / إنترنت"),amount=e("قيمة الاستحقاق"),frequency=e("التكرار: شهري أو سنوي"),due=e("تاريخ الاستحقاق — اضغط لاختيار التاريخ");
+   amount.setInputType(8194);if(due.getText().length()==0)due.setText(new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date()));attachDatePicker(due);content.addView(name);content.addView(amount);content.addView(frequency);content.addView(due);
    Button save=b("حفظ تعريف المصروف الدوري");content.addView(save);
    save.setOnClickListener(view->{String n=name.getText().toString().trim(),f=frequency.getText().toString().trim().toUpperCase(Locale.US),d=due.getText().toString().trim();double x=num(amount);if(n.isEmpty()||x<=0||(Double.isNaN(x)||Double.isInfinite(x))||!(f.equals("شهري")||f.equals("شهريًا")||f.equals("MONTHLY")||f.equals("سنوي")||f.equals("سنويًا")||f.equals("YEARLY"))||!validIsoDate(d,true)){toast("أدخل البيان ومبلغًا موجبًا وتكرارًا شهريًا/سنويًا وتاريخًا صحيحًا");return;}SQLiteDatabase sq=db.getWritableDatabase();ContentValues v=new ContentValues();v.put("name",n);v.put("amount",x);v.put("frequency",(f.startsWith("س")||f.equals("YEARLY"))?"YEARLY":"MONTHLY");v.put("next_due",d);v.put("active",1);try{sq.insertOrThrow("recurring_expenses",null,v);toast("تم حفظ تعريف المصروف الدوري");recurringExpenses();}catch(Exception ex){toast("تعذر الحفظ؛ تحقق من البيانات");}});
    Button generate=b("إنشاء استحقاق الفترة الحالية");content.addView(generate);
@@ -659,7 +667,7 @@ public class MainActivity extends Activity{
   void fixedAssets(){
    page("الأصول الثابتة والإهلاك");
    content.addView(t("سجل أصل، ثم أنشئ إهلاكًا خطيًا للفترة الحالية. لا يشمل هذا النموذج إعادة التقييم أو طرق الإهلاك المركبة؛ اعتمد العمر والقيمة المتبقية والسياسة مع المحاسب.",14));
-   EditText name=e("اسم الأصل"),cost=e("تكلفة الاقتناء"),life=e("العمر الإنتاجي بالأشهر"),date=e("تاريخ الجاهزية YYYY-MM-DD");cost.setInputType(8194);life.setInputType(2);content.addView(name);content.addView(cost);content.addView(life);content.addView(date);
+   EditText name=e("اسم الأصل"),cost=e("تكلفة الاقتناء"),life=e("العمر الإنتاجي بالأشهر"),date=e("تاريخ الجاهزية — اضغط لاختيار التاريخ");cost.setInputType(8194);life.setInputType(2);if(date.getText().length()==0)date.setText(new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date()));attachDatePicker(date);content.addView(name);content.addView(cost);content.addView(life);content.addView(date);
    Button add=b("تسجيل الأصل وترحيل الاقتناء");content.addView(add);
    add.setOnClickListener(view->{String n=name.getText().toString().trim(),d=date.getText().toString().trim();double x=num(cost);int months;try{months=Integer.parseInt(life.getText().toString().trim());}catch(Exception ex){months=0;}if(n.isEmpty()||(Double.isNaN(x)||Double.isInfinite(x))||x<=0||months<1||months>1200||!validIsoDate(d,true)){toast("تحقق من اسم الأصل والتكلفة والعمر والتاريخ");return;}SQLiteDatabase sq=db.getWritableDatabase();sq.beginTransaction();try{long assetAcc=accountId(sq,"1500"),cash=accountId(sq,"1010");if(assetAcc==0||cash==0)throw new IllegalStateException("missing accounts");ContentValues v=new ContentValues();v.put("name",n);v.put("cost",x);v.put("life_months",months);v.put("ready_date",d);v.put("created_at",System.currentTimeMillis());long id=sq.insertOrThrow("fixed_assets",null,v);long je=journal(sq);line(sq,je,assetAcc,x,0);line(sq,je,cash,0,x);assertBalanced(sq,je);ContentValues jv=new ContentValues();jv.put("acquisition_journal_id",je);sq.update("fixed_assets",jv,"id=?",new String[]{String.valueOf(id)});sq.setTransactionSuccessful();toast("تم تسجيل الأصل وترحيل اقتنائه");fixedAssets();}catch(Exception ex){toast("تعذر تسجيل الأصل؛ لم تعتمد العملية");}finally{sq.endTransaction();}});
    Button dep=b("احتساب وترحيل إهلاك الشهر الحالي");content.addView(dep);dep.setOnClickListener(view->{String period=new java.text.SimpleDateFormat("yyyy-MM",Locale.US).format(new java.util.Date()),today=new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new java.util.Date());SQLiteDatabase sq=db.getWritableDatabase();Cursor c=db.q("SELECT id,name,cost,life_months,ready_date FROM fixed_assets ORDER BY id");int done=0;while(c.moveToNext()){long id=c.getLong(0);String n=c.getString(1),rd=c.getString(4);if(rd.compareTo(today)>0)continue;Cursor ac=db.q("SELECT COALESCE(SUM(amount),0) FROM asset_depreciation WHERE asset_id=?",String.valueOf(id));double accumulated=ac.moveToFirst()?ac.getDouble(0):0;ac.close();double monthly=Math.min(c.getDouble(2)-accumulated,c.getDouble(2)/c.getInt(3));if(monthly<=0.005)continue;sq.beginTransaction();try{ContentValues v=new ContentValues();v.put("asset_id",id);v.put("period",period);v.put("amount",monthly);long depId=sq.insertOrThrow("asset_depreciation",null,v);long je=journal(sq);line(sq,je,accountId(sq,"6100"),monthly,0);line(sq,je,accountId(sq,"1590"),0,monthly);assertBalanced(sq,je);ContentValues up=new ContentValues();up.put("journal_entry_id",je);sq.update("asset_depreciation",up,"id=?",new String[]{String.valueOf(depId)});sq.setTransactionSuccessful();done++;}catch(Exception ex){/* unique asset-period key prevents duplicate depreciation */}finally{sq.endTransaction();}}c.close();toast("عدد قيود الإهلاك الجديدة: "+done);fixedAssets();});
