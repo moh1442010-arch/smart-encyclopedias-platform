@@ -87,7 +87,7 @@ sealed class MainForm : Form
         Add("الأصناف والمخزون والباركود", Products); Add("المبيعات", () => Transaction(false)); Add("المشتريات", () => Transaction(true));
         Add("العملاء", () => Simple("customers","العملاء")); Add("الموردون", () => Simple("suppliers","الموردون")); Add("تحصيلات العملاء", () => ReceiptPayment(false)); Add("سداد الموردين", () => ReceiptPayment(true)); Add("الموظفون والرواتب", Employees); Add("المصروفات", CashExpense); Add("المرتجعات", Returns); Add("النسخ الاحتياطي والاستعادة", BackupRestore);
         Add("دفتر الأستاذ وميزان المراجعة", LedgerReports); Add("قيد يومية يدوي (سطران)", ManualJournalEntry); Add("القيد العكسي", ReverseJournalEntry); Add("التقارير المالية", Reports); Add("الباقات والأسعار", SubscriptionPlans); Add("الدفع والتحويل البنكي", PaymentDetails); Add("الدعم عبر واتساب", () => Process.Start(new ProcessStartInfo("https://wa.me/249121851285") { UseShellExecute = true })); Add("الدعم عبر البريد الإلكتروني", () => Process.Start(new ProcessStartInfo("mailto:moh1442010@gmail.com?subject=دعم%20تطبيق%20شركة%20محمد%20مصطفى%20الذكية") { UseShellExecute = true }));
-        Add("المصروفات الدورية والإيجار والكهرباء", RecurringExpenses); Add("الأصول الثابتة والإهلاك", FixedAssets); Add("حساب التشغيل والتصنيع المرحلي", FactoryOperations); Add("الدليل الإرشادي والأسئلة الشائعة", UserGuide);
+        Add("المصروفات الدورية والإيجار والكهرباء", RecurringExpenses); Add("الأصول الثابتة والإهلاك", FixedAssets); Add("حساب التشغيل والتصنيع المرحلي", FactoryOperations); Add("غرفة التحكم والرقابة — Enterprise", EnterpriseControlRoom); Add("الدليل الإرشادي والأسئلة الشائعة", UserGuide);
         Add("اختيار اللغة / Language", ToggleLanguage);
         RefreshSummary();
         var captureGuard = new System.Windows.Forms.Timer { Interval = 500 };
@@ -99,6 +99,33 @@ sealed class MainForm : Form
         Shown += (_, _) => FormCaptureProtection.Apply(this);
         FormClosed += (_, _) => captureGuard.Stop();
         captureGuard.Start();
+    }
+
+    void EnterpriseControlRoom()
+    {
+        using var c=C();
+        long Scalar(string sql){using var q=c.CreateCommand();q.CommandText=sql;return Convert.ToInt64(q.ExecuteScalar());}
+        string Value(string sql){using var q=c.CreateCommand();q.CommandText=sql;return Convert.ToString(q.ExecuteScalar())??"0";}
+        var invalid=Scalar("SELECT COUNT(*) FROM (SELECT e.id FROM gl_entries e LEFT JOIN gl_lines l ON l.entry_id=e.id GROUP BY e.id HAVING COUNT(l.id)<2 OR ABS(COALESCE(SUM(l.debit),0)-COALESCE(SUM(l.credit),0))>0.005)");
+        var orphan=Scalar("SELECT COUNT(*) FROM gl_lines l LEFT JOIN gl_entries e ON e.id=l.entry_id LEFT JOIN gl_accounts a ON a.id=l.account_id WHERE e.id IS NULL OR a.id IS NULL");
+        var wipDebit=Value("SELECT printf('%.2f',COALESCE(SUM(l.debit-l.credit),0)) FROM gl_lines l JOIN gl_accounts a ON a.id=l.account_id WHERE a.code='1400'");
+        var unpostedStages=Scalar("SELECT COUNT(*) FROM factory_stage_events WHERE journal_entry_id IS NULL AND (material_cost+labor_cost+overhead_cost)>0");
+        var assets=Scalar("SELECT COUNT(*) FROM fixed_assets");
+        var recurringDue=Scalar("SELECT COUNT(*) FROM recurring_expenses WHERE active=1 AND next_due<=date('now')");
+        var unpostedExpenses=Scalar("SELECT COUNT(*) FROM expenses x WHERE NOT EXISTS(SELECT 1 FROM gl_entries e WHERE e.source_type='EXPENSE' AND e.source_id=x.id)");
+        var report="غرفة التحكم والرقابة — Enterprise (قراءة فقط)"+Environment.NewLine+
+          "القيود غير المتوازنة أو الناقصة: "+invalid+Environment.NewLine+
+          "أسطر دفتر أستاذ يتيمة: "+orphan+Environment.NewLine+
+          "صافي حركة حساب مخزون تحت التشغيل (1400): "+wipDebit+Environment.NewLine+
+          "مراحل تشغيل ذات تكلفة بلا قيد أستاذ: "+unpostedStages+Environment.NewLine+
+          "عدد الأصول المسجلة: "+assets+Environment.NewLine+
+          "تعريفات مصروف دوري مستحقة حسب التاريخ: "+recurringDue+Environment.NewLine+
+          "مصروفات بلا قيد أستاذ مطابق: "+unpostedExpenses+Environment.NewLine+Environment.NewLine+
+          "تنبيه: المؤشرات تشخيصية فقط. توازن القيود لا يثبت اكتمال العمليات، وحساب تحت التشغيل لا يثبت انتقال الناتج النهائي للمخزون. راجع دفاتر العملاء والموردين والمخزون والبنوك والرواتب والمرتجعات يدويًا. لا تستخدم هذه الشاشة لإقرار ضريبي أو إقفال نهائي.";
+        using var f=new Form{Text=UiLanguage.T("غرفة التحكم والرقابة — Enterprise"),Width=850,Height=600,StartPosition=FormStartPosition.CenterParent,RightToLeft=UiLanguage.English?RightToLeft.No:RightToLeft.Yes,RightToLeftLayout=!UiLanguage.English};
+        var view=new TextBox{Multiline=true,ReadOnly=true,ScrollBars=ScrollBars.Vertical,Dock=DockStyle.Fill,Font=new Font("Segoe UI",13),Text=UiLanguage.T(report)};
+        var refresh=new Button{Dock=DockStyle.Bottom,Height=44,Text=UiLanguage.T("تحديث مؤشرات الرقابة")};refresh.Click+=(_,_)=>{f.Close();EnterpriseControlRoom();};
+        f.Controls.Add(view);f.Controls.Add(refresh);f.ShowDialog(this);
     }
 
     void UserGuide()
