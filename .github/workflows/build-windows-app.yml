@@ -6,6 +6,7 @@ on:
   push:
     paths:
       - "windows-app/**"
+      - "android-app/**"
       - "windows-app.tests/**"
       - ".github/workflows/build-windows-app.yml"
 
