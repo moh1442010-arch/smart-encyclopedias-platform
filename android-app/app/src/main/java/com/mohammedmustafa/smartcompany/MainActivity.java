@@ -135,7 +135,7 @@ public class MainActivity extends Activity{
     runOnUiThread(()->{activate.setEnabled(true);if(activated){toast("تم تفعيل الترخيص بنجاح");login();}else{toast(msg);}});
    }).start();
   });
-  Button whatsappActivation=b("📲 طلب مراجعة التفعيل عبر واتساب");content.addView(whatsappActivation);whatsappActivation.setOnClickListener(v->{String message="السلام عليكم، أطلب مراجعة شراء/تفعيل المحاسب الميزان.\nالإصدار: "+BuildConfig.VERSION_NAME+"\nمعرّف التطبيق: "+getPackageName()+"\nيرجى إرسال تعليمات الدفع المعتمدة ومراجعة الطلب يدويًا. أفهم أن إرسال الرسالة لا يفعّل الترخيص تلقائيًا، ولا يتم التفعيل إلا بعد اعتماد الطلب وإصدار رمز صالح من الخادم.";open("https://wa.me/249121851285?text="+android.net.Uri.encode(message));});
+  Button whatsappActivation=b("📲 طلب مراجعة التفعيل عبر واتساب");content.addView(whatsappActivation);whatsappActivation.setOnClickListener(v->{String activationMessage="السلام عليكم، أطلب مراجعة شراء/تفعيل المحاسب الميزان.\nالإصدار: "+BuildConfig.VERSION_NAME+"\nمعرّف التطبيق: "+getPackageName()+"\nيرجى إرسال تعليمات الدفع المعتمدة ومراجعة الطلب يدويًا. أفهم أن إرسال الرسالة لا يفعّل الترخيص تلقائيًا، ولا يتم التفعيل إلا بعد اعتماد الطلب وإصدار رمز صالح من الخادم.";open("https://wa.me/249121851285?text="+android.net.Uri.encode(activationMessage));});
   Button retry=b("إعادة التحقق من الترخيص");content.addView(retry);retry.setOnClickListener(v->checkCommercialAccess());
   Button contact=b("التواصل مع الدعم");content.addView(contact);contact.setOnClickListener(v->support());
   content.addView(t("لا تحذف بيانات الشركة عند انتهاء التجربة أو الترخيص. يجب أن تبقى بياناتك قابلة للتصدير.",14));
