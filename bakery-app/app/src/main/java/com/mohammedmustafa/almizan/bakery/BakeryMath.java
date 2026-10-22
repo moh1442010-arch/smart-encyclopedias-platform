@@ -19,6 +19,9 @@ public final class BakeryMath {
     public static long sum(long... values) {
         long result=0; for(long value:values) result=Math.addExact(result,value); return result;
     }
+    public static long accountedTotal(long cash, long debt, long bank, long priceDifference, long wages, long expenses, long spoilageValue) {
+        return sum(cash, debt, bank, priceDifference, wages, expenses, spoilageValue);
+    }
     public static long difference(long expectedProduction, long recordedCategories) {
         return Math.subtractExact(expectedProduction, recordedCategories);
     }
