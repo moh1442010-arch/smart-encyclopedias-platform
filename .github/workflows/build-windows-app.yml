@@ -1,5 +1,5 @@
 name: Build Al-Mizan Windows Expert Test Candidate 2.2.9
-# Review publication workflow alignment refresh, 2026-10-20.
+# Review publication workflow alignment refresh, 2026-10-22: build paired review candidates from the same commit.
 
 on:
   workflow_dispatch:
