@@ -1,7 +1,7 @@
 name: Build Al-Mizan Accountant Android Release 2.4.2 - Signed
 # Keep this workflow name stable: the Android review publisher consumes successful main-branch runs by exact name.
 # Review publication workflow alignment refresh, 2026-10-22.
-# Version 2.4.12 fixes bakery daily reconciliation: expenses and employee bread are valued exactly once.
+# Version 2.4.12 adds a journal-date calendar selector and a prominent WhatsApp support shortcut.
 # Keep the workflow display name stable until all downstream publishers have migrated.
 
 concurrency:
