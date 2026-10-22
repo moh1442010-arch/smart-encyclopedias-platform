@@ -3,18 +3,25 @@
 الحالة: **مرشح أساس للمراجعة النهائية فقط — لم يُعتمد تجارياً بعد**
 
 ## 1. قرار خط الأساس
-- نسخة Android المرشحة: **2.4.5**، package ID: `com.mohammedmustafa.smartcompany`، versionCode: `2004005`.
+- نسخة Android المرشحة المحدّثة: **2.4.6**، package ID: `com.mohammedmustafa.smartcompany`، versionCode: `2004006`؛ حالة الإصدار للمراجعة فقط حتى اجتياز اختبار الجهاز.
 - نسخة Windows المرشحة للمراجعة: **2.3.0 x64**.
-- مصدر Android المرجعي: [الإصدار الموقّع 2.4.5 للمراجعة](https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/tag/al-mizan-android-review-2.4.5-2026-10-22).
+- مصدر Android المرشح: [الإصدار 2.4.6 للمراجعة](https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/tag/al-mizan-android-review-2.4.6-2026-10-22).
 - الحزمة المشتركة Android/Windows: [حزمة المراجعة النهائية](https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/tag/al-mizan-final-review-2026-10-22).
 - ملف بيان التحديث العام: [android-release-manifest.json](../android-release-manifest.json).
-- SHA-256 لملف APK المسجل في البيان: `e20d475b362599bbf882b735dc76b8255cf8e8ddc7d760283fdb7720f788ef4f`.
+- SHA-256 المسجل في بيان APK 2.4.6: `75b73b36bf07986e030e97b9a3757b82a9cfbf2c8d99399b06afa5cae3043101`؛ يجب التحقق من الملف الذي يُنزّل فعلياً قبل التثبيت.
 - بصمة شهادة توقيع Android SHA-256 المعتمدة في سير البناء: `159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279`.
 - سير البناء Android: [آخر بناء Android ناجح](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39727666015).
 - سير بناء Windows: [آخر بناء Windows ناجح](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39727665895).
 - نشر حزم المراجعة: [سير النشر الناجح](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/39727916380).
 - صفحة التنزيلات: https://moh1442010-arch.github.io/smart-encyclopedias-platform/downloads/
 - دليل الاستخدام والأسئلة الشائعة: https://moh1442010-arch.github.io/smart-encyclopedias-platform/guide/
+
+## 1.1 حادثة إغلاق Android 2.4.5 بعد تسجيل الدخول
+- وصف المستخدم: بعد إدخال رمز الدخول، يُغلق التطبيق ويعود إلى الشاشة الرئيسية للهاتف رغم اتصال الإنترنت.
+- مقارنة مصدر الوسم 2.4.5 بالمصدر الحالي: نسخة 2.4.5 لا تحتوي على معالجة استثناءات حول بناء لوحة التحكم، وكان `onStop()` يفرض إعادة إدخال رمز الدخول عند انتقال النشاط للخلفية. المصدر الحالي أضاف تسجيل تشخيص `AlMizanStartup` وحفظ تفاصيل استثناء إنشاء لوحة التحكم في `startup_diagnostics`، كما أوقف إعادة تسجيل الدخول القسرية في `onStop()`.
+- هذا يحدد عيباً في مسار استقرار الواجهة، لكنه **لا يحدد الاستثناء الأصلي بصورة قاطعة** لأن سجل Logcat من جهاز المستخدم غير متاح في هذه المراجعة.
+- أضيف اختبار Robolectric انحداري لمسار لوحة التحكم بعد الدخول في `DashboardStartupRegressionTest.java`. نتيجة CI بعد هذا التغيير ما زالت مطلوبة قبل إعلان نجاح الاختبار.
+- القبول النهائي: نجاح الاختبار الآلي، ثم تثبيت 2.4.6 على جهاز فعلي وفتح التطبيق وتسجيل الدخول، تكرار العملية بعد إغلاق/إعادة فتح التطبيق، والتحقق من عدم وجود انهيار. إذا تكرر الانهيار، يلزم سجل Logcat/التشخيص من الجهاز؛ لا يُفترض أن الإصلاح نجح بمجرد البناء.
 
 ## 2. حماية مفتاح التوقيع واستمرارية التحديث
 1. **المفتاح الخاص وملف keystore وكلمة مروره لا تُحفظ في المستودع أو صفحات الويب أو APK أو هذا السجل.** تبقى في نسخة محلية آمنة وخارج المستودع، وتُستخدم نسخة GitHub Actions secrets المخصصة للبناء الموقّع فقط.
