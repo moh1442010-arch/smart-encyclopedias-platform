@@ -21,6 +21,10 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 import org.json.JSONObject;
+import org.json.JSONArray;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
@@ -31,6 +35,7 @@ import java.util.Calendar;
 public class MainActivity extends Activity {
     private static final int NAVY = Color.rgb(11,31,58), GOLD = Color.rgb(212,175,55), BG = Color.rgb(246,248,251);
     private static final String SUPPORT = "249121851285", BANKAK = "1882224";
+    private static final int REQUEST_EXPORT_BACKUP = 4250, REQUEST_IMPORT_BACKUP = 4251;
     private Store store;
     private LinearLayout root, content;
     private String day;
@@ -84,6 +89,7 @@ public class MainActivity extends Activity {
         addCard("🧾 6. منصرفات المحل","وجبات العمال، الصيانة، المشتريات والمنصرفات الأخرى",()->openModule("expenses"));
         addCard("♻️ 7. التالف","عدد العيش التالف وسبب التلف",()->openModule("spoilage"));
         addCard("🧮 8. المحاسب والحساب","جمع القطععيات ومراجعة الكاش والديون والتحويلات واليوميات والمنصرفات والتالف",this::showAccounts);
+        Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
         Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.0.")); content.addView(support);
@@ -287,6 +293,53 @@ public class MainActivity extends Activity {
         statusLabel.setText(has?"حالة "+day+": توجد بيانات محفوظة على هذا الهاتف. افتح المحاسب والحساب للمراجعة.":"حالة "+day+": لم تُحفظ بيانات لهذا التاريخ بعد.");
     }
 
+
+    private void backupRestoreMenu() {
+        new AlertDialog.Builder(this).setTitle("نسخ احتياطي واستعادة")
+            .setMessage("أنشئ ملف JSON يحفظ سجلات الأيام والأقسام، واحتفظ به خارج الهاتف. الاستعادة تدمج السجلات وتستبدل فقط السجل الذي يطابق التاريخ والقسم.")
+            .setNegativeButton("إغلاق",null)
+            .setNeutralButton("استعادة نسخة",(d,w)->{
+                Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("application/json");
+                try { startActivityForResult(i,REQUEST_IMPORT_BACKUP); } catch(Exception ex) { toast("تعذر فتح اختيار ملف النسخة الاحتياطية"); }
+            })
+            .setPositiveButton("تصدير نسخة",(d,w)->{
+                Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT); i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("application/json");
+                i.putExtra(Intent.EXTRA_TITLE,"almizan-bakery-backup-"+day+".json");
+                try { startActivityForResult(i,REQUEST_EXPORT_BACKUP); } catch(Exception ex) { toast("تعذر فتح اختيار مكان حفظ النسخة"); }
+            }).show();
+    }
+
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data) {
+        super.onActivityResult(requestCode,resultCode,data);
+        if(resultCode!=RESULT_OK || data==null || data.getData()==null) return;
+        try {
+            if(requestCode==REQUEST_EXPORT_BACKUP) {
+                JSONArray records=store.exportAll();
+                try(OutputStream out=getContentResolver().openOutputStream(data.getData(),"w")) {
+                    if(out==null) throw new IllegalStateException("تعذر فتح ملف النسخة");
+                    out.write(records.toString(2).getBytes(StandardCharsets.UTF_8)); out.flush();
+                }
+                toast("تم تصدير "+records.length()+" سجل. احتفظ بالملف في مكان آمن.");
+            } else if(requestCode==REQUEST_IMPORT_BACKUP) {
+                byte[] bytes;
+                try(InputStream in=getContentResolver().openInputStream(data.getData())) {
+                    if(in==null) throw new IllegalStateException("تعذر فتح ملف النسخة");
+                    java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
+                    byte[] chunk=new byte[8192]; int n; long total=0;
+                    while((n=in.read(chunk))!=-1) { total+=n; if(total>10L*1024*1024) throw new IllegalArgumentException("حجم النسخة أكبر من 10 ميغابايت"); buffer.write(chunk,0,n); }
+                    bytes=buffer.toByteArray();
+                }
+                JSONArray records=new JSONArray(new String(bytes,StandardCharsets.UTF_8));
+                new AlertDialog.Builder(this).setTitle("تأكيد الاستعادة")
+                    .setMessage("سيتم دمج "+records.length()+" سجل مع السجلات الحالية. إذا تطابق التاريخ والقسم فستحل بيانات النسخة محل السجل المطابق فقط. أنشئ نسخة من الحالة الحالية قبل المتابعة.")
+                    .setNegativeButton("إلغاء",null).setPositiveButton("استعادة ودمج",(d,w)->{
+                        try { int count=store.restoreAll(records); updateStatus(); toast("اكتملت الاستعادة: "+count+" سجل. راجع التسوية قبل الاستخدام."); }
+                        catch(Exception ex) { toast("رفضت الاستعادة لأن الملف غير صالح؛ لم يتم اعتماد التغييرات."); }
+                    }).show();
+            }
+        } catch(Exception ex) { toast("تعذر التعامل مع ملف النسخة الاحتياطية. لم يتم حذف البيانات الحالية."); }
+    }
+
     private void showGuide() {
         String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.0\n\n"+
             "1) اختر التاريخ من رزنامة الهاتف داخل التطبيق؛ لكل تاريخ دفتر مستقل.\n"+
@@ -336,5 +389,32 @@ public class MainActivity extends Activity {
         }
         void delete(String date,String module) { getWritableDatabase().delete("records","day=? AND module=?",new String[]{date,module}); }
         boolean has(String date) { Cursor c=getReadableDatabase().rawQuery("SELECT 1 FROM records WHERE day=? LIMIT 1",new String[]{date}); try{return c.moveToFirst();}finally{c.close();} }
+
+        JSONArray exportAll() throws Exception {
+            JSONArray result=new JSONArray(); Cursor c=getReadableDatabase().rawQuery("SELECT day,module,payload,updated_at FROM records ORDER BY day,module",null);
+            try {
+                while(c.moveToNext()) {
+                    JSONObject row=new JSONObject(); row.put("day",c.getString(0)); row.put("module",c.getString(1));
+                    row.put("payload",new JSONObject(c.getString(2))); row.put("updated_at",c.getLong(3)); result.put(row);
+                }
+            } finally { c.close(); }
+            return result;
+        }
+        int restoreAll(JSONArray rows) throws Exception {
+            java.util.ArrayList<ContentValues> prepared=new java.util.ArrayList<>();
+            java.util.HashSet<String> allowed=new java.util.HashSet<>(java.util.Arrays.asList("stock","cuts","workers","window","distribution","expenses","spoilage","accounting"));
+            for(int i=0;i<rows.length();i++) {
+                JSONObject row=rows.getJSONObject(i); String date=row.getString("day"), module=row.getString("module");
+                if(!date.matches("\\d{4}-\\d{2}-\\d{2}") || !allowed.contains(module)) throw new IllegalArgumentException("Invalid backup record");
+                JSONObject payload=row.getJSONObject("payload");
+                ContentValues cv=new ContentValues(); cv.put("day",date); cv.put("module",module); cv.put("payload",payload.toString());
+                cv.put("updated_at",row.optLong("updated_at",System.currentTimeMillis())); prepared.add(cv);
+            }
+            SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
+            try { for(ContentValues cv:prepared) db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE); db.setTransactionSuccessful(); }
+            finally { db.endTransaction(); }
+            return prepared.size();
+        }
+
     }
 }
