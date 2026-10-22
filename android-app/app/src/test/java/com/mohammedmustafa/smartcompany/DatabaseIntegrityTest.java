@@ -556,6 +556,19 @@ public class DatabaseIntegrityTest {
         }
     }
 
+
+    @Test
+    public void journalDateValidationAcceptsRealDatesAndRejectsInvalidCalendarDates() {
+        MainActivity activity = new MainActivity();
+        assertTrue("Leap day should be accepted", activity.validIsoDate("2024-02-29", true));
+        assertTrue("Month end should be accepted", activity.validIsoDate("2026-10-31", true));
+        assertFalse("Impossible leap day should be rejected", activity.validIsoDate("2025-02-29", true));
+        assertFalse("Impossible month day should be rejected", activity.validIsoDate("2026-04-31", true));
+        assertFalse("Malformed date should be rejected", activity.validIsoDate("22-10-2026", true));
+        assertFalse("Required date cannot be blank", activity.validIsoDate("", true));
+        assertTrue("Optional blank date may be empty", activity.validIsoDate("", false));
+    }
+
     private void insertInvoiceItem(long transactionId, double price, double cost) {
         ContentValues item = new ContentValues();
         item.put("transaction_id", transactionId);
