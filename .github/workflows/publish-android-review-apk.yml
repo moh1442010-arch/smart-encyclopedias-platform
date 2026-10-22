@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      VERSION: 2.4.3
+      VERSION: 2.4.4
     steps:
       - name: Checkout main for release metadata
         uses: actions/checkout@v4
@@ -95,7 +95,7 @@ jobs:
             "status": "expert-review-only-not-approved-for-commercial-sale",
             "packageId": "com.mohammedmustafa.smartcompany",
             "versionName": os.environ["VERSION"],
-            "versionCode": 2004003,
+            "versionCode": 2004004,
             "releaseTag": os.environ["RELEASE_TAG"],
             "releasePage": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/tag/" + os.environ["RELEASE_TAG"],
             "apkUrl": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/" + os.environ["RELEASE_TAG"] + "/AlMizan-review-" + os.environ["VERSION"] + "-release.apk",
