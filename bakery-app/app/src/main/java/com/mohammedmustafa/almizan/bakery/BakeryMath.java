@@ -25,4 +25,20 @@ public final class BakeryMath {
     public static long difference(long expectedProduction, long recordedCategories) {
         return Math.subtractExact(expectedProduction, recordedCategories);
     }
+    /** Daily ingredient/fuel cost. Quantities and unit prices must be non-negative. */
+    public static long operatingCost(long fuelQty,long fuelPrice,long flourBags,long flourBagPrice,
+            long yeastCount,long yeastPrice,long oilQty,long oilPoundPrice,
+            long saltQty,long saltPrice,long bagsTotalPrice) {
+        long[] values={fuelQty,fuelPrice,flourBags,flourBagPrice,yeastCount,yeastPrice,
+                oilQty,oilPoundPrice,saltQty,saltPrice,bagsTotalPrice};
+        for(long value:values) if(value<0) throw new IllegalArgumentException("Negative cost input");
+        return sum(Math.multiplyExact(fuelQty,fuelPrice),Math.multiplyExact(flourBags,flourBagPrice),
+                Math.multiplyExact(yeastCount,yeastPrice),Math.multiplyExact(oilQty,oilPoundPrice),
+                Math.multiplyExact(saltQty,saltPrice),bagsTotalPrice);
+    }
+    /** Estimated margin before any additional costs not included in the supplied cost list. */
+    public static long grossMargin(long productionValue,long operatingCost) {
+        if(productionValue<0 || operatingCost<0) throw new IllegalArgumentException("Negative amount");
+        return Math.subtractExact(productionValue,operatingCost);
+    }
 }
