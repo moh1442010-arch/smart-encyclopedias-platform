@@ -9,6 +9,7 @@ namespace SmartCompany;
 // Expert-review candidate refresh 2026-10-22: subscription pricing aligned with Android and public store.
 // Paired final review candidate 2.4.4 / 2.3.0: includes review modules, guide/FAQ and control-room diagnostics.
 // Rebuild pair after Android compile correction; both artifacts must share the same commit.
+// Android 2.4.5 adds an audited one-time reversal screen for eligible manual journals; rebuild both review packages together.
 
 static class UiLanguage
 {
