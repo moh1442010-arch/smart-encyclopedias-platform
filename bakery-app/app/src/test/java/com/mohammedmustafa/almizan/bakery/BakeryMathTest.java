@@ -13,6 +13,9 @@ public class BakeryMathTest {
     @Test public void roundsMoneyToWholeSudanesePounds() {
         assertEquals(333L, BakeryMath.valueForLoaves(1,3));
     }
+    @Test public void reconciliationAddsAllRecordedCategoriesExactlyOnce() {
+        assertEquals(150000L, BakeryMath.accountedTotal(50000,20000,10000,0,30000,25000,15000));
+    }
     @Test public void balancedLedgerHasZeroDifference() {
         assertEquals(0L, BakeryMath.difference(150000,150000));
     }
