@@ -148,7 +148,7 @@ jobs:
           test -s "$aab"
           test -s "release/SHA256SUMS.txt"
           badging="$("$build_tools/aapt" dump badging "$apk")"
-          echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='2004007' versionName='2.4.8'"
+          echo "$badging" | grep -F "package: name='com.mohammedmustafa.smartcompany' versionCode='2004008' versionName='2.4.8'"
           echo "$badging" | grep -F "application-label:'المحاسب الميزان'"
           permissions="$("$build_tools/aapt" dump permissions "$apk")"
           echo "$permissions" | grep -q "android.permission.INTERNET" || { echo "Required INTERNET permission for server-side commercial licensing is missing"; exit 1; }
