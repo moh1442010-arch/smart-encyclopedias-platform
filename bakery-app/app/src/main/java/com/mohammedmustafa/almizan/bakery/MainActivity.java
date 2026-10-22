@@ -89,6 +89,7 @@ public class MainActivity extends Activity {
         addCard("🧾 6. منصرفات المحل","وجبات العمال، الصيانة، المشتريات والمنصرفات الأخرى",()->openModule("expenses"));
         addCard("♻️ 7. التالف","عدد العيش التالف وسبب التلف",()->openModule("spoilage"));
         addCard("🧮 8. المحاسب والحساب","جمع القطععيات ومراجعة الكاش والديون والتحويلات واليوميات والمنصرفات والتالف",this::showAccounts);
+        addCard("🏭 9. حساب التشغيل والتكلفة","تكلفة الوقود والدقيق والخميرة والزيت والملح والأكياس، وتقدير هامش الربح",()->openModule("costing"));
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
@@ -154,6 +155,14 @@ public class MainActivity extends Activity {
                 t("notes","ملاحظات المنصرفات","")
             };
             case "spoilage": return new Field[]{f("loaves","عدد العيش التالف"),t("reason","سبب التلف / الملاحظات","")};
+            case "costing": return new Field[]{
+                f("fuel_quantity","الوقود — الكمية المستخدمة"),f("fuel_unit_price","سعر وحدة الوقود (جنيه)"),
+                f("flour_bags","الدقيق — عدد الجوالات المستخدمة"),f("flour_bag_price","سعر جوال الدقيق الواحد (جنيه)"),
+                f("yeast_count","الخميرة — عدد القطع المستخدمة"),f("yeast_piece_price","سعر قطعة الخميرة (جنيه)"),
+                f("oil_quantity","الزيت — الكمية المستخدمة بالرطل"),f("oil_pound_price","سعر رطل الزيت (جنيه)"),
+                f("salt_quantity","الملح — الكمية المستخدمة"),f("salt_unit_price","سعر وحدة الملح (جنيه)"),
+                f("bags_total_price","جملة سعر الأكياس المستخدمة (جنيه)")
+            };
             default: return new Field[0];
         }
     }
@@ -162,7 +171,7 @@ public class MainActivity extends Activity {
         switch(module) {
             case "stock": return "المخزن"; case "cuts": return "القطععيات"; case "workers": return "يومية العمال";
             case "window": return "الكاش وبيع الشباك"; case "distribution": return "التوزيع";
-            case "expenses": return "منصرفات المحل"; case "spoilage": return "التالف"; default: return module;
+            case "expenses": return "منصرفات المحل"; case "spoilage": return "التالف"; case "costing": return "حساب التشغيل والتكلفة"; default: return module;
         }
     }
 
@@ -358,7 +367,8 @@ public class MainActivity extends Activity {
             "6) التوزيع: كل عميل في سطر: الاسم | الكمية | الكاش | الديون | التحويل البنكي | فرق السعر.\n"+
             "7) منصرفات المحل: أدخل الوجبات والصيانة والمشتريات، ثم أي منصرف إضافي في سطر البيان | المبلغ. لا تكرر نفس المصروف في أكثر من خانة.\n"+
             "8) التالف: أدخل عدد الأرغفة التالفة؛ يحسب التطبيق قيمتها باستخدام سعر القطععيات.\n"+
-            "9) المحاسب والحساب: يساوي قيمة الإنتاج مجموع الكاش والديون والتحويلات وفرق السعر واليوميات والمنصرفات وقيمة التالف وفق قاعدة التسوية المعتمدة. فرق التسوية يجب أن يساوي صفرًا، وإلا راجع البنود.\n\n"+
+            "9) المحاسب والحساب: يساوي قيمة الإنتاج مجموع الكاش والديون والتحويلات وفرق السعر واليوميات والمنصرفات وقيمة التالف وفق قاعدة التسوية المعتمدة. فرق التسوية يجب أن يساوي صفرًا، وإلا راجع البنود.\n"+
+            "10) حساب التشغيل والتكلفة: أدخل الكميات المستخدمة وأسعار وحداتها؛ يحسب التطبيق تكلفة الوقود والدقيق والخميرة والزيت والملح والأكياس، ثم يعرض هامشًا تقديريًا = قيمة الإنتاج - تكلفة المواد/الوقود المدخلة. لا تكرر المصروف نفسه في المنصرفات وفي التكلفة عند جمع إجمالياتك.\n\n"+
             "مهم: البيانات تحفظ محليًا على الجهاز ولا تُرفع للسحابة. استخدم زر «نسخ احتياطي واستعادة البيانات» لتصدير ملف JSON إلى مكان آمن واختبر استعادته. التطبيق لا يُصدر قيدًا محاسبيًا عامًا ولا يُعد بديلًا عن مراجعة محاسب قبل استخدام النتائج لإقرار مالي أو ضريبي.";
         new AlertDialog.Builder(this).setTitle("📘 اللوحة الإرشادية").setMessage(guide).setPositiveButton("فهمت",null).show();
     }
@@ -412,7 +422,7 @@ public class MainActivity extends Activity {
         }
         int restoreAll(JSONArray rows) throws Exception {
             java.util.ArrayList<ContentValues> prepared=new java.util.ArrayList<>();
-            java.util.HashSet<String> allowed=new java.util.HashSet<>(java.util.Arrays.asList("stock","cuts","workers","window","distribution","expenses","spoilage","accounting"));
+            java.util.HashSet<String> allowed=new java.util.HashSet<>(java.util.Arrays.asList("stock","cuts","workers","window","distribution","expenses","spoilage","costing","accounting"));
             for(int i=0;i<rows.length();i++) {
                 JSONObject row=rows.getJSONObject(i); String date=row.getString("day"), module=row.getString("module");
                 if(!date.matches("\\d{4}-\\d{2}-\\d{2}") || !allowed.contains(module)) throw new IllegalArgumentException("Invalid backup record");
