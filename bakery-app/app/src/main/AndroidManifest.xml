@@ -3,6 +3,8 @@
     <application
         android:allowBackup="false"
         android:label="الميزان المحاسبي للمخابز"
+        android:icon="@drawable/ic_bakery"
+        android:roundIcon="@drawable/ic_bakery"
         android:supportsRtl="true"
         android:usesCleartextTraffic="false"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
