@@ -65,7 +65,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag="al-mizan-android-review-${VERSION}-2026-10-21"
+          tag="al-mizan-android-review-${VERSION}-2026-10-22"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$tag" public-review/* --repo "$GITHUB_REPOSITORY" --clobber
           else
@@ -84,7 +84,7 @@ jobs:
           apk="public-review/AlMizan-review-${VERSION}-release.apk"
           test -s "$apk"
           apk_sha="$(sha256sum "$apk" | awk '{print $1}')"
-          tag="al-mizan-android-review-${VERSION}-2026-10-21"
+          tag="al-mizan-android-review-${VERSION}-2026-10-22"
           export RELEASE_TAG="$tag"
           python3 - "$apk_sha" <<'PY'
           import json, pathlib, sys, os
