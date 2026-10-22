@@ -104,17 +104,79 @@ public class DatabaseIntegrityTest {
         assertTrue(tableExists("payroll_events"));
         assertTrue(tableExists("factory_orders"));
         assertTrue(tableExists("factory_stage_events"));
+        assertTrue(tableExists("bread_counter_sales"));
+        assertTrue(tableExists("bread_distribution_sales"));
         assertTrue(accountExists("1010"));
         assertTrue(accountExists("1100"));
         assertTrue(accountExists("2100"));
         assertTrue(accountExists("3100"));
         assertTrue(accountExists("4000"));
+        assertTrue(accountExists("4200"));
         assertTrue(accountExists("1210"));
         assertTrue(accountExists("1400"));
         assertTrue(accountExists("2200"));
         assertTrue(accountExists("2300"));
     }
 
+
+    @Test
+    public void distributorDiscountRegisterEnforcesCashDebtAndPriceDifferenceReconciliation() {
+        assertTrue(tableExists("bread_distribution_sales"));
+        ContentValues row = new ContentValues();
+        row.put("transaction_id", 7001L);
+        row.put("product_id", 1L);
+        row.put("distributor_name", "مطعم تجريبي");
+        row.put("qty", 90.0);
+        row.put("retail_total", 30000.0);
+        row.put("distribution_total", 28000.0);
+        row.put("cash_received", 20000.0);
+        row.put("debt_amount", 8000.0);
+        row.put("price_difference", 2000.0);
+        row.put("created_at", System.currentTimeMillis());
+        database.insertOrThrow("bread_distribution_sales", null, row);
+        Cursor c = database.rawQuery("SELECT cash_received+debt_amount,distribution_total,retail_total-distribution_total,price_difference FROM bread_distribution_sales WHERE transaction_id=7001", null);
+        try {
+            assertTrue(c.moveToFirst());
+            assertEquals(28000.0, c.getDouble(0), 0.001);
+            assertEquals(28000.0, c.getDouble(1), 0.001);
+            assertEquals(2000.0, c.getDouble(2), 0.001);
+            assertEquals(2000.0, c.getDouble(3), 0.001);
+        } finally { c.close(); }
+        ContentValues invalid = new ContentValues(row);
+        invalid.put("transaction_id", 7002L);
+        invalid.put("cash_received", 27000.0);
+        invalid.put("debt_amount", 2000.0);
+        try {
+            database.insertOrThrow("bread_distribution_sales", null, invalid);
+            fail("Cash plus debt must equal the distribution amount");
+        } catch (android.database.SQLException expected) {
+            // Database CHECK constraint prevents unreconciled distributor totals.
+        }
+    }
+
+    @Test
+    public void distributorPostingBalancesGrossRevenueDiscountCashDebtAndInventoryCost() {
+        MainActivity activity = new MainActivity();
+        database.beginTransaction();
+        try {
+            ContentValues tx = new ContentValues();
+            tx.put("type", "SALE"); tx.put("party", "مطعم اختبار");
+            tx.put("total", 28000.0); tx.put("paid", 20000.0); tx.put("remaining", 8000.0);
+            tx.put("created_at", System.currentTimeMillis());
+            long transactionId = database.insertOrThrow("transactions", null, tx);
+            long journalId = activity.postBreadDistributionJournal(
+                    database, transactionId, "مطعم اختبار", 30000.0, 28000.0,
+                    20000.0, 8000.0, 2000.0, 90.0, 100.0);
+            assertJournalBalanced(journalId);
+            assertAccountTotals("1010", 20000.0, 0.0);
+            assertAccountTotals("1100", 8000.0, 0.0);
+            assertAccountTotals("4200", 2000.0, 0.0);
+            assertAccountTotals("4000", 0.0, 30000.0);
+            assertAccountTotals("5100", 9000.0, 0.0);
+            assertAccountTotals("1200", 0.0, 9000.0);
+            database.setTransactionSuccessful();
+        } finally { database.endTransaction(); }
+    }
 
     @Test
     public void returnCanBeRecordedOnlyOnceForOriginalInvoice() {
@@ -442,6 +504,9 @@ public class DatabaseIntegrityTest {
         assertTrue(columnExists("transactions", "customer_id"));
         assertTrue(columnExists("products", "barcode"));
         assertTrue(columnExists("journal_entries", "description"));
+        assertTrue(tableExists("bread_counter_sales"));
+        assertTrue(tableExists("bread_distribution_sales"));
+        assertTrue(accountExists("4200"));
         Cursor preserved = database.rawQuery(
                 "SELECT name FROM customers WHERE name='عميل قديم'", null);
         try {
@@ -604,4 +669,93 @@ public class DatabaseIntegrityTest {
             c.close();
         }
     }
+
+    @Test
+    public void cashCounterTransferSchemaAndBalancedBankJournalAreCorrect() {
+        Cursor columns = database.rawQuery("PRAGMA table_info(bread_counter_sales)", null);
+        java.util.Set<String> names = new java.util.HashSet<>();
+        while (columns.moveToNext()) names.add(columns.getString(1));
+        columns.close();
+        assertTrue("Payment method must be persisted", names.contains("payment_method"));
+        assertTrue("Bank operation reference must be persisted", names.contains("operation_ref"));
+        assertTrue("Bank account relation must be persisted", names.contains("bank_account_id"));
+
+        long bankAccount = database.insertOrThrow("bank_accounts", null, values(
+                "bank_name", "Test Bank", "account_name", "Test Operating Account", "opening_balance", 0));
+        ContentValues tx = values("type", "SALE", "party", "Cash counter bank transfer",
+                "total", 100, "paid", 100, "remaining", 0, "created_at", System.currentTimeMillis());
+        long transactionId = database.insertOrThrow("transactions", null, tx);
+        ContentValues sale = values("transaction_id", transactionId, "product_id", 1,
+                "qty", 2, "unit_price", 50, "total", 100, "payment_method", "BANK_TRANSFER",
+                "operation_ref", "TX-TEST-001", "bank_account_id", bankAccount,
+                "created_at", System.currentTimeMillis());
+        database.insertOrThrow("bread_counter_sales", null, sale);
+
+        MainActivity activity = new MainActivity();
+        activity.postBreadCounterJournal(database, transactionId, 100, 40, true);
+        Cursor totals = database.rawQuery(
+                "SELECT COALESCE(SUM(debit),0),COALESCE(SUM(credit),0) FROM journal_lines " +
+                "WHERE journal_entry_id=(SELECT id FROM journal_entries WHERE transaction_id=?)",
+                new String[]{String.valueOf(transactionId)});
+        assertTrue(totals.moveToFirst());
+        assertEquals("Bank transfer journal must balance", totals.getDouble(0), totals.getDouble(1), 0.005);
+        totals.close();
+
+        assertEquals("Bank transfer must debit bank account 1020",
+                100.0, accountBalanceForEntry(transactionId, "1020", true), 0.005);
+        assertEquals("Sale revenue must be credited",
+                100.0, accountBalanceForEntry(transactionId, "4000", false), 0.005);
+        assertEquals("Cost of sales must be debited",
+                40.0, accountBalanceForEntry(transactionId, "5100", true), 0.005);
+        assertEquals("Inventory must be credited at cost",
+                40.0, accountBalanceForEntry(transactionId, "1200", false), 0.005);
+    }
+
+    @Test
+    public void bankTransferReferenceCannotBeRecordedTwiceForSameBankAccount() {
+        long bankAccount = database.insertOrThrow("bank_accounts", null, values(
+                "bank_name", "Test Bank", "account_name", "Duplicate Ref Account", "opening_balance", 0));
+        ContentValues first = values("transaction_id", 901, "product_id", 1, "qty", 1,
+                "unit_price", 10, "total", 10, "payment_method", "BANK_TRANSFER",
+                "operation_ref", "DUP-REF-1", "bank_account_id", bankAccount,
+                "created_at", System.currentTimeMillis());
+        database.insertOrThrow("bread_counter_sales", null, first);
+        ContentValues second = values("transaction_id", 902, "product_id", 1, "qty", 1,
+                "unit_price", 10, "total", 10, "payment_method", "BANK_TRANSFER",
+                "operation_ref", "DUP-REF-1", "bank_account_id", bankAccount,
+                "created_at", System.currentTimeMillis());
+        try {
+            database.insertOrThrow("bread_counter_sales", null, second);
+            fail("Duplicate bank operation reference should be rejected");
+        } catch (android.database.sqlite.SQLiteConstraintException expected) {
+            // Expected: prevents accidental double-posting of a bank transfer.
+        }
+    }
+
+    private double accountBalanceForEntry(long transactionId, String code, boolean debit) {
+        Cursor c = database.rawQuery(
+                "SELECT COALESCE(SUM(l." + (debit ? "debit" : "credit") + "),0) " +
+                "FROM journal_lines l JOIN accounts a ON a.id=l.account_id " +
+                "JOIN journal_entries j ON j.id=l.journal_entry_id " +
+                "WHERE j.transaction_id=? AND a.code=?",
+                new String[]{String.valueOf(transactionId), code});
+        double result = c.moveToFirst() ? c.getDouble(0) : 0;
+        c.close();
+        return result;
+    }
+
+    private ContentValues values(Object... pairs) {
+        ContentValues values = new ContentValues();
+        for (int i = 0; i < pairs.length; i += 2) {
+            String key = String.valueOf(pairs[i]);
+            Object value = pairs[i + 1];
+            if (value instanceof String) values.put(key, (String) value);
+            else if (value instanceof Integer) values.put(key, (Integer) value);
+            else if (value instanceof Long) values.put(key, (Long) value);
+            else if (value instanceof Double) values.put(key, (Double) value);
+            else if (value == null) values.putNull(key);
+        }
+        return values;
+    }
+
 }
