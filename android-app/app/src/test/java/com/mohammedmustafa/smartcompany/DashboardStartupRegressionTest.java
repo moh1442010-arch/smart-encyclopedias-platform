@@ -70,7 +70,7 @@ public class DashboardStartupRegressionTest {
             View rootAfter = activity.findViewById(android.R.id.content);
             assertNotNull("Activity content must remain attached after sign-in", rootAfter);
             assertTrue("Correct PIN must navigate to dashboard", containsText(rootAfter, "مركز إدارة النشاط"));
-            assertTrue("Dashboard must expose bakery daily book", containsText(rootAfter, "دفتر المخبز اليومي — القطعيات والتوزيع والتسوية"));
+            assertTrue("Dashboard must expose bakery daily book", containsText(rootAfter, "🥖 دفتر المخبز اليومي — القطعيات والتوزيع والتسوية"));
             assertFalse("Successful login must not record a dashboard failure",
                 app.getSharedPreferences("startup_diagnostics", Context.MODE_PRIVATE).contains("last_failure_class"));
         } finally {
