@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 namespace SmartCompany;
 
 // Expert-review candidate refresh 2026-10-22: subscription pricing aligned with Android and public store.
+// Paired final review candidate 2.4.4 / 2.3.0: includes review modules, guide/FAQ and control-room diagnostics.
 
 static class UiLanguage
 {
