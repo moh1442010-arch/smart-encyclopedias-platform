@@ -154,6 +154,30 @@ public class DatabaseIntegrityTest {
     }
 
     @Test
+    public void distributorPostingBalancesGrossRevenueDiscountCashDebtAndInventoryCost() {
+        MainActivity activity = new MainActivity();
+        database.beginTransaction();
+        try {
+            ContentValues tx = new ContentValues();
+            tx.put("type", "SALE"); tx.put("party", "مطعم اختبار");
+            tx.put("total", 28000.0); tx.put("paid", 20000.0); tx.put("remaining", 8000.0);
+            tx.put("created_at", System.currentTimeMillis());
+            long transactionId = database.insertOrThrow("transactions", null, tx);
+            long journalId = activity.postBreadDistributionJournal(
+                    database, transactionId, "مطعم اختبار", 30000.0, 28000.0,
+                    20000.0, 8000.0, 2000.0, 90.0, 100.0);
+            assertJournalBalanced(journalId);
+            assertAccountTotals("1010", 20000.0, 0.0);
+            assertAccountTotals("1100", 8000.0, 0.0);
+            assertAccountTotals("4200", 2000.0, 0.0);
+            assertAccountTotals("4000", 0.0, 30000.0);
+            assertAccountTotals("5100", 9000.0, 0.0);
+            assertAccountTotals("1200", 0.0, 9000.0);
+            database.setTransactionSuccessful();
+        } finally { database.endTransaction(); }
+    }
+
+    @Test
     public void returnCanBeRecordedOnlyOnceForOriginalInvoice() {
         assertTrue(columnExists("transactions", "original_transaction_id"));
         assertTrue(accountExists("4100"));
