@@ -192,11 +192,11 @@ public class MainActivity extends Activity{
    page("الدليل الإرشادي والأسئلة الشائعة");
    content.addView(t("مساعدة محلية: لا تحتاج إلى اتصال بالإنترنت بعد تثبيت التطبيق. هذه النسخة التمهيدية محدودة؛ راجع النسخة الموسعة من الدليل قبل اعتماد خطوات غير مطابقة لواجهتك.",14));
    WebView guide=new WebView(this);
-   guide.getSettings().setJavaScriptEnabled(false);
+   guide.getSettings().setJavaScriptEnabled(true);
    guide.getSettings().setAllowFileAccess(true);
    guide.setWebViewClient(new WebViewClient());
    guide.loadUrl("file:///android_asset/guide/index.html");
-   content.addView(guide,new LinearLayout.LayoutParams(-1,0,1f));
+   content.addView(guide,new LinearLayout.LayoutParams(-1,(int)(650*getResources().getDisplayMetrics().density)));
   }
  void enterpriseControlCenter(){
    page("مركز الرقابة والإقفال المالي — Enterprise");
