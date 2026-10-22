@@ -1,5 +1,5 @@
 plugins { id 'com.android.application' }
-// Standalone offline-first bakery app; 2.5.0 remains review-only pending device acceptance.
+// Standalone offline-first bakery app; includes operating-cost and margin calculator. Review-only pending device acceptance.
 android {
     namespace 'com.mohammedmustafa.almizan.bakery'
     compileSdk 36
