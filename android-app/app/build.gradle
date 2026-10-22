@@ -1,5 +1,6 @@
 plugins { id 'com.android.application' }
-// Android 2.4.8 review candidate: preserve the package identity and monotonic versionCode.
+// Android 2.4.9 review candidate: preserve the package identity and monotonic versionCode.
+// Paired Android/Windows rebuild after publisher compatibility fixes; do not publish until both builds pass.
 android {
  namespace 'com.mohammedmustafa.smartcompany'
  buildFeatures { buildConfig true }
