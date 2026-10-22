@@ -8,8 +8,8 @@ android {
   applicationId 'com.mohammedmustafa.smartcompany'
   minSdk 23
   targetSdk 36
-  versionCode 2004008
-  versionName '2.4.8'
+  versionCode 2004009
+  versionName '2.4.9'
  }
  testOptions { unitTests.includeAndroidResources = true }
 }
