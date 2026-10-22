@@ -229,12 +229,11 @@ public class MainActivity extends Activity {
         }
         return out;
     }
-    private long productionLoaves() { return Math.multiplyExact(val("cuts","work_units"),val("cuts","loaves_per_unit")); }
+    private long productionLoaves() { return BakeryMath.productionLoaves(val("cuts","work_units"),val("cuts","loaves_per_unit")); }
     private long valueForLoaves(long loaves) {
         long perThousand=val("cuts","loaves_per_1000");
         if(perThousand<=0) return 0;
-        return BigDecimal.valueOf(loaves).multiply(BigDecimal.valueOf(1000))
-            .divide(BigDecimal.valueOf(perThousand),0,RoundingMode.HALF_UP).longValueExact();
+        return BakeryMath.valueForLoaves(loaves,perThousand);
     }
     private long wages() { return rowTotals("workers","rows",4).amount; }
     private long otherExpenses() { return rowTotals("expenses","rows",2).amount; }
@@ -267,7 +266,7 @@ public class MainActivity extends Activity {
                 "\nيومية العمال المحسوبة من السطور: "+fmt(wages())+" جنيه"+
                 "\nمنصرفات المحل: "+fmt(expenseTotal())+" جنيه"+
                 "\nقيمة التالف: "+fmt(spoilageValue())+" جنيه"+
-                "\n\nإجمالي البنود المسجلة: "+fmt(actual())+" جنيه"+
+                "\n\nإجمالي البنود المسجلة: "+fmt(actual)+" جنيه"+
                 "\nفرق التسوية (المطلوب صفر): "+fmt(difference)+" جنيه"+
                 "\nالنتيجة: "+status+
                 (bad>0?"\n\n⚠ توجد "+bad+" سطور غير مكتملة أو غير رقمية. راجع صيغة السطور.":"")+
