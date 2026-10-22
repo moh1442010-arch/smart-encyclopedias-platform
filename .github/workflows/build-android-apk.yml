@@ -1,6 +1,8 @@
 name: Build Al-Mizan Accountant Android Release 2.4.2 - Signed
 # Keep this workflow name stable: the Android review publisher consumes successful main-branch runs by exact name.
-# Review publication workflow alignment refresh, 2026-10-20.
+# Review publication workflow alignment refresh, 2026-10-22.
+# Version 2.4.7 adds guarded dashboard rendering and a regression test for the post-PIN startup path.
+# Keep the workflow display name stable until all downstream publishers have migrated.
 
 concurrency:
   group: smart-company-android-release
