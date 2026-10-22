@@ -200,7 +200,7 @@ public class MainActivity extends Activity {
     }
 
     private void buildHome() {
-        base("🥖 الميزان المحاسبي للمخابز 2.5.0");
+        base("🥖 الميزان المحاسبي للمخابز 2.5.1");
         TextView intro = text("نظام يومي للمخبز: أدخل بيانات كل قسم، احفظها بتاريخها، ثم افتح «المحاسب والحساب» لمراجعة التسوية.",16);
         content.addView(intro);
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -219,7 +219,7 @@ public class MainActivity extends Activity {
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
-        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.0.")); content.addView(support);
+        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.1.")); content.addView(support);
         updateStatus();
     }
 
@@ -515,7 +515,7 @@ public class MainActivity extends Activity {
     }
 
     private void showGuide() {
-        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.0\n\n"+
+        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.1\n\n"+
             "1) اختر التاريخ من رزنامة الهاتف داخل التطبيق؛ لكل تاريخ دفتر مستقل.\n"+
             "2) المخزن: أدخل أرصدة/كميات الدقيق والخميرة والأكياس والزيت والملح والحطب والغاز والجهاز. هذه بيانات مخزن وليست خصمًا تلقائيًا من المخزون حتى الآن.\n"+
             "3) القطععيات: أدخل عدد الشغل، وعدد الأرغفة لكل قطعة، وعدد الأرغفة المقابل لـ 1,000 جنيه. يحسب التطبيق كمية العيش وقيمة الإنتاج.\n"+
@@ -538,7 +538,7 @@ public class MainActivity extends Activity {
         content.addView(text("شراء مرة واحدة: 450,000 جنيه سوداني",18));
         content.addView(text("الدفع: بنكك — رقم الحساب 1882224",16));
         Button copy=button("نسخ رقم حساب بنكك"); copy.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("Bankak",BANKAK));toast("تم نسخ رقم بنكك");}); content.addView(copy);
-        Button wa=button("إرسال إشعار التحويل عبر واتساب"); wa.setOnClickListener(v->openWhatsApp("السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.0.\nالتاريخ: "+day+"\nالباقة المطلوبة: [شهري/سنوي/شراء مرة واحدة]\nالمبلغ المحول: [اكتب المبلغ]\nرقم عملية بنكك: [اكتب الرقم]. سأرفق الإيصال هنا.")); content.addView(wa);
+        Button wa=button("إرسال إشعار التحويل عبر واتساب"); wa.setOnClickListener(v->openWhatsApp("السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.1.\nالتاريخ: "+day+"\nالباقة المطلوبة: [شهري/سنوي/شراء مرة واحدة]\nالمبلغ المحول: [اكتب المبلغ]\nرقم عملية بنكك: [اكتب الرقم]. سأرفق الإيصال هنا.")); content.addView(wa);
         content.addView(text("التفعيل بعد مراجعة التحويل من الدعم فقط. لا تدخل رمز بنكك أو كلمة مرورك في التطبيق أو ترسلها لأي شخص.",14));
         Button backup=button("🗂️ تصدير / استعادة بياناتك"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         if (!trialExpired()) { Button back=button("العودة إلى التطبيق"); back.setOnClickListener(v->buildHome()); content.addView(back); }
