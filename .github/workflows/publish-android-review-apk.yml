@@ -47,9 +47,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_ID: ${{ github.event.workflow_run.id }}
+          TRIGGER_SHA: ${{ github.event.workflow_run.head_sha }}
         shell: bash
         run: |
           set -euo pipefail
+          current_sha="$(git rev-parse HEAD)"
+          if [[ -z "$TRIGGER_SHA" || "$TRIGGER_SHA" != "$current_sha" ]]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping stale Android build: run commit $TRIGGER_SHA does not match checked-out main $current_sha; no release or manifest update will occur."
+            exit 0
+          fi
           names="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts" --jq '.artifacts[].name')"
           if printf '%s\n' "$names" | grep -Fxq "al-mizan-android-signed-release-v${VERSION}"; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
