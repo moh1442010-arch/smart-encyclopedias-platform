@@ -153,6 +153,7 @@ public class MainActivity extends Activity{
    }).start();
   }
   void dashboard(){
+  try {
   android.content.SharedPreferences lic=getSharedPreferences("commercial_license",0);long licenseExpiry=lic.getLong("expires_at",0);if("trial".equals(lic.getString("mode",""))&&licenseExpiry>0&&licenseExpiry<=System.currentTimeMillis()){licensePage("انتهت التجربة المجانية. أدخل رمز الترخيص التجاري للمتابعة.");return;}
   page("لوحة التحكم");content.setPadding(10,10,10,16);content.addView(languageButton());
   TextView brandTitle=t(english()?"Al-Mizan Accountant":"⚖ المحاسب الميزان",28);brandTitle.setTextColor(Color.rgb(11,31,58));brandTitle.setTypeface(null,android.graphics.Typeface.BOLD);brandTitle.setGravity(Gravity.CENTER);content.addView(brandTitle,new LinearLayout.LayoutParams(-1,-2));
@@ -181,6 +182,21 @@ public class MainActivity extends Activity{
    TextView label=t(title,16);label.setGravity(Gravity.CENTER);label.setTextColor(green);card.addView(label,new LinearLayout.LayoutParams(-1,-2));
    TextView detail=t(items[i][2],12);detail.setGravity(Gravity.CENTER);detail.setTextColor(Color.DKGRAY);card.addView(detail,new LinearLayout.LayoutParams(-1,-2));
    LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(6,6,6,6);row.addView(card,lp);card.setOnClickListener(v->openSection(title));
+  }
+  } catch (RuntimeException ex) {
+   android.util.Log.e("AlMizanStartup", "Dashboard rendering failed after authentication", ex);
+   getSharedPreferences("startup_diagnostics", 0).edit()
+    .putString("last_failure_class", ex.getClass().getName())
+    .putString("last_failure_message", ex.getMessage() == null ? "(no message)" : ex.getMessage().substring(0, Math.min(240, ex.getMessage().length())))
+    .putLong("last_failure_at", System.currentTimeMillis()).apply();
+   authenticated = false;
+   try { login(); } catch (RuntimeException loginFailure) {
+    android.util.Log.e("AlMizanStartup", "Recovery login rendering also failed", loginFailure);
+    new AlertDialog.Builder(this).setTitle("تعذر فتح لوحة التحكم")
+     .setMessage("حدث خطأ أثناء تجهيز لوحة التحكم. لم تُحذف قاعدة البيانات. أعد فتح التطبيق، وإذا تكرر الخطأ أرسل سجل الأعطال للدعم.")
+     .setPositiveButton("حسنًا", (dialog, which) -> finish()).show();
+   }
+   Toast.makeText(this, "تعذر تجهيز لوحة التحكم؛ تم تسجيل تفاصيل الخطأ للتشخيص.", Toast.LENGTH_LONG).show();
   }
  }
  int countInvalidJournalEntries(SQLiteDatabase sq){
@@ -759,8 +775,10 @@ public class MainActivity extends Activity{
  boolean validIsoDate(String value,boolean required){if(value==null||value.trim().isEmpty())return !required;try{java.text.SimpleDateFormat sdf=new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US);sdf.setLenient(false);java.util.Date d=sdf.parse(value.trim());return d!=null&&sdf.format(d).equals(value.trim());}catch(Exception ex){return false;}}
  boolean validNumber(EditText x,boolean required){String value=x.getText().toString().trim();if(value.isEmpty())return !required;try{double d=Double.parseDouble(value);return !Double.isNaN(d)&&!Double.isInfinite(d);}catch(Exception ex){return false;}}
   double num(EditText x){try{return Double.parseDouble(x.getText().toString());}catch(Exception z){return 0;}}String fmt(double x){int decimals=getSharedPreferences("company_profile",0).getInt("decimals",2);String currency=getSharedPreferences("company_profile",0).getString("currency","SDG").trim();if(currency.isEmpty())currency="SDG";return String.format(Locale.US,decimals==0?"%,.0f":"%,.2f",x)+" "+currency;}void toast(String s){Toast.makeText(this,tr(s),Toast.LENGTH_LONG).show();}void open(String u){try{startActivity(new Intent(Intent.ACTION_VIEW,android.net.Uri.parse(u)));}catch(Exception z){}}
- @Override protected void onStop(){super.onStop();if(authenticated){authenticated=false;needsRelogin=true;}}
- @Override protected void onResume(){super.onResume();if(needsRelogin){login();}}
+ // Preserve the authenticated screen when the activity briefly leaves the foreground.
+ // Forcing a PIN re-entry from onStop caused UI re-entrancy during system dialogs/app switches.
+ @Override protected void onStop(){super.onStop();}
+ @Override protected void onResume(){super.onResume();if(needsRelogin){needsRelogin=false;login();}}
  public void onBackPressed(){if(authenticated){dashboard();}else{super.onBackPressed();}}
  static class DB extends SQLiteOpenHelper{DB(Context c){super(c,"smartcompany2.db",null,10);}public void onCreate(SQLiteDatabase d){schema(d);}public void onUpgrade(SQLiteDatabase d,int o,int n){schema(d);}void schema(SQLiteDatabase d){d.execSQL("CREATE TABLE IF NOT EXISTS products(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT UNIQUE,qty REAL NOT NULL DEFAULT 0,sale_price REAL NOT NULL DEFAULT 0,cost REAL NOT NULL DEFAULT 0,reorder REAL NOT NULL DEFAULT 0)");try{d.execSQL("ALTER TABLE products ADD COLUMN barcode TEXT");}catch(Exception ignored){}d.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode) WHERE barcode IS NOT NULL AND barcode != ''");d.execSQL("CREATE TABLE IF NOT EXISTS customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT,credit_limit REAL NOT NULL DEFAULT 0)");try{d.execSQL("ALTER TABLE customers ADD COLUMN credit_limit REAL NOT NULL DEFAULT 0");}catch(Exception ignored){}d.execSQL("CREATE TABLE IF NOT EXISTS suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT)");d.execSQL("CREATE TABLE IF NOT EXISTS employees(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT,job_title TEXT NOT NULL DEFAULT '',salary REAL NOT NULL DEFAULT 0)");try{d.execSQL("ALTER TABLE employees ADD COLUMN job_title TEXT NOT NULL DEFAULT ''");}catch(Exception ignored){}try{d.execSQL("ALTER TABLE employees ADD COLUMN salary REAL NOT NULL DEFAULT 0");}catch(Exception ignored){}d.execSQL("CREATE TABLE IF NOT EXISTS payroll_events(id INTEGER PRIMARY KEY AUTOINCREMENT,employee_id INTEGER NOT NULL,kind TEXT NOT NULL,amount REAL NOT NULL,note TEXT,period_month TEXT NOT NULL,created_at INTEGER)");d.execSQL("CREATE INDEX IF NOT EXISTS idx_payroll_employee_month ON payroll_events(employee_id,period_month)");try{d.execSQL("ALTER TABLE payroll_events ADD COLUMN posted INTEGER NOT NULL DEFAULT 0");}catch(Exception ignored){}d.execSQL("CREATE TABLE IF NOT EXISTS transactions(id INTEGER PRIMARY KEY AUTOINCREMENT,type TEXT NOT NULL,party TEXT,total REAL NOT NULL,paid REAL NOT NULL DEFAULT 0,remaining REAL NOT NULL DEFAULT 0,created_at INTEGER)");try{d.execSQL("ALTER TABLE transactions ADD COLUMN original_transaction_id INTEGER");}catch(Exception ignored){}d.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_transaction_single_return ON transactions(original_transaction_id) WHERE original_transaction_id IS NOT NULL");try{d.execSQL("ALTER TABLE transactions ADD COLUMN invoice_no TEXT");}catch(Exception ignored){}try{d.execSQL("ALTER TABLE transactions ADD COLUMN customer_id INTEGER");}catch(Exception ignored){}try{d.execSQL("ALTER TABLE transactions ADD COLUMN supplier_id INTEGER");}catch(Exception ignored){}d.execSQL("INSERT INTO customers(name) SELECT DISTINCT t.party FROM transactions t WHERE t.type='SALE' AND t.party IS NOT NULL AND TRIM(t.party)!='' AND NOT EXISTS(SELECT 1 FROM customers c WHERE c.name=t.party)");d.execSQL("INSERT INTO suppliers(name) SELECT DISTINCT t.party FROM transactions t WHERE t.type='PURCHASE' AND t.party IS NOT NULL AND TRIM(t.party)!='' AND NOT EXISTS(SELECT 1 FROM suppliers s WHERE s.name=t.party)");d.execSQL("UPDATE transactions SET customer_id=(SELECT MIN(c.id) FROM customers c WHERE c.name=transactions.party) WHERE type='SALE' AND customer_id IS NULL");d.execSQL("UPDATE transactions SET supplier_id=(SELECT MIN(s.id) FROM suppliers s WHERE s.name=transactions.party) WHERE type='PURCHASE' AND supplier_id IS NULL");d.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_invoice_no ON transactions(invoice_no) WHERE invoice_no IS NOT NULL AND invoice_no != ''");d.execSQL("CREATE TABLE IF NOT EXISTS invoice_items(id INTEGER PRIMARY KEY AUTOINCREMENT,transaction_id INTEGER,product_id INTEGER,qty REAL,price REAL,cost REAL,discount REAL NOT NULL DEFAULT 0)");
  d.execSQL("CREATE TABLE IF NOT EXISTS bank_accounts(id INTEGER PRIMARY KEY AUTOINCREMENT,bank_name TEXT NOT NULL,account_name TEXT NOT NULL UNIQUE,opening_balance REAL NOT NULL DEFAULT 0)");
