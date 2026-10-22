@@ -35,6 +35,14 @@ public class DashboardStartupRegressionTest {
                 "Dashboard must render its heading; falling back to login means startup still failed",
                 containsText(root, "مركز إدارة النشاط")
             );
+            assertTrue(
+                "Factory work-in-progress must be reachable from the main dashboard",
+                containsText(root, "حساب التشغيل والتصنيع المرحلي")
+            );
+            assertTrue(
+                "The audited reversal screen must be reachable from the main dashboard",
+                containsText(root, "القيد العكسي")
+            );
             assertNotNull("Database helper must remain available after login", activity.db);
             assertFalse(
                 "Successful dashboard render must not leave a recorded startup failure",
