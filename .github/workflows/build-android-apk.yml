@@ -1,7 +1,7 @@
 name: Build Al-Mizan Accountant Android Release 2.4.2 - Signed
 # Keep this workflow name stable: the Android review publisher consumes successful main-branch runs by exact name.
 # Review publication workflow alignment refresh, 2026-10-22.
-# Version 2.4.10 hardens post-login recovery and isolates dashboard summary failures.
+# Version 2.4.11 fixes bakery daily reconciliation: expenses and employee bread are valued exactly once.
 # Keep the workflow display name stable until all downstream publishers have migrated.
 
 concurrency:
@@ -64,7 +64,7 @@ jobs:
       - name: Upload clean-install test APK
         uses: actions/upload-artifact@v4
         with:
-          name: al-mizan-2.4.10-clean-install-test-debug
+          name: al-mizan-2.4.11-clean-install-test-debug
           path: android-app/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
