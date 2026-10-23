@@ -43,7 +43,7 @@ public class MainActivity extends Activity {
     private static final String SUPPORT = "249121851285", BANKAK = "1882224";
     // Public verification key only. The corresponding private key is stored as a GitHub Actions secret.
     private static final String LICENSE_PUBLIC_KEY_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqlGWpIPqSpXdEP67uticpomJ5nKGkHrZkKDgnueolx8cFKyov/PydmJuAnxUaRnggcNte4/PfGzwrXtmoJ6hrpXfYUVjyL3UZ9MdCmPKevrdBftzWYoJ6NG2Dda6ZdlQoDdD/Mads1uJYACKxbipsgWSUr9MzmJdmTSYexDHBS6MWMPyjK+L60Jy3sn6k85bPE+AnPtOW38/no2ucz6h8kANgpd/4XDusR07l6EYOSg8TXuVny6SKUzH6PWf/TC6fXt2erASsPkvc5MehBMI9vXCTpj0PGZikAdyj/Hw6IKyr5HmG8vLgzofB1AfXPgIrJdhGMhdsUn8iD+4ZLBucQIDAQAB";
-    private static final int REQUEST_EXPORT_BACKUP = 4250, REQUEST_IMPORT_BACKUP = 4251, REQUEST_PAYMENT_RECEIPT = 4252;
+    private static final int REQUEST_EXPORT_BACKUP = 4250, REQUEST_IMPORT_BACKUP = 4251, REQUEST_PAYMENT_RECEIPT = 4252, REQUEST_COMPANY_LOGO = 4253;
     private String pendingActivationMessage = "";
     private Store store;
     private LinearLayout root, content;
@@ -95,7 +95,7 @@ public class MainActivity extends Activity {
         base("⚠️ تعذر فتح التطبيق");
         content.addView(text("تم تسجيل الخطأ بدل إغلاق التطبيق فجأة. لم تُحذف بيانات الدفاتر. أرسل التقرير للدعم لتحديد السبب بدقة.", 16));
         Button send = button("إرسال تقرير الخطأ عبر واتساب");
-        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل المحاسب الميزان للمخابز 2.5.5\n" + report));
+        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل المحاسب الميزان للمخابز 2.5.6\n" + report));
         content.addView(send);
         Button retry = button("إعادة محاولة فتح الصفحة الرئيسية");
         retry.setOnClickListener(v -> continueAfterPinAccepted());
@@ -361,9 +361,10 @@ public class MainActivity extends Activity {
     }
 
     private void buildHome() {
-        base("🥖 المحاسب الميزان للمخابز 2.5.5");
-        TextView intro = text("نظام يومي للمخبز: أدخل بيانات كل قسم، احفظها بتاريخها، ثم افتح «المحاسب والحساب» لمراجعة التسوية.",16);
+        base("🥖 المحاسب الميزان للمخابز 2.5.6");
+        TextView intro = text("منظومة يومية متكاملة للمخبز — من رصيد الدقيق إلى الإنتاج والتحصيل وهامش الربح.",16);
         content.addView(intro);
+        addBakeryHero();
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
         dateLabel = text("📅 التاريخ: " + day,16); dateRow.addView(dateLabel,new LinearLayout.LayoutParams(0,-2,1f));
         Button choose = button("اختيار التاريخ"); choose.setOnClickListener(v -> chooseDate()); dateRow.addView(choose); content.addView(dateRow);
@@ -381,8 +382,52 @@ public class MainActivity extends Activity {
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
-        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق المحاسب الميزان للمخابز 2.5.5.")); content.addView(support);
+        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق المحاسب الميزان للمخابز 2.5.6.")); content.addView(support);
         updateStatus();
+    }
+
+    private void addBakeryHero() {
+        LinearLayout hero = new LinearLayout(this);
+        hero.setOrientation(LinearLayout.VERTICAL);
+        hero.setPadding(18,16,18,16);
+        android.graphics.drawable.GradientDrawable background =
+            new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                new int[]{NAVY, Color.rgb(25,58,88)});
+        background.setCornerRadius(18 * getResources().getDisplayMetrics().density);
+        background.setStroke(Math.max(1,(int)(1.5f*getResources().getDisplayMetrics().density)), GOLD);
+        hero.setBackground(background);
+        hero.setElevation(4f);
+
+        TextView brand = text("🌾  سنابل الخير  •  رغيف اليوم بميزان دقيق",19);
+        brand.setTextColor(Color.WHITE);
+        brand.setTypeface(null,1);
+        hero.addView(brand);
+        TextView sub = text("المخزن  ←  شغل اليوم  ←  المبيعات  ←  حساب التكلفة",13);
+        sub.setTextColor(Color.rgb(239,229,195));
+        hero.addView(sub);
+
+        TextView trial = text(hasActiveLicense()
+            ? "✓ الترخيص مفعّل على هذا الجهاز"
+            : "🎁 التجربة المجانية: " + trialDaysRemaining() + " يوم متبقٍ — البيانات محفوظة محليًا",12);
+        trial.setTextColor(Color.WHITE);
+        hero.addView(trial);
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        Button stock = button("📦 المخزن");
+        stock.setOnClickListener(v -> openModule("stock"));
+        Button work = button("🥖 شغل اليوم");
+        work.setOnClickListener(v -> openModule("cuts"));
+        LinearLayout.LayoutParams actionLp = new LinearLayout.LayoutParams(0,-2,1f);
+        actionLp.setMargins(3,6,3,0);
+        actions.addView(stock, actionLp);
+        actions.addView(work, actionLp);
+        hero.addView(actions);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1,-2);
+        lp.setMargins(0,6,0,12);
+        content.addView(hero,lp);
     }
 
     private void addDashboardSummary() {
@@ -789,6 +834,10 @@ public class MainActivity extends Activity {
             if(resultCode==RESULT_OK && data!=null && data.getData()!=null) sharePaymentReceipt(data.getData());
             return;
         }
+        if(requestCode==REQUEST_COMPANY_LOGO) {
+            if(resultCode==RESULT_OK && data!=null && data.getData()!=null) shareCompanyLogo(data.getData());
+            return;
+        }
         if(resultCode!=RESULT_OK || data==null || data.getData()==null) return;
         try {
             if(requestCode==REQUEST_EXPORT_BACKUP) {
@@ -819,7 +868,7 @@ public class MainActivity extends Activity {
     }
 
     private void showGuide() {
-        String guide="طريقة الاستخدام — المحاسب الميزان للمخابز 2.5.5\n\n"+
+        String guide="طريقة الاستخدام — المحاسب الميزان للمخابز 2.5.6\n\n"+
             "1) اختر التاريخ من رزنامة الهاتف داخل التطبيق؛ لكل تاريخ دفتر مستقل.\n"+
             "2) المخزن: أدخل رصيد الدقيق الافتتاحي قبل شغل اليوم وكميات المواد الأخرى. مثال: إذا كان الرصيد 10 جوالات وشغل اليوم 7 جوالات، يصبح الرصيد المتبقي 3 جوالات تلقائيًا. إذا عدّلت المخزن أو عدد الشغل، يعيد التطبيق احتساب الفرق ولا يخصم الشغل مرتين.\n"+
             "3) القطعيات: أدخل عدد الشغل، وعدد الأرغفة لكل جوال، وعدد الأرغفة المقابل لـ 1,000 جنيه. يحسب التطبيق كمية العيش وقيمة الإنتاج.\n"+
@@ -876,6 +925,9 @@ public class MainActivity extends Activity {
         copy.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("Bankak",BANKAK));toast("تم نسخ رقم بنكك");});
         content.addView(copy);
         content.addView(text("بعد التحويل، أرفق صورة الإيصال داخل محادثة واتساب. لا ترسل الرقم السري أو رمز التحقق الخاص ببنكك. التفعيل يتم بعد مراجعة التحويل.",14));
+        Button logoRequest=button("🌾 إرسال شعار المخبز لتخصيص الفواتير عبر واتساب");
+        logoRequest.setOnClickListener(v->chooseCompanyLogo());
+        content.addView(logoRequest);
         Button backup=button("🗂️ تصدير / استعادة بياناتك");
         backup.setOnClickListener(v->backupRestoreMenu());
         content.addView(backup);
@@ -883,7 +935,7 @@ public class MainActivity extends Activity {
     }
 
     private void requestActivation(String plan,String amount) {
-        final String message="السلام عليكم، أطلب تفعيل المحاسب الميزان للمخابز 2.5.5.\n"+
+        final String message="السلام عليكم، أطلب تفعيل المحاسب الميزان للمخابز 2.5.6.\n"+
             "الباقة المختارة: "+plan+"\n"+
             "المبلغ: "+amount+"\n"+
             "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\n"+
@@ -925,6 +977,37 @@ public class MainActivity extends Activity {
             startActivity(Intent.createChooser(share,"إرسال طلب التفعيل والإيصال"));
         } catch(Exception ex) {
             toast("تعذر مشاركة الإيصال. يمكنك فتح واتساب وإرسال الطلب النصي ثم إرفاق الإيصال يدويًا.");
+        }
+    }
+
+    private void chooseCompanyLogo() {
+        pendingActivationMessage = "السلام عليكم، أرسل شعار نشاطي لتخصيص فواتير المحاسب الميزان للمخابز 2.5.6.\\n"+
+            "معرّف الجهاز: "+deviceId()+"\\n"+
+            "اسم النشاط: [اكتب اسم المخبز]\\n"+
+            "يرجى استخدام الشعار في الفواتير بعد مراجعة الطلب.";
+        Intent picker = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        picker.addCategory(Intent.CATEGORY_OPENABLE);
+        picker.setType("image/*");
+        try { startActivityForResult(picker,REQUEST_COMPANY_LOGO); }
+        catch(Exception ex) { toast("تعذر فتح اختيار الشعار؛ يمكنك إرسال الشعار يدويًا عبر واتساب."); }
+    }
+
+    private void shareCompanyLogo(Uri uri) {
+        try {
+            String mime = getContentResolver().getType(uri);
+            if (mime == null || !mime.startsWith("image/")) {
+                toast("اختر ملف صورة صالحًا للشعار.");
+                return;
+            }
+            Intent share = new Intent(Intent.ACTION_SEND);
+            share.setType(mime);
+            share.putExtra(Intent.EXTRA_STREAM,uri);
+            share.putExtra(Intent.EXTRA_TEXT,pendingActivationMessage);
+            share.setClipData(android.content.ClipData.newUri(getContentResolver(),"شعار المخبز",uri));
+            share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(share,"إرسال شعار المخبز عبر واتساب"));
+        } catch(Exception ex) {
+            toast("تعذر مشاركة الشعار. افتح واتساب وأرفق الصورة يدويًا.");
         }
     }
 
