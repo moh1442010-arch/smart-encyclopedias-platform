@@ -45,8 +45,9 @@ if (!["monthly", "annual", "lifetime"].includes(plan)) fail("Plan must be monthl
 if (!/^[A-Za-z0-9-]{8,100}$/.test(device) || device.includes(";") || device.includes("=")) {
   fail("Device ID format is invalid. Copy the device ID shown inside the app exactly.");
 }
-const root = process.cwd() + path.sep;
-if (keyPath.startsWith(root)) {
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(scriptDir, "..") + path.sep;
+if (keyPath.startsWith(repoRoot)) {
   fail("Security stop: keep the private key outside the repository. Move it to a protected location and retry.");
 }
 if (!fs.existsSync(keyPath) || !fs.statSync(keyPath).isFile()) fail("Private key file not found.");
