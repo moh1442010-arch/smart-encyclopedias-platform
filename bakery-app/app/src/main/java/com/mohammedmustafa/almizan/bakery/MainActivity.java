@@ -41,6 +41,8 @@ import android.util.Base64;
 public class MainActivity extends Activity {
     private static final int NAVY = Color.rgb(11,31,58), GOLD = Color.rgb(212,175,55), BG = Color.rgb(246,248,251);
     private static final String SUPPORT = "249121851285", BANKAK = "1882224";
+    // Public verification key only. The corresponding private key is stored as a GitHub Actions secret.
+    private static final String LICENSE_PUBLIC_KEY_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqlGWpIPqSpXdEP67uticpomJ5nKGkHrZkKDgnueolx8cFKyov/PydmJuAnxUaRnggcNte4/PfGzwrXtmoJ6hrpXfYUVjyL3UZ9MdCmPKevrdBftzWYoJ6NG2Dda6ZdlQoDdD/Mads1uJYACKxbipsgWSUr9MzmJdmTSYexDHBS6MWMPyjK+L60Jy3sn6k85bPE+AnPtOW38/no2ucz6h8kANgpd/4XDusR07l6EYOSg8TXuVny6SKUzH6PWf/TC6fXt2erASsPkvc5MehBMI9vXCTpj0PGZikAdyj/Hw6IKyr5HmG8vLgzofB1AfXPgIrJdhGMhdsUn8iD+4ZLBucQIDAQAB";
     private static final int REQUEST_EXPORT_BACKUP = 4250, REQUEST_IMPORT_BACKUP = 4251;
     private Store store;
     private LinearLayout root, content;
@@ -77,7 +79,7 @@ public class MainActivity extends Activity {
 
     private void continueAfterPinAccepted() {
         try {
-            if (trialExpired()) { showPaywall(); return; }
+            if (!hasActiveLicense() && trialExpired()) { showPaywall(); return; }
             buildHome();
         } catch (RuntimeException ex) {
             android.util.Log.e("AlMizanBakery", "Failed to open home after login", ex);
@@ -92,7 +94,7 @@ public class MainActivity extends Activity {
         base("⚠️ تعذر فتح التطبيق");
         content.addView(text("تم تسجيل الخطأ بدل إغلاق التطبيق فجأة. لم تُحذف بيانات الدفاتر. أرسل التقرير للدعم لتحديد السبب بدقة.", 16));
         Button send = button("إرسال تقرير الخطأ عبر واتساب");
-        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.3\n" + report));
+        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.4\n" + report));
         content.addView(send);
         Button retry = button("إعادة محاولة فتح الصفحة الرئيسية");
         retry.setOnClickListener(v -> continueAfterPinAccepted());
@@ -207,10 +209,104 @@ public class MainActivity extends Activity {
         }
     }
 
+    private String deviceId() {
+        android.content.SharedPreferences prefs = getPreferences(0);
+        String id = prefs.getString("license_device_id", null);
+        if (id == null || id.trim().isEmpty()) {
+            id = java.util.UUID.randomUUID().toString();
+            prefs.edit().putString("license_device_id", id).apply();
+        }
+        return id;
+    }
+
+    private boolean hasActiveLicense() {
+        String token = getPreferences(0).getString("license_token", null);
+        return token != null && verifyLicenseToken(token);
+    }
+
+    private boolean verifyLicenseToken(String token) {
+        try {
+            String[] parts = token.trim().split("\\.", -1);
+            if (parts.length != 2) return false;
+            int flags = Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING;
+            byte[] payloadBytes = Base64.decode(parts[0], flags);
+            byte[] signatureBytes = Base64.decode(parts[1], flags);
+            String payload = new String(payloadBytes, StandardCharsets.UTF_8);
+            java.security.PublicKey key = java.security.KeyFactory.getInstance("RSA").generatePublic(
+                new java.security.spec.X509EncodedKeySpec(Base64.decode(LICENSE_PUBLIC_KEY_B64, Base64.NO_WRAP)));
+            java.security.Signature verifier = java.security.Signature.getInstance("SHA256withRSA");
+            verifier.initVerify(key);
+            verifier.update(payloadBytes);
+            if (!verifier.verify(signatureBytes)) return false;
+            java.util.Map<String,String> fields = new java.util.HashMap<>();
+            for (String field : payload.split(";")) {
+                int at = field.indexOf('=');
+                if (at <= 0) return false;
+                fields.put(field.substring(0, at), field.substring(at + 1));
+            }
+            if (!"com.mohammedmustafa.almizan.bakery".equals(fields.get("app"))) return false;
+            if (!deviceId().equals(fields.get("device"))) return false;
+            String plan = fields.get("plan");
+            if (!"monthly".equals(plan) && !"annual".equals(plan) && !"lifetime".equals(plan)) return false;
+            String maxVersion = fields.get("max_version");
+            if ("lifetime".equals(plan)) {
+                if (!BuildConfig.VERSION_NAME.equals(maxVersion)) return false;
+            } else if (!"any".equals(maxVersion)) {
+                return false;
+            }
+            long expires = Long.parseLong(fields.get("expires"));
+            if (expires == 0L) return true;
+            android.content.SharedPreferences prefs = getPreferences(0);
+            long now = System.currentTimeMillis() / 1000L;
+            long lastSeen = prefs.getLong("license_last_seen", 0L);
+            if (lastSeen > 0L && now < lastSeen - 300L) return false;
+            prefs.edit().putLong("license_last_seen", Math.max(lastSeen, now)).apply();
+            return now <= expires;
+        } catch (Exception ex) {
+            android.util.Log.w("AlMizanBakery", "Activation token rejected", ex);
+            return false;
+        }
+    }
+
+    private void showActivationDialog() {
+        EditText code = new EditText(this);
+        code.setHint("ألصق رمز التفعيل الذي أرسله الدعم");
+        code.setMinLines(3);
+        code.setGravity(Gravity.TOP | Gravity.START);
+        code.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("🔑 تفعيل الاشتراك")
+            .setMessage("بعد مراجعة التحويل، يصلك رمز موقّع مرتبط بهذا الجهاز والباقة. أدخله هنا؛ لا ترسل الرمز السري لبنكك.")
+            .setView(code).setNegativeButton("إلغاء", null)
+            .setPositiveButton("تفعيل", null).create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String token = code.getText().toString().replaceAll("\\s+", "");
+            if (!verifyLicenseToken(token)) {
+                code.setError("رمز التفعيل غير صحيح أو لا يخص هذا الجهاز أو انتهت صلاحيته.");
+                return;
+            }
+            getPreferences(0).edit().putString("license_token", token).apply();
+            dialog.dismiss();
+            toast("تم التحقق من رمز التفعيل.");
+            buildHome();
+        }));
+        dialog.show();
+    }
+
     private boolean trialExpired() {
+        android.content.SharedPreferences prefs = getPreferences(0);
         long now = System.currentTimeMillis();
-        long start = getPreferences(0).getLong("trial_start", 0L);
-        if (start == 0L) { getPreferences(0).edit().putLong("trial_start", now).apply(); return false; }
+        long start = prefs.getLong("trial_start", 0L);
+        long lastSeen = prefs.getLong("trial_last_seen", 0L);
+        if (start <= 0L) {
+            prefs.edit().putLong("trial_start", now).putLong("trial_last_seen", now).apply();
+            return false;
+        }
+        // Prevent a backwards device-clock change from silently extending the offline trial.
+        if (lastSeen > 0L && now < lastSeen - 300000L) {
+            prefs.edit().putBoolean("trial_clock_rollback_detected", true).apply();
+        }
+        if (prefs.getBoolean("trial_clock_rollback_detected", false)) return true;
+        prefs.edit().putLong("trial_last_seen", Math.max(lastSeen, now)).apply();
         return now - start >= 7L * 24L * 60L * 60L * 1000L;
     }
 
@@ -264,7 +360,7 @@ public class MainActivity extends Activity {
     }
 
     private void buildHome() {
-        base("🥖 الميزان المحاسبي للمخابز 2.5.3");
+        base("🥖 الميزان المحاسبي للمخابز 2.5.4");
         TextView intro = text("نظام يومي للمخبز: أدخل بيانات كل قسم، احفظها بتاريخها، ثم افتح «المحاسب والحساب» لمراجعة التسوية.",16);
         content.addView(intro);
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -284,7 +380,7 @@ public class MainActivity extends Activity {
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
-        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.3.")); content.addView(support);
+        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.4.")); content.addView(support);
         updateStatus();
     }
 
@@ -292,7 +388,7 @@ public class MainActivity extends Activity {
         content.addView(text("📊 ملخص المخبز لهذا اليوم",18));
         LinearLayout first = new LinearLayout(this);
         first.setOrientation(LinearLayout.HORIZONTAL);
-        addMetricTile(first, "flour", "📦 رصيد الدقيق", fmt(val("stock","flour")) + " جوال", "المتاح بالمخزن");
+        addMetricTile(first, "flour", "📦 رصيد الدقيق", fmt(stockFlourValue()) + " جوال", "المتاح بالمخزن");
         addMetricTile(first, "work", "🥖 شغل اليوم", fmt(val("cuts","work_units")) + " جوال", "خصم آلي من الرصيد");
         content.addView(first);
         LinearLayout second = new LinearLayout(this);
@@ -384,7 +480,7 @@ public class MainActivity extends Activity {
     private Field[] schema(String module) {
         switch(module) {
             case "stock": return new Field[]{
-                f("flour","الدقيق — عدد الجوالات"),f("yeast","الخميرة — الكمية"),f("bags","الأكياس — الكمية"),
+                f("flour","رصيد الدقيق قبل خصم شغل اليوم — عدد الجوالات"),f("yeast","الخميرة — الكمية"),f("bags","الأكياس — الكمية"),
                 f("oil","الزيت — الكمية"),f("salt","الملح — الكمية"),f("wood","الحطب — الكمية"),
                 f("gas","الغاز — الكمية"),t("equipment","الجهاز / المعدات","اسم الجهاز وحالته وأي ملاحظة"),
                 t("notes","ملاحظات المخزن","")
@@ -435,9 +531,18 @@ public class MainActivity extends Activity {
     private void openModule(String module) {
         Field[] fields = schema(module);
         JSONObject saved = store.get(day,module);
-        if (module.equals("stock") && store.get(day,"stock").length()==0) {
-            JSONObject previous = store.getLatest(day,"stock");
-            if (previous.length() > 0) saved = previous;
+        if (module.equals("stock")) {
+            JSONObject currentStock = store.get(day,"stock");
+            if (currentStock.length() == 0) {
+                JSONObject previous = store.getLatest(day,"stock");
+                if (previous.length() > 0) saved = previous;
+            } else {
+                long appliedUsage = store.usageForDate(day);
+                if (appliedUsage > 0) {
+                    try { saved.put("flour", String.valueOf(Math.addExact(parseLong(saved.optString("flour","0")), appliedUsage))); }
+                    catch (Exception ex) { toast("تعذر تجهيز رصيد الدقيق للتحرير. لا تحفظ التغييرات حتى مراجعة البيانات."); }
+                }
+            }
         }
         if (module.equals("costing") && val("cuts","work_units") > 0) {
             try { saved.put("flour_bags", String.valueOf(val("cuts","work_units"))); } catch(Exception ignored) {}
@@ -456,7 +561,25 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle(titleFor(module)+" — "+day).setView(sc)
             .setNegativeButton("إلغاء",null).setNeutralButton("مسح خانات هذا القسم",(d,w)->{
                 new AlertDialog.Builder(this).setMessage("هل تريد مسح بيانات هذا القسم لهذا التاريخ؟").setNegativeButton("لا",null)
-                    .setPositiveButton("نعم، امسح القسم",(dd,ww)->{store.delete(day,module);updateStatus();toast("تم مسح القسم المحدد لهذا التاريخ فقط");}).show();
+                    .setPositiveButton("نعم، امسح القسم",(dd,ww)->{
+                        if ((module.equals("stock") || module.equals("cuts")) && store.hasFutureStockAfter(day)) {
+                            toast("لا يمكن تعديل أو مسح مخزون/شغل يوم سابق بعد تسجيل أرصدة لأيام لاحقة؛ راجع الأيام اللاحقة يدويًا قبل التصحيح.");
+                            return;
+                        }
+                        if (module.equals("stock") && store.usageForDate(day) > 0) {
+                            toast("لا يمكن مسح المخزن بعد خصم شغل اليوم. امسح شغل اليوم أولًا لإرجاع الرصيد بأمان.");
+                            return;
+                        }
+                        try {
+                            if (module.equals("cuts")) store.deleteCutsWithInventory(day);
+                            else store.delete(day,module);
+                            updateStatus();
+                            toast("تم مسح القسم المحدد لهذا التاريخ فقط");
+                        } catch (Exception ex) {
+                            toast("لم يتم المسح؛ تعذر إرجاع المخزون بأمان. بياناتك محفوظة، أرسل التقرير للدعم.");
+                            android.util.Log.e("AlMizanBakery", "Safe section deletion failed", ex);
+                        }
+                    }).show();
             }).setPositiveButton("حفظ بيانات القسم",(d,w)->{
                 try {
                     JSONObject record=new JSONObject();
@@ -473,6 +596,10 @@ public class MainActivity extends Activity {
                         store.saveCutsWithInventory(day, record, newWork);
                         updateStatus();
                         toast("حُفظ شغل اليوم. تم تحديث رصيد الدقيق والتكلفة تلقائيًا.");
+                    } else if (module.equals("stock")) {
+                        store.saveStockWithInventory(day, record);
+                        updateStatus();
+                        toast("حُفظ رصيد المخزن. الرصيد الظاهر في الملخص هو المتبقي بعد خصم شغل اليوم.");
                     } else {
                         store.put(day,module,record); updateStatus(); toast("حُفظ "+titleFor(module)+" بتاريخ "+day);
                     }
@@ -524,6 +651,13 @@ public class MainActivity extends Activity {
         }
         return out;
     }
+    private long stockFlourValue() {
+        JSONObject stock = store.get(day, "stock");
+        if (stock.length() == 0) stock = store.getLatest(day, "stock");
+        try { return Math.max(0L, parseLong(stock.optString("flour", "0"))); }
+        catch (Exception ignored) { return 0L; }
+    }
+
     private long productionLoaves() { return BakeryMath.productionLoaves(val("cuts","work_units"),val("cuts","loaves_per_unit")); }
     private long valueForLoaves(long loaves) {
         long perThousand=val("cuts","loaves_per_1000");
@@ -680,9 +814,9 @@ public class MainActivity extends Activity {
     }
 
     private void showGuide() {
-        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.3\n\n"+
+        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.4\n\n"+
             "1) اختر التاريخ من رزنامة الهاتف داخل التطبيق؛ لكل تاريخ دفتر مستقل.\n"+
-            "2) المخزن: أدخل أرصدة/كميات الدقيق والخميرة والأكياس والزيت والملح والحطب والغاز والجهاز. عند حفظ شغل اليوم يُخصم عدد جوالات الدقيق تلقائيًا من رصيد المخزن.\n"+
+            "2) المخزن: أدخل رصيد الدقيق الافتتاحي قبل شغل اليوم وكميات المواد الأخرى. يعرض الملخص الرصيد المتبقي، وعند حفظ شغل اليوم يُخصم عدد الجوالات تلقائيًا. إذا عدّلت المخزن بعد تسجيل الشغل، يعيد التطبيق حساب الرصيد المتبقي ولا يخصم الشغل مرتين.\n"+
             "3) القطعيات: أدخل عدد الشغل، وعدد الأرغفة لكل جوال، وعدد الأرغفة المقابل لـ 1,000 جنيه. يحسب التطبيق كمية العيش وقيمة الإنتاج.\n"+
             "4) يومية العمال: كل عامل في سطر بصيغة الاسم | الوظيفة | عدد الشغل | أجرة الوحدة. الأجر = عدد الشغل × أجرة الوحدة.\n"+
             "5) بيع الشباك: أدخل الكاش والديون والتحويلات. احتفظ برقم العملية في خانة المرجع.\n"+
@@ -706,10 +840,13 @@ public class MainActivity extends Activity {
 
     private void showPaywall() {
         base("🔐 اشتراك الميزان المحاسبي للمخابز");
+        boolean licensed = hasActiveLicense();
         boolean expired = trialExpired();
-        String trialMessage = expired
-            ? "انتهت فترة التجربة المجانية (7 أيام)، وتم إيقاف الوصول إلى الدفاتر حتى التفعيل. بياناتك المحلية محفوظة ولن تُحذف. اختر الباقة وحوّل المبلغ عبر بنكك ثم أرسل الإيصال عبر واتساب لطلب التفعيل."
-            : "أهلًا بك في الميزان المحاسبي للمخابز. بقي نحو " + trialDaysRemaining() + " يومًا من التجربة المجانية. يمكنك اختيار باقة مسبقًا؛ ستظل بياناتك محفوظة على الهاتف.";
+        String trialMessage = licensed
+            ? "اشتراكك مفعّل على هذا الجهاز. يمكنك متابعة الدفاتر أو طلب تجديد الباقة عند الحاجة."
+            : expired
+                ? "انتهت فترة التجربة المجانية (7 أيام)، وتم إيقاف الوصول إلى الدفاتر حتى التفعيل. بياناتك المحلية محفوظة ولن تُحذف. اختر الباقة وحوّل المبلغ عبر بنكك ثم أرسل الإيصال عبر واتساب لطلب التفعيل."
+                : "أهلًا بك في الميزان المحاسبي للمخابز. بقي نحو " + trialDaysRemaining() + " يومًا من التجربة المجانية. يمكنك اختيار باقة مسبقًا؛ ستظل بياناتك محفوظة على الهاتف.";
         content.addView(text(trialMessage,16));
         content.addView(text("الاشتراك الشهري — 30,000 جنيه سوداني",18));
         Button monthly=button("اختيار الباقة الشهرية");
@@ -723,6 +860,12 @@ public class MainActivity extends Activity {
         Button lifetime=button("اختيار باقة الشراء مرة واحدة");
         lifetime.setOnClickListener(v->requestActivation("شراء مرة واحدة","450,000 جنيه سوداني"));
         content.addView(lifetime);
+        content.addView(text("تنبيه قبل الدفع: الشراء لمرة واحدة يفعّل هذا الإصدار فقط ولا يشمل التحديثات المستقبلية. الباقات الشهرية والسنوية تشمل التحديثات طوال فترة الاشتراك.",13));
+        content.addView(text("معرّف هذا الجهاز لربط الاشتراك به:",14));
+        content.addView(text(deviceId(),13));
+        Button activate=button("🔑 أدخل رمز التفعيل بعد موافقة الدعم");
+        activate.setOnClickListener(v->showActivationDialog());
+        content.addView(activate);
         content.addView(text("الدفع عبر بنكك — رقم الحساب: 1882224",16));
         Button copy=button("نسخ رقم حساب بنكك");
         copy.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("Bankak",BANKAK));toast("تم نسخ رقم بنكك");});
@@ -731,17 +874,18 @@ public class MainActivity extends Activity {
         Button backup=button("🗂️ تصدير / استعادة بياناتك");
         backup.setOnClickListener(v->backupRestoreMenu());
         content.addView(backup);
-        if (!trialExpired()) { Button back=button("العودة إلى التطبيق"); back.setOnClickListener(v->buildHome()); content.addView(back); }
+        if (!trialExpired() || hasActiveLicense()) { Button back=button("العودة إلى التطبيق"); back.setOnClickListener(v->buildHome()); content.addView(back); }
     }
 
     private void requestActivation(String plan,String amount) {
-        String message="السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.3.\n"+
+        String message="السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.4.\n"+
             "الباقة المختارة: "+plan+"\n"+
             "المبلغ: "+amount+"\n"+
             "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\n"+
             "تاريخ الطلب: "+day+"\n"+
+            "معرّف الجهاز: "+deviceId()+"\n"+
             "رقم عملية بنكك: [اكتب رقم العملية]\n"+
-            "سأرفق صورة إيصال التحويل هنا. أرجو مراجعة التحويل وتفعيل الباقة.";
+            "سأرفق صورة إيصال التحويل هنا. بعد التحقق أرجو إرسال رمز تفعيل مرتبط بهذا الجهاز والباقة.";
         openWhatsApp(message);
     }
 
@@ -785,6 +929,8 @@ public class MainActivity extends Activity {
                 long previouslyApplied=0L;
                 Cursor usage=db.rawQuery("SELECT flour_bags FROM inventory_usage WHERE day=?",new String[]{date});
                 try { if(usage.moveToFirst()) previouslyApplied=usage.getLong(0); } finally { usage.close(); }
+                if(newWork!=previouslyApplied && hasFutureStockAfter(date))
+                    throw new IllegalStateException("لا يمكن تغيير استخدام الدقيق ليوم سابق بعد تسجيل أرصدة مخزن لأيام لاحقة؛ صحح التسلسل الزمني أولًا.");
                 JSONObject stock=getLatest(date,"stock");
                 if (stock.length()==0 && (newWork>0 || previouslyApplied>0)) throw new IllegalStateException("أدخل رصيد الدقيق في قسم المخزن أولًا، ثم احفظ شغل اليوم.");
                 if (stock.length()>0) {
@@ -807,6 +953,58 @@ public class MainActivity extends Activity {
                 db.setTransactionSuccessful();
             } finally { db.endTransaction(); }
         }
+        long usageForDate(String date) {
+            Cursor c=getReadableDatabase().rawQuery("SELECT flour_bags FROM inventory_usage WHERE day=?",new String[]{date});
+            try { return c.moveToFirst()?c.getLong(0):0L; } finally { c.close(); }
+        }
+        boolean hasFutureStockAfter(String date) {
+            Cursor c=getReadableDatabase().rawQuery("SELECT 1 FROM records WHERE module='stock' AND day>? LIMIT 1",new String[]{date});
+            try { return c.moveToFirst(); } finally { c.close(); }
+        }
+
+        void saveStockWithInventory(String date,JSONObject stockInput) throws Exception {
+            SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
+            try {
+                if(hasFutureStockAfter(date)) throw new IllegalStateException("لا يمكن تعديل رصيد مخزن سابق بعد تسجيل أرصدة لأيام لاحقة.");
+                long usage=usageForDate(date);
+                String raw=stockInput.optString("flour","");
+                if(raw.trim().isEmpty() && usage>0) throw new IllegalStateException("أدخل رصيد الدقيق الافتتاحي قبل حفظ المخزن.");
+                long opening=raw.trim().isEmpty()?0L:parseLong(raw);
+                long closing=Math.subtractExact(opening,usage);
+                if(closing<0) throw new IllegalStateException("رصيد الدقيق الافتتاحي أقل من شغل اليوم.");
+                stockInput.put("flour",String.valueOf(closing));
+                ContentValues cv=new ContentValues(); cv.put("day",date); cv.put("module","stock"); cv.put("payload",stockInput.toString()); cv.put("updated_at",System.currentTimeMillis());
+                db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
+                db.setTransactionSuccessful();
+            } finally { db.endTransaction(); }
+        }
+
+        void deleteCutsWithInventory(String date) {
+            SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
+            try {
+                if(hasFutureStockAfter(date)) throw new IllegalStateException("لا يمكن حذف شغل يوم سابق بعد تسجيل أرصدة مخزن لأيام لاحقة.");
+                long usage=usageForDate(date);
+                Cursor c=db.rawQuery("SELECT payload FROM records WHERE day=? AND module='stock'",new String[]{date});
+                try {
+                    if(c.moveToFirst() && usage>0) {
+                        JSONObject stock=new JSONObject(c.getString(0));
+                        long closing=parseLong(stock.optString("flour","0"));
+                        stock.put("flour",String.valueOf(Math.addExact(closing,usage)));
+                        ContentValues cv=new ContentValues(); cv.put("day",date); cv.put("module","stock"); cv.put("payload",stock.toString()); cv.put("updated_at",System.currentTimeMillis());
+                        db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
+                    }
+                } finally { c.close(); }
+                db.delete("records","day=? AND module='cuts'",new String[]{date});
+                db.delete("inventory_usage","day=?",new String[]{date});
+                JSONObject cost=get(date,"costing"); cost.put("flour_bags","0");
+                ContentValues costCv=new ContentValues(); costCv.put("day",date); costCv.put("module","costing"); costCv.put("payload",cost.toString()); costCv.put("updated_at",System.currentTimeMillis());
+                db.insertWithOnConflict("records",null,costCv,SQLiteDatabase.CONFLICT_REPLACE);
+                db.setTransactionSuccessful();
+            } catch(Exception ex) {
+                throw new IllegalStateException("تعذر إرجاع المخزون بأمان؛ لم تكتمل عملية مسح شغل اليوم.",ex);
+            } finally { db.endTransaction(); }
+        }
+
         void delete(String date,String module) { getWritableDatabase().delete("records","day=? AND module=?",new String[]{date,module}); }
         boolean has(String date) { Cursor c=getReadableDatabase().rawQuery("SELECT 1 FROM records WHERE day=? LIMIT 1",new String[]{date}); try{return c.moveToFirst();}finally{c.close();} }
 

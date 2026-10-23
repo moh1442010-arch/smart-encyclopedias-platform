@@ -39,6 +39,13 @@ public class BakeryMathTest {
         assertEquals(4L, BakeryMath.stockAfterUsage(3,7,6));
         assertEquals(2L, BakeryMath.stockAfterUsage(3,7,8));
     }
+    @Test public void reversingDailyWorkRestoresTheOpeningFlourBalance() {
+        assertEquals(10L, BakeryMath.stockAfterUsage(3,7,0));
+    }
+    @Test public void savingOpeningStockAfterDailyUsageKeepsClosingBalanceCorrect() {
+        assertEquals(3L, BakeryMath.stockAfterUsage(10,0,7));
+        assertEquals(3L, BakeryMath.stockAfterUsage(3,7,7));
+    }
     @Test(expected=IllegalArgumentException.class) public void rejectsNegativeStockMovementInputs() {
         BakeryMath.stockAfterUsage(10,-1,7);
     }

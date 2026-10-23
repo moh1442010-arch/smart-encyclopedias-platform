@@ -1,14 +1,15 @@
 plugins { id 'com.android.application' }
 // Standalone offline-first bakery app; includes operating-cost and margin calculator. Review-only pending device acceptance.
 android {
+    buildFeatures { buildConfig true }
     namespace 'com.mohammedmustafa.almizan.bakery'
     compileSdk 36
     defaultConfig {
         applicationId 'com.mohammedmustafa.almizan.bakery'
         minSdk 23
         targetSdk 35
-        versionCode 250003
-        versionName '2.5.3'
+        versionCode 250004
+        versionName '2.5.4'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     testOptions { unitTests.includeAndroidResources = true }
