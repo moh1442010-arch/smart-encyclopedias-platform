@@ -328,12 +328,12 @@ public class MainActivity extends Activity {
         head.setGravity(Gravity.CENTER_VERTICAL);
         head.setPadding(16,14,16,14);
         head.setBackground(rounded(NAVY, 0));
-        TextView logo = new TextView(this);
-        logo.setText("⚖️\n🌾🥖");
-        logo.setTextSize(20);
-        logo.setGravity(Gravity.CENTER);
-        logo.setTextColor(GOLD);
-        head.addView(logo, new LinearLayout.LayoutParams(58,60));
+        android.widget.ImageView logo = new android.widget.ImageView(this);
+        logo.setImageResource(R.drawable.ic_bakery);
+        logo.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        logo.setPadding(2,2,2,2);
+        logo.setBackground(rounded(NAVY,12));
+        head.addView(logo, new LinearLayout.LayoutParams(60,60));
         LinearLayout titles = new LinearLayout(this);
         titles.setOrientation(LinearLayout.VERTICAL);
         TextView name = new TextView(this);
@@ -981,9 +981,9 @@ public class MainActivity extends Activity {
     }
 
     private void chooseCompanyLogo() {
-        pendingActivationMessage = "السلام عليكم، أرسل شعار نشاطي لتخصيص فواتير المحاسب الميزان للمخابز 2.5.6.\\n"+
-            "معرّف الجهاز: "+deviceId()+"\\n"+
-            "اسم النشاط: [اكتب اسم المخبز]\\n"+
+        pendingActivationMessage = "السلام عليكم، أرسل شعار نشاطي لتخصيص فواتير المحاسب الميزان للمخابز 2.5.6.\n"+
+            "معرّف الجهاز: "+deviceId()+"\n"+
+            "اسم النشاط: [اكتب اسم المخبز]\n"+
             "يرجى استخدام الشعار في الفواتير بعد مراجعة الطلب.";
         Intent picker = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         picker.addCategory(Intent.CATEGORY_OPENABLE);
