@@ -41,6 +41,8 @@ import android.util.Base64;
 public class MainActivity extends Activity {
     private static final int NAVY = Color.rgb(11,31,58), GOLD = Color.rgb(212,175,55), BG = Color.rgb(246,248,251);
     private static final String SUPPORT = "249121851285", BANKAK = "1882224";
+    // Public verification key only. The corresponding private key is stored as a GitHub Actions secret.
+    private static final String LICENSE_PUBLIC_KEY_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqlGWpIPqSpXdEP67uticpomJ5nKGkHrZkKDgnueolx8cFKyov/PydmJuAnxUaRnggcNte4/PfGzwrXtmoJ6hrpXfYUVjyL3UZ9MdCmPKevrdBftzWYoJ6NG2Dda6ZdlQoDdD/Mads1uJYACKxbipsgWSUr9MzmJdmTSYexDHBS6MWMPyjK+L60Jy3sn6k85bPE+AnPtOW38/no2ucz6h8kANgpd/4XDusR07l6EYOSg8TXuVny6SKUzH6PWf/TC6fXt2erASsPkvc5MehBMI9vXCTpj0PGZikAdyj/Hw6IKyr5HmG8vLgzofB1AfXPgIrJdhGMhdsUn8iD+4ZLBucQIDAQAB";
     private static final int REQUEST_EXPORT_BACKUP = 4250, REQUEST_IMPORT_BACKUP = 4251;
     private Store store;
     private LinearLayout root, content;
@@ -77,7 +79,7 @@ public class MainActivity extends Activity {
 
     private void continueAfterPinAccepted() {
         try {
-            if (trialExpired()) { showPaywall(); return; }
+            if (!hasActiveLicense() && trialExpired()) { showPaywall(); return; }
             buildHome();
         } catch (RuntimeException ex) {
             android.util.Log.e("AlMizanBakery", "Failed to open home after login", ex);
@@ -205,6 +207,74 @@ public class MainActivity extends Activity {
         } finally {
             spec.clearPassword();
         }
+    }
+
+    private String deviceId() {
+        android.content.SharedPreferences prefs = getPreferences(0);
+        String id = prefs.getString("license_device_id", null);
+        if (id == null || id.trim().isEmpty()) {
+            id = java.util.UUID.randomUUID().toString();
+            prefs.edit().putString("license_device_id", id).apply();
+        }
+        return id;
+    }
+
+    private boolean hasActiveLicense() {
+        String token = getPreferences(0).getString("license_token", null);
+        return token != null && verifyLicenseToken(token);
+    }
+
+    private boolean verifyLicenseToken(String token) {
+        try {
+            String[] parts = token.trim().split("\\.", -1);
+            if (parts.length != 2) return false;
+            int flags = Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING;
+            byte[] payloadBytes = Base64.decode(parts[0], flags);
+            byte[] signatureBytes = Base64.decode(parts[1], flags);
+            String payload = new String(payloadBytes, StandardCharsets.UTF_8);
+            java.security.PublicKey key = java.security.KeyFactory.getInstance("RSA").generatePublic(
+                new java.security.spec.X509EncodedKeySpec(Base64.decode(LICENSE_PUBLIC_KEY_B64, Base64.NO_WRAP)));
+            java.security.Signature verifier = java.security.Signature.getInstance("SHA256withRSA");
+            verifier.initVerify(key);
+            verifier.update(payloadBytes);
+            if (!verifier.verify(signatureBytes)) return false;
+            java.util.Map<String,String> fields = new java.util.HashMap<>();
+            for (String field : payload.split(";")) {
+                int at = field.indexOf('=');
+                if (at <= 0) return false;
+                fields.put(field.substring(0, at), field.substring(at + 1));
+            }
+            if (!"com.mohammedmustafa.almizan.bakery".equals(fields.get("app"))) return false;
+            if (!deviceId().equals(fields.get("device"))) return false;
+            String plan = fields.get("plan");
+            if (!"monthly".equals(plan) && !"annual".equals(plan) && !"lifetime".equals(plan)) return false;
+            long expires = Long.parseLong(fields.get("expires"));
+            return expires == 0L || System.currentTimeMillis() / 1000L <= expires;
+        } catch (Exception ex) {
+            android.util.Log.w("AlMizanBakery", "Activation token rejected", ex);
+            return false;
+        }
+    }
+
+    private void showActivationDialog() {
+        EditText code = new EditText(this);
+        code.setHint("ألصق رمز التفعيل الذي أرسله الدعم");
+        code.setMinLines(3);
+        code.setGravity(Gravity.TOP | Gravity.START);
+        code.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        new AlertDialog.Builder(this).setTitle("🔑 تفعيل الاشتراك")
+            .setMessage("بعد مراجعة التحويل، يصلك رمز موقّع مرتبط بهذا الجهاز والباقة. أدخله هنا؛ لا ترسل الرمز السري لبنكك.")
+            .setView(code).setNegativeButton("إلغاء", null)
+            .setPositiveButton("تفعيل", (d,w) -> {
+                String token = code.getText().toString().replaceAll("\\s+", "");
+                if (!verifyLicenseToken(token)) {
+                    toast("رمز التفعيل غير صحيح أو لا يخص هذا الجهاز أو انتهت صلاحيته.");
+                    return;
+                }
+                getPreferences(0).edit().putString("license_token", token).apply();
+                toast("تم التحقق من رمز التفعيل.");
+                buildHome();
+            }).show();
     }
 
     private boolean trialExpired() {
