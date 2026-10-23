@@ -5,10 +5,12 @@ on:
   push:
     paths:
       - "bakery-app/**"
+      - "tools/bakery-license-issuer.mjs"
       - ".github/workflows/build-bakery-apk.yml"
   pull_request:
     paths:
       - "bakery-app/**"
+      - "tools/bakery-license-issuer.mjs"
       - ".github/workflows/build-bakery-apk.yml"
 
 permissions:
@@ -24,6 +26,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Node.js for activation issuer validation
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Validate offline activation issuer syntax
+        run: node --check tools/bakery-license-issuer.mjs
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
