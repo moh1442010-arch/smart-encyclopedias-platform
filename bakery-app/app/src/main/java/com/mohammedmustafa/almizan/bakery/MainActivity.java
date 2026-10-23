@@ -253,10 +253,7 @@ public class MainActivity extends Activity {
             android.content.SharedPreferences prefs = getPreferences(0);
             long now = System.currentTimeMillis() / 1000L;
             long lastSeen = prefs.getLong("license_last_seen", 0L);
-            if (lastSeen > 0L && now < lastSeen - 300L) {
-                prefs.edit().putBoolean("license_clock_rollback_detected", true).apply();
-            }
-            if (prefs.getBoolean("license_clock_rollback_detected", false)) return false;
+            if (lastSeen > 0L && now < lastSeen - 300L) return false;
             prefs.edit().putLong("license_last_seen", Math.max(lastSeen, now)).apply();
             return now <= expires;
         } catch (Exception ex) {
