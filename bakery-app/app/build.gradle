@@ -1,5 +1,6 @@
 plugins { id 'com.android.application' }
 // Standalone offline-first bakery app; includes operating-cost and margin calculator. Review-only pending device acceptance.
+// Preserve applicationId and SQLite database name across updates; versionCode must increase monotonically.
 android {
     buildFeatures { buildConfig true }
     namespace 'com.mohammedmustafa.almizan.bakery'
