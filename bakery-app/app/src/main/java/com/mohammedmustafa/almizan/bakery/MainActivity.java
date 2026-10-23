@@ -395,7 +395,7 @@ public class MainActivity extends Activity {
     private Field[] schema(String module) {
         switch(module) {
             case "stock": return new Field[]{
-                f("flour","الدقيق — عدد الجوالات"),f("yeast","الخميرة — الكمية"),f("bags","الأكياس — الكمية"),
+                f("flour","رصيد الدقيق قبل خصم شغل اليوم — عدد الجوالات"),f("yeast","الخميرة — الكمية"),f("bags","الأكياس — الكمية"),
                 f("oil","الزيت — الكمية"),f("salt","الملح — الكمية"),f("wood","الحطب — الكمية"),
                 f("gas","الغاز — الكمية"),t("equipment","الجهاز / المعدات","اسم الجهاز وحالته وأي ملاحظة"),
                 t("notes","ملاحظات المخزن","")
@@ -446,9 +446,18 @@ public class MainActivity extends Activity {
     private void openModule(String module) {
         Field[] fields = schema(module);
         JSONObject saved = store.get(day,module);
-        if (module.equals("stock") && store.get(day,"stock").length()==0) {
-            JSONObject previous = store.getLatest(day,"stock");
-            if (previous.length() > 0) saved = previous;
+        if (module.equals("stock")) {
+            JSONObject currentStock = store.get(day,"stock");
+            if (currentStock.length() == 0) {
+                JSONObject previous = store.getLatest(day,"stock");
+                if (previous.length() > 0) saved = previous;
+            } else {
+                long appliedUsage = store.usageForDate(day);
+                if (appliedUsage > 0) {
+                    try { saved.put("flour", String.valueOf(Math.addExact(parseLong(saved.optString("flour","0")), appliedUsage))); }
+                    catch (Exception ex) { toast("تعذر تجهيز رصيد الدقيق للتحرير. لا تحفظ التغييرات حتى مراجعة البيانات."); }
+                }
+            }
         }
         if (module.equals("costing") && val("cuts","work_units") > 0) {
             try { saved.put("flour_bags", String.valueOf(val("cuts","work_units"))); } catch(Exception ignored) {}
@@ -467,7 +476,21 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle(titleFor(module)+" — "+day).setView(sc)
             .setNegativeButton("إلغاء",null).setNeutralButton("مسح خانات هذا القسم",(d,w)->{
                 new AlertDialog.Builder(this).setMessage("هل تريد مسح بيانات هذا القسم لهذا التاريخ؟").setNegativeButton("لا",null)
-                    .setPositiveButton("نعم، امسح القسم",(dd,ww)->{store.delete(day,module);updateStatus();toast("تم مسح القسم المحدد لهذا التاريخ فقط");}).show();
+                    .setPositiveButton("نعم، امسح القسم",(dd,ww)->{
+                        if (module.equals("stock") && store.usageForDate(day) > 0) {
+                            toast("لا يمكن مسح المخزن بعد خصم شغل اليوم. امسح شغل اليوم أولًا لإرجاع الرصيد بأمان.");
+                            return;
+                        }
+                        try {
+                            if (module.equals("cuts")) store.deleteCutsWithInventory(day);
+                            else store.delete(day,module);
+                            updateStatus();
+                            toast("تم مسح القسم المحدد لهذا التاريخ فقط");
+                        } catch (Exception ex) {
+                            toast("لم يتم المسح؛ تعذر إرجاع المخزون بأمان. بياناتك محفوظة، أرسل التقرير للدعم.");
+                            android.util.Log.e("AlMizanBakery", "Safe section deletion failed", ex);
+                        }
+                    }).show();
             }).setPositiveButton("حفظ بيانات القسم",(d,w)->{
                 try {
                     JSONObject record=new JSONObject();
@@ -484,6 +507,10 @@ public class MainActivity extends Activity {
                         store.saveCutsWithInventory(day, record, newWork);
                         updateStatus();
                         toast("حُفظ شغل اليوم. تم تحديث رصيد الدقيق والتكلفة تلقائيًا.");
+                    } else if (module.equals("stock")) {
+                        store.saveStockWithInventory(day, record);
+                        updateStatus();
+                        toast("حُفظ رصيد المخزن. الرصيد الظاهر في الملخص هو المتبقي بعد خصم شغل اليوم.");
                     } else {
                         store.put(day,module,record); updateStatus(); toast("حُفظ "+titleFor(module)+" بتاريخ "+day);
                     }
@@ -700,7 +727,7 @@ public class MainActivity extends Activity {
     private void showGuide() {
         String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.4\n\n"+
             "1) اختر التاريخ من رزنامة الهاتف داخل التطبيق؛ لكل تاريخ دفتر مستقل.\n"+
-            "2) المخزن: أدخل أرصدة/كميات الدقيق والخميرة والأكياس والزيت والملح والحطب والغاز والجهاز. عند حفظ شغل اليوم يُخصم عدد جوالات الدقيق تلقائيًا من رصيد المخزن.\n"+
+            "2) المخزن: أدخل رصيد الدقيق الافتتاحي قبل شغل اليوم وكميات المواد الأخرى. يعرض الملخص الرصيد المتبقي، وعند حفظ شغل اليوم يُخصم عدد الجوالات تلقائيًا. إذا عدّلت المخزن بعد تسجيل الشغل، يعيد التطبيق حساب الرصيد المتبقي ولا يخصم الشغل مرتين.\n"+
             "3) القطعيات: أدخل عدد الشغل، وعدد الأرغفة لكل جوال، وعدد الأرغفة المقابل لـ 1,000 جنيه. يحسب التطبيق كمية العيش وقيمة الإنتاج.\n"+
             "4) يومية العمال: كل عامل في سطر بصيغة الاسم | الوظيفة | عدد الشغل | أجرة الوحدة. الأجر = عدد الشغل × أجرة الوحدة.\n"+
             "5) بيع الشباك: أدخل الكاش والديون والتحويلات. احتفظ برقم العملية في خانة المرجع.\n"+
