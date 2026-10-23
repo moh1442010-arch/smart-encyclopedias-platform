@@ -212,9 +212,18 @@ public class BakeryDailyActivity extends Activity {
             breadForWorkers = BakeryLedgerMath.valueForLoaves(
                 Math.max(0, number("shop_bread_loaves")), loavesPerThousand);
         }
-        long shop = BakeryLedgerMath.sum(
+        return BakeryLedgerMath.sum(
             amount("shop_meals"), breadForWorkers, amount("shop_tea_sugar"), amount("shop_other_expenses"));
-        return BakeryLedgerMath.sum(amount("workers_wages"), amount("work_expenses"), shop);
+    }
+    private long totalExpenses() {
+        return BakeryLedgerMath.sum(amount("workers_wages"), amount("work_expenses"), shopExpenses());
+    }
+    private long grossRevenue() {
+        return BakeryLedgerMath.sum(amount("window_cash"), amount("window_bank"), amount("window_debt"),
+            amount("distribution_cash"), amount("distribution_bank"), amount("distribution_debt"));
+    }
+    private long flourCostForDay() {
+        return BakeryLedgerMath.flourCost(Math.max(0, number("flour_bags_used")), Math.max(0, number("flour_cost_per_bag")));
     }
     private void recalculate() {
         if (summary == null || fields.isEmpty()) return;
