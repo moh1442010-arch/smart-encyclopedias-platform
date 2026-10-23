@@ -1,4 +1,4 @@
-name: Build Al-Mizan Bakery 2.5.2 Review APK
+name: Build Al-Mizan Bakery 2.5.3 Review APK
 
 on:
   workflow_dispatch:
@@ -53,7 +53,7 @@ jobs:
       - name: Upload internal debug build (not for distribution)
         uses: actions/upload-artifact@v4
         with:
-          name: al-mizan-bakery-2.5.2-debug-internal
+          name: al-mizan-bakery-2.5.3-debug-internal
           path: bakery-app/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -78,35 +78,35 @@ jobs:
           apk="app/build/outputs/apk/release/app-release-unsigned.apk"
           test -s "$apk"
           build_tools="$ANDROID_HOME/build-tools/36.0.0"
-          "$build_tools/zipalign" -f -v 4 "$apk" release/AlMizan-Bakery-2.5.2-aligned.apk
-          "$build_tools/apksigner" sign --ks signing/release.jks --ks-key-alias "$alias" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEYSTORE_PASSWORD" --out release/AlMizan-Bakery-2.5.2-review.apk release/AlMizan-Bakery-2.5.2-aligned.apk
-          "$build_tools/apksigner" verify --verbose --print-certs release/AlMizan-Bakery-2.5.2-review.apk | tee release/SIGNING-CERTIFICATE.txt
+          "$build_tools/zipalign" -f -v 4 "$apk" release/AlMizan-Bakery-2.5.3-aligned.apk
+          "$build_tools/apksigner" sign --ks signing/release.jks --ks-key-alias "$alias" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEYSTORE_PASSWORD" --out release/AlMizan-Bakery-2.5.3-review.apk release/AlMizan-Bakery-2.5.3-aligned.apk
+          "$build_tools/apksigner" verify --verbose --print-certs release/AlMizan-Bakery-2.5.3-review.apk | tee release/SIGNING-CERTIFICATE.txt
           cert_sha="$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2); exit}' release/SIGNING-CERTIFICATE.txt | tr -d ':[:space:]')"
           expected="159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
           test "$cert_sha" = "$expected" || { echo "::error::Signing certificate fingerprint mismatch; do not distribute this APK"; exit 1; }
-          badging="$("$build_tools/aapt" dump badging release/AlMizan-Bakery-2.5.2-review.apk)"
-          echo "$badging" | grep -F "package: name='com.mohammedmustafa.almizan.bakery' versionCode='250002' versionName='2.5.2'"
+          badging="$("$build_tools/aapt" dump badging release/AlMizan-Bakery-2.5.3-review.apk)"
+          echo "$badging" | grep -F "package: name='com.mohammedmustafa.almizan.bakery' versionCode='250002' versionName='2.5.3'"
           echo "$badging" | grep -F "application-label:'الميزان المحاسبي للمخابز'"
-          sha256sum release/AlMizan-Bakery-2.5.2-review.apk > release/SHA256SUMS.txt
-          rm -f release/AlMizan-Bakery-2.5.2-aligned.apk signing/release.jks
+          sha256sum release/AlMizan-Bakery-2.5.3-review.apk > release/SHA256SUMS.txt
+          rm -f release/AlMizan-Bakery-2.5.3-aligned.apk signing/release.jks
 
       - name: Publish review-only GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: al-mizan-bakery-2.5.2-review
-          name: الميزان المحاسبي للمخابز 2.5.2 — مراجعة
+          tag_name: al-mizan-bakery-2.5.3-review
+          name: الميزان المحاسبي للمخابز 2.5.3 — مراجعة
           prerelease: true
           make_latest: false
           generate_release_notes: false
           overwrite_files: true
           body: |
-            رابط تنزيل مباشر: https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/al-mizan-bakery-2.5.2-review/AlMizan-Bakery-2.5.2-review.apk
+            رابط تنزيل مباشر: https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/al-mizan-bakery-2.5.3-review/AlMizan-Bakery-2.5.3-review.apk
             نسخة مراجعة فقط — ليست موافقة على البيع التجاري.
             - تطبيق Android مستقل بمعرّف حزمة منفصل عن المحاسب الميزان العام.
             - اختبارات حسابية آلية وبناء APK وتحقق من التوقيع والبصمة.
             - البيانات تحفظ محليًا على الهاتف؛ اختبر النسخ الاحتياطي واستعادة البيانات قبل الاعتماد.
             - يلزم اختبار عملي على جهاز حقيقي قبل اعتماد التوافق والتحديث.
           files: |
-            bakery-app/release/AlMizan-Bakery-2.5.2-review.apk
+            bakery-app/release/AlMizan-Bakery-2.5.3-review.apk
             bakery-app/release/SHA256SUMS.txt
             bakery-app/release/SIGNING-CERTIFICATE.txt
