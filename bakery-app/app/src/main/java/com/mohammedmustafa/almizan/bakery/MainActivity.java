@@ -860,6 +860,7 @@ public class MainActivity extends Activity {
         Button lifetime=button("اختيار باقة الشراء مرة واحدة");
         lifetime.setOnClickListener(v->requestActivation("شراء مرة واحدة","450,000 جنيه سوداني"));
         content.addView(lifetime);
+        content.addView(text("تنبيه قبل الدفع: الشراء لمرة واحدة يفعّل هذا الإصدار فقط ولا يشمل التحديثات المستقبلية. الباقات الشهرية والسنوية تشمل التحديثات طوال فترة الاشتراك.",13));
         content.addView(text("معرّف هذا الجهاز لربط الاشتراك به:",14));
         content.addView(text(deviceId(),13));
         Button activate=button("🔑 أدخل رمز التفعيل بعد موافقة الدعم");
