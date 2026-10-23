@@ -9,6 +9,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputType;
@@ -55,9 +56,14 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        store = new Store();
-        day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
-        showPinGate();
+        try {
+            store = new Store();
+            day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+            showPinGate();
+        } catch (RuntimeException ex) {
+            android.util.Log.e("AlMizanBakery", "Activity startup failed", ex);
+            showStartupFailure(ex);
+        }
     }
 
     private void showPinGate() {
@@ -70,8 +76,27 @@ public class MainActivity extends Activity {
     }
 
     private void continueAfterPinAccepted() {
-        if (trialExpired()) { showPaywall(); return; }
-        buildHome();
+        try {
+            if (trialExpired()) { showPaywall(); return; }
+            buildHome();
+        } catch (RuntimeException ex) {
+            android.util.Log.e("AlMizanBakery", "Failed to open home after login", ex);
+            showStartupFailure(ex);
+        }
+    }
+
+    private void showStartupFailure(RuntimeException ex) {
+        final String report = "تعذر فتح الصفحة الرئيسية بعد تسجيل الدخول.\n" +
+            ex.getClass().getName() + ": " + String.valueOf(ex.getMessage()) +
+            "\n\n" + android.util.Log.getStackTraceString(ex);
+        base("⚠️ تعذر فتح التطبيق");
+        content.addView(text("تم تسجيل الخطأ بدل إغلاق التطبيق فجأة. لم تُحذف بيانات الدفاتر. أرسل التقرير للدعم لتحديد السبب بدقة.", 16));
+        Button send = button("إرسال تقرير الخطأ عبر واتساب");
+        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.2\n" + report));
+        content.addView(send);
+        Button retry = button("إعادة محاولة فتح الصفحة الرئيسية");
+        retry.setOnClickListener(v -> continueAfterPinAccepted());
+        content.addView(retry);
     }
 
     private void showPinSetup() {
@@ -189,26 +214,65 @@ public class MainActivity extends Activity {
         return now - start >= 7L * 24L * 60L * 60L * 1000L;
     }
 
+    private GradientDrawable rounded(int color, float radiusDp) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(color);
+        d.setCornerRadius(radiusDp * getResources().getDisplayMetrics().density);
+        return d;
+    }
+
     private void base(String title) {
-        root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(BG);
-        TextView head = new TextView(this); head.setText(title); head.setTextSize(21); head.setTextColor(Color.WHITE);
-        head.setTypeface(null, 1); head.setPadding(16,18,16,18); head.setBackgroundColor(NAVY); root.addView(head);
+        root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        root.setBackgroundColor(BG);
+        LinearLayout head = new LinearLayout(this);
+        head.setOrientation(LinearLayout.HORIZONTAL);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        head.setPadding(16,14,16,14);
+        head.setBackground(rounded(NAVY, 0));
+        TextView logo = new TextView(this);
+        logo.setText("🌾\n🥖");
+        logo.setTextSize(23);
+        logo.setGravity(Gravity.CENTER);
+        logo.setTextColor(GOLD);
+        head.addView(logo, new LinearLayout.LayoutParams(58,60));
+        LinearLayout titles = new LinearLayout(this);
+        titles.setOrientation(LinearLayout.VERTICAL);
+        TextView name = new TextView(this);
+        name.setText(title);
+        name.setTextSize(19);
+        name.setTextColor(Color.WHITE);
+        name.setTypeface(null,1);
+        TextView subtitle = new TextView(this);
+        subtitle.setText("إدارة المخبز • المخزون • التشغيل • الربحية");
+        subtitle.setTextSize(12);
+        subtitle.setTextColor(Color.rgb(236,226,190));
+        titles.addView(name);
+        titles.addView(subtitle);
+        head.addView(titles,new LinearLayout.LayoutParams(0,-2,1f));
+        head.setElevation(5f);
+        root.addView(head);
         ScrollView scroll = new ScrollView(this);
-        content = new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(12,10,12,18);
-        scroll.addView(content); root.addView(scroll, new LinearLayout.LayoutParams(-1,0,1f));
+        content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        content.setPadding(14,14,14,20);
+        scroll.addView(content);
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
         setContentView(root);
     }
 
     private void buildHome() {
-        base("🥖 الميزان المحاسبي للمخابز 2.5.1");
+        base("🥖 الميزان المحاسبي للمخابز 2.5.2");
         TextView intro = text("نظام يومي للمخبز: أدخل بيانات كل قسم، احفظها بتاريخها، ثم افتح «المحاسب والحساب» لمراجعة التسوية.",16);
         content.addView(intro);
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
         dateLabel = text("📅 التاريخ: " + day,16); dateRow.addView(dateLabel,new LinearLayout.LayoutParams(0,-2,1f));
         Button choose = button("اختيار التاريخ"); choose.setOnClickListener(v -> chooseDate()); dateRow.addView(choose); content.addView(dateRow);
         statusLabel = text("",14); content.addView(statusLabel);
-        addCard("📦 1. المخزن","الدقيق، الخميرة، الأكياس، الزيت، الملح، الحطب، الغاز، الجهاز",()->openModule("stock"));
-        addCard("🥖 2. القطععيات","عدد الشغل، عدد العيش المنتج، وسعر التحويل إلى الجنيه",()->openModule("cuts"));
+        addCard("📦 1. المخزن","أرصدة الدقيق والخميرة والأكياس والزيت والملح والوقود والمعدات. يظهر رصيد اليوم السابق تلقائيًا.",()->openModule("stock"));
+        addCard("🥖 2. شغل اليوم والإنتاج","عدد جوالات الدقيق المستخدمة، عدد الأرغفة لكل جوال، وقيمة الإنتاج بالجنيه. يُخصم الدقيق تلقائيًا من المخزن.",()->openModule("cuts"));
         addCard("👷 3. يومية العمال","اسم العامل، الوظيفة، عدد الشغل، عمالة الجوال، وجملة العمل",()->openModule("workers"));
         addCard("💵 4. الكاش وبيع الشباك","النقد، الديون، التحويل البنكي ورقم العملية",()->openModule("window"));
         addCard("🚚 5. التوزيع","اسم العميل، الكمية، الكاش، الديون، التحويل وفرق السعر",()->openModule("distribution"));
@@ -219,17 +283,29 @@ public class MainActivity extends Activity {
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
-        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.1.")); content.addView(support);
+        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.2.")); content.addView(support);
         updateStatus();
     }
 
     private void addCard(String title, String description, Runnable action) {
-        LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(14,10,14,10);
-        card.setBackgroundColor(Color.WHITE);
-        TextView h = text(title,18); h.setTextColor(NAVY); h.setTypeface(null,1); card.addView(h);
-        card.addView(text(description,14));
-        Button open = button("فتح القسم"); open.setOnClickListener(v->action.run()); card.addView(open);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,6,0,6); content.addView(card,lp);
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(16,14,16,14);
+        card.setBackground(rounded(Color.WHITE,18));
+        card.setElevation(3f);
+        TextView h = text(title,18);
+        h.setTextColor(NAVY);
+        h.setTypeface(null,1);
+        card.addView(h);
+        TextView desc = text(description,14);
+        desc.setTextColor(Color.rgb(78,89,105));
+        card.addView(desc);
+        Button open = button("فتح القسم  ←");
+        open.setOnClickListener(v->action.run());
+        card.addView(open);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1,-2);
+        lp.setMargins(0,7,0,7);
+        content.addView(card,lp);
     }
 
     private TextView text(String value, int size) {
@@ -237,9 +313,18 @@ public class MainActivity extends Activity {
         v.setPadding(7,8,7,8); return v;
     }
     private Button button(String value) {
-        Button b = new Button(this); b.setText(value); b.setAllCaps(false); b.setTextColor(NAVY);
-        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(GOLD)); return b;
+        Button b = new Button(this);
+        b.setText(value);
+        b.setAllCaps(false);
+        b.setTextColor(NAVY);
+        b.setTextSize(15);
+        b.setTypeface(null,1);
+        b.setMinHeight(48);
+        b.setBackground(rounded(GOLD,14));
+        b.setElevation(2f);
+        return b;
     }
+
     private void chooseDate() {
         Calendar c = Calendar.getInstance();
         try { c.setTime(new SimpleDateFormat("yyyy-MM-dd",Locale.US).parse(day)); } catch(Exception ignored) {}
@@ -259,8 +344,8 @@ public class MainActivity extends Activity {
                 t("notes","ملاحظات المخزن","")
             };
             case "cuts": return new Field[]{
-                f("work_units","عدد الشغل/القطععيات اليومية"),f("loaves_per_unit","عدد العيش في القطعية الواحدة"),
-                f("loaves_per_1000","عدد العيشات التي تساوي 1,000 جنيه")
+                f("work_units","عدد جوالات الدقيق المستخدمة في شغل اليوم"),f("loaves_per_unit","عدد الأرغفة الناتجة من جوال دقيق واحد"),
+                f("loaves_per_1000","عدد الأرغفة التي تساوي 1,000 جنيه")
             };
             case "workers": return new Field[]{
                 t("rows","تفاصيل العمال — سطر لكل عامل","الاسم | الوظيفة | عدد الشغل | أجرة الوحدة\nمثال: أحمد | خباز | 10 | 500"),
@@ -283,7 +368,7 @@ public class MainActivity extends Activity {
             case "spoilage": return new Field[]{f("loaves","عدد العيش التالف"),t("reason","سبب التلف / الملاحظات","")};
             case "costing": return new Field[]{
                 f("fuel_quantity","الوقود — الكمية المستخدمة"),f("fuel_unit_price","سعر وحدة الوقود (جنيه)"),
-                f("flour_bags","الدقيق — عدد الجوالات المستخدمة"),f("flour_bag_price","سعر جوال الدقيق الواحد (جنيه)"),
+                f("flour_bags","الدقيق — الجوالات المستخدمة (تُزامن تلقائيًا مع شغل اليوم)"),f("flour_bag_price","سعر جوال الدقيق الواحد (جنيه)"),
                 f("yeast_count","الخميرة — عدد القطع المستخدمة"),f("yeast_piece_price","سعر قطعة الخميرة (جنيه)"),
                 f("oil_quantity","الزيت — الكمية المستخدمة بالرطل"),f("oil_pound_price","سعر رطل الزيت (جنيه)"),
                 f("salt_quantity","الملح — الكمية المستخدمة"),f("salt_unit_price","سعر وحدة الملح (جنيه)"),
@@ -304,6 +389,13 @@ public class MainActivity extends Activity {
     private void openModule(String module) {
         Field[] fields = schema(module);
         JSONObject saved = store.get(day,module);
+        if (module.equals("stock") && store.get(day,"stock").length()==0) {
+            JSONObject previous = store.getLatest(day,"stock");
+            if (previous.length() > 0) saved = previous;
+        }
+        if (module.equals("costing") && val("cuts","work_units") > 0) {
+            try { saved.put("flour_bags", String.valueOf(val("cuts","work_units"))); } catch(Exception ignored) {}
+        }
         ScrollView sc = new ScrollView(this); LinearLayout box = new LinearLayout(this);
         box.setPadding(14,8,14,12); box.setOrientation(LinearLayout.VERTICAL); sc.addView(box);
         final java.util.Map<String,EditText> inputs = new java.util.LinkedHashMap<>();
@@ -312,6 +404,7 @@ public class MainActivity extends Activity {
             EditText e = new EditText(this); e.setTextSize(16); e.setHint(field.hint); e.setPadding(10,8,10,8);
             if(field.numeric) { e.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED); e.setSingleLine(true); }
             else { e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE); e.setMinLines(field.key.equals("rows")?4:1); e.setGravity(Gravity.TOP|Gravity.START); }
+            if (module.equals("costing") && field.key.equals("flour_bags")) { e.setEnabled(false); e.setAlpha(0.75f); }
             e.setText(saved.optString(field.key,"")); inputs.put(field.key,e); box.addView(e);
         }
         new AlertDialog.Builder(this).setTitle(titleFor(module)+" — "+day).setView(sc)
@@ -329,7 +422,14 @@ public class MainActivity extends Activity {
                         }
                         record.put(field.key,val);
                     }
-                    store.put(day,module,record); updateStatus(); toast("حُفظ "+titleFor(module)+" بتاريخ "+day);
+                    if (module.equals("cuts")) {
+                        long newWork = parseLong(record.optString("work_units","0"));
+                        store.saveCutsWithInventory(day, record, newWork);
+                        updateStatus();
+                        toast("حُفظ شغل اليوم. تم تحديث رصيد الدقيق والتكلفة تلقائيًا.");
+                    } else {
+                        store.put(day,module,record); updateStatus(); toast("حُفظ "+titleFor(module)+" بتاريخ "+day);
+                    }
                 } catch(Exception ex) { toast("لم تُحفظ البيانات: "+ex.getMessage()); }
             }).show();
     }
@@ -355,7 +455,7 @@ public class MainActivity extends Activity {
     private Totals rowTotals(String module,String key,int columns) {
         Totals out=new Totals(); String raw=record(module).optString(key,"");
         if(raw.trim().isEmpty()) return out;
-        String[] lines=raw.split("\\r?\\n");
+        String[] lines=raw.split("\\r?\n");
         for(String line:lines) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
@@ -393,32 +493,35 @@ public class MainActivity extends Activity {
     private long costingTotal() {
         return BakeryMath.operatingCost(
             val("costing","fuel_quantity"),val("costing","fuel_unit_price"),
-            val("costing","flour_bags"),val("costing","flour_bag_price"),
+            val("cuts","work_units"),val("costing","flour_bag_price"),
             val("costing","yeast_count"),val("costing","yeast_piece_price"),
             val("costing","oil_quantity"),val("costing","oil_pound_price"),
             val("costing","salt_quantity"),val("costing","salt_unit_price"),
             val("costing","bags_total_price"));
     }
+
     private void showCosting() {
         try {
-            long production=productionValue(), cost=costingTotal(), margin=BakeryMath.grossMargin(production,cost);
+            long production=productionValue(), cost=costingTotal();
+            long spoilage=spoilageValue(), labor=wages(), expenses=expenseTotal();
+            long beforeCost=Math.subtractExact(Math.subtractExact(Math.subtractExact(production,spoilage),labor),expenses);
+            long margin=BakeryMath.netMargin(production,spoilage,labor,expenses,cost);
             String message="تاريخ التكلفة: "+day+
-                "\nقيمة الإنتاج حسب القطععيات: "+fmt(production)+" جنيه"+
-                "\nتكلفة الوقود: "+fmt(Math.multiplyExact(val("costing","fuel_quantity"),val("costing","fuel_unit_price")))+" جنيه"+
-                "\nتكلفة الدقيق: "+fmt(Math.multiplyExact(val("costing","flour_bags"),val("costing","flour_bag_price")))+" جنيه"+
-                "\nتكلفة الخميرة: "+fmt(Math.multiplyExact(val("costing","yeast_count"),val("costing","yeast_piece_price")))+" جنيه"+
-                "\nتكلفة الزيت: "+fmt(Math.multiplyExact(val("costing","oil_quantity"),val("costing","oil_pound_price")))+" جنيه"+
-                "\nتكلفة الملح: "+fmt(Math.multiplyExact(val("costing","salt_quantity"),val("costing","salt_unit_price")))+" جنيه"+
-                "\nتكلفة الأكياس: "+fmt(val("costing","bags_total_price"))+" جنيه"+
-                "\n\nإجمالي تكلفة التشغيل المدخلة: "+fmt(cost)+" جنيه"+
-                "\nهامش الربح التقديري = قيمة الإنتاج - تكلفة التشغيل: "+fmt(margin)+" جنيه"+
-                "\n\nتنبيه: الهامش تقديري للمواد والوقود المدخلين فقط؛ أضف كل التكاليف الأخرى التي تنطبق على المخبز. لا تكرر نفس التكلفة في تسوية المحاسب والمنصرفات.";
+                "\nقيمة القطععيات/الإنتاج: "+fmt(production)+" جنيه"+
+                "\n(-) قيمة التالف: "+fmt(spoilage)+" جنيه"+
+                "\n(-) يومية العمال: "+fmt(labor)+" جنيه"+
+                "\n(-) منصرفات المحل: "+fmt(expenses)+" جنيه"+
+                "\nالصافي قبل تكلفة التشغيل: "+fmt(beforeCost)+" جنيه"+
+                "\n(-) تكلفة الدقيق والوقود والخميرة والزيت والملح والأكياس: "+fmt(cost)+" جنيه"+
+                "\n\nهامش الربح التقديري النهائي: "+fmt(margin)+" جنيه"+
+                "\n\nحساب الدقيق مرتبط بعدد جوالات شغل اليوم. راجع أسعار المواد والتالف واليومية والمنصرفات، ولا تسجل المصروف نفسه مرتين.";
             new AlertDialog.Builder(this).setTitle("🏭 حساب التشغيل والتكلفة — "+day).setMessage(message)
                 .setNegativeButton("إغلاق",null)
                 .setNeutralButton("تعديل بيانات التكلفة",(d,w)->openModule("costing"))
                 .setPositiveButton("مشاركة التقرير",(d,w)->shareReport(message)).show();
-        } catch(Exception ex) { toast("تعذر حساب تكلفة التشغيل بسبب رقم كبير جدًا أو بيانات غير صحيحة. راجع الكميات والأسعار."); }
+        } catch(Exception ex) { toast("تعذر حساب التكلفة بسبب رقم كبير جدًا أو بيانات غير صحيحة. راجع الكميات والأسعار."); }
     }
+
     private long cashTotal() { Totals d=distribution(); return Math.addExact(val("window","cash"),d.cash); }
     private long debtTotal() { Totals d=distribution(); return Math.addExact(val("window","debt"),d.debt); }
     private long bankTotal() { Totals d=distribution(); return Math.addExact(val("window","bank"),d.bank); }
@@ -445,7 +548,7 @@ public class MainActivity extends Activity {
                 "\nمنصرفات المحل: "+fmt(expenseTotal())+" جنيه"+
                 "\nقيمة التالف: "+fmt(spoilageValue())+" جنيه"+
                 "\nتكلفة التشغيل التقديرية (للمقارنة فقط): "+fmt(costingTotal())+" جنيه"+
-                "\nهامش الربح التقديري: "+fmt(BakeryMath.grossMargin(expected,costingTotal()))+" جنيه"+
+                "\nهامش الربح التقديري: "+fmt(BakeryMath.netMargin(expected,spoilageValue(),wages(),expenseTotal(),costingTotal()))+" جنيه"+
                 "\n\nإجمالي البنود المسجلة: "+fmt(actual)+" جنيه"+
                 "\nفرق التسوية (المطلوب صفر): "+fmt(difference)+" جنيه"+
                 "\nالنتيجة: "+status+
@@ -515,34 +618,58 @@ public class MainActivity extends Activity {
     }
 
     private void showGuide() {
-        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.1\n\n"+
+        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.2\n\n"+
             "1) اختر التاريخ من رزنامة الهاتف داخل التطبيق؛ لكل تاريخ دفتر مستقل.\n"+
-            "2) المخزن: أدخل أرصدة/كميات الدقيق والخميرة والأكياس والزيت والملح والحطب والغاز والجهاز. هذه بيانات مخزن وليست خصمًا تلقائيًا من المخزون حتى الآن.\n"+
-            "3) القطععيات: أدخل عدد الشغل، وعدد الأرغفة لكل قطعة، وعدد الأرغفة المقابل لـ 1,000 جنيه. يحسب التطبيق كمية العيش وقيمة الإنتاج.\n"+
+            "2) المخزن: أدخل أرصدة/كميات الدقيق والخميرة والأكياس والزيت والملح والحطب والغاز والجهاز. عند حفظ شغل اليوم يُخصم عدد جوالات الدقيق تلقائيًا من رصيد المخزن.\n"+
+            "3) القطععيات: أدخل عدد الشغل، وعدد الأرغفة لكل جوال، وعدد الأرغفة المقابل لـ 1,000 جنيه. يحسب التطبيق كمية العيش وقيمة الإنتاج.\n"+
             "4) يومية العمال: كل عامل في سطر بصيغة الاسم | الوظيفة | عدد الشغل | أجرة الوحدة. الأجر = عدد الشغل × أجرة الوحدة.\n"+
             "5) بيع الشباك: أدخل الكاش والديون والتحويلات. احتفظ برقم العملية في خانة المرجع.\n"+
             "6) التوزيع: كل عميل في سطر: الاسم | الكمية | الكاش | الديون | التحويل البنكي | فرق السعر.\n"+
             "7) منصرفات المحل: أدخل الوجبات والصيانة والمشتريات، ثم أي منصرف إضافي في سطر البيان | المبلغ. لا تكرر نفس المصروف في أكثر من خانة.\n"+
             "8) التالف: أدخل عدد الأرغفة التالفة؛ يحسب التطبيق قيمتها باستخدام سعر القطععيات.\n"+
             "9) المحاسب والحساب: يساوي قيمة الإنتاج مجموع الكاش والديون والتحويلات وفرق السعر واليوميات والمنصرفات وقيمة التالف وفق قاعدة التسوية المعتمدة. فرق التسوية يجب أن يساوي صفرًا، وإلا راجع البنود.\n"+
-            "10) حساب التشغيل والتكلفة: أدخل الكميات المستخدمة وأسعار وحداتها؛ يحسب التطبيق تكلفة الوقود والدقيق والخميرة والزيت والملح والأكياس، ثم يعرض هامشًا تقديريًا = قيمة الإنتاج - تكلفة المواد/الوقود المدخلة. لا تكرر المصروف نفسه في المنصرفات وفي التكلفة عند جمع إجمالياتك.\n\n"+
+            "10) حساب التشغيل والتكلفة: يحسب التطبيق تكلفة الدقيق من عدد جوالات شغل اليوم × سعر الجوال، ثم يخصم قيمة التالف ويومية العمال والمنصرفات وتكلفة التشغيل من قيمة القطععيات لعرض هامش الربح. لا تكرر المصروف نفسه في المنصرفات وفي التكلفة عند جمع إجمالياتك.\n\n"+
             "مهم: البيانات تحفظ محليًا على الجهاز ولا تُرفع للسحابة. استخدم زر «نسخ احتياطي واستعادة البيانات» لتصدير ملف JSON إلى مكان آمن واختبر استعادته. التطبيق لا يُصدر قيدًا محاسبيًا عامًا ولا يُعد بديلًا عن مراجعة محاسب قبل استخدام النتائج لإقرار مالي أو ضريبي.";
         new AlertDialog.Builder(this).setTitle("📘 اللوحة الإرشادية").setMessage(guide).setPositiveButton("فهمت",null).show();
     }
 
     private void showPaywall() {
         base("🔐 اشتراك الميزان المحاسبي للمخابز");
-        content.addView(text("انتهت فترة التجربة المجانية (7 أيام). بيانات الدفاتر المحلية لا تُحذف بسبب انتهاء التجربة. تواصل مع الدعم لإرسال إشعار التحويل وطلب التفعيل اليدوي.",16));
-        content.addView(text("الاشتراك الشهري: 30,000 جنيه سوداني",18));
-        content.addView(text("الاشتراك السنوي: 300,000 جنيه سوداني",18));
-        content.addView(text("شراء مرة واحدة: 450,000 جنيه سوداني",18));
-        content.addView(text("الدفع: بنكك — رقم الحساب 1882224",16));
-        Button copy=button("نسخ رقم حساب بنكك"); copy.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("Bankak",BANKAK));toast("تم نسخ رقم بنكك");}); content.addView(copy);
-        Button wa=button("إرسال إشعار التحويل عبر واتساب"); wa.setOnClickListener(v->openWhatsApp("السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.1.\nالتاريخ: "+day+"\nالباقة المطلوبة: [شهري/سنوي/شراء مرة واحدة]\nالمبلغ المحول: [اكتب المبلغ]\nرقم عملية بنكك: [اكتب الرقم]. سأرفق الإيصال هنا.")); content.addView(wa);
-        content.addView(text("التفعيل بعد مراجعة التحويل من الدعم فقط. لا تدخل رمز بنكك أو كلمة مرورك في التطبيق أو ترسلها لأي شخص.",14));
-        Button backup=button("🗂️ تصدير / استعادة بياناتك"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
+        content.addView(text("انتهت فترة التجربة المجانية (7 أيام). تبقى بيانات الدفاتر المحلية محفوظة ولا تُحذف بسبب انتهاء التجربة. اختر الباقة ثم حوّل المبلغ عبر بنكك وأرسل الإيصال من واتساب لطلب التفعيل اليدوي.",16));
+        content.addView(text("الاشتراك الشهري — 30,000 جنيه سوداني",18));
+        Button monthly=button("اختيار الباقة الشهرية");
+        monthly.setOnClickListener(v->requestActivation("شهرية","30,000 جنيه سوداني"));
+        content.addView(monthly);
+        content.addView(text("الاشتراك السنوي — 300,000 جنيه سوداني",18));
+        Button annual=button("اختيار الباقة السنوية");
+        annual.setOnClickListener(v->requestActivation("سنوية","300,000 جنيه سوداني"));
+        content.addView(annual);
+        content.addView(text("شراء مرة واحدة — 450,000 جنيه سوداني",18));
+        Button lifetime=button("اختيار باقة الشراء مرة واحدة");
+        lifetime.setOnClickListener(v->requestActivation("شراء مرة واحدة","450,000 جنيه سوداني"));
+        content.addView(lifetime);
+        content.addView(text("الدفع عبر بنكك — رقم الحساب: 1882224",16));
+        Button copy=button("نسخ رقم حساب بنكك");
+        copy.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("Bankak",BANKAK));toast("تم نسخ رقم بنكك");});
+        content.addView(copy);
+        content.addView(text("بعد التحويل، أرفق صورة الإيصال داخل محادثة واتساب. لا ترسل الرقم السري أو رمز التحقق الخاص ببنكك. التفعيل يتم بعد مراجعة التحويل.",14));
+        Button backup=button("🗂️ تصدير / استعادة بياناتك");
+        backup.setOnClickListener(v->backupRestoreMenu());
+        content.addView(backup);
         if (!trialExpired()) { Button back=button("العودة إلى التطبيق"); back.setOnClickListener(v->buildHome()); content.addView(back); }
     }
+
+    private void requestActivation(String plan,String amount) {
+        String message="السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.2.\n"+
+            "الباقة المختارة: "+plan+"\n"+
+            "المبلغ: "+amount+"\n"+
+            "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\n"+
+            "تاريخ الطلب: "+day+"\n"+
+            "رقم عملية بنكك: [اكتب رقم العملية]\n"+
+            "سأرفق صورة إيصال التحويل هنا. أرجو مراجعة التحويل وتفعيل الباقة.";
+        openWhatsApp(message);
+    }
+
     private void openWhatsApp(String message) {
         try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/"+SUPPORT+"?text="+Uri.encode(message)))); }
         catch(Exception e) { toast("تعذر فتح واتساب. الرقم: +249 121 851 285"); }
@@ -550,11 +677,14 @@ public class MainActivity extends Activity {
     private void toast(String s) { Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
 
     private class Store extends SQLiteOpenHelper {
-        Store(){super(MainActivity.this,"almizan_bakery_250.db",null,1);}
+        Store(){super(MainActivity.this,"almizan_bakery_250.db",null,2);}
         @Override public void onCreate(SQLiteDatabase db) {
             db.execSQL("CREATE TABLE records (day TEXT NOT NULL, module TEXT NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(day,module))");
+            db.execSQL("CREATE TABLE inventory_usage (day TEXT PRIMARY KEY NOT NULL, flour_bags INTEGER NOT NULL DEFAULT 0)");
         }
-        @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion) {}
+        @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion) {
+            if (oldVersion < 2) db.execSQL("CREATE TABLE IF NOT EXISTS inventory_usage (day TEXT PRIMARY KEY NOT NULL, flour_bags INTEGER NOT NULL DEFAULT 0)");
+        }
         JSONObject get(String date,String module) {
             SQLiteDatabase db=getReadableDatabase(); Cursor c=db.rawQuery("SELECT payload FROM records WHERE day=? AND module=?",new String[]{date,module});
             try { if(c.moveToFirst()) return new JSONObject(c.getString(0)); } catch(Exception ignored) {} finally {c.close();}
@@ -563,6 +693,44 @@ public class MainActivity extends Activity {
         void put(String date,String module,JSONObject value) {
             ContentValues cv=new ContentValues(); cv.put("day",date); cv.put("module",module); cv.put("payload",value.toString()); cv.put("updated_at",System.currentTimeMillis());
             getWritableDatabase().insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
+        }
+
+        JSONObject getLatest(String date,String module) {
+            SQLiteDatabase db=getReadableDatabase();
+            Cursor c=db.rawQuery("SELECT payload FROM records WHERE module=? AND day<=? ORDER BY day DESC LIMIT 1",new String[]{module,date});
+            try { if(c.moveToFirst()) return new JSONObject(c.getString(0)); }
+            catch(Exception ignored) {} finally { c.close(); }
+            return new JSONObject();
+        }
+
+        void saveCutsWithInventory(String date,JSONObject cuts,long newWork) throws Exception {
+            if (newWork < 0) throw new IllegalArgumentException("عدد جوالات الدقيق لا يمكن أن يكون سالبًا");
+            SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
+            try {
+                long previouslyApplied=0L;
+                Cursor usage=db.rawQuery("SELECT flour_bags FROM inventory_usage WHERE day=?",new String[]{date});
+                try { if(usage.moveToFirst()) previouslyApplied=usage.getLong(0); } finally { usage.close(); }
+                JSONObject stock=getLatest(date,"stock");
+                if (stock.length()==0 && (newWork>0 || previouslyApplied>0)) throw new IllegalStateException("أدخل رصيد الدقيق في قسم المخزن أولًا، ثم احفظ شغل اليوم.");
+                if (stock.length()>0) {
+                    String raw=stock.optString("flour","");
+                    if (raw.trim().isEmpty() && (newWork>0 || previouslyApplied>0)) throw new IllegalStateException("رصيد الدقيق غير محدد. أدخل عدد الجوالات في المخزن أولًا.");
+                    long current=raw.trim().isEmpty()?0L:parseLong(raw);
+                    long adjusted=BakeryMath.stockAfterUsage(current,previouslyApplied,newWork);
+                    if (adjusted<0) throw new IllegalStateException("رصيد الدقيق لا يكفي لشغل اليوم. الرصيد الحالي: "+current+" جوال.");
+                    stock.put("flour",String.valueOf(adjusted));
+                    ContentValues scv=new ContentValues(); scv.put("day",date); scv.put("module","stock"); scv.put("payload",stock.toString()); scv.put("updated_at",System.currentTimeMillis());
+                    db.insertWithOnConflict("records",null,scv,SQLiteDatabase.CONFLICT_REPLACE);
+                }
+                ContentValues uv=new ContentValues(); uv.put("day",date); uv.put("flour_bags",newWork);
+                db.insertWithOnConflict("inventory_usage",null,uv,SQLiteDatabase.CONFLICT_REPLACE);
+                JSONObject cost=get(date,"costing"); cost.put("flour_bags",String.valueOf(newWork));
+                ContentValues ccv=new ContentValues(); ccv.put("day",date); ccv.put("module","costing"); ccv.put("payload",cost.toString()); ccv.put("updated_at",System.currentTimeMillis());
+                db.insertWithOnConflict("records",null,ccv,SQLiteDatabase.CONFLICT_REPLACE);
+                ContentValues cutcv=new ContentValues(); cutcv.put("day",date); cutcv.put("module","cuts"); cutcv.put("payload",cuts.toString()); cutcv.put("updated_at",System.currentTimeMillis());
+                db.insertWithOnConflict("records",null,cutcv,SQLiteDatabase.CONFLICT_REPLACE);
+                db.setTransactionSuccessful();
+            } finally { db.endTransaction(); }
         }
         void delete(String date,String module) { getWritableDatabase().delete("records","day=? AND module=?",new String[]{date,module}); }
         boolean has(String date) { Cursor c=getReadableDatabase().rawQuery("SELECT 1 FROM records WHERE day=? LIMIT 1",new String[]{date}); try{return c.moveToFirst();}finally{c.close();} }
@@ -575,11 +743,19 @@ public class MainActivity extends Activity {
                     row.put("payload",new JSONObject(c.getString(2))); row.put("updated_at",c.getLong(3)); result.put(row);
                 }
             } finally { c.close(); }
+            Cursor u=getReadableDatabase().rawQuery("SELECT day,flour_bags FROM inventory_usage ORDER BY day",null);
+            try {
+                while(u.moveToNext()) {
+                    JSONObject row=new JSONObject(); row.put("day",u.getString(0)); row.put("module","inventory_usage");
+                    JSONObject payload=new JSONObject(); payload.put("flour_bags",u.getLong(1)); row.put("payload",payload);
+                    row.put("updated_at",System.currentTimeMillis()); result.put(row);
+                }
+            } finally { u.close(); }
             return result;
         }
         int restoreAll(JSONArray rows) throws Exception {
             java.util.ArrayList<ContentValues> prepared=new java.util.ArrayList<>();
-            java.util.HashSet<String> allowed=new java.util.HashSet<>(java.util.Arrays.asList("stock","cuts","workers","window","distribution","expenses","spoilage","costing","accounting"));
+            java.util.HashSet<String> allowed=new java.util.HashSet<>(java.util.Arrays.asList("stock","cuts","workers","window","distribution","expenses","spoilage","costing","accounting","inventory_usage"));
             for(int i=0;i<rows.length();i++) {
                 JSONObject row=rows.getJSONObject(i); String date=row.getString("day"), module=row.getString("module");
                 if(!date.matches("\\d{4}-\\d{2}-\\d{2}") || !allowed.contains(module)) throw new IllegalArgumentException("Invalid backup record");
@@ -588,7 +764,18 @@ public class MainActivity extends Activity {
                 cv.put("updated_at",row.optLong("updated_at",System.currentTimeMillis())); prepared.add(cv);
             }
             SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
-            try { for(ContentValues cv:prepared) db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE); db.setTransactionSuccessful(); }
+            try {
+                for(ContentValues cv:prepared) {
+                    if ("inventory_usage".equals(cv.getAsString("module"))) {
+                        JSONObject payload=new JSONObject(cv.getAsString("payload"));
+                        ContentValues uv=new ContentValues(); uv.put("day",cv.getAsString("day")); uv.put("flour_bags",payload.getLong("flour_bags"));
+                        db.insertWithOnConflict("inventory_usage",null,uv,SQLiteDatabase.CONFLICT_REPLACE);
+                    } else {
+                        db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
+                    }
+                }
+                db.setTransactionSuccessful();
+            }
             finally { db.endTransaction(); }
             return prepared.size();
         }

@@ -36,6 +36,20 @@ public final class BakeryMath {
                 Math.multiplyExact(yeastCount,yeastPrice),Math.multiplyExact(oilQty,oilPoundPrice),
                 Math.multiplyExact(saltQty,saltPrice),bagsTotalPrice);
     }
+    /** Reconciles stock after a change to the daily number of flour bags used. */
+    public static long stockAfterUsage(long currentStock, long previouslyAppliedUsage, long newUsage) {
+        if (currentStock < 0 || previouslyAppliedUsage < 0 || newUsage < 0)
+            throw new IllegalArgumentException("Negative stock or usage");
+        return Math.subtractExact(currentStock, Math.subtractExact(newUsage, previouslyAppliedUsage));
+    }
+
+    /** Net daily margin after spoilage, wages, shop expenses, and operating costs. */
+    public static long netMargin(long productionValue,long spoilageValue,long wages,long expenses,long operatingCost) {
+        long[] values={productionValue,spoilageValue,wages,expenses,operatingCost};
+        for(long value:values) if(value<0) throw new IllegalArgumentException("Negative amount");
+        return Math.subtractExact(Math.subtractExact(Math.subtractExact(Math.subtractExact(productionValue,spoilageValue),wages),expenses),operatingCost);
+    }
+
     /** Estimated margin before any additional costs not included in the supplied cost list. */
     public static long grossMargin(long productionValue,long operatingCost) {
         if(productionValue<0 || operatingCost<0) throw new IllegalArgumentException("Negative amount");

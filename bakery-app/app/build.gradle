@@ -7,8 +7,8 @@ android {
         applicationId 'com.mohammedmustafa.almizan.bakery'
         minSdk 23
         targetSdk 35
-        versionCode 250001
-        versionName '2.5.1'
+        versionCode 250002
+        versionName '2.5.2'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     testOptions { unitTests.includeAndroidResources = true }
