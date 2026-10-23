@@ -81,13 +81,13 @@ public class MainActivity extends Activity {
     }
 
     private void showStartupFailure(RuntimeException ex) {
-        final String report = "تعذر فتح الصفحة الرئيسية بعد تسجيل الدخول.\\n" +
+        final String report = "تعذر فتح الصفحة الرئيسية بعد تسجيل الدخول.\n" +
             ex.getClass().getName() + ": " + String.valueOf(ex.getMessage()) +
-            "\\n\\n" + android.util.Log.getStackTraceString(ex);
+            "\n\n" + android.util.Log.getStackTraceString(ex);
         base("⚠️ تعذر فتح التطبيق");
         content.addView(text("تم تسجيل الخطأ بدل إغلاق التطبيق فجأة. لم تُحذف بيانات الدفاتر. أرسل التقرير للدعم لتحديد السبب بدقة.", 16));
         Button send = button("إرسال تقرير الخطأ عبر واتساب");
-        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.2\\n" + report));
+        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.2\n" + report));
         content.addView(send);
         Button retry = button("إعادة محاولة فتح الصفحة الرئيسية");
         retry.setOnClickListener(v -> continueAfterPinAccepted());
@@ -227,7 +227,7 @@ public class MainActivity extends Activity {
         head.setPadding(16,14,16,14);
         head.setBackground(rounded(NAVY, 0));
         TextView logo = new TextView(this);
-        logo.setText("🌾\\n🥖");
+        logo.setText("🌾\n🥖");
         logo.setTextSize(23);
         logo.setGravity(Gravity.CENTER);
         logo.setTextColor(GOLD);
@@ -259,7 +259,7 @@ public class MainActivity extends Activity {
     }
 
     private void buildHome() {
-        base("🥖 الميزان المحاسبي للمخابز 2.5.1");
+        base("🥖 الميزان المحاسبي للمخابز 2.5.2");
         TextView intro = text("نظام يومي للمخبز: أدخل بيانات كل قسم، احفظها بتاريخها، ثم افتح «المحاسب والحساب» لمراجعة التسوية.",16);
         content.addView(intro);
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -450,7 +450,7 @@ public class MainActivity extends Activity {
     private Totals rowTotals(String module,String key,int columns) {
         Totals out=new Totals(); String raw=record(module).optString(key,"");
         if(raw.trim().isEmpty()) return out;
-        String[] lines=raw.split("\\r?\\n");
+        String[] lines=raw.split("\\r?\n");
         for(String line:lines) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
@@ -502,14 +502,14 @@ public class MainActivity extends Activity {
             long beforeCost=Math.subtractExact(Math.subtractExact(Math.subtractExact(production,spoilage),labor),expenses);
             long margin=Math.subtractExact(beforeCost,cost);
             String message="تاريخ التكلفة: "+day+
-                "\\nقيمة القطععيات/الإنتاج: "+fmt(production)+" جنيه"+
-                "\\n(-) قيمة التالف: "+fmt(spoilage)+" جنيه"+
-                "\\n(-) يومية العمال: "+fmt(labor)+" جنيه"+
-                "\\n(-) منصرفات المحل: "+fmt(expenses)+" جنيه"+
-                "\\nالصافي قبل تكلفة التشغيل: "+fmt(beforeCost)+" جنيه"+
-                "\\n(-) تكلفة الدقيق والوقود والخميرة والزيت والملح والأكياس: "+fmt(cost)+" جنيه"+
-                "\\n\\nهامش الربح التقديري النهائي: "+fmt(margin)+" جنيه"+
-                "\\n\\nحساب الدقيق مرتبط بعدد جوالات شغل اليوم. راجع أسعار المواد والتالف واليومية والمنصرفات، ولا تسجل المصروف نفسه مرتين.";
+                "\nقيمة القطععيات/الإنتاج: "+fmt(production)+" جنيه"+
+                "\n(-) قيمة التالف: "+fmt(spoilage)+" جنيه"+
+                "\n(-) يومية العمال: "+fmt(labor)+" جنيه"+
+                "\n(-) منصرفات المحل: "+fmt(expenses)+" جنيه"+
+                "\nالصافي قبل تكلفة التشغيل: "+fmt(beforeCost)+" جنيه"+
+                "\n(-) تكلفة الدقيق والوقود والخميرة والزيت والملح والأكياس: "+fmt(cost)+" جنيه"+
+                "\n\nهامش الربح التقديري النهائي: "+fmt(margin)+" جنيه"+
+                "\n\nحساب الدقيق مرتبط بعدد جوالات شغل اليوم. راجع أسعار المواد والتالف واليومية والمنصرفات، ولا تسجل المصروف نفسه مرتين.";
             new AlertDialog.Builder(this).setTitle("🏭 حساب التشغيل والتكلفة — "+day).setMessage(message)
                 .setNegativeButton("إغلاق",null)
                 .setNeutralButton("تعديل بيانات التكلفة",(d,w)->openModule("costing"))
@@ -543,7 +543,7 @@ public class MainActivity extends Activity {
                 "\nمنصرفات المحل: "+fmt(expenseTotal())+" جنيه"+
                 "\nقيمة التالف: "+fmt(spoilageValue())+" جنيه"+
                 "\nتكلفة التشغيل التقديرية (للمقارنة فقط): "+fmt(costingTotal())+" جنيه"+
-                "\nهامش الربح التقديري: "+fmt(BakeryMath.grossMargin(expected,costingTotal()))+" جنيه"+
+                "\nهامش الربح التقديري: "+fmt(Math.subtractExact(Math.subtractExact(Math.subtractExact(Math.subtractExact(expected,spoilageValue()),wages()),expenseTotal()),costingTotal()))+" جنيه"+
                 "\n\nإجمالي البنود المسجلة: "+fmt(actual)+" جنيه"+
                 "\nفرق التسوية (المطلوب صفر): "+fmt(difference)+" جنيه"+
                 "\nالنتيجة: "+status+
@@ -615,7 +615,7 @@ public class MainActivity extends Activity {
     private void showGuide() {
         String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.1\n\n"+
             "1) اختر التاريخ من رزنامة الهاتف داخل التطبيق؛ لكل تاريخ دفتر مستقل.\n"+
-            "2) المخزن: أدخل أرصدة/كميات الدقيق والخميرة والأكياس والزيت والملح والحطب والغاز والجهاز. هذه بيانات مخزن وليست خصمًا تلقائيًا من المخزون حتى الآن.\n"+
+            "2) المخزن: أدخل أرصدة/كميات الدقيق والخميرة والأكياس والزيت والملح والحطب والغاز والجهاز. عند حفظ شغل اليوم يُخصم عدد جوالات الدقيق تلقائيًا من رصيد المخزن.\n"+
             "3) القطععيات: أدخل عدد الشغل، وعدد الأرغفة لكل قطعة، وعدد الأرغفة المقابل لـ 1,000 جنيه. يحسب التطبيق كمية العيش وقيمة الإنتاج.\n"+
             "4) يومية العمال: كل عامل في سطر بصيغة الاسم | الوظيفة | عدد الشغل | أجرة الوحدة. الأجر = عدد الشغل × أجرة الوحدة.\n"+
             "5) بيع الشباك: أدخل الكاش والديون والتحويلات. احتفظ برقم العملية في خانة المرجع.\n"+
@@ -623,7 +623,7 @@ public class MainActivity extends Activity {
             "7) منصرفات المحل: أدخل الوجبات والصيانة والمشتريات، ثم أي منصرف إضافي في سطر البيان | المبلغ. لا تكرر نفس المصروف في أكثر من خانة.\n"+
             "8) التالف: أدخل عدد الأرغفة التالفة؛ يحسب التطبيق قيمتها باستخدام سعر القطععيات.\n"+
             "9) المحاسب والحساب: يساوي قيمة الإنتاج مجموع الكاش والديون والتحويلات وفرق السعر واليوميات والمنصرفات وقيمة التالف وفق قاعدة التسوية المعتمدة. فرق التسوية يجب أن يساوي صفرًا، وإلا راجع البنود.\n"+
-            "10) حساب التشغيل والتكلفة: أدخل الكميات المستخدمة وأسعار وحداتها؛ يحسب التطبيق تكلفة الوقود والدقيق والخميرة والزيت والملح والأكياس، ثم يعرض هامشًا تقديريًا = قيمة الإنتاج - تكلفة المواد/الوقود المدخلة. لا تكرر المصروف نفسه في المنصرفات وفي التكلفة عند جمع إجمالياتك.\n\n"+
+            "10) حساب التشغيل والتكلفة: يحسب التطبيق تكلفة الدقيق من عدد جوالات شغل اليوم × سعر الجوال، ثم يخصم قيمة التالف ويومية العمال والمنصرفات وتكلفة التشغيل من قيمة القطععيات لعرض هامش الربح. لا تكرر المصروف نفسه في المنصرفات وفي التكلفة عند جمع إجمالياتك.\n\n"+
             "مهم: البيانات تحفظ محليًا على الجهاز ولا تُرفع للسحابة. استخدم زر «نسخ احتياطي واستعادة البيانات» لتصدير ملف JSON إلى مكان آمن واختبر استعادته. التطبيق لا يُصدر قيدًا محاسبيًا عامًا ولا يُعد بديلًا عن مراجعة محاسب قبل استخدام النتائج لإقرار مالي أو ضريبي.";
         new AlertDialog.Builder(this).setTitle("📘 اللوحة الإرشادية").setMessage(guide).setPositiveButton("فهمت",null).show();
     }
@@ -655,12 +655,12 @@ public class MainActivity extends Activity {
     }
 
     private void requestActivation(String plan,String amount) {
-        String message="السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.2.\\n"+
-            "الباقة المختارة: "+plan+"\\n"+
-            "المبلغ: "+amount+"\\n"+
-            "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\\n"+
-            "تاريخ الطلب: "+day+"\\n"+
-            "رقم عملية بنكك: [اكتب رقم العملية]\\n"+
+        String message="السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.2.\n"+
+            "الباقة المختارة: "+plan+"\n"+
+            "المبلغ: "+amount+"\n"+
+            "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\n"+
+            "تاريخ الطلب: "+day+"\n"+
+            "رقم عملية بنكك: [اكتب رقم العملية]\n"+
             "سأرفق صورة إيصال التحويل هنا. أرجو مراجعة التحويل وتفعيل الباقة.";
         openWhatsApp(message);
     }
