@@ -830,10 +830,13 @@ public class MainActivity extends Activity {
 
     private void showPaywall() {
         base("🔐 اشتراك الميزان المحاسبي للمخابز");
+        boolean licensed = hasActiveLicense();
         boolean expired = trialExpired();
-        String trialMessage = expired
-            ? "انتهت فترة التجربة المجانية (7 أيام)، وتم إيقاف الوصول إلى الدفاتر حتى التفعيل. بياناتك المحلية محفوظة ولن تُحذف. اختر الباقة وحوّل المبلغ عبر بنكك ثم أرسل الإيصال عبر واتساب لطلب التفعيل."
-            : "أهلًا بك في الميزان المحاسبي للمخابز. بقي نحو " + trialDaysRemaining() + " يومًا من التجربة المجانية. يمكنك اختيار باقة مسبقًا؛ ستظل بياناتك محفوظة على الهاتف.";
+        String trialMessage = licensed
+            ? "اشتراكك مفعّل على هذا الجهاز. يمكنك متابعة الدفاتر أو طلب تجديد الباقة عند الحاجة."
+            : expired
+                ? "انتهت فترة التجربة المجانية (7 أيام)، وتم إيقاف الوصول إلى الدفاتر حتى التفعيل. بياناتك المحلية محفوظة ولن تُحذف. اختر الباقة وحوّل المبلغ عبر بنكك ثم أرسل الإيصال عبر واتساب لطلب التفعيل."
+                : "أهلًا بك في الميزان المحاسبي للمخابز. بقي نحو " + trialDaysRemaining() + " يومًا من التجربة المجانية. يمكنك اختيار باقة مسبقًا؛ ستظل بياناتك محفوظة على الهاتف.";
         content.addView(text(trialMessage,16));
         content.addView(text("الاشتراك الشهري — 30,000 جنيه سوداني",18));
         Button monthly=button("اختيار الباقة الشهرية");
@@ -860,7 +863,7 @@ public class MainActivity extends Activity {
         Button backup=button("🗂️ تصدير / استعادة بياناتك");
         backup.setOnClickListener(v->backupRestoreMenu());
         content.addView(backup);
-        if (!trialExpired()) { Button back=button("العودة إلى التطبيق"); back.setOnClickListener(v->buildHome()); content.addView(back); }
+        if (!trialExpired() || hasActiveLicense()) { Button back=button("العودة إلى التطبيق"); back.setOnClickListener(v->buildHome()); content.addView(back); }
     }
 
     private void requestActivation(String plan,String amount) {
