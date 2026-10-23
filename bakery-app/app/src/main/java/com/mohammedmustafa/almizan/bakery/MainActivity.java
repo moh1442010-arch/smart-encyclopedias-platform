@@ -556,6 +556,10 @@ public class MainActivity extends Activity {
             .setNegativeButton("إلغاء",null).setNeutralButton("مسح خانات هذا القسم",(d,w)->{
                 new AlertDialog.Builder(this).setMessage("هل تريد مسح بيانات هذا القسم لهذا التاريخ؟").setNegativeButton("لا",null)
                     .setPositiveButton("نعم، امسح القسم",(dd,ww)->{
+                        if ((module.equals("stock") || module.equals("cuts")) && store.hasFutureStockAfter(day)) {
+                            toast("لا يمكن تعديل أو مسح مخزون/شغل يوم سابق بعد تسجيل أرصدة لأيام لاحقة؛ راجع الأيام اللاحقة يدويًا قبل التصحيح.");
+                            return;
+                        }
                         if (module.equals("stock") && store.usageForDate(day) > 0) {
                             toast("لا يمكن مسح المخزن بعد خصم شغل اليوم. امسح شغل اليوم أولًا لإرجاع الرصيد بأمان.");
                             return;
@@ -918,6 +922,8 @@ public class MainActivity extends Activity {
                 long previouslyApplied=0L;
                 Cursor usage=db.rawQuery("SELECT flour_bags FROM inventory_usage WHERE day=?",new String[]{date});
                 try { if(usage.moveToFirst()) previouslyApplied=usage.getLong(0); } finally { usage.close(); }
+                if(newWork!=previouslyApplied && hasFutureStockAfter(date))
+                    throw new IllegalStateException("لا يمكن تغيير استخدام الدقيق ليوم سابق بعد تسجيل أرصدة مخزن لأيام لاحقة؛ صحح التسلسل الزمني أولًا.");
                 JSONObject stock=getLatest(date,"stock");
                 if (stock.length()==0 && (newWork>0 || previouslyApplied>0)) throw new IllegalStateException("أدخل رصيد الدقيق في قسم المخزن أولًا، ثم احفظ شغل اليوم.");
                 if (stock.length()>0) {
@@ -944,10 +950,15 @@ public class MainActivity extends Activity {
             Cursor c=getReadableDatabase().rawQuery("SELECT flour_bags FROM inventory_usage WHERE day=?",new String[]{date});
             try { return c.moveToFirst()?c.getLong(0):0L; } finally { c.close(); }
         }
+        boolean hasFutureStockAfter(String date) {
+            Cursor c=getReadableDatabase().rawQuery("SELECT 1 FROM records WHERE module='stock' AND day>? LIMIT 1",new String[]{date});
+            try { return c.moveToFirst(); } finally { c.close(); }
+        }
 
         void saveStockWithInventory(String date,JSONObject stockInput) throws Exception {
             SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
             try {
+                if(hasFutureStockAfter(date)) throw new IllegalStateException("لا يمكن تعديل رصيد مخزن سابق بعد تسجيل أرصدة لأيام لاحقة.");
                 long usage=usageForDate(date);
                 String raw=stockInput.optString("flour","");
                 if(raw.trim().isEmpty() && usage>0) throw new IllegalStateException("أدخل رصيد الدقيق الافتتاحي قبل حفظ المخزن.");
@@ -964,6 +975,7 @@ public class MainActivity extends Activity {
         void deleteCutsWithInventory(String date) {
             SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
             try {
+                if(hasFutureStockAfter(date)) throw new IllegalStateException("لا يمكن حذف شغل يوم سابق بعد تسجيل أرصدة مخزن لأيام لاحقة.");
                 long usage=usageForDate(date);
                 Cursor c=db.rawQuery("SELECT payload FROM records WHERE day=? AND module='stock'",new String[]{date});
                 try {
