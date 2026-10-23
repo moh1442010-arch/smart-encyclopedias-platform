@@ -30,27 +30,4 @@ public final class BakeryLedgerMath {
     public static long reconciliationDifference(long productionValue, long categorizedValue) {
         return Math.subtractExact(productionValue, categorizedValue);
     }
-
-    /** Remaining flour sacks for the day; never mutates the opening balance. */
-    public static long remainingFlourBags(long openingBags, long usedBags) {
-        if (openingBags < 0 || usedBags < 0) throw new IllegalArgumentException("Negative flour quantity");
-        if (usedBags > openingBags) throw new IllegalArgumentException("Flour usage exceeds available stock");
-        return Math.subtractExact(openingBags, usedBags);
-    }
-
-    /** Gross revenue less spoilage, wages, operating expenses and direct flour cost. */
-    public static long profitMargin(long salesRevenue, long spoilageValue, long wages,
-                                    long workExpenses, long shopExpenses, long flourCost) {
-        if (salesRevenue < 0 || spoilageValue < 0 || wages < 0 || workExpenses < 0 ||
-                shopExpenses < 0 || flourCost < 0) {
-            throw new IllegalArgumentException("Negative cost or revenue");
-        }
-        return Math.subtractExact(salesRevenue,
-                sum(spoilageValue, wages, workExpenses, shopExpenses, flourCost));
-    }
-
-    public static long flourCost(long bagsUsed, long costPerBag) {
-        if (bagsUsed < 0 || costPerBag < 0) throw new IllegalArgumentException("Negative flour cost input");
-        return Math.multiplyExact(bagsUsed, costPerBag);
-    }
 }
