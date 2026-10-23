@@ -2,7 +2,7 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:allowBackup="false"
-        android:label="الميزان المحاسبي للمخابز"
+        android:label="المحاسب الميزان للمخابز"
         android:icon="@drawable/ic_bakery"
         android:roundIcon="@drawable/ic_bakery"
         android:supportsRtl="true"
