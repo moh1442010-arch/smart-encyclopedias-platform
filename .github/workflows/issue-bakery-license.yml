@@ -27,6 +27,9 @@ jobs:
   issue-license:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+
       - name: Validate request and issue signed token
         shell: bash
         env:
@@ -41,16 +44,20 @@ jobs:
           case "$PLAN" in monthly|annual|lifetime) ;; *) echo "::error::Unsupported plan."; exit 1;; esac
           printf '%s' "$PRIVATE_KEY_B64" | base64 --decode > license-private.pem
           openssl pkey -in license-private.pem -noout >/dev/null
+          APP_VERSION="$(sed -n "s/.*versionName '\\([^']*\\)'.*/\\1/p" bakery-app/app/build.gradle | head -1)"
+          test -n "$APP_VERSION" || { echo "::error::Could not read current bakery app version."; exit 1; }
           if [ "$PLAN" = "lifetime" ]; then
             EXPIRES=0
+            MAX_VERSION="$APP_VERSION"
           else
+            MAX_VERSION="any"
             [[ "$EXPIRES_ON" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || { echo "::error::Provide expiry as YYYY-MM-DD for monthly or annual plans."; exit 1; }
             EXPIRES="$(date -u -d "$EXPIRES_ON 23:59:59" +%s)"
             NORMALIZED="$(date -u -d "@$EXPIRES" +%F)"
             test "$NORMALIZED" = "$EXPIRES_ON" || { echo "::error::Expiry date is invalid."; exit 1; }
             test "$EXPIRES" -gt "$(date -u +%s)" || { echo "::error::Expiry must be in the future."; exit 1; }
           fi
-          PAYLOAD="app=com.mohammedmustafa.almizan.bakery;device=$DEVICE_ID;plan=$PLAN;expires=$EXPIRES"
+          PAYLOAD="app=com.mohammedmustafa.almizan.bakery;device=$DEVICE_ID;plan=$PLAN;expires=$EXPIRES;max_version=$MAX_VERSION"
           printf '%s' "$PAYLOAD" > license-payload.txt
           openssl dgst -sha256 -sign license-private.pem -out license-signature.bin license-payload.txt
           PAYLOAD_B64="$(printf '%s' "$PAYLOAD" | openssl base64 -A | tr '+/' '-_' | tr -d '=')"
@@ -61,6 +68,7 @@ jobs:
             echo
             echo "- Device: $DEVICE_ID"
             echo "- Plan: $PLAN"
+            echo "- Allowed app version: $MAX_VERSION"
             if [ "$EXPIRES" = "0" ]; then echo "- Expiry: Lifetime"; else echo "- Expiry (UTC): $EXPIRES_ON 23:59:59"; fi
             echo
             echo 'Copy the token below and send it to the customer through the verified support conversation:'
