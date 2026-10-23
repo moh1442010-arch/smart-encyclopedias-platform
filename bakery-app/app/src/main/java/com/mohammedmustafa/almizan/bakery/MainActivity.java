@@ -743,11 +743,19 @@ public class MainActivity extends Activity {
                     row.put("payload",new JSONObject(c.getString(2))); row.put("updated_at",c.getLong(3)); result.put(row);
                 }
             } finally { c.close(); }
+            Cursor u=getReadableDatabase().rawQuery("SELECT day,flour_bags FROM inventory_usage ORDER BY day",null);
+            try {
+                while(u.moveToNext()) {
+                    JSONObject row=new JSONObject(); row.put("day",u.getString(0)); row.put("module","inventory_usage");
+                    JSONObject payload=new JSONObject(); payload.put("flour_bags",u.getLong(1)); row.put("payload",payload);
+                    row.put("updated_at",System.currentTimeMillis()); result.put(row);
+                }
+            } finally { u.close(); }
             return result;
         }
         int restoreAll(JSONArray rows) throws Exception {
             java.util.ArrayList<ContentValues> prepared=new java.util.ArrayList<>();
-            java.util.HashSet<String> allowed=new java.util.HashSet<>(java.util.Arrays.asList("stock","cuts","workers","window","distribution","expenses","spoilage","costing","accounting"));
+            java.util.HashSet<String> allowed=new java.util.HashSet<>(java.util.Arrays.asList("stock","cuts","workers","window","distribution","expenses","spoilage","costing","accounting","inventory_usage"));
             for(int i=0;i<rows.length();i++) {
                 JSONObject row=rows.getJSONObject(i); String date=row.getString("day"), module=row.getString("module");
                 if(!date.matches("\\d{4}-\\d{2}-\\d{2}") || !allowed.contains(module)) throw new IllegalArgumentException("Invalid backup record");
@@ -756,7 +764,18 @@ public class MainActivity extends Activity {
                 cv.put("updated_at",row.optLong("updated_at",System.currentTimeMillis())); prepared.add(cv);
             }
             SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
-            try { for(ContentValues cv:prepared) db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE); db.setTransactionSuccessful(); }
+            try {
+                for(ContentValues cv:prepared) {
+                    if ("inventory_usage".equals(cv.getAsString("module"))) {
+                        JSONObject payload=new JSONObject(cv.getAsString("payload"));
+                        ContentValues uv=new ContentValues(); uv.put("day",cv.getAsString("day")); uv.put("flour_bags",payload.getLong("flour_bags"));
+                        db.insertWithOnConflict("inventory_usage",null,uv,SQLiteDatabase.CONFLICT_REPLACE);
+                    } else {
+                        db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
+                    }
+                }
+                db.setTransactionSuccessful();
+            }
             finally { db.endTransaction(); }
             return prepared.size();
         }
