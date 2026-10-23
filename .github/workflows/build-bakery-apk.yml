@@ -6,6 +6,10 @@ on:
     paths:
       - "bakery-app/**"
       - ".github/workflows/build-bakery-apk.yml"
+  pull_request:
+    paths:
+      - "bakery-app/**"
+      - ".github/workflows/build-bakery-apk.yml"
 
 permissions:
   contents: write
