@@ -1,0 +1,33 @@
+{
+  "product": "الميزان المحاسبي للمخابز",
+  "status": "expert-review-only-not-approved-for-commercial-sale",
+  "versionName": "2.5.4",
+  "versionCode": 250004,
+  "applicationId": "com.mohammedmustafa.almizan.bakery",
+  "databaseName": "almizan_bakery_250.db",
+  "releaseTag": "al-mizan-bakery-2.5.4-review",
+  "apkUrl": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/al-mizan-bakery-2.5.4-review/AlMizan-Bakery-2.5.4-review.apk",
+  "checksumUrl": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/al-mizan-bakery-2.5.4-review/SHA256SUMS.txt",
+  "signingCertificateSha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
+  "activationWorkflow": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/workflows/issue-bakery-license.yml",
+  "licenseSecretName": "BAKERY_LICENSE_PRIVATE_KEY_B64",
+  "licensePolicy": {
+    "trialDays": 7,
+    "monthlyAndAnnual": "Device-bound signed activation valid until the issued expiry; updates allowed while subscription is active",
+    "lifetime": "Device-bound signed activation for this app version only; future updates are not included"
+  },
+  "verification": {
+    "arithmeticUnitTests": "passed",
+    "debugAndReleaseBuild": "passed",
+    "apkSigningAndCertificateCheck": "passed",
+    "packageAndVersionCheck": "passed",
+    "sha256File": "published-as-release-asset",
+    "realDeviceUpdateTest": "pending",
+    "activationSecretSetup": "owner-action-required"
+  },
+  "notes": [
+    "The package ID and SQLite database name are unchanged from bakery 2.5.1, so an in-place update should preserve app data when the installed build uses the same signing certificate.",
+    "Before commercial approval, test update over 2.5.1/2.5.3, backup/restore, stock 10 minus work 7 equals 3, editing/deleting daily work, trial expiry, and valid/invalid/expired activation tokens.",
+    "The activation private key must never be committed to the repository or embedded in the APK."
+  ]
+}
