@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application
+        android:label="المحاسب الميزان للمخابز"
+        android:icon="@drawable/ic_smart_company"
+        android:roundIcon="@drawable/ic_smart_company"
+        tools:replace="android:label,android:icon,android:roundIcon" />
+</manifest>
