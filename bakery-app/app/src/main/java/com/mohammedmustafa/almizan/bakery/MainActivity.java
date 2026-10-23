@@ -328,7 +328,7 @@ public class MainActivity extends Activity {
         head.setPadding(16,14,16,14);
         head.setBackground(rounded(NAVY, 0));
         TextView logo = new TextView(this);
-        logo.setText("🌾\n🥖");
+        logo.setText("⚖️\n🌾🥖");
         logo.setTextSize(20);
         logo.setGravity(Gravity.CENTER);
         logo.setTextColor(GOLD);
