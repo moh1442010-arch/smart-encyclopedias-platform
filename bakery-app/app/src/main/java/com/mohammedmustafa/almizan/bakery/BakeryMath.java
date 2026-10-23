@@ -43,6 +43,13 @@ public final class BakeryMath {
         return Math.subtractExact(currentStock, Math.subtractExact(newUsage, previouslyAppliedUsage));
     }
 
+    /** Net daily margin after spoilage, wages, shop expenses, and operating costs. */
+    public static long netMargin(long productionValue,long spoilageValue,long wages,long expenses,long operatingCost) {
+        long[] values={productionValue,spoilageValue,wages,expenses,operatingCost};
+        for(long value:values) if(value<0) throw new IllegalArgumentException("Negative amount");
+        return Math.subtractExact(Math.subtractExact(Math.subtractExact(Math.subtractExact(productionValue,spoilageValue),wages),expenses),operatingCost);
+    }
+
     /** Estimated margin before any additional costs not included in the supplied cost list. */
     public static long grossMargin(long productionValue,long operatingCost) {
         if(productionValue<0 || operatingCost<0) throw new IllegalArgumentException("Negative amount");
