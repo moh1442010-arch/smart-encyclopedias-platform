@@ -38,7 +38,7 @@ public class BakeryDailyActivity extends Activity {
 
     private static final String[] FIELD_KEYS = {
         "cuts", "loaves_per_cut", "loaves_per_thousand",
-        "stock_flour", "stock_yeast", "stock_bags", "stock_oil", "stock_salt",
+        "stock_flour", "flour_bags_used", "flour_cost_per_bag", "stock_yeast", "stock_bags", "stock_oil", "stock_salt",
         "stock_diesel", "stock_wood", "stock_gas",
         "window_cash", "window_bank", "window_debt",
         "distribution_cash", "distribution_bank", "distribution_debt", "price_difference",
@@ -80,7 +80,9 @@ public class BakeryDailyActivity extends Activity {
         addField("loaves_per_thousand", "عدد العيشات التي تساوي 1,000 جنيه (يدخلها المحاسب)", "4", false);
 
         addHeading("2) المخزن — الأرصدة/الكميات");
-        addField("stock_flour", "جوالات الدقيق", "0", false);
+        addField("stock_flour", "رصيد الدقيق قبل تشغيل اليوم (جوال)", "0", false);
+        addField("flour_bags_used", "عدد جوالات الدقيق المستخدمة اليوم (تُخصم آليًا من رصيد اليوم)", "0", false);
+        addField("flour_cost_per_bag", "تكلفة جوال الدقيق الواحد بالجنيه", "0", false);
         addField("stock_yeast", "الخميرة (الكمية)", "0", false);
         addField("stock_bags", "الأكياس", "0", false);
         addField("stock_oil", "الزيت (الكمية)", "0", false);
@@ -138,7 +140,7 @@ public class BakeryDailyActivity extends Activity {
             toast("تم نسخ ملخص التسوية");
         });
         body.addView(copy);
-        body.addView(label("مهم: هذا الدفتر يحسب التسوية ويخزنها محليًا على الهاتف. لا يُرحّل إلى دفتر الأستاذ العام تلقائيًا في هذا الإصدار، ويجب اختبار النسخ الاحتياطي قبل الاعتماد التجاري."));
+        body.addView(label("حساب المخزون والتكلفة في هذا الدفتر تقديري ومحلي: رصيد آخر اليوم = رصيد أول اليوم − جوالات الدقيق المستخدمة. هامش الربح = إيرادات القطعيات والتوزيع − قيمة التالف − يومية العمال − المنصرفات − تكلفة الدقيق المستخدم. لا يُرحّل تلقائيًا إلى دفتر الأستاذ العام في هذا الإصدار."));
     }
 
     private void addHeading(String text) {
@@ -203,7 +205,7 @@ public class BakeryDailyActivity extends Activity {
             amount("distribution_cash"), amount("distribution_bank"), amount("distribution_debt"),
             amount("price_difference"), spoiledValue(), totalExpenses());
     }
-    private long totalExpenses() {
+    private long shopExpenses() {
         long breadForWorkers = 0;
         long loavesPerThousand = number("loaves_per_thousand");
         if (loavesPerThousand > 0) {
