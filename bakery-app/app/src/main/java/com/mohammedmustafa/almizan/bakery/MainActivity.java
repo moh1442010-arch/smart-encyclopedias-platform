@@ -249,7 +249,16 @@ public class MainActivity extends Activity {
             String plan = fields.get("plan");
             if (!"monthly".equals(plan) && !"annual".equals(plan) && !"lifetime".equals(plan)) return false;
             long expires = Long.parseLong(fields.get("expires"));
-            return expires == 0L || System.currentTimeMillis() / 1000L <= expires;
+            if (expires == 0L) return true;
+            android.content.SharedPreferences prefs = getPreferences(0);
+            long now = System.currentTimeMillis() / 1000L;
+            long lastSeen = prefs.getLong("license_last_seen", 0L);
+            if (lastSeen > 0L && now < lastSeen - 300L) {
+                prefs.edit().putBoolean("license_clock_rollback_detected", true).apply();
+            }
+            if (prefs.getBoolean("license_clock_rollback_detected", false)) return false;
+            prefs.edit().putLong("license_last_seen", Math.max(lastSeen, now)).apply();
+            return now <= expires;
         } catch (Exception ex) {
             android.util.Log.w("AlMizanBakery", "Activation token rejected", ex);
             return false;
@@ -262,19 +271,22 @@ public class MainActivity extends Activity {
         code.setMinLines(3);
         code.setGravity(Gravity.TOP | Gravity.START);
         code.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-        new AlertDialog.Builder(this).setTitle("🔑 تفعيل الاشتراك")
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("🔑 تفعيل الاشتراك")
             .setMessage("بعد مراجعة التحويل، يصلك رمز موقّع مرتبط بهذا الجهاز والباقة. أدخله هنا؛ لا ترسل الرمز السري لبنكك.")
             .setView(code).setNegativeButton("إلغاء", null)
-            .setPositiveButton("تفعيل", (d,w) -> {
-                String token = code.getText().toString().replaceAll("\\s+", "");
-                if (!verifyLicenseToken(token)) {
-                    toast("رمز التفعيل غير صحيح أو لا يخص هذا الجهاز أو انتهت صلاحيته.");
-                    return;
-                }
-                getPreferences(0).edit().putString("license_token", token).apply();
-                toast("تم التحقق من رمز التفعيل.");
-                buildHome();
-            }).show();
+            .setPositiveButton("تفعيل", null).create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String token = code.getText().toString().replaceAll("\\s+", "");
+            if (!verifyLicenseToken(token)) {
+                code.setError("رمز التفعيل غير صحيح أو لا يخص هذا الجهاز أو انتهت صلاحيته.");
+                return;
+            }
+            getPreferences(0).edit().putString("license_token", token).apply();
+            dialog.dismiss();
+            toast("تم التحقق من رمز التفعيل.");
+            buildHome();
+        }));
+        dialog.show();
     }
 
     private boolean trialExpired() {
