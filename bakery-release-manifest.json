@@ -17,17 +17,19 @@
     "lifetime": "Device-bound signed activation for this app version only; future updates are not included"
   },
   "verification": {
-    "arithmeticUnitTests": "pending-build-verification",
-    "debugAndReleaseBuild": "pending-build-verification",
-    "apkSigningAndCertificateCheck": "pending-build-verification",
-    "packageAndVersionCheck": "pending-build-verification",
-    "sha256File": "pending-build-verification",
-    "realDeviceUpdateTest": "pending",
+    "arithmeticUnitTests": "passed",
+    "debugAndReleaseBuild": "passed",
+    "apkSigningAndCertificateCheck": "passed",
+    "packageAndVersionCheck": "passed",
+    "sha256File": "published-as-release-asset",
+    "realDeviceUpdateTest": "pending-user-device-test",
     "activationSecretSetup": "owner-action-required"
   },
   "notes": [
-    "The package ID and SQLite database name are unchanged from bakery 2.5.1, so an in-place update should preserve app data when the installed build uses the same signing certificate.",
-    "Before commercial approval, test update over 2.5.1/2.5.3, backup/restore, stock 10 minus work 7 equals 3, editing/deleting daily work, trial expiry, and valid/invalid/expired activation tokens.",
+    "Application ID com.mohammedmustafa.almizan.bakery and database almizan_bakery_250.db remain unchanged to support in-place updates from the same signed lineage.",
+    "Automated tests cover 10 flour bags minus 7 bags of daily work leaving 3, recalculation when editing usage, and net margin after spoilage, wages, expenses and operating costs.",
+    "Before accepting commercial use, test update over the installed 2.5.1/2.5.3/2.5.6 build, backup/restore, trial expiry, and valid/invalid/expired activation tokens on a real Android device.",
     "The activation private key must never be committed to the repository or embedded in the APK."
-  ]
+  ],
+  "sha256": "d650e74be8d58545fff41e5fc655635166000f1ef52500a662c0e654c5d3a211"
 }
