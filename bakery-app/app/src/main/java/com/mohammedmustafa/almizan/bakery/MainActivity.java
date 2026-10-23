@@ -43,7 +43,8 @@ public class MainActivity extends Activity {
     private static final String SUPPORT = "249121851285", BANKAK = "1882224";
     // Public verification key only. The corresponding private key is stored as a GitHub Actions secret.
     private static final String LICENSE_PUBLIC_KEY_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqlGWpIPqSpXdEP67uticpomJ5nKGkHrZkKDgnueolx8cFKyov/PydmJuAnxUaRnggcNte4/PfGzwrXtmoJ6hrpXfYUVjyL3UZ9MdCmPKevrdBftzWYoJ6NG2Dda6ZdlQoDdD/Mads1uJYACKxbipsgWSUr9MzmJdmTSYexDHBS6MWMPyjK+L60Jy3sn6k85bPE+AnPtOW38/no2ucz6h8kANgpd/4XDusR07l6EYOSg8TXuVny6SKUzH6PWf/TC6fXt2erASsPkvc5MehBMI9vXCTpj0PGZikAdyj/Hw6IKyr5HmG8vLgzofB1AfXPgIrJdhGMhdsUn8iD+4ZLBucQIDAQAB";
-    private static final int REQUEST_EXPORT_BACKUP = 4250, REQUEST_IMPORT_BACKUP = 4251;
+    private static final int REQUEST_EXPORT_BACKUP = 4250, REQUEST_IMPORT_BACKUP = 4251, REQUEST_PAYMENT_RECEIPT = 4252;
+    private String pendingActivationMessage = "";
     private Store store;
     private LinearLayout root, content;
     private String day;
@@ -784,6 +785,10 @@ public class MainActivity extends Activity {
 
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data) {
         super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode==REQUEST_PAYMENT_RECEIPT) {
+            if(resultCode==RESULT_OK && data!=null && data.getData()!=null) sharePaymentReceipt(data.getData());
+            return;
+        }
         if(resultCode!=RESULT_OK || data==null || data.getData()==null) return;
         try {
             if(requestCode==REQUEST_EXPORT_BACKUP) {
@@ -878,15 +883,49 @@ public class MainActivity extends Activity {
     }
 
     private void requestActivation(String plan,String amount) {
-        String message="السلام عليكم، أطلب تفعيل المحاسب الميزان للمخابز 2.5.5.\n"+
+        final String message="السلام عليكم، أطلب تفعيل المحاسب الميزان للمخابز 2.5.5.\n"+
             "الباقة المختارة: "+plan+"\n"+
             "المبلغ: "+amount+"\n"+
             "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\n"+
             "تاريخ الطلب: "+day+"\n"+
             "معرّف الجهاز: "+deviceId()+"\n"+
             "رقم عملية بنكك: [اكتب رقم العملية]\n"+
-            "سأرفق صورة إيصال التحويل هنا. بعد التحقق أرجو إرسال رمز تفعيل مرتبط بهذا الجهاز والباقة.";
-        openWhatsApp(message);
+            "أرفق إيصال التحويل في هذه المحادثة. بعد التحقق أرجو إرسال رمز تفعيل مرتبط بهذا الجهاز والباقة.";
+        new AlertDialog.Builder(this).setTitle("إرسال طلب التفعيل")
+            .setMessage("اختر إرسال الطلب النصي إلى واتساب أو إرفاق صورة/PDF لإيصال التحويل. لا ترسل الرقم السري أو رمز التحقق الخاص ببنكك.")
+            .setNegativeButton("إلغاء",null)
+            .setNeutralButton("إرسال الطلب النصي",(d,w)->openWhatsApp(message))
+            .setPositiveButton("📎 إرفاق الإيصال",(d,w)->choosePaymentReceipt(message))
+            .show();
+    }
+
+    private void choosePaymentReceipt(String message) {
+        pendingActivationMessage = message;
+        Intent picker = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        picker.addCategory(Intent.CATEGORY_OPENABLE);
+        picker.setType("*/*");
+        picker.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/*","application/pdf"});
+        try { startActivityForResult(picker,REQUEST_PAYMENT_RECEIPT); }
+        catch(Exception ex) { toast("تعذر فتح اختيار الإيصال؛ يمكنك إرسال الطلب النصي عبر واتساب."); }
+    }
+
+    private void sharePaymentReceipt(Uri uri) {
+        try {
+            String mime = getContentResolver().getType(uri);
+            if (mime == null || (!mime.startsWith("image/") && !mime.equals("application/pdf"))) {
+                toast("اختر صورة أو ملف PDF صالحًا للإيصال.");
+                return;
+            }
+            Intent share = new Intent(Intent.ACTION_SEND);
+            share.setType(mime);
+            share.putExtra(Intent.EXTRA_STREAM,uri);
+            share.putExtra(Intent.EXTRA_TEXT,pendingActivationMessage);
+            share.setClipData(android.content.ClipData.newUri(getContentResolver(), "إيصال التحويل", uri));
+            share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(share,"إرسال طلب التفعيل والإيصال"));
+        } catch(Exception ex) {
+            toast("تعذر مشاركة الإيصال. يمكنك فتح واتساب وإرسال الطلب النصي ثم إرفاق الإيصال يدويًا.");
+        }
     }
 
     private void openWhatsApp(String message) {
