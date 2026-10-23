@@ -95,7 +95,7 @@ public class MainActivity extends Activity {
         base("⚠️ تعذر فتح التطبيق");
         content.addView(text("تم تسجيل الخطأ بدل إغلاق التطبيق فجأة. لم تُحذف بيانات الدفاتر. أرسل التقرير للدعم لتحديد السبب بدقة.", 16));
         Button send = button("إرسال تقرير الخطأ عبر واتساب");
-        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل المحاسب الميزان للمخابز 2.5.6\n" + report));
+        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل المحاسب الميزان للمخابز 2.5.7\n" + report));
         content.addView(send);
         Button retry = button("إعادة محاولة فتح الصفحة الرئيسية");
         retry.setOnClickListener(v -> continueAfterPinAccepted());
@@ -361,7 +361,7 @@ public class MainActivity extends Activity {
     }
 
     private void buildHome() {
-        base("🥖 المحاسب الميزان للمخابز 2.5.6");
+        base("🥖 المحاسب الميزان للمخابز 2.5.7");
         TextView intro = text("منظومة يومية متكاملة للمخبز — من رصيد الدقيق إلى الإنتاج والتحصيل وهامش الربح.",16);
         content.addView(intro);
         addBakeryHero();
@@ -382,7 +382,7 @@ public class MainActivity extends Activity {
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
-        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق المحاسب الميزان للمخابز 2.5.6.")); content.addView(support);
+        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق المحاسب الميزان للمخابز 2.5.7.")); content.addView(support);
         updateStatus();
     }
 
@@ -399,7 +399,7 @@ public class MainActivity extends Activity {
         hero.setBackground(background);
         hero.setElevation(4f);
 
-        TextView brand = text("🌾  سنابل الخير  •  رغيف اليوم بميزان دقيق",19);
+        TextView brand = text("🌾  سنابل القمح والخبز  •  رغيف اليوم بميزان دقيق",19);
         brand.setTextColor(Color.WHITE);
         brand.setTypeface(null,1);
         hero.addView(brand);
@@ -868,7 +868,7 @@ public class MainActivity extends Activity {
     }
 
     private void showGuide() {
-        String guide="طريقة الاستخدام — المحاسب الميزان للمخابز 2.5.6\n\n"+
+        String guide="طريقة الاستخدام — المحاسب الميزان للمخابز 2.5.7\n\n"+
             "1) اختر التاريخ من رزنامة الهاتف داخل التطبيق؛ لكل تاريخ دفتر مستقل.\n"+
             "2) المخزن: أدخل رصيد الدقيق الافتتاحي قبل شغل اليوم وكميات المواد الأخرى. مثال: إذا كان الرصيد 10 جوالات وشغل اليوم 7 جوالات، يصبح الرصيد المتبقي 3 جوالات تلقائيًا. إذا عدّلت المخزن أو عدد الشغل، يعيد التطبيق احتساب الفرق ولا يخصم الشغل مرتين.\n"+
             "3) القطعيات: أدخل عدد الشغل، وعدد الأرغفة لكل جوال، وعدد الأرغفة المقابل لـ 1,000 جنيه. يحسب التطبيق كمية العيش وقيمة الإنتاج.\n"+
@@ -942,7 +942,7 @@ public class MainActivity extends Activity {
     }
 
     private void requestActivation(String plan,String amount) {
-        final String message="السلام عليكم، أطلب تفعيل المحاسب الميزان للمخابز 2.5.6.\n"+
+        final String message="السلام عليكم، أطلب تفعيل المحاسب الميزان للمخابز 2.5.7.\n"+
             "الباقة المختارة: "+plan+"\n"+
             "المبلغ: "+amount+"\n"+
             "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\n"+
@@ -988,7 +988,7 @@ public class MainActivity extends Activity {
     }
 
     private void chooseCompanyLogo() {
-        pendingActivationMessage = "السلام عليكم، أرسل شعار نشاطي لتخصيص فواتير المحاسب الميزان للمخابز 2.5.6.\n"+
+        pendingActivationMessage = "السلام عليكم، أرسل شعار نشاطي لتخصيص فواتير المحاسب الميزان للمخابز 2.5.7.\n"+
             "معرّف الجهاز: "+deviceId()+"\n"+
             "اسم النشاط: [اكتب اسم المخبز]\n"+
             "يرجى استخدام الشعار في الفواتير بعد مراجعة الطلب.";
