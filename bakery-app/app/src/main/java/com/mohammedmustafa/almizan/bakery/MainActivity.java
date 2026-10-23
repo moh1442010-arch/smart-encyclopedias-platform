@@ -917,6 +917,13 @@ public class MainActivity extends Activity {
         content.addView(text("تنبيه قبل الدفع: الشراء لمرة واحدة يفعّل هذا الإصدار فقط ولا يشمل التحديثات المستقبلية. الباقات الشهرية والسنوية تشمل التحديثات طوال فترة الاشتراك.",13));
         content.addView(text("معرّف هذا الجهاز لربط الاشتراك به:",14));
         content.addView(text(deviceId(),13));
+        Button copyDevice=button("📋 نسخ معرّف الجهاز لإرساله للدعم");
+        copyDevice.setOnClickListener(v->{
+            android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("Bakery device ID",deviceId()));
+            toast("تم نسخ معرّف الجهاز. أرسله للدعم فقط؛ لا ترسل كلمة مرورك.");
+        });
+        content.addView(copyDevice);
         Button activate=button("🔑 أدخل رمز التفعيل بعد موافقة الدعم");
         activate.setOnClickListener(v->showActivationDialog());
         content.addView(activate);
