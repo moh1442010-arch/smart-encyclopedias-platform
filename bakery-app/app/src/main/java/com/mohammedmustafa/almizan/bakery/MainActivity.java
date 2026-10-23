@@ -825,6 +825,52 @@ public class MainActivity extends Activity {
                 db.setTransactionSuccessful();
             } finally { db.endTransaction(); }
         }
+        long usageForDate(String date) {
+            Cursor c=getReadableDatabase().rawQuery("SELECT flour_bags FROM inventory_usage WHERE day=?",new String[]{date});
+            try { return c.moveToFirst()?c.getLong(0):0L; } finally { c.close(); }
+        }
+
+        void saveStockWithInventory(String date,JSONObject stockInput) throws Exception {
+            SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
+            try {
+                long usage=usageForDate(date);
+                String raw=stockInput.optString("flour","");
+                if(raw.trim().isEmpty() && usage>0) throw new IllegalStateException("أدخل رصيد الدقيق الافتتاحي قبل حفظ المخزن.");
+                long opening=raw.trim().isEmpty()?0L:parseLong(raw);
+                long closing=Math.subtractExact(opening,usage);
+                if(closing<0) throw new IllegalStateException("رصيد الدقيق الافتتاحي أقل من شغل اليوم.");
+                stockInput.put("flour",String.valueOf(closing));
+                ContentValues cv=new ContentValues(); cv.put("day",date); cv.put("module","stock"); cv.put("payload",stockInput.toString()); cv.put("updated_at",System.currentTimeMillis());
+                db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
+                db.setTransactionSuccessful();
+            } finally { db.endTransaction(); }
+        }
+
+        void deleteCutsWithInventory(String date) {
+            SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
+            try {
+                long usage=usageForDate(date);
+                Cursor c=db.rawQuery("SELECT payload FROM records WHERE day=? AND module='stock'",new String[]{date});
+                try {
+                    if(c.moveToFirst() && usage>0) {
+                        JSONObject stock=new JSONObject(c.getString(0));
+                        long closing=parseLong(stock.optString("flour","0"));
+                        stock.put("flour",String.valueOf(Math.addExact(closing,usage)));
+                        ContentValues cv=new ContentValues(); cv.put("day",date); cv.put("module","stock"); cv.put("payload",stock.toString()); cv.put("updated_at",System.currentTimeMillis());
+                        db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
+                    }
+                } finally { c.close(); }
+                db.delete("records","day=? AND module='cuts'",new String[]{date});
+                db.delete("inventory_usage","day=?",new String[]{date});
+                JSONObject cost=get(date,"costing"); cost.put("flour_bags","0");
+                ContentValues costCv=new ContentValues(); costCv.put("day",date); costCv.put("module","costing"); costCv.put("payload",cost.toString()); costCv.put("updated_at",System.currentTimeMillis());
+                db.insertWithOnConflict("records",null,costCv,SQLiteDatabase.CONFLICT_REPLACE);
+                db.setTransactionSuccessful();
+            } catch(Exception ex) {
+                throw new IllegalStateException("تعذر إرجاع المخزون بأمان؛ لم تكتمل عملية مسح شغل اليوم.",ex);
+            } finally { db.endTransaction(); }
+        }
+
         void delete(String date,String module) { getWritableDatabase().delete("records","day=? AND module=?",new String[]{date,module}); }
         boolean has(String date) { Cursor c=getReadableDatabase().rawQuery("SELECT 1 FROM records WHERE day=? LIMIT 1",new String[]{date}); try{return c.moveToFirst();}finally{c.close();} }
 
