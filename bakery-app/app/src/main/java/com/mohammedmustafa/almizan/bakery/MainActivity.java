@@ -9,6 +9,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.InputType;
@@ -70,8 +71,27 @@ public class MainActivity extends Activity {
     }
 
     private void continueAfterPinAccepted() {
-        if (trialExpired()) { showPaywall(); return; }
-        buildHome();
+        try {
+            if (trialExpired()) { showPaywall(); return; }
+            buildHome();
+        } catch (RuntimeException ex) {
+            android.util.Log.e("AlMizanBakery", "Failed to open home after login", ex);
+            showStartupFailure(ex);
+        }
+    }
+
+    private void showStartupFailure(RuntimeException ex) {
+        final String report = "تعذر فتح الصفحة الرئيسية بعد تسجيل الدخول.\\n" +
+            ex.getClass().getName() + ": " + String.valueOf(ex.getMessage()) +
+            "\\n\\n" + android.util.Log.getStackTraceString(ex);
+        base("⚠️ تعذر فتح التطبيق");
+        content.addView(text("تم تسجيل الخطأ بدل إغلاق التطبيق فجأة. لم تُحذف بيانات الدفاتر. أرسل التقرير للدعم لتحديد السبب بدقة.", 16));
+        Button send = button("إرسال تقرير الخطأ عبر واتساب");
+        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.2\\n" + report));
+        content.addView(send);
+        Button retry = button("إعادة محاولة فتح الصفحة الرئيسية");
+        retry.setOnClickListener(v -> continueAfterPinAccepted());
+        content.addView(retry);
     }
 
     private void showPinSetup() {
@@ -189,13 +209,52 @@ public class MainActivity extends Activity {
         return now - start >= 7L * 24L * 60L * 60L * 1000L;
     }
 
+    private GradientDrawable rounded(int color, float radiusDp) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(color);
+        d.setCornerRadius(radiusDp * getResources().getDisplayMetrics().density);
+        return d;
+    }
+
     private void base(String title) {
-        root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(BG);
-        TextView head = new TextView(this); head.setText(title); head.setTextSize(21); head.setTextColor(Color.WHITE);
-        head.setTypeface(null, 1); head.setPadding(16,18,16,18); head.setBackgroundColor(NAVY); root.addView(head);
+        root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        root.setBackgroundColor(BG);
+        LinearLayout head = new LinearLayout(this);
+        head.setOrientation(LinearLayout.HORIZONTAL);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        head.setPadding(16,14,16,14);
+        head.setBackground(rounded(NAVY, 0));
+        TextView logo = new TextView(this);
+        logo.setText("🌾\\n🥖");
+        logo.setTextSize(23);
+        logo.setGravity(Gravity.CENTER);
+        logo.setTextColor(GOLD);
+        head.addView(logo, new LinearLayout.LayoutParams(58,60));
+        LinearLayout titles = new LinearLayout(this);
+        titles.setOrientation(LinearLayout.VERTICAL);
+        TextView name = new TextView(this);
+        name.setText(title);
+        name.setTextSize(19);
+        name.setTextColor(Color.WHITE);
+        name.setTypeface(null,1);
+        TextView subtitle = new TextView(this);
+        subtitle.setText("إدارة المخبز • المخزون • التشغيل • الربحية");
+        subtitle.setTextSize(12);
+        subtitle.setTextColor(Color.rgb(236,226,190));
+        titles.addView(name);
+        titles.addView(subtitle);
+        head.addView(titles,new LinearLayout.LayoutParams(0,-2,1f));
+        head.setElevation(5f);
+        root.addView(head);
         ScrollView scroll = new ScrollView(this);
-        content = new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL); content.setPadding(12,10,12,18);
-        scroll.addView(content); root.addView(scroll, new LinearLayout.LayoutParams(-1,0,1f));
+        content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        content.setPadding(14,14,14,20);
+        scroll.addView(content);
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
         setContentView(root);
     }
 
@@ -207,8 +266,8 @@ public class MainActivity extends Activity {
         dateLabel = text("📅 التاريخ: " + day,16); dateRow.addView(dateLabel,new LinearLayout.LayoutParams(0,-2,1f));
         Button choose = button("اختيار التاريخ"); choose.setOnClickListener(v -> chooseDate()); dateRow.addView(choose); content.addView(dateRow);
         statusLabel = text("",14); content.addView(statusLabel);
-        addCard("📦 1. المخزن","الدقيق، الخميرة، الأكياس، الزيت، الملح، الحطب، الغاز، الجهاز",()->openModule("stock"));
-        addCard("🥖 2. القطععيات","عدد الشغل، عدد العيش المنتج، وسعر التحويل إلى الجنيه",()->openModule("cuts"));
+        addCard("📦 1. المخزن","أرصدة الدقيق والخميرة والأكياس والزيت والملح والوقود والمعدات. يظهر رصيد اليوم السابق تلقائيًا.",()->openModule("stock"));
+        addCard("🥖 2. شغل اليوم والإنتاج","عدد جوالات الدقيق المستخدمة، عدد الأرغفة لكل جوال، وقيمة الإنتاج بالجنيه. يُخصم الدقيق تلقائيًا من المخزن.",()->openModule("cuts"));
         addCard("👷 3. يومية العمال","اسم العامل، الوظيفة، عدد الشغل، عمالة الجوال، وجملة العمل",()->openModule("workers"));
         addCard("💵 4. الكاش وبيع الشباك","النقد، الديون، التحويل البنكي ورقم العملية",()->openModule("window"));
         addCard("🚚 5. التوزيع","اسم العميل، الكمية، الكاش، الديون، التحويل وفرق السعر",()->openModule("distribution"));
@@ -224,12 +283,24 @@ public class MainActivity extends Activity {
     }
 
     private void addCard(String title, String description, Runnable action) {
-        LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL); card.setPadding(14,10,14,10);
-        card.setBackgroundColor(Color.WHITE);
-        TextView h = text(title,18); h.setTextColor(NAVY); h.setTypeface(null,1); card.addView(h);
-        card.addView(text(description,14));
-        Button open = button("فتح القسم"); open.setOnClickListener(v->action.run()); card.addView(open);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1,-2); lp.setMargins(0,6,0,6); content.addView(card,lp);
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(16,14,16,14);
+        card.setBackground(rounded(Color.WHITE,18));
+        card.setElevation(3f);
+        TextView h = text(title,18);
+        h.setTextColor(NAVY);
+        h.setTypeface(null,1);
+        card.addView(h);
+        TextView desc = text(description,14);
+        desc.setTextColor(Color.rgb(78,89,105));
+        card.addView(desc);
+        Button open = button("فتح القسم  ←");
+        open.setOnClickListener(v->action.run());
+        card.addView(open);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1,-2);
+        lp.setMargins(0,7,0,7);
+        content.addView(card,lp);
     }
 
     private TextView text(String value, int size) {
@@ -237,9 +308,18 @@ public class MainActivity extends Activity {
         v.setPadding(7,8,7,8); return v;
     }
     private Button button(String value) {
-        Button b = new Button(this); b.setText(value); b.setAllCaps(false); b.setTextColor(NAVY);
-        b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(GOLD)); return b;
+        Button b = new Button(this);
+        b.setText(value);
+        b.setAllCaps(false);
+        b.setTextColor(NAVY);
+        b.setTextSize(15);
+        b.setTypeface(null,1);
+        b.setMinHeight(48);
+        b.setBackground(rounded(GOLD,14));
+        b.setElevation(2f);
+        return b;
     }
+
     private void chooseDate() {
         Calendar c = Calendar.getInstance();
         try { c.setTime(new SimpleDateFormat("yyyy-MM-dd",Locale.US).parse(day)); } catch(Exception ignored) {}
@@ -259,8 +339,8 @@ public class MainActivity extends Activity {
                 t("notes","ملاحظات المخزن","")
             };
             case "cuts": return new Field[]{
-                f("work_units","عدد الشغل/القطععيات اليومية"),f("loaves_per_unit","عدد العيش في القطعية الواحدة"),
-                f("loaves_per_1000","عدد العيشات التي تساوي 1,000 جنيه")
+                f("work_units","عدد جوالات الدقيق المستخدمة في شغل اليوم"),f("loaves_per_unit","عدد الأرغفة الناتجة من جوال دقيق واحد"),
+                f("loaves_per_1000","عدد الأرغفة التي تساوي 1,000 جنيه")
             };
             case "workers": return new Field[]{
                 t("rows","تفاصيل العمال — سطر لكل عامل","الاسم | الوظيفة | عدد الشغل | أجرة الوحدة\nمثال: أحمد | خباز | 10 | 500"),
@@ -283,7 +363,7 @@ public class MainActivity extends Activity {
             case "spoilage": return new Field[]{f("loaves","عدد العيش التالف"),t("reason","سبب التلف / الملاحظات","")};
             case "costing": return new Field[]{
                 f("fuel_quantity","الوقود — الكمية المستخدمة"),f("fuel_unit_price","سعر وحدة الوقود (جنيه)"),
-                f("flour_bags","الدقيق — عدد الجوالات المستخدمة"),f("flour_bag_price","سعر جوال الدقيق الواحد (جنيه)"),
+                f("flour_bags","الدقيق — الجوالات المستخدمة (تُزامن تلقائيًا مع شغل اليوم)"),f("flour_bag_price","سعر جوال الدقيق الواحد (جنيه)"),
                 f("yeast_count","الخميرة — عدد القطع المستخدمة"),f("yeast_piece_price","سعر قطعة الخميرة (جنيه)"),
                 f("oil_quantity","الزيت — الكمية المستخدمة بالرطل"),f("oil_pound_price","سعر رطل الزيت (جنيه)"),
                 f("salt_quantity","الملح — الكمية المستخدمة"),f("salt_unit_price","سعر وحدة الملح (جنيه)"),
@@ -304,6 +384,13 @@ public class MainActivity extends Activity {
     private void openModule(String module) {
         Field[] fields = schema(module);
         JSONObject saved = store.get(day,module);
+        if (module.equals("stock") && !store.has(day,"stock")) {
+            JSONObject previous = store.getLatest(day,"stock");
+            if (previous.length() > 0) saved = previous;
+        }
+        if (module.equals("costing") && val("cuts","work_units") > 0) {
+            try { saved.put("flour_bags", String.valueOf(val("cuts","work_units"))); } catch(Exception ignored) {}
+        }
         ScrollView sc = new ScrollView(this); LinearLayout box = new LinearLayout(this);
         box.setPadding(14,8,14,12); box.setOrientation(LinearLayout.VERTICAL); sc.addView(box);
         final java.util.Map<String,EditText> inputs = new java.util.LinkedHashMap<>();
@@ -312,6 +399,7 @@ public class MainActivity extends Activity {
             EditText e = new EditText(this); e.setTextSize(16); e.setHint(field.hint); e.setPadding(10,8,10,8);
             if(field.numeric) { e.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED); e.setSingleLine(true); }
             else { e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE); e.setMinLines(field.key.equals("rows")?4:1); e.setGravity(Gravity.TOP|Gravity.START); }
+            if (module.equals("costing") && field.key.equals("flour_bags")) { e.setEnabled(false); e.setAlpha(0.75f); }
             e.setText(saved.optString(field.key,"")); inputs.put(field.key,e); box.addView(e);
         }
         new AlertDialog.Builder(this).setTitle(titleFor(module)+" — "+day).setView(sc)
@@ -329,7 +417,14 @@ public class MainActivity extends Activity {
                         }
                         record.put(field.key,val);
                     }
-                    store.put(day,module,record); updateStatus(); toast("حُفظ "+titleFor(module)+" بتاريخ "+day);
+                    if (module.equals("cuts")) {
+                        long newWork = parseLong(record.optString("work_units","0"));
+                        store.saveCutsWithInventory(day, record, newWork);
+                        updateStatus();
+                        toast("حُفظ شغل اليوم. تم تحديث رصيد الدقيق والتكلفة تلقائيًا.");
+                    } else {
+                        store.put(day,module,record); updateStatus(); toast("حُفظ "+titleFor(module)+" بتاريخ "+day);
+                    }
                 } catch(Exception ex) { toast("لم تُحفظ البيانات: "+ex.getMessage()); }
             }).show();
     }
@@ -393,32 +488,35 @@ public class MainActivity extends Activity {
     private long costingTotal() {
         return BakeryMath.operatingCost(
             val("costing","fuel_quantity"),val("costing","fuel_unit_price"),
-            val("costing","flour_bags"),val("costing","flour_bag_price"),
+            val("cuts","work_units"),val("costing","flour_bag_price"),
             val("costing","yeast_count"),val("costing","yeast_piece_price"),
             val("costing","oil_quantity"),val("costing","oil_pound_price"),
             val("costing","salt_quantity"),val("costing","salt_unit_price"),
             val("costing","bags_total_price"));
     }
+
     private void showCosting() {
         try {
-            long production=productionValue(), cost=costingTotal(), margin=BakeryMath.grossMargin(production,cost);
+            long production=productionValue(), cost=costingTotal();
+            long spoilage=spoilageValue(), labor=wages(), expenses=expenseTotal();
+            long beforeCost=Math.subtractExact(Math.subtractExact(Math.subtractExact(production,spoilage),labor),expenses);
+            long margin=Math.subtractExact(beforeCost,cost);
             String message="تاريخ التكلفة: "+day+
-                "\nقيمة الإنتاج حسب القطععيات: "+fmt(production)+" جنيه"+
-                "\nتكلفة الوقود: "+fmt(Math.multiplyExact(val("costing","fuel_quantity"),val("costing","fuel_unit_price")))+" جنيه"+
-                "\nتكلفة الدقيق: "+fmt(Math.multiplyExact(val("costing","flour_bags"),val("costing","flour_bag_price")))+" جنيه"+
-                "\nتكلفة الخميرة: "+fmt(Math.multiplyExact(val("costing","yeast_count"),val("costing","yeast_piece_price")))+" جنيه"+
-                "\nتكلفة الزيت: "+fmt(Math.multiplyExact(val("costing","oil_quantity"),val("costing","oil_pound_price")))+" جنيه"+
-                "\nتكلفة الملح: "+fmt(Math.multiplyExact(val("costing","salt_quantity"),val("costing","salt_unit_price")))+" جنيه"+
-                "\nتكلفة الأكياس: "+fmt(val("costing","bags_total_price"))+" جنيه"+
-                "\n\nإجمالي تكلفة التشغيل المدخلة: "+fmt(cost)+" جنيه"+
-                "\nهامش الربح التقديري = قيمة الإنتاج - تكلفة التشغيل: "+fmt(margin)+" جنيه"+
-                "\n\nتنبيه: الهامش تقديري للمواد والوقود المدخلين فقط؛ أضف كل التكاليف الأخرى التي تنطبق على المخبز. لا تكرر نفس التكلفة في تسوية المحاسب والمنصرفات.";
+                "\\nقيمة القطععيات/الإنتاج: "+fmt(production)+" جنيه"+
+                "\\n(-) قيمة التالف: "+fmt(spoilage)+" جنيه"+
+                "\\n(-) يومية العمال: "+fmt(labor)+" جنيه"+
+                "\\n(-) منصرفات المحل: "+fmt(expenses)+" جنيه"+
+                "\\nالصافي قبل تكلفة التشغيل: "+fmt(beforeCost)+" جنيه"+
+                "\\n(-) تكلفة الدقيق والوقود والخميرة والزيت والملح والأكياس: "+fmt(cost)+" جنيه"+
+                "\\n\\nهامش الربح التقديري النهائي: "+fmt(margin)+" جنيه"+
+                "\\n\\nحساب الدقيق مرتبط بعدد جوالات شغل اليوم. راجع أسعار المواد والتالف واليومية والمنصرفات، ولا تسجل المصروف نفسه مرتين.";
             new AlertDialog.Builder(this).setTitle("🏭 حساب التشغيل والتكلفة — "+day).setMessage(message)
                 .setNegativeButton("إغلاق",null)
                 .setNeutralButton("تعديل بيانات التكلفة",(d,w)->openModule("costing"))
                 .setPositiveButton("مشاركة التقرير",(d,w)->shareReport(message)).show();
-        } catch(Exception ex) { toast("تعذر حساب تكلفة التشغيل بسبب رقم كبير جدًا أو بيانات غير صحيحة. راجع الكميات والأسعار."); }
+        } catch(Exception ex) { toast("تعذر حساب التكلفة بسبب رقم كبير جدًا أو بيانات غير صحيحة. راجع الكميات والأسعار."); }
     }
+
     private long cashTotal() { Totals d=distribution(); return Math.addExact(val("window","cash"),d.cash); }
     private long debtTotal() { Totals d=distribution(); return Math.addExact(val("window","debt"),d.debt); }
     private long bankTotal() { Totals d=distribution(); return Math.addExact(val("window","bank"),d.bank); }
@@ -550,11 +648,14 @@ public class MainActivity extends Activity {
     private void toast(String s) { Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
 
     private class Store extends SQLiteOpenHelper {
-        Store(){super(MainActivity.this,"almizan_bakery_250.db",null,1);}
+        Store(){super(MainActivity.this,"almizan_bakery_250.db",null,2);}
         @Override public void onCreate(SQLiteDatabase db) {
             db.execSQL("CREATE TABLE records (day TEXT NOT NULL, module TEXT NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(day,module))");
+            db.execSQL("CREATE TABLE inventory_usage (day TEXT PRIMARY KEY NOT NULL, flour_bags INTEGER NOT NULL DEFAULT 0)");
         }
-        @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion) {}
+        @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion) {
+            if (oldVersion < 2) db.execSQL("CREATE TABLE IF NOT EXISTS inventory_usage (day TEXT PRIMARY KEY NOT NULL, flour_bags INTEGER NOT NULL DEFAULT 0)");
+        }
         JSONObject get(String date,String module) {
             SQLiteDatabase db=getReadableDatabase(); Cursor c=db.rawQuery("SELECT payload FROM records WHERE day=? AND module=?",new String[]{date,module});
             try { if(c.moveToFirst()) return new JSONObject(c.getString(0)); } catch(Exception ignored) {} finally {c.close();}
@@ -563,6 +664,44 @@ public class MainActivity extends Activity {
         void put(String date,String module,JSONObject value) {
             ContentValues cv=new ContentValues(); cv.put("day",date); cv.put("module",module); cv.put("payload",value.toString()); cv.put("updated_at",System.currentTimeMillis());
             getWritableDatabase().insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
+        }
+
+        JSONObject getLatest(String date,String module) {
+            SQLiteDatabase db=getReadableDatabase();
+            Cursor c=db.rawQuery("SELECT payload FROM records WHERE module=? AND day<=? ORDER BY day DESC LIMIT 1",new String[]{module,date});
+            try { if(c.moveToFirst()) return new JSONObject(c.getString(0)); }
+            catch(Exception ignored) {} finally { c.close(); }
+            return new JSONObject();
+        }
+
+        void saveCutsWithInventory(String date,JSONObject cuts,long newWork) throws Exception {
+            if (newWork < 0) throw new IllegalArgumentException("عدد جوالات الدقيق لا يمكن أن يكون سالبًا");
+            SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
+            try {
+                long previouslyApplied=0L;
+                Cursor usage=db.rawQuery("SELECT flour_bags FROM inventory_usage WHERE day=?",new String[]{date});
+                try { if(usage.moveToFirst()) previouslyApplied=usage.getLong(0); } finally { usage.close(); }
+                JSONObject stock=getLatest(date,"stock");
+                if (stock.length()==0 && (newWork>0 || previouslyApplied>0)) throw new IllegalStateException("أدخل رصيد الدقيق في قسم المخزن أولًا، ثم احفظ شغل اليوم.");
+                if (stock.length()>0) {
+                    String raw=stock.optString("flour","");
+                    if (raw.trim().isEmpty() && (newWork>0 || previouslyApplied>0)) throw new IllegalStateException("رصيد الدقيق غير محدد. أدخل عدد الجوالات في المخزن أولًا.");
+                    long current=raw.trim().isEmpty()?0L:parseLong(raw);
+                    long adjusted=BakeryMath.stockAfterUsage(current,previouslyApplied,newWork);
+                    if (adjusted<0) throw new IllegalStateException("رصيد الدقيق لا يكفي لشغل اليوم. الرصيد الحالي: "+current+" جوال.");
+                    stock.put("flour",String.valueOf(adjusted));
+                    ContentValues scv=new ContentValues(); scv.put("day",date); scv.put("module","stock"); scv.put("payload",stock.toString()); scv.put("updated_at",System.currentTimeMillis());
+                    db.insertWithOnConflict("records",null,scv,SQLiteDatabase.CONFLICT_REPLACE);
+                }
+                ContentValues uv=new ContentValues(); uv.put("day",date); uv.put("flour_bags",newWork);
+                db.insertWithOnConflict("inventory_usage",null,uv,SQLiteDatabase.CONFLICT_REPLACE);
+                JSONObject cost=get(date,"costing"); cost.put("flour_bags",String.valueOf(newWork));
+                ContentValues ccv=new ContentValues(); ccv.put("day",date); ccv.put("module","costing"); ccv.put("payload",cost.toString()); ccv.put("updated_at",System.currentTimeMillis());
+                db.insertWithOnConflict("records",null,ccv,SQLiteDatabase.CONFLICT_REPLACE);
+                ContentValues cutcv=new ContentValues(); cutcv.put("day",date); cutcv.put("module","cuts"); cutcv.put("payload",cuts.toString()); cutcv.put("updated_at",System.currentTimeMillis());
+                db.insertWithOnConflict("records",null,cutcv,SQLiteDatabase.CONFLICT_REPLACE);
+                db.setTransactionSuccessful();
+            } finally { db.endTransaction(); }
         }
         void delete(String date,String module) { getWritableDatabase().delete("records","day=? AND module=?",new String[]{date,module}); }
         boolean has(String date) { Cursor c=getReadableDatabase().rawQuery("SELECT 1 FROM records WHERE day=? LIMIT 1",new String[]{date}); try{return c.moveToFirst();}finally{c.close();} }
