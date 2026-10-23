@@ -248,6 +248,12 @@ public class MainActivity extends Activity {
             if (!deviceId().equals(fields.get("device"))) return false;
             String plan = fields.get("plan");
             if (!"monthly".equals(plan) && !"annual".equals(plan) && !"lifetime".equals(plan)) return false;
+            String maxVersion = fields.get("max_version");
+            if ("lifetime".equals(plan)) {
+                if (!BuildConfig.VERSION_NAME.equals(maxVersion)) return false;
+            } else if (!"any".equals(maxVersion)) {
+                return false;
+            }
             long expires = Long.parseLong(fields.get("expires"));
             if (expires == 0L) return true;
             android.content.SharedPreferences prefs = getPreferences(0);
