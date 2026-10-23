@@ -45,7 +45,7 @@ public class MainActivity extends Activity {
     private Store store;
     private LinearLayout root, content;
     private String day;
-    private TextView dateLabel, statusLabel;
+    private TextView dateLabel, statusLabel, flourMetric, workMetric, productionMetric, marginMetric;
 
     private static class Field {
         final String key, label, hint; final boolean numeric;
@@ -292,8 +292,8 @@ public class MainActivity extends Activity {
         content.addView(text("📊 ملخص المخبز لهذا اليوم",18));
         LinearLayout first = new LinearLayout(this);
         first.setOrientation(LinearLayout.HORIZONTAL);
-        addMetricTile(first, "📦 رصيد الدقيق", fmt(val("stock","flour")) + " جوال", "المتاح بالمخزن");
-        addMetricTile(first, "🥖 شغل اليوم", fmt(val("cuts","work_units")) + " جوال", "خصم آلي من الرصيد");
+        addMetricTile(first, "flour", "📦 رصيد الدقيق", fmt(val("stock","flour")) + " جوال", "المتاح بالمخزن");
+        addMetricTile(first, "work", "🥖 شغل اليوم", fmt(val("cuts","work_units")) + " جوال", "خصم آلي من الرصيد");
         content.addView(first);
         LinearLayout second = new LinearLayout(this);
         second.setOrientation(LinearLayout.HORIZONTAL);
@@ -302,12 +302,12 @@ public class MainActivity extends Activity {
             production = productionValue();
             margin = BakeryMath.netMargin(production, spoilageValue(), wages(), expenseTotal(), costingTotal());
         } catch (Exception ignored) { /* keep the dashboard available if a daily record needs correction */ }
-        addMetricTile(second, "💵 قيمة الإنتاج", fmt(production) + " ج", "بحسب سعر القطعيات");
-        addMetricTile(second, "📈 هامش الربح", fmt(margin) + " ج", "تقديري بعد التكاليف");
+        addMetricTile(second, "production", "💵 قيمة الإنتاج", fmt(production) + " ج", "بحسب سعر القطعيات");
+        addMetricTile(second, "margin", "📈 هامش الربح", fmt(margin) + " ج", "تقديري بعد التكاليف");
         content.addView(second);
     }
 
-    private void addMetricTile(LinearLayout row, String heading, String value, String caption) {
+    private void addMetricTile(LinearLayout row, String key, String heading, String value, String caption) {
         LinearLayout tile = new LinearLayout(this);
         tile.setOrientation(LinearLayout.VERTICAL);
         tile.setPadding(10,10,10,10);
@@ -324,6 +324,10 @@ public class MainActivity extends Activity {
         tile.addView(h);
         tile.addView(v);
         tile.addView(note);
+        if ("flour".equals(key)) flourMetric = v;
+        else if ("work".equals(key)) workMetric = v;
+        else if ("production".equals(key)) productionMetric = v;
+        else if ("margin".equals(key)) marginMetric = v;
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,-2,1f);
         lp.setMargins(4,4,4,8);
         row.addView(tile,lp);
@@ -610,6 +614,22 @@ public class MainActivity extends Activity {
         if(statusLabel==null) return;
         boolean has=store.has(day);
         statusLabel.setText(has?"حالة "+day+": توجد بيانات محفوظة على هذا الهاتف. افتح المحاسب والحساب للمراجعة.":"حالة "+day+": لم تُحفظ بيانات لهذا التاريخ بعد.");
+        updateDashboardMetrics();
+    }
+
+    private void updateDashboardMetrics() {
+        if (flourMetric == null) return;
+        flourMetric.setText(fmt(val("stock","flour")) + " جوال");
+        if (workMetric != null) workMetric.setText(fmt(val("cuts","work_units")) + " جوال");
+        try {
+            long production = productionValue();
+            long margin = BakeryMath.netMargin(production, spoilageValue(), wages(), expenseTotal(), costingTotal());
+            if (productionMetric != null) productionMetric.setText(fmt(production) + " ج");
+            if (marginMetric != null) marginMetric.setText(fmt(margin) + " ج");
+        } catch (Exception ex) {
+            if (productionMetric != null) productionMetric.setText("راجع البيانات");
+            if (marginMetric != null) marginMetric.setText("راجع البيانات");
+        }
     }
 
 
