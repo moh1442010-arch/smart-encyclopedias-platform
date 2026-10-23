@@ -12,20 +12,6 @@ android {
   versionCode 2004013
   versionName '2.4.13'
  }
- flavorDimensions += "edition"
- productFlavors {
-  standard {
-   dimension "edition"
-   buildConfigField "boolean", "BAKERY_APP", "false"
-  }
-  bakery {
-   dimension "edition"
-   applicationIdSuffix ".bakery"
-   versionCode 2005001
-   versionName "2.5.1"
-   buildConfigField "boolean", "BAKERY_APP", "true"
-  }
- }
  testOptions { unitTests.includeAndroidResources = true }
 }
 
