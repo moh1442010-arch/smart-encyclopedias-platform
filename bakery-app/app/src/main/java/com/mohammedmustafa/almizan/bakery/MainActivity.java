@@ -92,7 +92,7 @@ public class MainActivity extends Activity {
         base("⚠️ تعذر فتح التطبيق");
         content.addView(text("تم تسجيل الخطأ بدل إغلاق التطبيق فجأة. لم تُحذف بيانات الدفاتر. أرسل التقرير للدعم لتحديد السبب بدقة.", 16));
         Button send = button("إرسال تقرير الخطأ عبر واتساب");
-        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.2\n" + report));
+        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.3\n" + report));
         content.addView(send);
         Button retry = button("إعادة محاولة فتح الصفحة الرئيسية");
         retry.setOnClickListener(v -> continueAfterPinAccepted());
@@ -264,13 +264,14 @@ public class MainActivity extends Activity {
     }
 
     private void buildHome() {
-        base("🥖 الميزان المحاسبي للمخابز 2.5.2");
+        base("🥖 الميزان المحاسبي للمخابز 2.5.3");
         TextView intro = text("نظام يومي للمخبز: أدخل بيانات كل قسم، احفظها بتاريخها، ثم افتح «المحاسب والحساب» لمراجعة التسوية.",16);
         content.addView(intro);
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
         dateLabel = text("📅 التاريخ: " + day,16); dateRow.addView(dateLabel,new LinearLayout.LayoutParams(0,-2,1f));
         Button choose = button("اختيار التاريخ"); choose.setOnClickListener(v -> chooseDate()); dateRow.addView(choose); content.addView(dateRow);
         statusLabel = text("",14); content.addView(statusLabel);
+        addDashboardSummary();
         addCard("📦 1. المخزن","أرصدة الدقيق والخميرة والأكياس والزيت والملح والوقود والمعدات. يظهر رصيد اليوم السابق تلقائيًا.",()->openModule("stock"));
         addCard("🥖 2. شغل اليوم والإنتاج","عدد جوالات الدقيق المستخدمة، عدد الأرغفة لكل جوال، وقيمة الإنتاج بالجنيه. يُخصم الدقيق تلقائيًا من المخزن.",()->openModule("cuts"));
         addCard("👷 3. يومية العمال","اسم العامل، الوظيفة، عدد الشغل، عمالة الجوال، وجملة العمل",()->openModule("workers"));
@@ -278,13 +279,54 @@ public class MainActivity extends Activity {
         addCard("🚚 5. التوزيع","اسم العميل، الكمية، الكاش، الديون، التحويل وفرق السعر",()->openModule("distribution"));
         addCard("🧾 6. منصرفات المحل","وجبات العمال، الصيانة، المشتريات والمنصرفات الأخرى",()->openModule("expenses"));
         addCard("♻️ 7. التالف","عدد العيش التالف وسبب التلف",()->openModule("spoilage"));
-        addCard("🧮 8. المحاسب والحساب","جمع القطععيات ومراجعة الكاش والديون والتحويلات واليوميات والمنصرفات والتالف",this::showAccounts);
+        addCard("🧮 8. المحاسب والحساب","جمع القطعيات ومراجعة الكاش والديون والتحويلات واليوميات والمنصرفات والتالف",this::showAccounts);
         addCard("🏭 9. حساب التشغيل والتكلفة","تكلفة الوقود والدقيق والخميرة والزيت والملح والأكياس، وتقدير هامش الربح",this::showCosting);
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
-        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.2.")); content.addView(support);
+        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.3.")); content.addView(support);
         updateStatus();
+    }
+
+    private void addDashboardSummary() {
+        content.addView(text("📊 ملخص المخبز لهذا اليوم",18));
+        LinearLayout first = new LinearLayout(this);
+        first.setOrientation(LinearLayout.HORIZONTAL);
+        addMetricTile(first, "📦 رصيد الدقيق", fmt(val("stock","flour")) + " جوال", "المتاح بالمخزن");
+        addMetricTile(first, "🥖 شغل اليوم", fmt(val("cuts","work_units")) + " جوال", "خصم آلي من الرصيد");
+        content.addView(first);
+        LinearLayout second = new LinearLayout(this);
+        second.setOrientation(LinearLayout.HORIZONTAL);
+        long production = 0L, margin = 0L;
+        try {
+            production = productionValue();
+            margin = BakeryMath.netMargin(production, spoilageValue(), wages(), expenseTotal(), costingTotal());
+        } catch (Exception ignored) { /* keep the dashboard available if a daily record needs correction */ }
+        addMetricTile(second, "💵 قيمة الإنتاج", fmt(production) + " ج", "بحسب سعر القطعيات");
+        addMetricTile(second, "📈 هامش الربح", fmt(margin) + " ج", "تقديري بعد التكاليف");
+        content.addView(second);
+    }
+
+    private void addMetricTile(LinearLayout row, String heading, String value, String caption) {
+        LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setPadding(10,10,10,10);
+        tile.setBackground(rounded(Color.WHITE,16));
+        tile.setElevation(2f);
+        TextView h = text(heading,13);
+        h.setTextColor(NAVY);
+        h.setTypeface(null,1);
+        TextView v = text(value,18);
+        v.setTextColor(NAVY);
+        v.setTypeface(null,1);
+        TextView note = text(caption,11);
+        note.setTextColor(Color.rgb(91,101,116));
+        tile.addView(h);
+        tile.addView(v);
+        tile.addView(note);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,-2,1f);
+        lp.setMargins(4,4,4,8);
+        row.addView(tile,lp);
     }
 
     private void addCard(String title, String description, Runnable action) {
@@ -380,7 +422,7 @@ public class MainActivity extends Activity {
 
     private String titleFor(String module) {
         switch(module) {
-            case "stock": return "المخزن"; case "cuts": return "القطععيات"; case "workers": return "يومية العمال";
+            case "stock": return "المخزن"; case "cuts": return "القطعيات"; case "workers": return "يومية العمال";
             case "window": return "الكاش وبيع الشباك"; case "distribution": return "التوزيع";
             case "expenses": return "منصرفات المحل"; case "spoilage": return "التالف"; case "costing": return "حساب التشغيل والتكلفة"; default: return module;
         }
@@ -507,7 +549,7 @@ public class MainActivity extends Activity {
             long beforeCost=Math.subtractExact(Math.subtractExact(Math.subtractExact(production,spoilage),labor),expenses);
             long margin=BakeryMath.netMargin(production,spoilage,labor,expenses,cost);
             String message="تاريخ التكلفة: "+day+
-                "\nقيمة القطععيات/الإنتاج: "+fmt(production)+" جنيه"+
+                "\nقيمة القطعيات/الإنتاج: "+fmt(production)+" جنيه"+
                 "\n(-) قيمة التالف: "+fmt(spoilage)+" جنيه"+
                 "\n(-) يومية العمال: "+fmt(labor)+" جنيه"+
                 "\n(-) منصرفات المحل: "+fmt(expenses)+" جنيه"+
@@ -538,7 +580,7 @@ public class MainActivity extends Activity {
             String status=difference==0?"متوازن حسابيًا":difference>0?"عجز غير مفسر":"زيادة غير مفسرة";
             String message="تاريخ الدفتر: "+day+
                 "\n\nالعيش المنتج: "+fmt(loaves)+" رغيف"+
-                "\nقيمة القطععيات حسب السعر المدخل: "+fmt(expected)+" جنيه"+
+                "\nقيمة القطعيات حسب السعر المدخل: "+fmt(expected)+" جنيه"+
                 "\nالكاش (الشباك والتوزيع): "+fmt(cashTotal())+" جنيه"+
                 "\nالديون المستحقة: "+fmt(debtTotal())+" جنيه"+
                 "\nالتحويلات البنكية: "+fmt(bankTotal())+" جنيه"+
@@ -553,7 +595,7 @@ public class MainActivity extends Activity {
                 "\nفرق التسوية (المطلوب صفر): "+fmt(difference)+" جنيه"+
                 "\nالنتيجة: "+status+
                 (bad>0?"\n\n⚠ توجد "+bad+" سطور غير مكتملة أو غير رقمية. راجع صيغة السطور.":"")+
-                (val("cuts","loaves_per_1000")<=0?"\n⚠ أدخل عدد العيش المقابل لـ 1,000 جنيه في القطععيات.":"");
+                (val("cuts","loaves_per_1000")<=0?"\n⚠ أدخل عدد العيش المقابل لـ 1,000 جنيه في القطعيات.":"");
             new AlertDialog.Builder(this).setTitle("🧮 المحاسب والحساب — "+day).setMessage(message)
                 .setNegativeButton("إغلاق",null).setNeutralButton("مشاركة التقرير",(d,w)->shareReport(message))
                 .setPositiveButton("حفظ التقرير", (d,w)->{store.put(day,"accounting",jsonSummary(message));toast("تم حفظ ملخص التسوية لهذا التاريخ");}).show();
@@ -618,24 +660,37 @@ public class MainActivity extends Activity {
     }
 
     private void showGuide() {
-        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.2\n\n"+
+        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.3\n\n"+
             "1) اختر التاريخ من رزنامة الهاتف داخل التطبيق؛ لكل تاريخ دفتر مستقل.\n"+
             "2) المخزن: أدخل أرصدة/كميات الدقيق والخميرة والأكياس والزيت والملح والحطب والغاز والجهاز. عند حفظ شغل اليوم يُخصم عدد جوالات الدقيق تلقائيًا من رصيد المخزن.\n"+
-            "3) القطععيات: أدخل عدد الشغل، وعدد الأرغفة لكل جوال، وعدد الأرغفة المقابل لـ 1,000 جنيه. يحسب التطبيق كمية العيش وقيمة الإنتاج.\n"+
+            "3) القطعيات: أدخل عدد الشغل، وعدد الأرغفة لكل جوال، وعدد الأرغفة المقابل لـ 1,000 جنيه. يحسب التطبيق كمية العيش وقيمة الإنتاج.\n"+
             "4) يومية العمال: كل عامل في سطر بصيغة الاسم | الوظيفة | عدد الشغل | أجرة الوحدة. الأجر = عدد الشغل × أجرة الوحدة.\n"+
             "5) بيع الشباك: أدخل الكاش والديون والتحويلات. احتفظ برقم العملية في خانة المرجع.\n"+
             "6) التوزيع: كل عميل في سطر: الاسم | الكمية | الكاش | الديون | التحويل البنكي | فرق السعر.\n"+
             "7) منصرفات المحل: أدخل الوجبات والصيانة والمشتريات، ثم أي منصرف إضافي في سطر البيان | المبلغ. لا تكرر نفس المصروف في أكثر من خانة.\n"+
-            "8) التالف: أدخل عدد الأرغفة التالفة؛ يحسب التطبيق قيمتها باستخدام سعر القطععيات.\n"+
+            "8) التالف: أدخل عدد الأرغفة التالفة؛ يحسب التطبيق قيمتها باستخدام سعر القطعيات.\n"+
             "9) المحاسب والحساب: يساوي قيمة الإنتاج مجموع الكاش والديون والتحويلات وفرق السعر واليوميات والمنصرفات وقيمة التالف وفق قاعدة التسوية المعتمدة. فرق التسوية يجب أن يساوي صفرًا، وإلا راجع البنود.\n"+
-            "10) حساب التشغيل والتكلفة: يحسب التطبيق تكلفة الدقيق من عدد جوالات شغل اليوم × سعر الجوال، ثم يخصم قيمة التالف ويومية العمال والمنصرفات وتكلفة التشغيل من قيمة القطععيات لعرض هامش الربح. لا تكرر المصروف نفسه في المنصرفات وفي التكلفة عند جمع إجمالياتك.\n\n"+
+            "10) حساب التشغيل والتكلفة: يحسب التطبيق تكلفة الدقيق من عدد جوالات شغل اليوم × سعر الجوال، ثم يخصم قيمة التالف ويومية العمال والمنصرفات وتكلفة التشغيل من قيمة القطعيات لعرض هامش الربح. لا تكرر المصروف نفسه في المنصرفات وفي التكلفة عند جمع إجمالياتك.\n\n"+
             "مهم: البيانات تحفظ محليًا على الجهاز ولا تُرفع للسحابة. استخدم زر «نسخ احتياطي واستعادة البيانات» لتصدير ملف JSON إلى مكان آمن واختبر استعادته. التطبيق لا يُصدر قيدًا محاسبيًا عامًا ولا يُعد بديلًا عن مراجعة محاسب قبل استخدام النتائج لإقرار مالي أو ضريبي.";
         new AlertDialog.Builder(this).setTitle("📘 اللوحة الإرشادية").setMessage(guide).setPositiveButton("فهمت",null).show();
     }
 
+    private long trialDaysRemaining() {
+        long start = getPreferences(0).getLong("trial_start", 0L);
+        if (start == 0L) return 7L;
+        long duration = 7L * 24L * 60L * 60L * 1000L;
+        long remaining = duration - Math.max(0L, System.currentTimeMillis() - start);
+        if (remaining <= 0L) return 0L;
+        return (remaining + 24L * 60L * 60L * 1000L - 1L) / (24L * 60L * 60L * 1000L);
+    }
+
     private void showPaywall() {
         base("🔐 اشتراك الميزان المحاسبي للمخابز");
-        content.addView(text("انتهت فترة التجربة المجانية (7 أيام). تبقى بيانات الدفاتر المحلية محفوظة ولا تُحذف بسبب انتهاء التجربة. اختر الباقة ثم حوّل المبلغ عبر بنكك وأرسل الإيصال من واتساب لطلب التفعيل اليدوي.",16));
+        boolean expired = trialExpired();
+        String trialMessage = expired
+            ? "انتهت فترة التجربة المجانية (7 أيام)، وتم إيقاف الوصول إلى الدفاتر حتى التفعيل. بياناتك المحلية محفوظة ولن تُحذف. اختر الباقة وحوّل المبلغ عبر بنكك ثم أرسل الإيصال عبر واتساب لطلب التفعيل."
+            : "أهلًا بك في الميزان المحاسبي للمخابز. بقي نحو " + trialDaysRemaining() + " يومًا من التجربة المجانية. يمكنك اختيار باقة مسبقًا؛ ستظل بياناتك محفوظة على الهاتف.";
+        content.addView(text(trialMessage,16));
         content.addView(text("الاشتراك الشهري — 30,000 جنيه سوداني",18));
         Button monthly=button("اختيار الباقة الشهرية");
         monthly.setOnClickListener(v->requestActivation("شهرية","30,000 جنيه سوداني"));
@@ -660,7 +715,7 @@ public class MainActivity extends Activity {
     }
 
     private void requestActivation(String plan,String amount) {
-        String message="السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.2.\n"+
+        String message="السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.3.\n"+
             "الباقة المختارة: "+plan+"\n"+
             "المبلغ: "+amount+"\n"+
             "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\n"+
