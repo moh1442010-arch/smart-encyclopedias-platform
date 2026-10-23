@@ -52,7 +52,7 @@ public class MainActivity extends Activity{
    .putLong("last_failure_at",System.currentTimeMillis()).commit();
   page("تشخيص بدء التشغيل");
   content.addView(t("تعذر تهيئة قاعدة بيانات التطبيق. لم يحاول التطبيق حذف البيانات أو إعادة إنشاء قاعدة البيانات تلقائيًا.",16));
-  content.addView(t("نوع الخطأ: "+ex.getClass().getName()+"\\nالتفاصيل: "+(ex.getMessage()==null?"(لا توجد رسالة)":ex.getMessage()),13));
+  content.addView(t("نوع الخطأ: "+ex.getClass().getName()+"\nالتفاصيل: "+(ex.getMessage()==null?"(لا توجد رسالة)":ex.getMessage()),13));
   Button copy=b("نسخ تقرير الخطأ للدعم");
   content.addView(copy);
   copy.setOnClickListener(v->{String report=getSharedPreferences("startup_diagnostics",0).getString("last_failure_stack",stack);((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Al-Mizan startup diagnostic",report));toast("تم نسخ تقرير الخطأ؛ أرسله للدعم دون إضافة كلمات مرور");});
@@ -256,10 +256,10 @@ public class MainActivity extends Activity{
     Button copy = b("نسخ تفاصيل التشخيص");
     content.addView(copy);
     copy.setOnClickListener(v -> {
-     String report = "Al-Mizan dashboard failure\\nVersion: " + BuildConfig.VERSION_NAME +
-      "\\nClass: " + diag.getString("last_failure_class", "unknown") +
-      "\\nMessage: " + diag.getString("last_failure_message", "unknown") +
-      "\\nStack: " + diag.getString("last_failure_stack", "");
+     String report = "Al-Mizan dashboard failure\nVersion: " + BuildConfig.VERSION_NAME +
+      "\nClass: " + diag.getString("last_failure_class", "unknown") +
+      "\nMessage: " + diag.getString("last_failure_message", "unknown") +
+      "\nStack: " + diag.getString("last_failure_stack", "");
      ((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(android.content.ClipData.newPlainText("Al-Mizan diagnostics", report));
      toast("تم نسخ التشخيص؛ أرسله للدعم");
     });
@@ -424,7 +424,7 @@ public class MainActivity extends Activity{
   Button copy=b("📋 نسخ رقم بنكك");content.addView(copy);copy.setOnClickListener(v->{((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Bankak account","1882224"));toast("تم نسخ رقم بنكك");});
   Button send=b("💬 إرسال طلب الاشتراك عبر واتساب");content.addView(send);send.setOnClickListener(v->{
    if(company.getText().toString().trim().isEmpty()){toast("أدخل اسم المخبز أولًا");return;}
-   String message="السلام عليكم، طلب اشتراك المحاسب الميزان للمخابز.\\nاسم المخبز: "+company.getText().toString().trim()+"\\nالباقة: "+String.valueOf(period.getSelectedItem())+"\\nرقم التواصل: "+contact.getText().toString().trim()+"\\nتفاصيل/مرجع التحويل: "+notes.getText().toString().trim()+"\\nرقم بنكك: 1882224\\nأرجو تأكيد السعر والباقة قبل التحويل، ولا يُعد الطلب تفعيلًا حتى التحقق وإرسال رمز رسمي.";
+   String message="السلام عليكم، طلب اشتراك المحاسب الميزان للمخابز.\nاسم المخبز: "+company.getText().toString().trim()+"\nالباقة: "+String.valueOf(period.getSelectedItem())+"\nرقم التواصل: "+contact.getText().toString().trim()+"\nتفاصيل/مرجع التحويل: "+notes.getText().toString().trim()+"\nرقم بنكك: 1882224\nأرجو تأكيد السعر والباقة قبل التحويل، ولا يُعد الطلب تفعيلًا حتى التحقق وإرسال رمز رسمي.";
    open("https://wa.me/249121851285?text="+android.net.Uri.encode(message));
   });
   content.addView(t("مهم: لا تحوّل قبل تأكيد السعر النهائي. بعد مراجعة إيصال التحويل، يصدر المشرف رمز التفعيل، ثم يُدخل داخل شاشة التفعيل بالتطبيق.",14));
@@ -507,7 +507,7 @@ public class MainActivity extends Activity{
    TextView number=t(iban,20);number.setTextIsSelectable(true);number.setTypeface(null,android.graphics.Typeface.BOLD);content.addView(number);
    content.addView(t("تحقق من اسم المستفيد والعملة والرسوم مع البنك قبل التحويل. لا ترسل كلمات مرور أو رموز تحقق.",14));
    Button copy=b("📋 نسخ رقم IBAN");content.addView(copy);copy.setOnClickListener(v->{try{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(ClipData.newPlainText("IBAN",iban));toast("تم نسخ رقم IBAN");}catch(Exception ex){toast("تعذر النسخ؛ اضغط مطولاً على الرقم لنسخه");}});
-   Button notice=b("💬 إرسال إشعار التحويل عبر واتساب");content.addView(notice);notice.setOnClickListener(v->{EditText amount=e("المبلغ المحوّل بالدولار"),reference=e("مرجع التحويل البنكي");amount.setInputType(8194);LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.addView(amount);box.addView(reference);new AlertDialog.Builder(this).setTitle("إشعار التحويل").setView(box).setNegativeButton("إلغاء",null).setPositiveButton("متابعة إلى واتساب",(d,w)->{String a=amount.getText().toString().trim(),r=reference.getText().toString().trim();if(a.isEmpty()||r.isEmpty()){toast("أدخل المبلغ ومرجع التحويل");return;}String message="السلام عليكم، أرسل إشعار تحويل بنكي لشراء ترخيص المحاسب الميزان.\\nالمبلغ: "+a+" USD\\nمرجع التحويل: "+r+"\\nIBAN المستفيد: "+iban+"\\nيرجى تأكيد وصول المبلغ قبل إصدار الترخيص. سأرفق إيصال التحويل هنا.";open("https://wa.me/249121851285?text="+android.net.Uri.encode(message));}).show();});
+   Button notice=b("💬 إرسال إشعار التحويل عبر واتساب");content.addView(notice);notice.setOnClickListener(v->{EditText amount=e("المبلغ المحوّل بالدولار"),reference=e("مرجع التحويل البنكي");amount.setInputType(8194);LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.addView(amount);box.addView(reference);new AlertDialog.Builder(this).setTitle("إشعار التحويل").setView(box).setNegativeButton("إلغاء",null).setPositiveButton("متابعة إلى واتساب",(d,w)->{String a=amount.getText().toString().trim(),r=reference.getText().toString().trim();if(a.isEmpty()||r.isEmpty()){toast("أدخل المبلغ ومرجع التحويل");return;}String message="السلام عليكم، أرسل إشعار تحويل بنكي لشراء ترخيص المحاسب الميزان.\nالمبلغ: "+a+" USD\nمرجع التحويل: "+r+"\nIBAN المستفيد: "+iban+"\nيرجى تأكيد وصول المبلغ قبل إصدار الترخيص. سأرفق إيصال التحويل هنا.";open("https://wa.me/249121851285?text="+android.net.Uri.encode(message));}).show();});
    Button support=b("التواصل مع الدعم");content.addView(support);support.setOnClickListener(v->open("https://wa.me/249121851285"));
   }
   void support(){page("الدعم");content.addView(t("راسلنا عبر واتساب أو البريد الإلكتروني. لا ترسل كلمات المرور أو بياناتك المالية السرية.",16));content.addView(t("رقم الدعم: +249 121 851 285",16));Button wa=b("الدعم عبر واتساب");content.addView(wa);wa.setOnClickListener(v->open("https://wa.me/249121851285"));content.addView(t("البريد الإلكتروني: moh1442010@gmail.com",16));Button mail=b("الدعم عبر البريد الإلكتروني");content.addView(mail);mail.setOnClickListener(v->{try{Intent i=new Intent(Intent.ACTION_SENDTO,android.net.Uri.parse("mailto:moh1442010@gmail.com"));i.putExtra(Intent.EXTRA_SUBJECT,"دعم تطبيق شركة محمد مصطفى الذكية");startActivity(i);}catch(Exception ex){toast("تعذر فتح تطبيق البريد الإلكتروني");}});}
