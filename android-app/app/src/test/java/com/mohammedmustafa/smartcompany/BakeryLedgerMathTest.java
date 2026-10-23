@@ -31,4 +31,18 @@ public class BakeryLedgerMathTest {
     }
     @Test(expected = IllegalArgumentException.class)
     public void rejectsZeroLoavesPerThousand() { BakeryLedgerMath.valueForLoaves(100, 0); }
+
+    @Test public void deductsDailyFlourUsageFromOpeningStock() {
+        assertEquals(3L, BakeryLedgerMath.remainingFlourBags(10, 7));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void rejectsFlourUsageAboveOpeningStock() {
+        BakeryLedgerMath.remainingFlourBags(3, 7);
+    }
+
+    @Test public void flourCostAndProfitMarginAreCalculatedExplicitly() {
+        assertEquals(35000L, BakeryLedgerMath.flourCost(7, 5000));
+        assertEquals(6500L, BakeryLedgerMath.profitMargin(45000, 2000, 5000, 3500, 0, 28000));
+    }
 }
