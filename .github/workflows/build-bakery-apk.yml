@@ -94,7 +94,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: al-mizan-bakery-2.5.2-review
-          name: الميزان المحاسبي للمخابز 2.5.1 — مراجعة
+          name: الميزان المحاسبي للمخابز 2.5.2 — مراجعة
           prerelease: true
           make_latest: false
           generate_release_notes: false
