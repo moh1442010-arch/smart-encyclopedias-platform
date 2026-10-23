@@ -384,7 +384,7 @@ public class MainActivity extends Activity {
     private void openModule(String module) {
         Field[] fields = schema(module);
         JSONObject saved = store.get(day,module);
-        if (module.equals("stock") && !store.has(day,"stock")) {
+        if (module.equals("stock") && store.get(day,"stock").length()==0) {
             JSONObject previous = store.getLatest(day,"stock");
             if (previous.length() > 0) saved = previous;
         }
@@ -630,17 +630,41 @@ public class MainActivity extends Activity {
 
     private void showPaywall() {
         base("🔐 اشتراك الميزان المحاسبي للمخابز");
-        content.addView(text("انتهت فترة التجربة المجانية (7 أيام). بيانات الدفاتر المحلية لا تُحذف بسبب انتهاء التجربة. تواصل مع الدعم لإرسال إشعار التحويل وطلب التفعيل اليدوي.",16));
-        content.addView(text("الاشتراك الشهري: 30,000 جنيه سوداني",18));
-        content.addView(text("الاشتراك السنوي: 300,000 جنيه سوداني",18));
-        content.addView(text("شراء مرة واحدة: 450,000 جنيه سوداني",18));
-        content.addView(text("الدفع: بنكك — رقم الحساب 1882224",16));
-        Button copy=button("نسخ رقم حساب بنكك"); copy.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("Bankak",BANKAK));toast("تم نسخ رقم بنكك");}); content.addView(copy);
-        Button wa=button("إرسال إشعار التحويل عبر واتساب"); wa.setOnClickListener(v->openWhatsApp("السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.1.\nالتاريخ: "+day+"\nالباقة المطلوبة: [شهري/سنوي/شراء مرة واحدة]\nالمبلغ المحول: [اكتب المبلغ]\nرقم عملية بنكك: [اكتب الرقم]. سأرفق الإيصال هنا.")); content.addView(wa);
-        content.addView(text("التفعيل بعد مراجعة التحويل من الدعم فقط. لا تدخل رمز بنكك أو كلمة مرورك في التطبيق أو ترسلها لأي شخص.",14));
-        Button backup=button("🗂️ تصدير / استعادة بياناتك"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
+        content.addView(text("انتهت فترة التجربة المجانية (7 أيام). تبقى بيانات الدفاتر المحلية محفوظة ولا تُحذف بسبب انتهاء التجربة. اختر الباقة ثم حوّل المبلغ عبر بنكك وأرسل الإيصال من واتساب لطلب التفعيل اليدوي.",16));
+        content.addView(text("الاشتراك الشهري — 30,000 جنيه سوداني",18));
+        Button monthly=button("اختيار الباقة الشهرية");
+        monthly.setOnClickListener(v->requestActivation("شهرية","30,000 جنيه سوداني"));
+        content.addView(monthly);
+        content.addView(text("الاشتراك السنوي — 300,000 جنيه سوداني",18));
+        Button annual=button("اختيار الباقة السنوية");
+        annual.setOnClickListener(v->requestActivation("سنوية","300,000 جنيه سوداني"));
+        content.addView(annual);
+        content.addView(text("شراء مرة واحدة — 450,000 جنيه سوداني",18));
+        Button lifetime=button("اختيار باقة الشراء مرة واحدة");
+        lifetime.setOnClickListener(v->requestActivation("شراء مرة واحدة","450,000 جنيه سوداني"));
+        content.addView(lifetime);
+        content.addView(text("الدفع عبر بنكك — رقم الحساب: 1882224",16));
+        Button copy=button("نسخ رقم حساب بنكك");
+        copy.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("Bankak",BANKAK));toast("تم نسخ رقم بنكك");});
+        content.addView(copy);
+        content.addView(text("بعد التحويل، أرفق صورة الإيصال داخل محادثة واتساب. لا ترسل الرقم السري أو رمز التحقق الخاص ببنكك. التفعيل يتم بعد مراجعة التحويل.",14));
+        Button backup=button("🗂️ تصدير / استعادة بياناتك");
+        backup.setOnClickListener(v->backupRestoreMenu());
+        content.addView(backup);
         if (!trialExpired()) { Button back=button("العودة إلى التطبيق"); back.setOnClickListener(v->buildHome()); content.addView(back); }
     }
+
+    private void requestActivation(String plan,String amount) {
+        String message="السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.2.\\n"+
+            "الباقة المختارة: "+plan+"\\n"+
+            "المبلغ: "+amount+"\\n"+
+            "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\\n"+
+            "تاريخ الطلب: "+day+"\\n"+
+            "رقم عملية بنكك: [اكتب رقم العملية]\\n"+
+            "سأرفق صورة إيصال التحويل هنا. أرجو مراجعة التحويل وتفعيل الباقة.";
+        openWhatsApp(message);
+    }
+
     private void openWhatsApp(String message) {
         try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/"+SUPPORT+"?text="+Uri.encode(message)))); }
         catch(Exception e) { toast("تعذر فتح واتساب. الرقم: +249 121 851 285"); }
