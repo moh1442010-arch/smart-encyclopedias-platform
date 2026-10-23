@@ -838,6 +838,11 @@ public class MainActivity extends Activity {
         Button lifetime=button("اختيار باقة الشراء مرة واحدة");
         lifetime.setOnClickListener(v->requestActivation("شراء مرة واحدة","450,000 جنيه سوداني"));
         content.addView(lifetime);
+        content.addView(text("معرّف هذا الجهاز لربط الاشتراك به:",14));
+        content.addView(text(deviceId(),13));
+        Button activate=button("🔑 أدخل رمز التفعيل بعد موافقة الدعم");
+        activate.setOnClickListener(v->showActivationDialog());
+        content.addView(activate);
         content.addView(text("الدفع عبر بنكك — رقم الحساب: 1882224",16));
         Button copy=button("نسخ رقم حساب بنكك");
         copy.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("Bankak",BANKAK));toast("تم نسخ رقم بنكك");});
@@ -855,8 +860,9 @@ public class MainActivity extends Activity {
             "المبلغ: "+amount+"\n"+
             "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\n"+
             "تاريخ الطلب: "+day+"\n"+
+            "معرّف الجهاز: "+deviceId()+"\n"+
             "رقم عملية بنكك: [اكتب رقم العملية]\n"+
-            "سأرفق صورة إيصال التحويل هنا. أرجو مراجعة التحويل وتفعيل الباقة.";
+            "سأرفق صورة إيصال التحويل هنا. بعد التحقق أرجو إرسال رمز تفعيل مرتبط بهذا الجهاز والباقة.";
         openWhatsApp(message);
     }
 
