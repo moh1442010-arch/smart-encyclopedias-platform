@@ -31,6 +31,17 @@ public class BakeryMathTest {
         assertEquals(10*5000L + 20*40000L + 3*2500L + 15*1800L + 2*1000L + 12000L, cost);
         assertEquals(100000L-cost, BakeryMath.grossMargin(100000L,cost));
     }
+    @Test public void flourStockDeductsDailyUsageOnce() {
+        assertEquals(3L, BakeryMath.stockAfterUsage(10,0,7));
+        assertEquals(3L, BakeryMath.stockAfterUsage(3,7,7));
+    }
+    @Test public void editingDailyUsageAdjustsOnlyTheDifference() {
+        assertEquals(4L, BakeryMath.stockAfterUsage(3,7,6));
+        assertEquals(2L, BakeryMath.stockAfterUsage(3,7,8));
+    }
+    @Test(expected=IllegalArgumentException.class) public void rejectsNegativeStockMovementInputs() {
+        BakeryMath.stockAfterUsage(10,-1,7);
+    }
     @Test(expected=IllegalArgumentException.class) public void rejectsNegativeCostQuantity() {
         BakeryMath.operatingCost(-1,500,1,40000,1,2500,1,1800,1,1000,12000);
     }
