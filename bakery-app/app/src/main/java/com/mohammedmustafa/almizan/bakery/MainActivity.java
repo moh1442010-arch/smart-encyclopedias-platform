@@ -94,7 +94,7 @@ public class MainActivity extends Activity {
         base("⚠️ تعذر فتح التطبيق");
         content.addView(text("تم تسجيل الخطأ بدل إغلاق التطبيق فجأة. لم تُحذف بيانات الدفاتر. أرسل التقرير للدعم لتحديد السبب بدقة.", 16));
         Button send = button("إرسال تقرير الخطأ عبر واتساب");
-        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.4\n" + report));
+        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل المحاسب الميزان للمخابز 2.5.5\n" + report));
         content.addView(send);
         Button retry = button("إعادة محاولة فتح الصفحة الرئيسية");
         retry.setOnClickListener(v -> continueAfterPinAccepted());
@@ -360,7 +360,7 @@ public class MainActivity extends Activity {
     }
 
     private void buildHome() {
-        base("🥖 الميزان المحاسبي للمخابز 2.5.4");
+        base("🥖 المحاسب الميزان للمخابز 2.5.5");
         TextView intro = text("نظام يومي للمخبز: أدخل بيانات كل قسم، احفظها بتاريخها، ثم افتح «المحاسب والحساب» لمراجعة التسوية.",16);
         content.addView(intro);
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -380,7 +380,7 @@ public class MainActivity extends Activity {
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
-        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.4.")); content.addView(support);
+        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق المحاسب الميزان للمخابز 2.5.5.")); content.addView(support);
         updateStatus();
     }
 
@@ -753,7 +753,7 @@ public class MainActivity extends Activity {
 
     private void updateDashboardMetrics() {
         if (flourMetric == null) return;
-        flourMetric.setText(fmt(val("stock","flour")) + " جوال");
+        flourMetric.setText(fmt(stockFlourValue()) + " جوال");
         if (workMetric != null) workMetric.setText(fmt(val("cuts","work_units")) + " جوال");
         try {
             long production = productionValue();
@@ -814,7 +814,7 @@ public class MainActivity extends Activity {
     }
 
     private void showGuide() {
-        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.4\n\n"+
+        String guide="طريقة الاستخدام — المحاسب الميزان للمخابز 2.5.5\n\n"+
             "1) اختر التاريخ من رزنامة الهاتف داخل التطبيق؛ لكل تاريخ دفتر مستقل.\n"+
             "2) المخزن: أدخل رصيد الدقيق الافتتاحي قبل شغل اليوم وكميات المواد الأخرى. يعرض الملخص الرصيد المتبقي، وعند حفظ شغل اليوم يُخصم عدد الجوالات تلقائيًا. إذا عدّلت المخزن بعد تسجيل الشغل، يعيد التطبيق حساب الرصيد المتبقي ولا يخصم الشغل مرتين.\n"+
             "3) القطعيات: أدخل عدد الشغل، وعدد الأرغفة لكل جوال، وعدد الأرغفة المقابل لـ 1,000 جنيه. يحسب التطبيق كمية العيش وقيمة الإنتاج.\n"+
@@ -839,14 +839,14 @@ public class MainActivity extends Activity {
     }
 
     private void showPaywall() {
-        base("🔐 اشتراك الميزان المحاسبي للمخابز");
+        base("🔐 اشتراك المحاسب الميزان للمخابز");
         boolean licensed = hasActiveLicense();
         boolean expired = trialExpired();
         String trialMessage = licensed
             ? "اشتراكك مفعّل على هذا الجهاز. يمكنك متابعة الدفاتر أو طلب تجديد الباقة عند الحاجة."
             : expired
                 ? "انتهت فترة التجربة المجانية (7 أيام)، وتم إيقاف الوصول إلى الدفاتر حتى التفعيل. بياناتك المحلية محفوظة ولن تُحذف. اختر الباقة وحوّل المبلغ عبر بنكك ثم أرسل الإيصال عبر واتساب لطلب التفعيل."
-                : "أهلًا بك في الميزان المحاسبي للمخابز. بقي نحو " + trialDaysRemaining() + " يومًا من التجربة المجانية. يمكنك اختيار باقة مسبقًا؛ ستظل بياناتك محفوظة على الهاتف.";
+                : "أهلًا بك في المحاسب الميزان للمخابز. بقي نحو " + trialDaysRemaining() + " يومًا من التجربة المجانية. يمكنك اختيار باقة مسبقًا؛ ستظل بياناتك محفوظة على الهاتف.";
         content.addView(text(trialMessage,16));
         content.addView(text("الاشتراك الشهري — 30,000 جنيه سوداني",18));
         Button monthly=button("اختيار الباقة الشهرية");
@@ -878,7 +878,7 @@ public class MainActivity extends Activity {
     }
 
     private void requestActivation(String plan,String amount) {
-        String message="السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.4.\n"+
+        String message="السلام عليكم، أطلب تفعيل المحاسب الميزان للمخابز 2.5.5.\n"+
             "الباقة المختارة: "+plan+"\n"+
             "المبلغ: "+amount+"\n"+
             "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\n"+
