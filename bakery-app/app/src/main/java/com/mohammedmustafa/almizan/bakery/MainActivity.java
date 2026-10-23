@@ -278,7 +278,7 @@ public class MainActivity extends Activity {
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
-        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.1.")); content.addView(support);
+        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.2.")); content.addView(support);
         updateStatus();
     }
 
@@ -613,10 +613,10 @@ public class MainActivity extends Activity {
     }
 
     private void showGuide() {
-        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.1\n\n"+
+        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.2\n\n"+
             "1) اختر التاريخ من رزنامة الهاتف داخل التطبيق؛ لكل تاريخ دفتر مستقل.\n"+
             "2) المخزن: أدخل أرصدة/كميات الدقيق والخميرة والأكياس والزيت والملح والحطب والغاز والجهاز. عند حفظ شغل اليوم يُخصم عدد جوالات الدقيق تلقائيًا من رصيد المخزن.\n"+
-            "3) القطععيات: أدخل عدد الشغل، وعدد الأرغفة لكل قطعة، وعدد الأرغفة المقابل لـ 1,000 جنيه. يحسب التطبيق كمية العيش وقيمة الإنتاج.\n"+
+            "3) القطععيات: أدخل عدد الشغل، وعدد الأرغفة لكل جوال، وعدد الأرغفة المقابل لـ 1,000 جنيه. يحسب التطبيق كمية العيش وقيمة الإنتاج.\n"+
             "4) يومية العمال: كل عامل في سطر بصيغة الاسم | الوظيفة | عدد الشغل | أجرة الوحدة. الأجر = عدد الشغل × أجرة الوحدة.\n"+
             "5) بيع الشباك: أدخل الكاش والديون والتحويلات. احتفظ برقم العملية في خانة المرجع.\n"+
             "6) التوزيع: كل عميل في سطر: الاسم | الكمية | الكاش | الديون | التحويل البنكي | فرق السعر.\n"+
