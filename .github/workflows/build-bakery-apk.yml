@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: al-mizan-bakery-release
+  group: al-mizan-bakery-release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
