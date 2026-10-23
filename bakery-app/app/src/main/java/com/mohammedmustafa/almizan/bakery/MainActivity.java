@@ -303,7 +303,7 @@ public class MainActivity extends Activity {
         content.addView(text("📊 ملخص المخبز لهذا اليوم",18));
         LinearLayout first = new LinearLayout(this);
         first.setOrientation(LinearLayout.HORIZONTAL);
-        addMetricTile(first, "flour", "📦 رصيد الدقيق", fmt(val("stock","flour")) + " جوال", "المتاح بالمخزن");
+        addMetricTile(first, "flour", "📦 رصيد الدقيق", fmt(stockFlourValue()) + " جوال", "المتاح بالمخزن");
         addMetricTile(first, "work", "🥖 شغل اليوم", fmt(val("cuts","work_units")) + " جوال", "خصم آلي من الرصيد");
         content.addView(first);
         LinearLayout second = new LinearLayout(this);
@@ -535,6 +535,13 @@ public class MainActivity extends Activity {
         }
         return out;
     }
+    private long stockFlourValue() {
+        JSONObject stock = store.get(day, "stock");
+        if (stock.length() == 0) stock = store.getLatest(day, "stock");
+        try { return Math.max(0L, parseLong(stock.optString("flour", "0"))); }
+        catch (Exception ignored) { return 0L; }
+    }
+
     private long productionLoaves() { return BakeryMath.productionLoaves(val("cuts","work_units"),val("cuts","loaves_per_unit")); }
     private long valueForLoaves(long loaves) {
         long perThousand=val("cuts","loaves_per_1000");
