@@ -368,15 +368,16 @@ public class MainActivity extends Activity {
         Button choose = button("اختيار التاريخ"); choose.setOnClickListener(v -> chooseDate()); dateRow.addView(choose); content.addView(dateRow);
         statusLabel = text("",14); content.addView(statusLabel);
         addDashboardSummary();
-        addCard("📦 1. المخزن","أرصدة الدقيق والخميرة والأكياس والزيت والملح والوقود والمعدات. يظهر رصيد اليوم السابق تلقائيًا.",()->openModule("stock"));
-        addCard("🥖 2. شغل اليوم والإنتاج","عدد جوالات الدقيق المستخدمة، عدد الأرغفة لكل جوال، وقيمة الإنتاج بالجنيه. يُخصم الدقيق تلقائيًا من المخزن.",()->openModule("cuts"));
-        addCard("👷 3. يومية العمال","اسم العامل، الوظيفة، عدد الشغل، عمالة الجوال، وجملة العمل",()->openModule("workers"));
-        addCard("💵 4. الكاش وبيع الشباك","النقد، الديون، التحويل البنكي ورقم العملية",()->openModule("window"));
-        addCard("🚚 5. التوزيع","اسم العميل، الكمية، الكاش، الديون، التحويل وفرق السعر",()->openModule("distribution"));
-        addCard("🧾 6. منصرفات المحل","وجبات العمال، الصيانة، المشتريات والمنصرفات الأخرى",()->openModule("expenses"));
-        addCard("♻️ 7. التالف","عدد العيش التالف وسبب التلف",()->openModule("spoilage"));
-        addCard("🧮 8. المحاسب والحساب","جمع القطعيات ومراجعة الكاش والديون والتحويلات واليوميات والمنصرفات والتالف",this::showAccounts);
-        addCard("🏭 9. حساب التشغيل والتكلفة","تكلفة الوقود والدقيق والخميرة والزيت والملح والأكياس، وتقدير هامش الربح",this::showCosting);
+        // The nine home icons follow the bakery owner's approved daily workflow order.
+        addCard("📦 1. المخزن ومحتوياته","الدقيق والخميرة والزيت والأكياس والحطب والغاز والجاز والملح والمعدات. أدخل الأرصدة والأسعار؛ رصيد الدقيق يُحدّث تلقائيًا مع شغل اليوم.",()->openModule("stock"));
+        addCard("🥖 2. القطعيات وشغل اليوم","سجّل كل شغل أو كيس وعدد الأرغفة المنتجة، ثم راجع إجمالي الإنتاج وقيمته تلقائيًا حسب سعر القطعيات.",()->openModule("cuts"));
+        addCard("🧾 3. منصرفات المحل","وجبات العمال والصيانة والمشتريات وكل ما يُصرف داخل المحل. سجّل كل مصروف مرة واحدة فقط.",()->openModule("expenses"));
+        addCard("👷 4. قيد يومية العمال","اسم العامل ووظيفته وعدد الأشغال ومستحق الجوال أو الوحدة؛ يحسب التطبيق إجمالي الاستحقاقات تلقائيًا.",()->openModule("workers"));
+        addCard("💵 5. شباك البيع","سجّل النقد والديون والتحويلات عبر بنكك، مع مرجع العملية وملاحظات البيع.",()->openModule("window"));
+        addCard("🚚 6. التوزيع","اسم العميل والكمية والنقد والديون والتحويل وفرق السعر؛ تُجمع تفاصيل العملاء تلقائيًا في التسوية.",()->openModule("distribution"));
+        addCard("♻️ 7. التالف والمنصرفات","سجّل العيش التالف وسبب التلف هنا، وراجع تفاصيل المنصرفات من الأيقونة 3 لتجنب تكرار المصروف.",()->openModule("spoilage"));
+        addCard("🧮 8. المحاسب والحساب","راجع الإنتاج والكاش والديون وبنكك والتوزيع والعمال والمنصرفات والتالف وفرق التسوية؛ يجب تفسير أي فرق قبل اعتماد اليوم.",this::showAccounts);
+        addCard("🏭 9. حساب التشغيل وهامش الربح","راجع تكلفة الدقيق والوقود والخميرة والزيت والملح والأكياس، ثم هامش الربح التقديري بعد التالف والعمال والمنصرفات.",this::showCosting);
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
