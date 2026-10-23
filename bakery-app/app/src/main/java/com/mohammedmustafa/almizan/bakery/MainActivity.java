@@ -208,9 +208,20 @@ public class MainActivity extends Activity {
     }
 
     private boolean trialExpired() {
+        android.content.SharedPreferences prefs = getPreferences(0);
         long now = System.currentTimeMillis();
-        long start = getPreferences(0).getLong("trial_start", 0L);
-        if (start == 0L) { getPreferences(0).edit().putLong("trial_start", now).apply(); return false; }
+        long start = prefs.getLong("trial_start", 0L);
+        long lastSeen = prefs.getLong("trial_last_seen", 0L);
+        if (start <= 0L) {
+            prefs.edit().putLong("trial_start", now).putLong("trial_last_seen", now).apply();
+            return false;
+        }
+        // Prevent a backwards device-clock change from silently extending the offline trial.
+        if (lastSeen > 0L && now < lastSeen - 300000L) {
+            prefs.edit().putBoolean("trial_clock_rollback_detected", true).apply();
+        }
+        if (prefs.getBoolean("trial_clock_rollback_detected", false)) return true;
+        prefs.edit().putLong("trial_last_seen", Math.max(lastSeen, now)).apply();
         return now - start >= 7L * 24L * 60L * 60L * 1000L;
     }
 
