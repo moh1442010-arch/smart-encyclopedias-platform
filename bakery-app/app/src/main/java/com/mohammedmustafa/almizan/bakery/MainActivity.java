@@ -510,12 +510,16 @@ public class MainActivity extends Activity {
             };
             case "spoilage": return new Field[]{f("loaves","عدد العيش التالف"),t("reason","سبب التلف / الملاحظات","")};
             case "costing": return new Field[]{
-                f("fuel_quantity","الوقود — الكمية المستخدمة"),f("fuel_unit_price","سعر وحدة الوقود (جنيه)"),
+                f("fuel_quantity","وقود آخر غير مفصل — الكمية المستخدمة"),f("fuel_unit_price","سعر وحدة الوقود الآخر (جنيه)"),
+                f("wood_quantity","الحطب — الكمية المستخدمة"),f("wood_unit_price","سعر وحدة الحطب (جنيه)"),
+                f("gas_quantity","الغاز — الكمية المستخدمة"),f("gas_unit_price","سعر وحدة الغاز (جنيه)"),
+                f("kerosene_quantity","الجاز — الكمية المستخدمة"),f("kerosene_unit_price","سعر وحدة الجاز (جنيه)"),
                 f("flour_bags","الدقيق — الجوالات المستخدمة (تُزامن تلقائيًا مع شغل اليوم)"),f("flour_bag_price","سعر جوال الدقيق الواحد (جنيه)"),
                 f("yeast_count","الخميرة — عدد القطع المستخدمة"),f("yeast_piece_price","سعر قطعة الخميرة (جنيه)"),
                 f("oil_quantity","الزيت — الكمية المستخدمة بالرطل"),f("oil_pound_price","سعر رطل الزيت (جنيه)"),
                 f("salt_quantity","الملح — الكمية المستخدمة"),f("salt_unit_price","سعر وحدة الملح (جنيه)"),
-                f("bags_total_price","جملة سعر الأكياس المستخدمة (جنيه)")
+                f("bags_total_price","جملة سعر الأكياس المستخدمة (جنيه)"),
+                f("equipment_operating_cost","تكلفة تشغيل المعدات/الجهاز لهذا اليوم (جنيه)")
             };
             default: return new Field[0];
         }
@@ -672,13 +676,18 @@ public class MainActivity extends Activity {
     private Totals distribution() { return rowTotals("distribution","rows",6); }
     private long productionValue() { return valueForLoaves(productionLoaves()); }
     private long costingTotal() {
-        return BakeryMath.operatingCost(
+        long materials = BakeryMath.operatingCost(
             val("costing","fuel_quantity"),val("costing","fuel_unit_price"),
             val("cuts","work_units"),val("costing","flour_bag_price"),
             val("costing","yeast_count"),val("costing","yeast_piece_price"),
             val("costing","oil_quantity"),val("costing","oil_pound_price"),
             val("costing","salt_quantity"),val("costing","salt_unit_price"),
             val("costing","bags_total_price"));
+        long wood = Math.multiplyExact(val("costing","wood_quantity"),val("costing","wood_unit_price"));
+        long gas = Math.multiplyExact(val("costing","gas_quantity"),val("costing","gas_unit_price"));
+        long kerosene = Math.multiplyExact(val("costing","kerosene_quantity"),val("costing","kerosene_unit_price"));
+        return Math.addExact(Math.addExact(Math.addExact(materials,wood),gas),
+            Math.addExact(kerosene,val("costing","equipment_operating_cost")));
     }
 
     private void showCosting() {
@@ -693,7 +702,7 @@ public class MainActivity extends Activity {
                 "\n(-) يومية العمال: "+fmt(labor)+" جنيه"+
                 "\n(-) منصرفات المحل: "+fmt(expenses)+" جنيه"+
                 "\nالصافي قبل تكلفة التشغيل: "+fmt(beforeCost)+" جنيه"+
-                "\n(-) تكلفة الدقيق والوقود والخميرة والزيت والملح والأكياس: "+fmt(cost)+" جنيه"+
+                "\n(-) تكلفة المواد والوقود الحطب/الغاز/الجاز وتشغيل المعدات: "+fmt(cost)+" جنيه"+
                 "\n\nهامش الربح التقديري النهائي: "+fmt(margin)+" جنيه"+
                 "\n\nحساب الدقيق مرتبط بعدد جوالات شغل اليوم. راجع أسعار المواد والتالف واليومية والمنصرفات، ولا تسجل المصروف نفسه مرتين.";
             new AlertDialog.Builder(this).setTitle("🏭 حساب التشغيل والتكلفة — "+day).setMessage(message)
@@ -825,7 +834,7 @@ public class MainActivity extends Activity {
             "7) منصرفات المحل: أدخل الوجبات والصيانة والمشتريات، ثم أي منصرف إضافي في سطر البيان | المبلغ. لا تكرر نفس المصروف في أكثر من خانة.\n"+
             "8) التالف: أدخل عدد الأرغفة التالفة؛ يحسب التطبيق قيمتها باستخدام سعر القطعيات.\n"+
             "9) المحاسب والحساب: يساوي قيمة الإنتاج مجموع الكاش والديون والتحويلات وفرق السعر واليوميات والمنصرفات وقيمة التالف وفق قاعدة التسوية المعتمدة. فرق التسوية يجب أن يساوي صفرًا، وإلا راجع البنود.\n"+
-            "10) حساب التشغيل والتكلفة: يحسب التطبيق تكلفة الدقيق من عدد جوالات شغل اليوم × سعر الجوال، ثم يخصم قيمة التالف ويومية العمال والمنصرفات وتكلفة التشغيل من قيمة القطعيات لعرض هامش الربح. لا تكرر المصروف نفسه في المنصرفات وفي التكلفة عند جمع إجمالياتك.\n\n"+
+            "10) حساب التشغيل والتكلفة: يحسب التطبيق تكلفة الدقيق من عدد جوالات شغل اليوم × سعر الجوال، ويضيف تكلفة الخميرة والزيت والأكياس والحطب والغاز والجاز وتشغيل المعدات، ثم يخصم قيمة التالف ويومية العمال والمنصرفات وتكلفة التشغيل من قيمة القطعيات لعرض هامش الربح. لا تكرر المصروف نفسه في المنصرفات وفي التكلفة عند جمع إجمالياتك.\n\n"+
             "مهم: البيانات تحفظ محليًا على الجهاز ولا تُرفع للسحابة. استخدم زر «نسخ احتياطي واستعادة البيانات» لتصدير ملف JSON إلى مكان آمن واختبر استعادته. التطبيق لا يُصدر قيدًا محاسبيًا عامًا ولا يُعد بديلًا عن مراجعة محاسب قبل استخدام النتائج لإقرار مالي أو ضريبي.";
         new AlertDialog.Builder(this).setTitle("📘 اللوحة الإرشادية").setMessage(guide).setPositiveButton("فهمت",null).show();
     }
