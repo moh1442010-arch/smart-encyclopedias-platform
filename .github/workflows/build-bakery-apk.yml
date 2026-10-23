@@ -1,4 +1,4 @@
-name: Build Al-Mizan Bakery 2.5.3 Review APK
+name: Build Al-Mizan Bakery 2.5.4 Review APK
 
 on:
   workflow_dispatch:
@@ -91,6 +91,7 @@ jobs:
           rm -f release/AlMizan-Bakery-2.5.3-aligned.apk signing/release.jks
 
       - name: Publish review-only GitHub Release
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: al-mizan-bakery-2.5.3-review
