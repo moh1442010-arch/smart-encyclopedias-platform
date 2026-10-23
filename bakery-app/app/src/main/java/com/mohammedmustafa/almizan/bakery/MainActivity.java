@@ -56,9 +56,14 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        store = new Store();
-        day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
-        showPinGate();
+        try {
+            store = new Store();
+            day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+            showPinGate();
+        } catch (RuntimeException ex) {
+            android.util.Log.e("AlMizanBakery", "Activity startup failed", ex);
+            showStartupFailure(ex);
+        }
     }
 
     private void showPinGate() {
@@ -500,7 +505,7 @@ public class MainActivity extends Activity {
             long production=productionValue(), cost=costingTotal();
             long spoilage=spoilageValue(), labor=wages(), expenses=expenseTotal();
             long beforeCost=Math.subtractExact(Math.subtractExact(Math.subtractExact(production,spoilage),labor),expenses);
-            long margin=Math.subtractExact(beforeCost,cost);
+            long margin=BakeryMath.netMargin(production,spoilage,labor,expenses,cost);
             String message="تاريخ التكلفة: "+day+
                 "\nقيمة القطععيات/الإنتاج: "+fmt(production)+" جنيه"+
                 "\n(-) قيمة التالف: "+fmt(spoilage)+" جنيه"+
@@ -543,7 +548,7 @@ public class MainActivity extends Activity {
                 "\nمنصرفات المحل: "+fmt(expenseTotal())+" جنيه"+
                 "\nقيمة التالف: "+fmt(spoilageValue())+" جنيه"+
                 "\nتكلفة التشغيل التقديرية (للمقارنة فقط): "+fmt(costingTotal())+" جنيه"+
-                "\nهامش الربح التقديري: "+fmt(Math.subtractExact(Math.subtractExact(Math.subtractExact(Math.subtractExact(expected,spoilageValue()),wages()),expenseTotal()),costingTotal()))+" جنيه"+
+                "\nهامش الربح التقديري: "+fmt(BakeryMath.netMargin(expected,spoilageValue(),wages(),expenseTotal(),costingTotal()))+" جنيه"+
                 "\n\nإجمالي البنود المسجلة: "+fmt(actual)+" جنيه"+
                 "\nفرق التسوية (المطلوب صفر): "+fmt(difference)+" جنيه"+
                 "\nالنتيجة: "+status+
