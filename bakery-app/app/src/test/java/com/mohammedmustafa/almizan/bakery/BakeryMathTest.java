@@ -10,6 +10,9 @@ public class BakeryMathTest {
     @Test public void valuesLoavesUsingConfiguredPriceBasis() {
         assertEquals(250000L, BakeryMath.valueForLoaves(1000,4));
     }
+    @Test public void ownerExample900LoavesAtThreePerThousandIs300000() {
+        assertEquals(300000L, BakeryMath.valueForLoaves(900, 3));
+    }
     @Test public void roundsMoneyToWholeSudanesePounds() {
         assertEquals(333L, BakeryMath.valueForLoaves(1,3));
     }
