@@ -687,7 +687,7 @@ public class MainActivity extends Activity {
                             String loaves=inputs.get("__cuts_loaves_"+n).getText().toString().trim();
                             if(loaves.isEmpty()) continue;
                             if(number.isEmpty()) throw new IllegalArgumentException("أدخل رقم القطعية للسطر "+(n+1)+".");
-                            if(rows.length()>0) rows.append("\\n");
+                            if(rows.length()>0) rows.append("\n");
                             rows.append(number).append(" | ").append(loaves);
                         }
                         inputs.get("work_rows").setText(rows.toString());
@@ -886,7 +886,7 @@ public class MainActivity extends Activity {
                 bad>0?"بيانات السطور غير مكتملة — لا تعتمد التسوية":
                 difference==0?"متوازن حسابيًا":difference>0?"عجز غير مفسر":"زيادة غير مفسرة";
             String message="تاريخ الدفتر: "+day+
-                "\n\nتفاصيل القطعيات: "+(productionEntered?store.get(day,"cuts").optString("work_rows","").replace("\\n","؛ "):"لم تُسجل")+
+                "\n\nتفاصيل القطعيات: "+(productionEntered?store.get(day,"cuts").optString("work_rows","").replace("\n","؛ "):"لم تُسجل")+
                 "\nالعيش المنتج: "+(productionEntered?fmt(loaves)+" رغيف":"غير محسوب — أدخل سطور القطعيات واحفظها")+
                 "\nقيمة القطعيات حسب السعر المدخل: "+(calculationReady?fmt(expected)+" جنيه":"غير محسوبة — "+(!productionEntered?"سجّل الإنتاج واحفظه":"أدخل عدد العيشات المقابل لـ 1,000 جنيه"))+
                 "\nنقد الشباك: "+fmt(val("window","cash"))+" جنيه"+
