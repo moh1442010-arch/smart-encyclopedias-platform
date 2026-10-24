@@ -889,7 +889,7 @@ public class MainActivity extends Activity {
     private long distributionDiff() { return distribution().diff; }
     private long accountedTotal() {
         // Revenue reconciliation must compare sales channels only; expenses and payroll belong in the profit calculation.
-        return BakeryMath.salesRecordedTotal(cashTotal(),debtTotal(),bankTotal(),distributionDiff());
+        return BakeryMath.salesRecordedTotal(cashTotal(),debtTotal(),bankTotal(),0L);
     }
     private String fmt(long n) { return String.format(Locale.US,"%,d",n); }
 
@@ -927,7 +927,7 @@ public class MainActivity extends Activity {
                 "\nإجمالي التكاليف التشغيلية (العمال + المنصرفات + التالف + المواد): "+fmt(Math.addExact(Math.addExact(wages(),expenseTotal()),Math.addExact(spoilageValue(),costingTotal())))+" جنيه"+
                 "\nتكلفة التشغيل التقديرية (للمقارنة فقط): "+fmt(costingTotal())+" جنيه"+
                 "\nهامش الربح التقديري: "+(calculationReady?fmt(BakeryMath.netMargin(expected,spoilageValue(),wages(),expenseTotal(),costingTotal(),distributionDiff()))+" جنيه":"غير محسوب حتى اكتمال الإنتاج والسعر")+
-                "\n\nإجمالي المبيعات المسجلة (الكاش + الديون + بنكك + فرق السعر): "+fmt(actual)+" جنيه"+
+                "\n\nإجمالي المبيعات المسجلة (الكاش + الديون + بنكك فقط؛ فرق السعر معروض منفصلًا): "+fmt(actual)+" جنيه"+
                 "\nفرق تسوية المبيعات (المطلوب صفر): "+(!calculationReady?"غير محسوب حتى اكتمال الإنتاج والسعر":bad>0?"غير معتمد حتى تصحيح السطور":fmt(difference)+" جنيه")+
                 "\nالنتيجة: "+status+
                 (!productionEntered?"\n\n⚠ لم تُحفظ بيانات إنتاج لهذا اليوم. اضغط «إدخال القطعيات الآن»، واكتب السطور الستة فعليًا ثم اضغط «حفظ بيانات القسم». النص الرمادي في التلميح مثال فقط ولا يُحتسب.":"")+
