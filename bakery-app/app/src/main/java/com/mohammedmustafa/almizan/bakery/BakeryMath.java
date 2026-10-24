@@ -65,6 +65,11 @@ public final class BakeryMath {
     public static long difference(long expectedProduction, long recordedCategories) {
         return Math.subtractExact(expectedProduction, recordedCategories);
     }
+    /** Piecework wages: number of jobs/bags multiplied by the agreed unit rate. */
+    public static long workerWage(long jobCount, long unitRate) {
+        if(jobCount<0 || unitRate<0) throw new IllegalArgumentException("Negative worker quantity or rate");
+        return Math.multiplyExact(jobCount,unitRate);
+    }
     /** Daily ingredient/fuel cost. Quantities and unit prices must be non-negative. */
     public static long operatingCost(long fuelQty,long fuelPrice,long flourBags,long flourBagPrice,
             long yeastCount,long yeastPrice,long oilQty,long oilPoundPrice,
