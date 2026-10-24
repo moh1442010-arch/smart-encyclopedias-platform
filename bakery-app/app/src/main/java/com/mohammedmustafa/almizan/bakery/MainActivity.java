@@ -919,7 +919,7 @@ public class MainActivity extends Activity {
                 "\nإجمالي النقد: "+fmt(cashTotal())+" جنيه"+
                 "\nديون الشباك والتوزيع: "+fmt(debtTotal())+" جنيه"+
                 "\nتحويلات بنكك/البنك: "+fmt(bankTotal())+" جنيه"+
-                "\nكمية التوزيع المسجلة: "+fmt(dist.qty)+" رغيف"+\nالقيمة التقديرية لكمية التوزيع حسب سعر القطعيات: "+fmt(valueForLoaves(dist.qty))+" جنيه"+
+                "\nكمية التوزيع المسجلة: "+fmt(dist.qty)+" رغيف"+"\nالقيمة التقديرية لكمية التوزيع حسب سعر القطعيات: "+fmt(valueForLoaves(dist.qty))+" جنيه"+
                 "\nفرق السعر: "+fmt(distributionDiff())+" جنيه"+
                 "\nيومية العمال المحسوبة من السطور: "+fmt(wages())+" جنيه"+
                 "\nمنصرفات المحل: "+fmt(expenseTotal())+" جنيه"+
