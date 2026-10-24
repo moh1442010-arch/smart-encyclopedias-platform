@@ -6,6 +6,40 @@ import java.math.RoundingMode;
 /** Exact integer arithmetic for bakery production and daily reconciliation. */
 public final class BakeryMath {
     private BakeryMath() {}
+    /** Sum manually entered work lines in the format: work number | loaf count. */
+    public static long sumWorkRows(String rows) {
+        if (rows == null || rows.trim().isEmpty()) return 0L;
+        long total=0L;
+        String[] lines=rows.split("\\r?\\n");
+        java.util.HashSet<Long> workNumbers=new java.util.HashSet<>();
+        for(int i=0;i<lines.length;i++) {
+            String line=lines[i].trim();
+            if(line.isEmpty()) continue;
+            String[] parts=line.split("\\|",-1);
+            if(parts.length!=2) throw new IllegalArgumentException("سطر القطعيات "+(i+1)+": اكتب رقم الشغل | عدد العيش.");
+            long work, loaves;
+            try {
+                work=Long.parseLong(normalizeDigits(parts[0].trim()));
+                loaves=Long.parseLong(normalizeDigits(parts[1].trim()));
+            } catch(NumberFormatException ex) {
+                throw new IllegalArgumentException("سطر القطعيات "+(i+1)+": أدخل أرقامًا صحيحة لرقم الشغل وعدد العيش.");
+            }
+            if(work<=0 || loaves<0) throw new IllegalArgumentException("رقم الشغل يبدأ من 1 وعدد العيش لا يكون سالبًا.");
+            if(!workNumbers.add(work)) throw new IllegalArgumentException("رقم الشغل "+work+" مكرر.");
+            total=Math.addExact(total,loaves);
+        }
+        return total;
+    }
+    private static String normalizeDigits(String value) {
+        StringBuilder out=new StringBuilder();
+        for(int i=0;i<value.length();i++) {
+            char c=value.charAt(i);
+            if(c>='٠' && c<='٩') out.append((char)('0'+c-'٠'));
+            else if(c>='۰' && c<='۹') out.append((char)('0'+c-'۰'));
+            else out.append(c);
+        }
+        return out.toString();
+    }
     public static long productionLoaves(long workUnits, long loavesPerUnit) {
         if (workUnits < 0 || loavesPerUnit < 0) throw new IllegalArgumentException("Negative quantity");
         return Math.multiplyExact(workUnits, loavesPerUnit);
