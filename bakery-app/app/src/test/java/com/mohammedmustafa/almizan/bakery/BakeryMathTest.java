@@ -105,4 +105,12 @@ public class BakeryMathTest {
     @Test(expected=ArithmeticException.class) public void rejectsCostOverflow() {
         BakeryMath.operatingCost(Long.MAX_VALUE,2,0,0,0,0,0,0,0,0,0);
     }
+    @Test public void profitSubtractsDistributionPriceDifference() {
+        assertEquals(101500L, BakeryMath.netMargin(752500,0,12000,20000,600000,19000));
+    }
+    @Test public void productionCostExampleSubtotalIs413000BeforeUnspecifiedMaterials() {
+        long cost = BakeryMath.operatingCost(0,0,6,60000,6,7000,0,0,1,2000,0) + 5000L + 4000L;
+        assertEquals(413000L, cost);
+    }
+
 }
