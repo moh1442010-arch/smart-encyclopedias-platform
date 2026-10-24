@@ -95,7 +95,7 @@ public class MainActivity extends Activity {
         base("⚠️ تعذر فتح التطبيق");
         content.addView(text("تم تسجيل الخطأ بدل إغلاق التطبيق فجأة. لم تُحذف بيانات الدفاتر. أرسل التقرير للدعم لتحديد السبب بدقة.", 16));
         Button send = button("إرسال تقرير الخطأ عبر واتساب");
-        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.5\n" + report));
+        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.6\n" + report));
         content.addView(send);
         Button retry = button("إعادة محاولة فتح الصفحة الرئيسية");
         retry.setOnClickListener(v -> continueAfterPinAccepted());
@@ -360,7 +360,7 @@ public class MainActivity extends Activity {
     }
 
     private void buildHome() {
-        base("🥖 الميزان المحاسبي للمخابز 2.5.5");
+        base("🥖 الميزان المحاسبي للمخابز 2.5.6");
         TextView intro = text("نظام يومي للمخبز: أدخل بيانات كل قسم، احفظها بتاريخها، ثم افتح «المحاسب والحساب» لمراجعة التسوية.",16);
         content.addView(intro);
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -381,7 +381,7 @@ public class MainActivity extends Activity {
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
-        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.5.")); content.addView(support);
+        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.6.")); content.addView(support);
         updateStatus();
     }
 
@@ -495,8 +495,10 @@ public class MainActivity extends Activity {
                 t("notes","ملاحظات المخزن","")
             };
             case "cuts": return new Field[]{
-                f("work_units","عدد جوالات الدقيق المستخدمة في شغل اليوم"),f("loaves_per_unit","عدد الأرغفة الناتجة من جوال دقيق واحد"),
-                f("loaves_per_1000","عدد الأرغفة التي تساوي 1,000 جنيه")
+                f("work_units","عدد جوالات الدقيق المستخدمة في شغل اليوم — مثال: 6 جوالات"),
+                t("work_rows","تفاصيل القطعيات — سطر لكل شغل: رقم الشغل | عدد العيش","1 | 500\n2 | 510\n3 | 500\n4 | 500\n5 | 500\n6 | 500"),
+                f("loaves_per_unit","عدد الأرغفة الناتجة من جوال دقيق واحد (للتقدير عند عدم إدخال التفاصيل)"),
+                f("loaves_per_1000","عدد العيشات التي تساوي 1,000 جنيه — مثال: 4")
             };
             case "workers": return new Field[]{
                 t("rows","تفاصيل العمال — سطر لكل عامل","الاسم | الوظيفة | عدد الشغل | أجرة الوحدة\nمثال: أحمد | خباز | 10 | 500"),
@@ -622,6 +624,7 @@ public class MainActivity extends Activity {
                             if(n<0) throw new IllegalArgumentException("لا تُقبل الكميات أو المبالغ السالبة في هذا الحقل: "+field.label);
                         }
                         if (module.equals("stock") && field.key.equals("other_items")) validateStockRows(val);
+                        if (module.equals("cuts") && field.key.equals("work_rows")) validateWorkRows(val);
                         record.put(field.key,val);
                     }
                     if (module.equals("cuts")) {
@@ -706,7 +709,15 @@ public class MainActivity extends Activity {
         catch (Exception ignored) { return 0L; }
     }
 
-    private long productionLoaves() { return BakeryMath.productionLoaves(val("cuts","work_units"),val("cuts","loaves_per_unit")); }
+    private long productionLoaves() {
+        String rows=store.get(day,"cuts").optString("work_rows","").trim();
+        if (!rows.isEmpty()) return BakeryMath.sumWorkRows(rows);
+        return BakeryMath.productionLoaves(val("cuts","work_units"),val("cuts","loaves_per_unit"));
+    }
+    private void validateWorkRows(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return;
+        BakeryMath.sumWorkRows(raw);
+    }
     private long valueForLoaves(long loaves) {
         long perThousand=val("cuts","loaves_per_1000");
         if(perThousand<=0) return 0;
@@ -867,16 +878,16 @@ public class MainActivity extends Activity {
     }
 
     private void showGuide() {
-        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.5\n\n"+
+        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.6\n\n"+
             "1) اختر التاريخ من رزنامة الهاتف داخل التطبيق؛ لكل تاريخ دفتر مستقل.\n"+
             "2) المخزن: أدخل كمية كل صنف وسعر الوحدة الواحدة، بما في ذلك الدقيق والخميرة والأكياس والزيت والملح والحطب والغاز والجاز والمعدات. للأصناف الإضافية استخدم سطرًا لكل صنف بالصيغة: الصنف | الكمية | سعر الوحدة. أدخل رصيد الدقيق الافتتاحي قبل شغل اليوم؛ يُخصم عدد الجوالات المستخدمة تلقائيًا دون خصم مزدوج.\n"+
-            "3) القطعيات: أدخل عدد الشغل، وعدد الأرغفة لكل جوال، وعدد الأرغفة المقابل لـ 1,000 جنيه. يحسب التطبيق كمية العيش وقيمة الإنتاج.\n"+
+            "3) القطعيات: أدخل عدد جوالات الدقيق المستخدمة، ثم سطرًا لكل شغل بصيغة رقم الشغل | عدد العيش، مثل 1 | 500 و2 | 510. يجمع التطبيق التفاصيل ويعرض قيمة القطعيات = مجموع العيش × 1,000 ÷ عدد العيشات التي تساوي 1,000 جنيه. إذا تركت التفاصيل فارغة يستخدم تقدير عدد الجوالات × الأرغفة لكل جوال.\n"+
             "4) يومية العمال: كل عامل في سطر بصيغة الاسم | الوظيفة | عدد الشغل | أجرة الوحدة. الأجر = عدد الشغل × أجرة الوحدة.\n"+
             "5) بيع الشباك: أدخل الكاش والديون والتحويلات. احتفظ برقم العملية في خانة المرجع.\n"+
             "6) التوزيع: كل عميل في سطر: الاسم | الكمية | الكاش | الديون | التحويل البنكي | فرق السعر.\n"+
             "7) منصرفات المحل: أدخل الوجبات والصيانة والمشتريات، ثم أي منصرف إضافي في سطر البيان | المبلغ. لا تكرر نفس المصروف في أكثر من خانة.\n"+
             "8) التالف: أدخل عدد الأرغفة التالفة؛ يحسب التطبيق قيمتها باستخدام سعر القطعيات.\n"+
-            "9) المحاسب والحساب: يساوي قيمة الإنتاج مجموع الكاش والديون والتحويلات وفرق السعر واليوميات والمنصرفات وقيمة التالف وفق قاعدة التسوية المعتمدة. فرق التسوية يجب أن يساوي صفرًا، وإلا راجع البنود.\n"+
+            "9) المحاسب والحساب: قارن قيمة القطعيات بمجموع الكاش والديون وبنكك وفرق السعر والتالف واليومية والمنصرفات وفق طريقة تسجيل كل عملية. لا تسجل مبيعات الشباك نفسها مرة أخرى ضمن التوزيع؛ إذا كانت البيانات مسجلة في القسمين فستتكرر في الإجمالي. يجب أن يساوي فرق التسوية صفرًا بعد منع التكرار.\n"+
             "10) حساب التشغيل والتكلفة: يحسب التطبيق تكلفة الدقيق من عدد جوالات شغل اليوم × سعر الجوال، ويضيف تكلفة الخميرة والزيت والأكياس والحطب والغاز والجاز وتشغيل المعدات، ثم يخصم قيمة التالف ويومية العمال والمنصرفات وتكلفة التشغيل من قيمة القطعيات لعرض هامش الربح. لا تكرر المصروف نفسه في المنصرفات وفي التكلفة عند جمع إجمالياتك.\n\n"+
             "مهم: البيانات تحفظ محليًا على الجهاز ولا تُرفع للسحابة. استخدم زر «نسخ احتياطي واستعادة البيانات» لتصدير ملف JSON إلى مكان آمن واختبر استعادته. التطبيق لا يُصدر قيدًا محاسبيًا عامًا ولا يُعد بديلًا عن مراجعة محاسب قبل استخدام النتائج لإقرار مالي أو ضريبي.";
         new AlertDialog.Builder(this).setTitle("📘 اللوحة الإرشادية").setMessage(guide).setPositiveButton("فهمت",null).show();
@@ -931,7 +942,7 @@ public class MainActivity extends Activity {
     }
 
     private void requestActivation(String plan,String amount) {
-        String message="السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.5.\n"+
+        String message="السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.6.\n"+
             "الباقة المختارة: "+plan+"\n"+
             "المبلغ: "+amount+"\n"+
             "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\n"+
