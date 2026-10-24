@@ -399,7 +399,7 @@ public class MainActivity extends Activity {
         try {
             if (productionReady) {
                 production = productionValue();
-                margin = BakeryMath.netMargin(production, spoilageValue(), wages(), expenseTotal(), costingTotal());
+                margin = BakeryMath.netMargin(production, spoilageValue(), wages(), expenseTotal(), costingTotal(), distributionDiff());
             }
         } catch (Exception ignored) { productionReady = false; /* keep dashboard available while records are corrected */ }
         addMetricTile(second, "production", "💵 قيمة الإنتاج", productionReady ? fmt(production) + " ج" : "غير محسوب", productionReady ? "بحسب سعر القطعيات" : "أدخل واحفظ الإنتاج والسعر");
@@ -698,7 +698,7 @@ public class MainActivity extends Activity {
                             for(int c=0;c<4;c++) { cells[c]=inputs.get("__workers_"+n+"_"+c).getText().toString().trim(); if(!cells[c].isEmpty()) any=true; }
                             if(!any) continue;
                             for(int c=0;c<4;c++) if(cells[c].isEmpty()) throw new IllegalArgumentException("أكمل اسم العامل والوظيفة وعدد الشغل وأجرة الوحدة في بطاقة العامل "+(n+1)+".");
-                            if(rows.length()>0) rows.append("\\n");
+                            if(rows.length()>0) rows.append("\n");
                             rows.append(cells[0]).append(" | ").append(cells[1]).append(" | ").append(cells[2]).append(" | ").append(cells[3]);
                         }
                         inputs.get("rows").setText(rows.toString());
@@ -840,17 +840,42 @@ public class MainActivity extends Activity {
         try {
             long production=productionValue(), cost=costingTotal();
             long spoilage=spoilageValue(), labor=wages(), expenses=expenseTotal();
-            long beforeCost=Math.subtractExact(Math.subtractExact(Math.subtractExact(production,spoilage),labor),expenses);
-            long margin=BakeryMath.netMargin(production,spoilage,labor,expenses,cost);
+            boolean productionReady=hasProductionInput() && val("cuts","loaves_per_1000")>0;
+            long flourCost=Math.multiplyExact(val("cuts","work_units"),val("costing","flour_bag_price"));
+            long yeastCost=Math.multiplyExact(val("costing","yeast_count"),val("costing","yeast_piece_price"));
+            long bagsCost=val("costing","bags_quantity")>0
+                ? Math.multiplyExact(val("costing","bags_quantity"),val("costing","bags_unit_price"))
+                : val("costing","bags_total_price");
+            long oilCost=Math.multiplyExact(val("costing","oil_quantity"),val("costing","oil_pound_price"));
+            long saltCost=Math.multiplyExact(val("costing","salt_quantity"),val("costing","salt_unit_price"));
+            long woodCost=Math.multiplyExact(val("costing","wood_quantity"),val("costing","wood_unit_price"));
+            long gasCost=Math.multiplyExact(val("costing","gas_quantity"),val("costing","gas_unit_price"));
+            long keroseneCost=Math.multiplyExact(val("costing","kerosene_quantity"),val("costing","kerosene_unit_price"));
+            long fuelCost=Math.multiplyExact(val("costing","fuel_quantity"),val("costing","fuel_unit_price"));
+            long equipmentCost=val("costing","equipment_operating_cost");
+            long beforeCost=productionReady?Math.subtractExact(Math.subtractExact(Math.subtractExact(production,spoilage),labor),expenses):0L;
+            long margin=productionReady?BakeryMath.netMargin(production,spoilage,labor,expenses,cost,distributionDiff()):0L;
             String message="تاريخ التكلفة: "+day+
-                "\nقيمة القطعيات/الإنتاج: "+fmt(production)+" جنيه"+
-                "\n(-) قيمة التالف: "+fmt(spoilage)+" جنيه"+
-                "\n(-) يومية العمال: "+fmt(labor)+" جنيه"+
+                "\nقيمة الإنتاج من القطعيات: "+(productionReady?fmt(production)+" جنيه":"غير محسوبة — أدخل القطعيات وسعر عدد الأرغفة لكل 1,000 جنيه")+
+                "\n(-) قيمة التالف: "+fmt(spoilage)+" جنيه ("+fmt(val("spoilage","loaves"))+" رغيف)"+
+                "\n(-) يومية العمال المحسوبة من تفاصيل العمال: "+fmt(labor)+" جنيه"+
                 "\n(-) منصرفات المحل: "+fmt(expenses)+" جنيه"+
-                "\nالصافي قبل تكلفة التشغيل: "+fmt(beforeCost)+" جنيه"+
-                "\n(-) تكلفة المواد والوقود الحطب/الغاز/الجاز وتشغيل المعدات: "+fmt(cost)+" جنيه"+
-                "\n\nهامش الربح التقديري النهائي: "+fmt(margin)+" جنيه"+
-                "\n\nحساب الدقيق مرتبط بعدد جوالات شغل اليوم. راجع أسعار المواد والتالف واليومية والمنصرفات، ولا تسجل المصروف نفسه مرتين.";
+                "\n(-) فرق السعر المخصوم: "+fmt(distributionDiff())+" جنيه"+
+                "\nالصافي قبل تكلفة التشغيل: "+(productionReady?fmt(beforeCost)+" جنيه":"غير محسوب")+
+                "\n\nتفصيل تكلفة التشغيل:"+
+                "\nالدقيق: "+fmt(val("cuts","work_units"))+" جوال × "+fmt(val("costing","flour_bag_price"))+" = "+fmt(flourCost)+" جنيه"+
+                "\nالخميرة: "+fmt(val("costing","yeast_count"))+" × "+fmt(val("costing","yeast_piece_price"))+" = "+fmt(yeastCost)+" جنيه"+
+                "\nالأكياس: "+fmt(bagsCost)+" جنيه"+
+                "\nالزيت: "+fmt(oilCost)+" جنيه"+
+                "\nالملح: "+fmt(saltCost)+" جنيه"+
+                "\nالحطب: "+fmt(woodCost)+" جنيه"+
+                "\nالغاز: "+fmt(gasCost)+" جنيه"+
+                "\nالجاز: "+fmt(keroseneCost)+" جنيه"+
+                "\nالوقود الآخر: "+fmt(fuelCost)+" جنيه"+
+                "\nتشغيل المعدات: "+fmt(equipmentCost)+" جنيه"+
+                "\nإجمالي تكلفة التشغيل: "+fmt(cost)+" جنيه"+
+                "\n\nهامش الربح النهائي: "+(productionReady?fmt(margin)+" جنيه":"غير محسوب حتى تسجيل الإنتاج والسعر")+
+                "\n\nالمعادلة: قيمة الإنتاج − التالف − يومية العمال − منصرفات المحل − فرق السعر − تكلفة التشغيل. لا تسجل المصروف نفسه مرتين.";
             new AlertDialog.Builder(this).setTitle("🏭 حساب التشغيل والتكلفة — "+day).setMessage(message)
                 .setNegativeButton("إغلاق",null)
                 .setNeutralButton("تعديل بيانات التكلفة",(d,w)->openModule("costing"))
@@ -894,7 +919,7 @@ public class MainActivity extends Activity {
                 "\nإجمالي النقد: "+fmt(cashTotal())+" جنيه"+
                 "\nديون الشباك والتوزيع: "+fmt(debtTotal())+" جنيه"+
                 "\nتحويلات بنكك/البنك: "+fmt(bankTotal())+" جنيه"+
-                "\nكمية التوزيع المسجلة: "+fmt(dist.qty)+" رغيف"+
+                "\nكمية التوزيع المسجلة: "+fmt(dist.qty)+" رغيف"+\nالقيمة التقديرية لكمية التوزيع حسب سعر القطعيات: "+fmt(valueForLoaves(dist.qty))+" جنيه"+
                 "\nفرق السعر: "+fmt(distributionDiff())+" جنيه"+
                 "\nيومية العمال المحسوبة من السطور: "+fmt(wages())+" جنيه"+
                 "\nمنصرفات المحل: "+fmt(expenseTotal())+" جنيه"+
