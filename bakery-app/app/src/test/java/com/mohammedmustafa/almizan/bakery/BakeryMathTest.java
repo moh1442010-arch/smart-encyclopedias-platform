@@ -31,6 +31,9 @@ public class BakeryMathTest {
     @Test public void roundsMoneyToWholeSudanesePounds() {
         assertEquals(333L, BakeryMath.valueForLoaves(1,3));
     }
+    @Test public void salesReconciliationExcludesExpensesAndPayroll() {
+        assertEquals(80000L, BakeryMath.salesRecordedTotal(50000,20000,10000,0));
+    }
     @Test public void reconciliationAddsAllRecordedCategoriesExactlyOnce() {
         assertEquals(150000L, BakeryMath.accountedTotal(50000,20000,10000,0,30000,25000,15000));
     }
