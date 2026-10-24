@@ -1160,8 +1160,12 @@ public class MainActivity extends Activity {
             java.util.HashSet<String> allowed=new java.util.HashSet<>(java.util.Arrays.asList("stock","cuts","workers","window","distribution","expenses","spoilage","costing","accounting","inventory_usage"));
             for(int i=0;i<rows.length();i++) {
                 JSONObject row=rows.getJSONObject(i); String date=row.getString("day"), module=row.getString("module");
-                if(!date.matches("\\d{4}-\\d{2}-\\d{2}") || !allowed.contains(module)) throw new IllegalArgumentException("Invalid backup record");
+                if(!BakeryDataValidation.isValidIsoDate(date) || !allowed.contains(module)) throw new IllegalArgumentException("Invalid backup record date or module");
                 JSONObject payload=row.getJSONObject("payload");
+                if ("inventory_usage".equals(module)) {
+                    if (!payload.has("flour_bags")) throw new IllegalArgumentException("Backup inventory usage is missing flour_bags");
+                    BakeryDataValidation.requireNonNegative(payload.getLong("flour_bags"), "inventory_usage.flour_bags");
+                }
                 ContentValues cv=new ContentValues(); cv.put("day",date); cv.put("module",module); cv.put("payload",payload.toString());
                 cv.put("updated_at",row.optLong("updated_at",System.currentTimeMillis())); prepared.add(cv);
             }
