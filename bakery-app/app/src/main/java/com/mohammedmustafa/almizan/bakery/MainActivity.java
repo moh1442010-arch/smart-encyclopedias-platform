@@ -952,15 +952,35 @@ public class MainActivity extends Activity {
     }
 
     private void requestActivation(String plan,String amount) {
-        String message="السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.6.\n"+
-            "الباقة المختارة: "+plan+"\n"+
-            "المبلغ: "+amount+"\n"+
-            "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\n"+
-            "تاريخ الطلب: "+day+"\n"+
-            "معرّف الجهاز: "+deviceId()+"\n"+
-            "رقم عملية بنكك: [اكتب رقم العملية]\n"+
-            "سأرفق صورة إيصال التحويل هنا. بعد التحقق أرجو إرسال رمز تفعيل مرتبط بهذا الجهاز والباقة.";
-        openWhatsApp(message);
+        EditText devices=new EditText(this);
+        devices.setSingleLine(true);
+        devices.setInputType(InputType.TYPE_CLASS_NUMBER);
+        devices.setText("1");
+        devices.setHint("عدد الأجهزة المطلوب ترخيصها");
+        LinearLayout box=new LinearLayout(this); box.setPadding(24,8,24,4); box.setOrientation(LinearLayout.VERTICAL);
+        box.addView(text("الباقة: "+plan+"\nالمبلغ المطلوب: "+amount+"\nحساب بنكك: "+BANKAK+"\n\nحوّل المبلغ أولًا، ثم انسخ رقم الحساب أو أرسل طلب واتساب وأرفق إيصال التحويل. سيُراجع الدعم التحويل قبل إصدار الترخيص.",15));
+        box.addView(text("عدد الأجهزة المطلوب ترخيصها (1 إلى 20):",14)); box.addView(devices);
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("تأكيد طلب الاشتراك").setView(box)
+            .setNegativeButton("إلغاء",null).setPositiveButton("نسخ رقم الحساب",null)
+            .setNeutralButton("إرسال الطلب عبر واتساب",null).create();
+        dialog.setOnShowListener(ignored -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("Bankak",BANKAK));
+                toast("تم نسخ رقم بنكك: "+BANKAK);
+            });
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> {
+                String count=devices.getText().toString().trim();
+                int n; try { n=Integer.parseInt(normalizePin(count)); } catch(Exception ex) { devices.setError("أدخل عدد الأجهزة"); return; }
+                if(n<1 || n>20) { devices.setError("العدد من 1 إلى 20"); return; }
+                String message="السلام عليكم، أطلب ترخيص تطبيق الميزان المحاسبي للمخابز 2.5.7.\n"+
+                    "الباقة المختارة: "+plan+"\nالمبلغ: "+amount+"\nرقم حساب بنكك: "+BANKAK+"\n"+
+                    "تاريخ الطلب: "+day+"\nمعرّف الجهاز الأول: "+deviceId()+"\nعدد الأجهزة المطلوب ترخيصها: "+n+"\n"+
+                    "رقم عملية بنكك: [أدخل رقم العملية]\nسأرفق صورة الإيصال. أرجو مراجعة التحويل ثم إصدار ترخيص موقّع لكل جهاز بعد الموافقة. إذا كانت الأجهزة أكثر من واحد سأرسل معرّف كل جهاز.";
+                dialog.dismiss(); openWhatsApp(message);
+            });
+        });
+        dialog.show();
     }
 
     private void openWhatsApp(String message) {
