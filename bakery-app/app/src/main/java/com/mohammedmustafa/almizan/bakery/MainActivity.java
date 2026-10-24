@@ -775,7 +775,7 @@ public class MainActivity extends Activity {
                 if(module.equals("workers")) {
                     long count=parseLong(p[2]), rate=parseLong(p[3]);
                     if(count<0||rate<0) throw new IllegalArgumentException();
-                    out.amount=Math.addExact(out.amount,Math.multiplyExact(count,rate));
+                    out.amount=Math.addExact(out.amount,BakeryMath.workerWage(count,rate));
                 } else if(module.equals("distribution")) {
                     long qty=parseLong(p[1]), cash=parseLong(p[2]), debt=parseLong(p[3]), bank=parseLong(p[4]), diff=parseLong(p[5]);
                     if(qty<0||cash<0||debt<0||bank<0) throw new IllegalArgumentException();
