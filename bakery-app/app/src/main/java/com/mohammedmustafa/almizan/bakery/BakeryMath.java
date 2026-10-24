@@ -53,6 +53,11 @@ public final class BakeryMath {
     public static long sum(long... values) {
         long result=0; for(long value:values) result=Math.addExact(result,value); return result;
     }
+    /** Sales reconciliation only: do not mix wages, expenses, or spoilage costs into revenue. */
+    public static long salesRecordedTotal(long cash, long debt, long bank, long priceDifference) {
+        return sum(cash, debt, bank, priceDifference);
+    }
+    /** Kept for backwards compatibility with existing callers/tests. */
     public static long accountedTotal(long cash, long debt, long bank, long priceDifference, long wages, long expenses, long spoilageValue) {
         return sum(cash, debt, bank, priceDifference, wages, expenses, spoilageValue);
     }
