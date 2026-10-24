@@ -36,6 +36,7 @@ public final class BakeryMath {
             char c=value.charAt(i);
             if(c>='٠' && c<='٩') out.append((char)('0'+c-'٠'));
             else if(c>='۰' && c<='۹') out.append((char)('0'+c-'۰'));
+            else if(c==',' || c=='٬' || Character.isWhitespace(c)) { /* accept grouped whole-number input */ }
             else out.append(c);
         }
         return out.toString();
