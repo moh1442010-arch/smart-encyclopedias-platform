@@ -46,7 +46,7 @@ public class BakeryMathTest {
         assertEquals(80000L, BakeryMath.salesRecordedTotal(50000,20000,10000,0));
     }
     @Test public void ownerExampleReconcilesToAnActual500PoundDifference() {
-        long loaves=BakeryMath.sumWorkRows("1 | 500\\n2 | 500\\n3 | 500\\n4 | 510\\n5 | 500\\n6 | 500");
+        long loaves=BakeryMath.sumWorkRows("1 | 500\n2 | 500\n3 | 500\n4 | 510\n5 | 500\n6 | 500");
         long production=BakeryMath.valueForLoaves(loaves,4);
         long sales=BakeryMath.salesRecordedTotal(522000,150000,80000,0);
         assertEquals(3010L,loaves);
