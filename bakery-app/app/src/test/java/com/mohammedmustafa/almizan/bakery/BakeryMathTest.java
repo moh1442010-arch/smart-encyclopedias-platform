@@ -45,6 +45,18 @@ public class BakeryMathTest {
     @Test public void salesReconciliationExcludesExpensesAndPayroll() {
         assertEquals(80000L, BakeryMath.salesRecordedTotal(50000,20000,10000,0));
     }
+    @Test public void ownerExampleReconcilesToAnActual500PoundDifference() {
+        long loaves=BakeryMath.sumWorkRows("1 | 500\\n2 | 500\\n3 | 500\\n4 | 510\\n5 | 500\\n6 | 500");
+        long production=BakeryMath.valueForLoaves(loaves,4);
+        long sales=BakeryMath.salesRecordedTotal(522000,150000,80000,0);
+        assertEquals(3010L,loaves);
+        assertEquals(752500L,production);
+        assertEquals(752000L,sales);
+        assertEquals(500L,BakeryMath.difference(production,sales));
+    }
+    @Test public void pieceworkWageIsJobCountTimesUnitRate() {
+        assertEquals(12000L,BakeryMath.workerWage(6,2000));
+    }
     @Test public void reconciliationAddsAllRecordedCategoriesExactlyOnce() {
         assertEquals(150000L, BakeryMath.accountedTotal(50000,20000,10000,0,30000,25000,15000));
     }
