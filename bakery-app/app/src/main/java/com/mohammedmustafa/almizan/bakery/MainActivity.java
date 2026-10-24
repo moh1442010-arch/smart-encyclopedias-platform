@@ -594,6 +594,61 @@ public class MainActivity extends Activity {
         box.setPadding(14,8,14,12); box.setOrientation(LinearLayout.VERTICAL); sc.addView(box);
         final java.util.Map<String,EditText> inputs = new java.util.LinkedHashMap<>();
         for(Field field:fields) {
+            boolean cutsRows=module.equals("cuts") && field.key.equals("work_rows");
+            boolean workerRows=module.equals("workers") && field.key.equals("rows");
+            if(cutsRows || workerRows) {
+                // Keep the established storage format for backups while presenting structured, numbered rows.
+                EditText serialized=new EditText(this);
+                serialized.setVisibility(View.GONE);
+                serialized.setText(saved.optString(field.key,""));
+                inputs.put(field.key,serialized);
+                box.addView(text(field.label,15));
+                String raw=saved.optString(field.key,"");
+                String[] lines=raw.trim().isEmpty()?new String[0]:raw.split("\\r?\\n");
+                java.util.Map<Integer,String[]> oldRows=new java.util.HashMap<>();
+                for(int n=0;n<lines.length;n++) {
+                    String[] parts=lines[n].split("\\|",-1);
+                    if(parts.length==(cutsRows?2:4)) oldRows.put(n,parts);
+                }
+                int rowCount=cutsRows?10:8;
+                if(cutsRows) {
+                    LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL);
+                    TextView numberHead=text("رقم القطعية",13); TextView loafHead=text("عدد العيش المنتج",13);
+                    numberHead.setTypeface(null,1); loafHead.setTypeface(null,1);
+                    header.addView(numberHead,new LinearLayout.LayoutParams(0,-2,1f));
+                    header.addView(loafHead,new LinearLayout.LayoutParams(0,-2,2f)); box.addView(header);
+                    for(int n=0;n<rowCount;n++) {
+                        String[] prior=oldRows.get(n);
+                        LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL);
+                        EditText number=new EditText(this); number.setSingleLine(true); number.setTextSize(15);
+                        number.setInputType(InputType.TYPE_CLASS_NUMBER); number.setHint("رقم "+(n+1));
+                        number.setText(prior==null?String.valueOf(n+1):prior[0].trim());
+                        EditText loaves=new EditText(this); loaves.setSingleLine(true); loaves.setTextSize(15);
+                        loaves.setInputType(InputType.TYPE_CLASS_NUMBER); loaves.setHint("عدد الأرغفة");
+                        loaves.setText(prior==null?"":prior[1].trim());
+                        row.addView(number,new LinearLayout.LayoutParams(0,-2,1f));
+                        row.addView(loaves,new LinearLayout.LayoutParams(0,-2,2f)); box.addView(row);
+                        inputs.put("__cuts_number_"+n,number); inputs.put("__cuts_loaves_"+n,loaves);
+                    }
+                    box.addView(text("الإجمالي يحسب تلقائيًا من أعداد العيش المدخلة، ولا تُحتسب الأمثلة غير المحفوظة.",13));
+                } else {
+                    box.addView(text("أدخل بيانات كل عامل منفصلة. إجمالي العامل = عدد الشغل × أجرة الوحدة.",13));
+                    for(int n=0;n<rowCount;n++) {
+                        String[] prior=oldRows.get(n);
+                        box.addView(text("العامل "+(n+1),14));
+                        String[] labels={"اسم العامل","الوظيفة / نوع العمل","عدد الجوالات أو الأشغال","أجرة الجوال/الوحدة بالجنيه"};
+                        String[] hints={"اسم العامل","مثال: خباز","مثال: 6","مثال: 2,000"};
+                        for(int c=0;c<4;c++) {
+                            EditText cell=new EditText(this); cell.setTextSize(15); cell.setSingleLine(true);
+                            cell.setHint(labels[c]+" — "+hints[c]);
+                            cell.setInputType(c<2?InputType.TYPE_CLASS_TEXT:InputType.TYPE_CLASS_NUMBER);
+                            cell.setText(prior==null?"":prior[c].trim());
+                            inputs.put("__workers_"+n+"_"+c,cell); box.addView(cell);
+                        }
+                    }
+                }
+                continue;
+            }
             box.addView(text(field.label,15));
             EditText e = new EditText(this); e.setTextSize(16); e.setHint(field.hint); e.setPadding(10,8,10,8);
             if(field.numeric) { e.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED); e.setSingleLine(true); }
@@ -625,6 +680,29 @@ public class MainActivity extends Activity {
                     }).show();
             }).setPositiveButton("حفظ بيانات القسم",(d,w)->{
                 try {
+                    if(module.equals("cuts")) {
+                        StringBuilder rows=new StringBuilder();
+                        for(int n=0;n<10;n++) {
+                            String number=inputs.get("__cuts_number_"+n).getText().toString().trim();
+                            String loaves=inputs.get("__cuts_loaves_"+n).getText().toString().trim();
+                            if(loaves.isEmpty()) continue;
+                            if(number.isEmpty()) throw new IllegalArgumentException("أدخل رقم القطعية للسطر "+(n+1)+".");
+                            if(rows.length()>0) rows.append("\\n");
+                            rows.append(number).append(" | ").append(loaves);
+                        }
+                        inputs.get("work_rows").setText(rows.toString());
+                    } else if(module.equals("workers")) {
+                        StringBuilder rows=new StringBuilder();
+                        for(int n=0;n<8;n++) {
+                            String[] cells=new String[4]; boolean any=false;
+                            for(int c=0;c<4;c++) { cells[c]=inputs.get("__workers_"+n+"_"+c).getText().toString().trim(); if(!cells[c].isEmpty()) any=true; }
+                            if(!any) continue;
+                            for(int c=0;c<4;c++) if(cells[c].isEmpty()) throw new IllegalArgumentException("أكمل اسم العامل والوظيفة وعدد الشغل وأجرة الوحدة في بطاقة العامل "+(n+1)+".");
+                            if(rows.length()>0) rows.append("\\n");
+                            rows.append(cells[0]).append(" | ").append(cells[1]).append(" | ").append(cells[2]).append(" | ").append(cells[3]);
+                        }
+                        inputs.get("rows").setText(rows.toString());
+                    }
                     JSONObject record=new JSONObject();
                     for(Field field:fields) {
                         String val=inputs.get(field.key).getText().toString().trim();
@@ -719,13 +797,11 @@ public class MainActivity extends Activity {
     }
 
     private boolean hasProductionInput() {
-        String rows=store.get(day,"cuts").optString("work_rows","").trim();
-        return !rows.isEmpty() || (val("cuts","work_units")>0 && val("cuts","loaves_per_unit")>0);
+        // Only actual numbered daily cuts are valid production evidence for reconciliation.
+        return !store.get(day,"cuts").optString("work_rows","").trim().isEmpty();
     }
     private long productionLoaves() {
-        String rows=store.get(day,"cuts").optString("work_rows","").trim();
-        if (!rows.isEmpty()) return BakeryMath.sumWorkRows(rows);
-        return BakeryMath.productionLoaves(val("cuts","work_units"),val("cuts","loaves_per_unit"));
+        return BakeryMath.sumWorkRows(store.get(day,"cuts").optString("work_rows",""));
     }
     private void validateWorkRows(String raw) {
         if (raw == null || raw.trim().isEmpty()) return;
@@ -810,16 +886,20 @@ public class MainActivity extends Activity {
                 bad>0?"بيانات السطور غير مكتملة — لا تعتمد التسوية":
                 difference==0?"متوازن حسابيًا":difference>0?"عجز غير مفسر":"زيادة غير مفسرة";
             String message="تاريخ الدفتر: "+day+
-                "\n\nالعيش المنتج: "+(productionEntered?fmt(loaves)+" رغيف":"غير محسوب — أدخل سطور القطعيات واحفظها")+
+                "\n\nتفاصيل القطعيات: "+(productionEntered?store.get(day,"cuts").optString("work_rows","").replace("\\n","؛ "):"لم تُسجل")+
+                "\nالعيش المنتج: "+(productionEntered?fmt(loaves)+" رغيف":"غير محسوب — أدخل سطور القطعيات واحفظها")+
                 "\nقيمة القطعيات حسب السعر المدخل: "+(calculationReady?fmt(expected)+" جنيه":"غير محسوبة — "+(!productionEntered?"سجّل الإنتاج واحفظه":"أدخل عدد العيشات المقابل لـ 1,000 جنيه"))+
-                "\nالكاش (الشباك والتوزيع): "+fmt(cashTotal())+" جنيه"+
-                "\nالديون المستحقة: "+fmt(debtTotal())+" جنيه"+
-                "\nالتحويلات البنكية: "+fmt(bankTotal())+" جنيه"+
+                "\nنقد الشباك: "+fmt(val("window","cash"))+" جنيه"+
+                "\nنقد التوزيع: "+fmt(dist.cash)+" جنيه"+
+                "\nإجمالي النقد: "+fmt(cashTotal())+" جنيه"+
+                "\nديون الشباك والتوزيع: "+fmt(debtTotal())+" جنيه"+
+                "\nتحويلات بنكك/البنك: "+fmt(bankTotal())+" جنيه"+
                 "\nكمية التوزيع المسجلة: "+fmt(dist.qty)+" رغيف"+
                 "\nفرق السعر: "+fmt(distributionDiff())+" جنيه"+
                 "\nيومية العمال المحسوبة من السطور: "+fmt(wages())+" جنيه"+
                 "\nمنصرفات المحل: "+fmt(expenseTotal())+" جنيه"+
                 "\nقيمة التالف: "+fmt(spoilageValue())+" جنيه"+
+                "\nإجمالي التكاليف التشغيلية (العمال + المنصرفات + التالف + المواد): "+fmt(Math.addExact(Math.addExact(wages(),expenseTotal()),Math.addExact(spoilageValue(),costingTotal())))+" جنيه"+
                 "\nتكلفة التشغيل التقديرية (للمقارنة فقط): "+fmt(costingTotal())+" جنيه"+
                 "\nهامش الربح التقديري: "+(calculationReady?fmt(BakeryMath.netMargin(expected,spoilageValue(),wages(),expenseTotal(),costingTotal()))+" جنيه":"غير محسوب حتى اكتمال الإنتاج والسعر")+
                 "\n\nإجمالي المبيعات المسجلة (الكاش + الديون + بنكك + فرق السعر): "+fmt(actual)+" جنيه"+
