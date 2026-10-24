@@ -926,7 +926,7 @@ public class MainActivity extends Activity {
                 "\nقيمة التالف: "+fmt(spoilageValue())+" جنيه"+
                 "\nإجمالي التكاليف التشغيلية (العمال + المنصرفات + التالف + المواد): "+fmt(Math.addExact(Math.addExact(wages(),expenseTotal()),Math.addExact(spoilageValue(),costingTotal())))+" جنيه"+
                 "\nتكلفة التشغيل التقديرية (للمقارنة فقط): "+fmt(costingTotal())+" جنيه"+
-                "\nهامش الربح التقديري: "+(calculationReady?fmt(BakeryMath.netMargin(expected,spoilageValue(),wages(),expenseTotal(),costingTotal()))+" جنيه":"غير محسوب حتى اكتمال الإنتاج والسعر")+
+                "\nهامش الربح التقديري: "+(calculationReady?fmt(BakeryMath.netMargin(expected,spoilageValue(),wages(),expenseTotal(),costingTotal(),distributionDiff()))+" جنيه":"غير محسوب حتى اكتمال الإنتاج والسعر")+
                 "\n\nإجمالي المبيعات المسجلة (الكاش + الديون + بنكك + فرق السعر): "+fmt(actual)+" جنيه"+
                 "\nفرق تسوية المبيعات (المطلوب صفر): "+(!calculationReady?"غير محسوب حتى اكتمال الإنتاج والسعر":bad>0?"غير معتمد حتى تصحيح السطور":fmt(difference)+" جنيه")+
                 "\nالنتيجة: "+status+
