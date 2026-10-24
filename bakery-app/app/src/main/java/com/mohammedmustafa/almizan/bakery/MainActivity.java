@@ -793,8 +793,11 @@ public class MainActivity extends Activity {
         try {
             boolean productionEntered=hasProductionInput();
             long loaves=productionEntered?productionLoaves():0L, expected=productionEntered?productionValue():0L, actual=accountedTotal(), difference=productionEntered?Math.subtractExact(expected,actual):0L;
-            Totals dist=distribution(); int bad=rowTotals("workers","rows",4).badRows+dist.badRows+rowTotals("expenses","rows",2).badRows;
-            String status=!productionEntered?"بيانات الإنتاج غير مكتملة — لا تعتمد التسوية":difference==0?"متوازن حسابيًا":difference>0?"عجز غير مفسر":"زيادة غير مفسرة";
+            Totals dist=distribution();
+            Totals workerRows=rowTotals("workers","rows",4);
+            Totals expenseRows=rowTotals("expenses","rows",2);
+            int bad=workerRows.badRows+dist.badRows+expenseRows.badRows;
+            String status=!productionEntered?"بيانات الإنتاج غير مكتملة — لا تعتمد التسوية":bad>0?"بيانات السطور غير مكتملة — لا تعتمد التسوية":difference==0?"متوازن حسابيًا":difference>0?"عجز غير مفسر":"زيادة غير مفسرة";
             String message="تاريخ الدفتر: "+day+
                 "\n\nالعيش المنتج: "+(productionEntered?fmt(loaves)+" رغيف":"غير محسوب — أدخل سطور القطعيات واحفظها")+
                 "\nقيمة القطعيات حسب السعر المدخل: "+(productionEntered?fmt(expected)+" جنيه":"غير محسوبة حتى تسجيل الإنتاج")+
@@ -809,10 +812,10 @@ public class MainActivity extends Activity {
                 "\nتكلفة التشغيل التقديرية (للمقارنة فقط): "+fmt(costingTotal())+" جنيه"+
                 "\nهامش الربح التقديري: "+(productionEntered?fmt(BakeryMath.netMargin(expected,spoilageValue(),wages(),expenseTotal(),costingTotal()))+" جنيه":"غير محسوب حتى تسجيل الإنتاج")+
                 "\n\nإجمالي المبيعات المسجلة (الكاش + الديون + بنكك + فرق السعر): "+fmt(actual)+" جنيه"+
-                "\nفرق تسوية المبيعات (المطلوب صفر): "+(productionEntered?fmt(difference)+" جنيه":"غير محسوب حتى تسجيل الإنتاج")+
+                "\nفرق تسوية المبيعات (المطلوب صفر): "+(!productionEntered?"غير محسوب حتى تسجيل الإنتاج":bad>0?"غير معتمد حتى تصحيح السطور":fmt(difference)+" جنيه")+
                 "\nالنتيجة: "+status+
                 (!productionEntered?"\n\n⚠ لم تُحفظ بيانات إنتاج لهذا اليوم. افتح القطعيات، اكتب السطور الستة فعليًا (1 | 500 إلى 6 | 500) ثم اضغط حفظ بيانات القسم؛ النص الرمادي في التلميح مثال فقط ولا يُحتسب.":"")+ 
-                (bad>0?"\n\n⚠ توجد "+bad+" سطور غير مكتملة أو غير رقمية في يومية العمال/التوزيع/المنصرفات. راجع صيغة السطور.":"")+
+                (bad>0?"\n\n⚠ توجد "+bad+" سطور غير مكتملة أو غير رقمية: يومية العمال "+workerRows.badRows+"، التوزيع "+dist.badRows+"، المنصرفات "+expenseRows.badRows+". صحح السطور ثم أعد التسوية.":"")+
                 (val("cuts","loaves_per_1000")<=0?"\n⚠ أدخل عدد العيش المقابل لـ 1,000 جنيه في القطعيات.":"");
             new AlertDialog.Builder(this).setTitle("🧮 المحاسب والحساب — "+day).setMessage(message)
                 .setNegativeButton("إغلاق",null).setNeutralButton("مشاركة التقرير",(d,w)->shareReport(message))
