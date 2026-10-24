@@ -95,7 +95,7 @@ public class MainActivity extends Activity {
         base("⚠️ تعذر فتح التطبيق");
         content.addView(text("تم تسجيل الخطأ بدل إغلاق التطبيق فجأة. لم تُحذف بيانات الدفاتر. أرسل التقرير للدعم لتحديد السبب بدقة.", 16));
         Button send = button("إرسال تقرير الخطأ عبر واتساب");
-        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.9\n" + report));
+        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.10\n" + report));
         content.addView(send);
         Button retry = button("إعادة محاولة فتح الصفحة الرئيسية");
         retry.setOnClickListener(v -> continueAfterPinAccepted());
@@ -360,7 +360,7 @@ public class MainActivity extends Activity {
     }
 
     private void buildHome() {
-        base("🥖 الميزان المحاسبي للمخابز 2.5.9");
+        base("🥖 الميزان المحاسبي للمخابز 2.5.10");
         TextView intro = text("نظام يومي للمخبز: أدخل بيانات كل قسم، احفظها بتاريخها، ثم افتح «المحاسب والحساب» لمراجعة التسوية.",16);
         content.addView(intro);
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -381,7 +381,7 @@ public class MainActivity extends Activity {
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
-        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.9.")); content.addView(support);
+        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.10.")); content.addView(support);
         updateStatus();
     }
 
@@ -997,7 +997,7 @@ public class MainActivity extends Activity {
     }
 
     private void showGuide() {
-        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.9\n\n"+
+        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.10\n\n"+
             "1) اختر التاريخ من رزنامة الهاتف داخل التطبيق؛ لكل تاريخ دفتر مستقل.\n"+
             "2) المخزن: أدخل كمية كل صنف وسعر الوحدة الواحدة، بما في ذلك الدقيق والخميرة والأكياس والزيت والملح والحطب والغاز والجاز والمعدات. للأصناف الإضافية استخدم سطرًا لكل صنف بالصيغة: الصنف | الكمية | سعر الوحدة. أدخل رصيد الدقيق الافتتاحي قبل شغل اليوم؛ يُخصم عدد الجوالات المستخدمة تلقائيًا دون خصم مزدوج.\n"+
             "3) القطعيات: أدخل عدد جوالات الدقيق المستخدمة، ثم سطرًا لكل شغل بصيغة رقم الشغل | عدد العيش، مثل 1 | 500 و2 | 510. يجمع التطبيق التفاصيل ويعرض قيمة القطعيات = مجموع العيش × 1,000 ÷ عدد العيشات التي تساوي 1,000 جنيه. إذا تركت التفاصيل فارغة يستخدم تقدير عدد الجوالات × الأرغفة لكل جوال.\n"+
@@ -1082,7 +1082,7 @@ public class MainActivity extends Activity {
                 String count=devices.getText().toString().trim();
                 int n; try { n=Integer.parseInt(normalizePin(count)); } catch(Exception ex) { devices.setError("أدخل عدد الأجهزة"); return; }
                 if(n<1 || n>20) { devices.setError("العدد من 1 إلى 20"); return; }
-                String message="السلام عليكم، أطلب ترخيص تطبيق الميزان المحاسبي للمخابز 2.5.9.\n"+
+                String message="السلام عليكم، أطلب ترخيص تطبيق الميزان المحاسبي للمخابز 2.5.10.\n"+
                     "الباقة المختارة: "+plan+"\nالمبلغ: "+amount+"\nرقم حساب بنكك: "+BANKAK+"\n"+
                     "تاريخ الطلب: "+day+"\nمعرّف الجهاز الأول: "+deviceId()+"\nعدد الأجهزة المطلوب ترخيصها: "+n+"\n"+
                     "رقم عملية بنكك: [أدخل رقم العملية]\nسأرفق صورة الإيصال. أرجو مراجعة التحويل ثم إصدار ترخيص موقّع لكل جهاز بعد الموافقة. إذا كانت الأجهزة أكثر من واحد سأرسل معرّف كل جهاز.";
