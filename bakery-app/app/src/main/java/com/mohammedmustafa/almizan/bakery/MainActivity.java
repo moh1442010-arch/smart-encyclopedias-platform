@@ -95,7 +95,7 @@ public class MainActivity extends Activity {
         base("⚠️ تعذر فتح التطبيق");
         content.addView(text("تم تسجيل الخطأ بدل إغلاق التطبيق فجأة. لم تُحذف بيانات الدفاتر. أرسل التقرير للدعم لتحديد السبب بدقة.", 16));
         Button send = button("إرسال تقرير الخطأ عبر واتساب");
-        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.4\n" + report));
+        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.5\n" + report));
         content.addView(send);
         Button retry = button("إعادة محاولة فتح الصفحة الرئيسية");
         retry.setOnClickListener(v -> continueAfterPinAccepted());
@@ -360,7 +360,7 @@ public class MainActivity extends Activity {
     }
 
     private void buildHome() {
-        base("🥖 الميزان المحاسبي للمخابز 2.5.4");
+        base("🥖 الميزان المحاسبي للمخابز 2.5.5");
         TextView intro = text("نظام يومي للمخبز: أدخل بيانات كل قسم، احفظها بتاريخها، ثم افتح «المحاسب والحساب» لمراجعة التسوية.",16);
         content.addView(intro);
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -381,7 +381,7 @@ public class MainActivity extends Activity {
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
-        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.4.")); content.addView(support);
+        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق الميزان المحاسبي للمخابز 2.5.5.")); content.addView(support);
         updateStatus();
     }
 
@@ -481,9 +481,17 @@ public class MainActivity extends Activity {
     private Field[] schema(String module) {
         switch(module) {
             case "stock": return new Field[]{
-                f("flour","رصيد الدقيق قبل خصم شغل اليوم — عدد الجوالات"),f("yeast","الخميرة — الكمية"),f("bags","الأكياس — الكمية"),
-                f("oil","الزيت — الكمية"),f("salt","الملح — الكمية"),f("wood","الحطب — الكمية"),
-                f("gas","الغاز — الكمية"),t("equipment","الجهاز / المعدات","اسم الجهاز وحالته وأي ملاحظة"),
+                f("flour","رصيد الدقيق قبل خصم شغل اليوم — الكمية بالجوال"),f("flour_unit_price","سعر جوال الدقيق الواحد (جنيه)"),
+                f("yeast","الخميرة — الكمية"),f("yeast_unit_price","سعر وحدة الخميرة الواحدة (جنيه)"),
+                f("bags","الأكياس — الكمية"),f("bags_unit_price","سعر الكيس الواحد (جنيه)"),
+                f("oil","الزيت — الكمية"),f("oil_unit_price","سعر وحدة الزيت (جنيه)"),
+                f("salt","الملح — الكمية"),f("salt_unit_price","سعر وحدة الملح (جنيه)"),
+                f("wood","الحطب — الكمية"),f("wood_unit_price","سعر وحدة الحطب (جنيه)"),
+                f("gas","الغاز — الكمية"),f("gas_unit_price","سعر وحدة الغاز (جنيه)"),
+                f("kerosene","الجاز — الكمية"),f("kerosene_unit_price","سعر وحدة الجاز (جنيه)"),
+                f("equipment_quantity","المعدات/الجهاز — عدد الوحدات"),f("equipment_unit_price","سعر وحدة المعدات (جنيه)"),
+                t("other_items","أصناف أخرى — سطر لكل صنف","الصنف | الكمية | سعر الوحدة\nمثال: صابون | 5 | 1000"),
+                t("equipment","اسم الجهاز / المعدات وحالتها",""),
                 t("notes","ملاحظات المخزن","")
             };
             case "cuts": return new Field[]{
@@ -594,6 +602,7 @@ public class MainActivity extends Activity {
                             long n=parseLong(val);
                             if(n<0) throw new IllegalArgumentException("لا تُقبل الكميات أو المبالغ السالبة في هذا الحقل: "+field.label);
                         }
+                        if (module.equals("stock") && field.key.equals("other_items")) validateStockRows(val);
                         record.put(field.key,val);
                     }
                     if (module.equals("cuts")) {
@@ -610,6 +619,21 @@ public class MainActivity extends Activity {
                     }
                 } catch(Exception ex) { toast("لم تُحفظ البيانات: "+ex.getMessage()); }
             }).show();
+    }
+
+    private void validateStockRows(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return;
+        String[] lines = raw.split("\\r?\\n");
+        for (int i=0;i<lines.length;i++) {
+            String line=lines[i].trim();
+            if (line.isEmpty()) continue;
+            String[] p=line.split("\\|",-1);
+            if (p.length != 3 || p[0].trim().isEmpty())
+                throw new IllegalArgumentException("صنف المخزن، السطر "+(i+1)+": اكتب الصنف | الكمية | سعر الوحدة.");
+            long quantity=parseLong(p[1]), price=parseLong(p[2]);
+            if (quantity < 0 || price < 0)
+                throw new IllegalArgumentException("كمية وسعر الصنف لا يمكن أن يكونا سالبين.");
+        }
     }
 
     private long parseLong(String value) {
@@ -824,9 +848,9 @@ public class MainActivity extends Activity {
     }
 
     private void showGuide() {
-        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.4\n\n"+
+        String guide="طريقة الاستخدام — الميزان المحاسبي للمخابز 2.5.5\n\n"+
             "1) اختر التاريخ من رزنامة الهاتف داخل التطبيق؛ لكل تاريخ دفتر مستقل.\n"+
-            "2) المخزن: أدخل رصيد الدقيق الافتتاحي قبل شغل اليوم وكميات المواد الأخرى. يعرض الملخص الرصيد المتبقي، وعند حفظ شغل اليوم يُخصم عدد الجوالات تلقائيًا. إذا عدّلت المخزن بعد تسجيل الشغل، يعيد التطبيق حساب الرصيد المتبقي ولا يخصم الشغل مرتين.\n"+
+            "2) المخزن: أدخل كمية كل صنف وسعر الوحدة الواحدة، بما في ذلك الدقيق والخميرة والأكياس والزيت والملح والحطب والغاز والجاز والمعدات. للأصناف الإضافية استخدم سطرًا لكل صنف بالصيغة: الصنف | الكمية | سعر الوحدة. أدخل رصيد الدقيق الافتتاحي قبل شغل اليوم؛ يُخصم عدد الجوالات المستخدمة تلقائيًا دون خصم مزدوج.\n"+
             "3) القطعيات: أدخل عدد الشغل، وعدد الأرغفة لكل جوال، وعدد الأرغفة المقابل لـ 1,000 جنيه. يحسب التطبيق كمية العيش وقيمة الإنتاج.\n"+
             "4) يومية العمال: كل عامل في سطر بصيغة الاسم | الوظيفة | عدد الشغل | أجرة الوحدة. الأجر = عدد الشغل × أجرة الوحدة.\n"+
             "5) بيع الشباك: أدخل الكاش والديون والتحويلات. احتفظ برقم العملية في خانة المرجع.\n"+
@@ -888,7 +912,7 @@ public class MainActivity extends Activity {
     }
 
     private void requestActivation(String plan,String amount) {
-        String message="السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.4.\n"+
+        String message="السلام عليكم، أطلب تفعيل الميزان المحاسبي للمخابز 2.5.5.\n"+
             "الباقة المختارة: "+plan+"\n"+
             "المبلغ: "+amount+"\n"+
             "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\n"+
