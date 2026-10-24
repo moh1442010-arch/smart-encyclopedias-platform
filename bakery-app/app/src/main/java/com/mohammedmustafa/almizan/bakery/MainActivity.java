@@ -557,8 +557,27 @@ public class MainActivity extends Activity {
                 }
             }
         }
-        if (module.equals("costing") && val("cuts","work_units") > 0) {
-            try { saved.put("flour_bags", String.valueOf(val("cuts","work_units"))); } catch(Exception ignored) {}
+        if (module.equals("costing")) {
+            // Pull inventory unit prices into costing as defaults; the baker may adjust actual daily usage.
+            JSONObject prices = store.getLatest(day, "stock");
+            String[][] priceMap = {
+                {"flour_bag_price","flour_unit_price"},
+                {"yeast_piece_price","yeast_unit_price"},
+                {"oil_pound_price","oil_unit_price"},
+                {"salt_unit_price","salt_unit_price"},
+                {"wood_unit_price","wood_unit_price"},
+                {"gas_unit_price","gas_unit_price"},
+                {"kerosene_unit_price","kerosene_unit_price"}
+            };
+            for (String[] pair : priceMap) {
+                if (saved.optString(pair[0], "").trim().isEmpty()) {
+                    String price = prices.optString(pair[1], "").trim();
+                    if (!price.isEmpty()) try { saved.put(pair[0], price); } catch(Exception ignored) {}
+                }
+            }
+            if (val("cuts","work_units") > 0) {
+                try { saved.put("flour_bags", String.valueOf(val("cuts","work_units"))); } catch(Exception ignored) {}
+            }
         }
         ScrollView sc = new ScrollView(this); LinearLayout box = new LinearLayout(this);
         box.setPadding(14,8,14,12); box.setOrientation(LinearLayout.VERTICAL); sc.addView(box);
