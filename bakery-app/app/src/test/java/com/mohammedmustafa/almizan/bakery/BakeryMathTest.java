@@ -19,6 +19,17 @@ public class BakeryMathTest {
     @Test public void valuesOwnerExample3010LoavesAtFourPerThousand() {
         assertEquals(752500L, BakeryMath.valueForLoaves(BakeryMath.sumWorkRows("1 | 500\n2 | 510\n3 | 500\n4 | 500\n5 | 500\n6 | 500"),4));
     }
+    @Test public void acceptsGroupedNumbersAndArabicThousandsSeparatorInWorkRows() {
+        assertEquals(3010L, BakeryMath.sumWorkRows("1 | 500\n2 | ٥١٠\n3 | 500\n4 | 500\n5 | 500\n6 | 500"));
+        assertEquals(3000L, BakeryMath.sumWorkRows("1 | 1,000\n2 | 2٬000"));
+    }
+    @Test public void sampleLedgerShowsTheActualUnexplainedOverage() {
+        long expected = BakeryMath.valueForLoaves(BakeryMath.sumWorkRows("1 | 500\n2 | 510\n3 | 500\n4 | 500\n5 | 500\n6 | 500"), 4);
+        long recorded = BakeryMath.salesRecordedTotal(700000, 150000, 80000, 0);
+        assertEquals(752500L, expected);
+        assertEquals(930000L, recorded);
+        assertEquals(-177500L, BakeryMath.difference(expected, recorded));
+    }
     @Test public void acceptsArabicDigitsInWorkRows() {
         assertEquals(1010L, BakeryMath.sumWorkRows("١ | ٥٠٠\n٢ | ٥١٠"));
     }
