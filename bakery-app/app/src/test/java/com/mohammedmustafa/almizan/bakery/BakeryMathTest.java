@@ -13,6 +13,21 @@ public class BakeryMathTest {
     @Test public void ownerExample900LoavesAtThreePerThousandIs300000() {
         assertEquals(300000L, BakeryMath.valueForLoaves(900, 3));
     }
+    @Test public void sumsNumberedWorkLinesExactly() {
+        assertEquals(3010L, BakeryMath.sumWorkRows("1 | 500\n2 | 510\n3 | 500\n4 | 500\n5 | 500\n6 | 500"));
+    }
+    @Test public void valuesOwnerExample3010LoavesAtFourPerThousand() {
+        assertEquals(752500L, BakeryMath.valueForLoaves(BakeryMath.sumWorkRows("1 | 500\n2 | 510\n3 | 500\n4 | 500\n5 | 500\n6 | 500"),4));
+    }
+    @Test public void acceptsArabicDigitsInWorkRows() {
+        assertEquals(1010L, BakeryMath.sumWorkRows("١ | ٥٠٠\n٢ | ٥١٠"));
+    }
+    @Test(expected=IllegalArgumentException.class) public void rejectsDuplicateWorkNumbers() {
+        BakeryMath.sumWorkRows("1 | 500\n1 | 510");
+    }
+    @Test(expected=IllegalArgumentException.class) public void rejectsMalformedWorkRows() {
+        BakeryMath.sumWorkRows("1 - 500");
+    }
     @Test public void roundsMoneyToWholeSudanesePounds() {
         assertEquals(333L, BakeryMath.valueForLoaves(1,3));
     }
