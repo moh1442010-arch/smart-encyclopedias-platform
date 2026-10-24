@@ -95,7 +95,7 @@ public class MainActivity extends Activity {
         base("⚠️ تعذر فتح التطبيق");
         content.addView(text("تم تسجيل الخطأ بدل إغلاق التطبيق فجأة. لم تُحذف بيانات الدفاتر. أرسل التقرير للدعم لتحديد السبب بدقة.", 16));
         Button send = button("إرسال تقرير الخطأ عبر واتساب");
-        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.7\n" + report));
+        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل الميزان المحاسبي للمخابز 2.5.8\n" + report));
         content.addView(send);
         Button retry = button("إعادة محاولة فتح الصفحة الرئيسية");
         retry.setOnClickListener(v -> continueAfterPinAccepted());
@@ -497,7 +497,7 @@ public class MainActivity extends Activity {
             };
             case "cuts": return new Field[]{
                 f("work_units","عدد جوالات الدقيق المستخدمة في شغل اليوم — مثال: 6 جوالات"),
-                t("work_rows","تفاصيل القطعيات — سطر لكل شغل: رقم الشغل | عدد العيش","1 | 500\n2 | 510\n3 | 500\n4 | 500\n5 | 500\n6 | 500"),
+                t("work_rows","تفاصيل القطعيات — أدخل كل شغل ثم اضغط حفظ. المثال في التلميح ليس بيانات محفوظة.","مثال فقط — اكتب داخل الحقل: 1 | 500\n2 | 510\n3 | 500\n4 | 500\n5 | 500\n6 | 500"),
                 f("loaves_per_unit","عدد الأرغفة الناتجة من جوال دقيق واحد (للتقدير عند عدم إدخال التفاصيل)"),
                 f("loaves_per_1000","عدد العيشات التي تساوي 1,000 جنيه — مثال: 4")
             };
@@ -715,6 +715,10 @@ public class MainActivity extends Activity {
         catch (Exception ignored) { return 0L; }
     }
 
+    private boolean hasProductionInput() {
+        String rows=store.get(day,"cuts").optString("work_rows","").trim();
+        return !rows.isEmpty() || (val("cuts","work_units")>0 && val("cuts","loaves_per_unit")>0);
+    }
     private long productionLoaves() {
         String rows=store.get(day,"cuts").optString("work_rows","").trim();
         if (!rows.isEmpty()) return BakeryMath.sumWorkRows(rows);
@@ -787,12 +791,13 @@ public class MainActivity extends Activity {
 
     private void showAccounts() {
         try {
-            long loaves=productionLoaves(), expected=productionValue(), actual=accountedTotal(), difference=Math.subtractExact(expected,actual);
+            boolean productionEntered=hasProductionInput();
+            long loaves=productionEntered?productionLoaves():0L, expected=productionEntered?productionValue():0L, actual=accountedTotal(), difference=productionEntered?Math.subtractExact(expected,actual):0L;
             Totals dist=distribution(); int bad=rowTotals("workers","rows",4).badRows+dist.badRows+rowTotals("expenses","rows",2).badRows;
-            String status=difference==0?"متوازن حسابيًا":difference>0?"عجز غير مفسر":"زيادة غير مفسرة";
+            String status=!productionEntered?"بيانات الإنتاج غير مكتملة — لا تعتمد التسوية":difference==0?"متوازن حسابيًا":difference>0?"عجز غير مفسر":"زيادة غير مفسرة";
             String message="تاريخ الدفتر: "+day+
-                "\n\nالعيش المنتج: "+fmt(loaves)+" رغيف"+
-                "\nقيمة القطعيات حسب السعر المدخل: "+fmt(expected)+" جنيه"+
+                "\n\nالعيش المنتج: "+(productionEntered?fmt(loaves)+" رغيف":"غير محسوب — أدخل سطور القطعيات واحفظها")+
+                "\nقيمة القطعيات حسب السعر المدخل: "+(productionEntered?fmt(expected)+" جنيه":"غير محسوبة حتى تسجيل الإنتاج")+
                 "\nالكاش (الشباك والتوزيع): "+fmt(cashTotal())+" جنيه"+
                 "\nالديون المستحقة: "+fmt(debtTotal())+" جنيه"+
                 "\nالتحويلات البنكية: "+fmt(bankTotal())+" جنيه"+
@@ -802,11 +807,12 @@ public class MainActivity extends Activity {
                 "\nمنصرفات المحل: "+fmt(expenseTotal())+" جنيه"+
                 "\nقيمة التالف: "+fmt(spoilageValue())+" جنيه"+
                 "\nتكلفة التشغيل التقديرية (للمقارنة فقط): "+fmt(costingTotal())+" جنيه"+
-                "\nهامش الربح التقديري: "+fmt(BakeryMath.netMargin(expected,spoilageValue(),wages(),expenseTotal(),costingTotal()))+" جنيه"+
+                "\nهامش الربح التقديري: "+(productionEntered?fmt(BakeryMath.netMargin(expected,spoilageValue(),wages(),expenseTotal(),costingTotal()))+" جنيه":"غير محسوب حتى تسجيل الإنتاج")+
                 "\n\nإجمالي المبيعات المسجلة (الكاش + الديون + بنكك + فرق السعر): "+fmt(actual)+" جنيه"+
-                "\nفرق تسوية المبيعات (المطلوب صفر): "+fmt(difference)+" جنيه"+
+                "\nفرق تسوية المبيعات (المطلوب صفر): "+(productionEntered?fmt(difference)+" جنيه":"غير محسوب حتى تسجيل الإنتاج")+
                 "\nالنتيجة: "+status+
-                (bad>0?"\n\n⚠ توجد "+bad+" سطور غير مكتملة أو غير رقمية. راجع صيغة السطور.":"")+
+                (!productionEntered?"\n\n⚠ لم تُحفظ بيانات إنتاج لهذا اليوم. افتح القطعيات، اكتب السطور الستة فعليًا (1 | 500 إلى 6 | 500) ثم اضغط حفظ بيانات القسم؛ النص الرمادي في التلميح مثال فقط ولا يُحتسب.":"")+ 
+                (bad>0?"\n\n⚠ توجد "+bad+" سطور غير مكتملة أو غير رقمية في يومية العمال/التوزيع/المنصرفات. راجع صيغة السطور.":"")+
                 (val("cuts","loaves_per_1000")<=0?"\n⚠ أدخل عدد العيش المقابل لـ 1,000 جنيه في القطعيات.":"");
             new AlertDialog.Builder(this).setTitle("🧮 المحاسب والحساب — "+day).setMessage(message)
                 .setNegativeButton("إغلاق",null).setNeutralButton("مشاركة التقرير",(d,w)->shareReport(message))
