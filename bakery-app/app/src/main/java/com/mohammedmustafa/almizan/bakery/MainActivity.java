@@ -482,6 +482,8 @@ public class MainActivity extends Activity {
         switch(module) {
             case "stock": return new Field[]{
                 f("flour","رصيد الدقيق قبل خصم شغل اليوم — الكمية بالجوال"),f("flour_unit_price","سعر جوال الدقيق الواحد (جنيه)"),
+                f("fuel_other","رصيد الوقود الآخر — الكمية"),f("fuel_other_unit_price","سعر وحدة الوقود الآخر (جنيه)"),
+                f("fuel_other","رصيد الوقود الآخر — الكمية"),f("fuel_other_unit_price","سعر وحدة الوقود الآخر (جنيه)"),
                 f("yeast","الخميرة — الكمية"),f("yeast_unit_price","سعر وحدة الخميرة الواحدة (جنيه)"),
                 f("bags","الأكياس — الكمية"),f("bags_unit_price","سعر الكيس الواحد (جنيه)"),
                 f("oil","الزيت — الكمية"),f("oil_unit_price","سعر وحدة الزيت (جنيه)"),
@@ -525,11 +527,12 @@ public class MainActivity extends Activity {
                 f("gas_quantity","الغاز — الكمية المستخدمة"),f("gas_unit_price","سعر وحدة الغاز (جنيه)"),
                 f("kerosene_quantity","الجاز — الكمية المستخدمة"),f("kerosene_unit_price","سعر وحدة الجاز (جنيه)"),
                 f("flour_bags","الدقيق — الجوالات المستخدمة (تُزامن تلقائيًا مع شغل اليوم)"),f("flour_bag_price","سعر جوال الدقيق الواحد (جنيه)"),
-                f("yeast_count","الخميرة — عدد القطع المستخدمة"),f("yeast_piece_price","سعر قطعة الخميرة (جنيه)"),
-                f("oil_quantity","الزيت — الكمية المستخدمة بالرطل"),f("oil_pound_price","سعر رطل الزيت (جنيه)"),
-                f("salt_quantity","الملح — الكمية المستخدمة"),f("salt_unit_price","سعر وحدة الملح (جنيه)"),
-                f("bags_total_price","جملة سعر الأكياس المستخدمة (جنيه)"),
-                f("equipment_operating_cost","تكلفة تشغيل المعدات/الجهاز لهذا اليوم (جنيه)")
+                f("yeast_count","الخميرة — الكمية المستهلكة"),f("yeast_piece_price","سعر وحدة الخميرة (جنيه)"),
+                f("bags_quantity","الأكياس — عدد الأكياس المستهلكة"),f("bags_unit_price","سعر الكيس الواحد (جنيه)"),
+                f("oil_quantity","الزيت — الكمية المستهلكة"),f("oil_pound_price","سعر وحدة الزيت (جنيه)"),
+                f("salt_quantity","الملح — الكمية المستهلكة"),f("salt_unit_price","سعر وحدة الملح (جنيه)"),
+                f("bags_total_price","إجمالي قديم للأكياس (للتوافق مع السجلات السابقة فقط)"),
+                f("equipment_operating_cost","مصروف تشغيل المعدات لهذا اليوم (جنيه)")
             };
             default: return new Field[0];
         }
@@ -551,13 +554,15 @@ public class MainActivity extends Activity {
             if (currentStock.length() == 0) {
                 JSONObject previous = store.getLatest(day,"stock");
                 if (previous.length() > 0) saved = previous;
-            } else {
-                long appliedUsage = store.usageForDate(day);
-                if (appliedUsage > 0) {
-                    try { saved.put("flour", String.valueOf(Math.addExact(parseLong(saved.optString("flour","0")), appliedUsage))); }
-                    catch (Exception ex) { toast("تعذر تجهيز رصيد الدقيق للتحرير. لا تحفظ التغييرات حتى مراجعة البيانات."); }
-                }
             }
+            JSONObject appliedCosting=store.get(day,"costing");
+            JSONObject appliedItems=appliedCosting.optJSONObject("inventory_applied");
+            if(appliedItems!=null) {
+                String[][] itemKeys={{"yeast","yeast"},{"bags","bags"},{"oil","oil"},{"salt","salt"},{"wood","wood"},{"gas","gas"},{"kerosene","kerosene"},{"fuel_other","fuel_other"}};
+                for(String[] pair:itemKeys) { long used=appliedItems.optLong(pair[1],0L); if(used>0) try { saved.put(pair[0],String.valueOf(Math.addExact(parseLong(saved.optString(pair[0],"0")),used))); } catch(Exception ex) { toast("تعذر تجهيز رصيد "+pair[0]+" للتحرير؛ راجع الاستهلاك قبل الحفظ."); } }
+            }
+            long appliedUsage=store.usageForDate(day);
+            if(appliedUsage>0) try { saved.put("flour",String.valueOf(Math.addExact(parseLong(saved.optString("flour","0")),appliedUsage))); } catch(Exception ex) { toast("تعذر تجهيز رصيد الدقيق للتحرير. لا تحفظ التغييرات حتى مراجعة البيانات."); }
         }
         if (module.equals("costing")) {
             // Pull inventory unit prices into costing as defaults; the baker may adjust actual daily usage.
@@ -637,7 +642,7 @@ public class MainActivity extends Activity {
                         updateStatus();
                         toast("حُفظ رصيد المخزن. الرصيد الظاهر في الملخص هو المتبقي بعد خصم شغل اليوم.");
                     } else {
-                        store.put(day,module,record); updateStatus(); toast("حُفظ "+titleFor(module)+" بتاريخ "+day);
+                        if (module.equals("costing")) store.saveCostingWithInventory(day,record); else store.put(day,module,record); updateStatus(); toast("حُفظ "+titleFor(module)+" بتاريخ "+day+"؛ تم تحديث استهلاك المواد في المخزن إن كانت الكميات محددة.");
                     }
                 } catch(Exception ex) { toast("لم تُحفظ البيانات: "+ex.getMessage()); }
             }).show();
@@ -730,13 +735,16 @@ public class MainActivity extends Activity {
     private Totals distribution() { return rowTotals("distribution","rows",6); }
     private long productionValue() { return valueForLoaves(productionLoaves()); }
     private long costingTotal() {
+        long bagCost = val("costing","bags_quantity") > 0
+            ? Math.multiplyExact(val("costing","bags_quantity"),val("costing","bags_unit_price"))
+            : val("costing","bags_total_price");
         long materials = BakeryMath.operatingCost(
             val("costing","fuel_quantity"),val("costing","fuel_unit_price"),
             val("cuts","work_units"),val("costing","flour_bag_price"),
             val("costing","yeast_count"),val("costing","yeast_piece_price"),
             val("costing","oil_quantity"),val("costing","oil_pound_price"),
             val("costing","salt_quantity"),val("costing","salt_unit_price"),
-            val("costing","bags_total_price"));
+            bagCost);
         long wood = Math.multiplyExact(val("costing","wood_quantity"),val("costing","wood_unit_price"));
         long gas = Math.multiplyExact(val("costing","gas_quantity"),val("costing","gas_unit_price"));
         long kerosene = Math.multiplyExact(val("costing","kerosene_quantity"),val("costing","kerosene_unit_price"));
@@ -888,7 +896,7 @@ public class MainActivity extends Activity {
             "7) منصرفات المحل: أدخل الوجبات والصيانة والمشتريات، ثم أي منصرف إضافي في سطر البيان | المبلغ. لا تكرر نفس المصروف في أكثر من خانة.\n"+
             "8) التالف: أدخل عدد الأرغفة التالفة؛ يحسب التطبيق قيمتها باستخدام سعر القطعيات.\n"+
             "9) المحاسب والحساب: قارن قيمة القطعيات بمجموع الكاش والديون وبنكك وفرق السعر والتالف واليومية والمنصرفات وفق طريقة تسجيل كل عملية. لا تسجل مبيعات الشباك نفسها مرة أخرى ضمن التوزيع؛ إذا كانت البيانات مسجلة في القسمين فستتكرر في الإجمالي. يجب أن يساوي فرق التسوية صفرًا بعد منع التكرار.\n"+
-            "10) حساب التشغيل والتكلفة: يحسب التطبيق تكلفة الدقيق من عدد جوالات شغل اليوم × سعر الجوال، ويضيف تكلفة الخميرة والزيت والأكياس والحطب والغاز والجاز وتشغيل المعدات، ثم يخصم قيمة التالف ويومية العمال والمنصرفات وتكلفة التشغيل من قيمة القطعيات لعرض هامش الربح. لا تكرر المصروف نفسه في المنصرفات وفي التكلفة عند جمع إجمالياتك.\n\n"+
+            "10) حساب التشغيل والتكلفة: يحسب التطبيق تكلفة الدقيق من عدد جوالات شغل اليوم × سعر الجوال، ويحسب الخميرة والأكياس والزيت والملح والوقود والحطب والغاز والجاز من الكمية المستهلكة × سعر الوحدة، ويضيف مصروف تشغيل المعدات. عند حفظ استهلاك المواد تُخصم الكميات المحددة من أرصدة المخزن، ويُمنع الحفظ إذا كان الرصيد غير كافٍ. أدخل الكمية المستهلكة فقط لا قيمة شراء المخزون كله، ثم يخصم التطبيق التالف ويومية العمال والمنصرفات وتكلفة التشغيل من قيمة القطعيات لعرض هامش الربح. لا تكرر المصروف نفسه.\n\n"+
             "مهم: البيانات تحفظ محليًا على الجهاز ولا تُرفع للسحابة. استخدم زر «نسخ احتياطي واستعادة البيانات» لتصدير ملف JSON إلى مكان آمن واختبر استعادته. التطبيق لا يُصدر قيدًا محاسبيًا عامًا ولا يُعد بديلًا عن مراجعة محاسب قبل استخدام النتائج لإقرار مالي أو ضريبي.";
         new AlertDialog.Builder(this).setTitle("📘 اللوحة الإرشادية").setMessage(guide).setPositiveButton("فهمت",null).show();
     }
@@ -960,13 +968,14 @@ public class MainActivity extends Activity {
     private void toast(String s) { Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
 
     private class Store extends SQLiteOpenHelper {
-        Store(){super(MainActivity.this,"almizan_bakery_250.db",null,2);}
+        Store(){super(MainActivity.this,"almizan_bakery_250.db",null,3);}
         @Override public void onCreate(SQLiteDatabase db) {
             db.execSQL("CREATE TABLE records (day TEXT NOT NULL, module TEXT NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(day,module))");
             db.execSQL("CREATE TABLE inventory_usage (day TEXT PRIMARY KEY NOT NULL, flour_bags INTEGER NOT NULL DEFAULT 0)");
         }
         @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion) {
             if (oldVersion < 2) db.execSQL("CREATE TABLE IF NOT EXISTS inventory_usage (day TEXT PRIMARY KEY NOT NULL, flour_bags INTEGER NOT NULL DEFAULT 0)");
+            // Version 3 retains existing records; daily material consumption is stored in costing JSON.
         }
         JSONObject get(String date,String module) {
             SQLiteDatabase db=getReadableDatabase(); Cursor c=db.rawQuery("SELECT payload FROM records WHERE day=? AND module=?",new String[]{date,module});
@@ -1017,6 +1026,35 @@ public class MainActivity extends Activity {
                 db.setTransactionSuccessful();
             } finally { db.endTransaction(); }
         }
+        void saveCostingWithInventory(String date,JSONObject costing) throws Exception {
+            SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
+            try {
+                if(hasFutureStockAfter(date)) throw new IllegalStateException("لا يمكن تعديل استهلاك مواد يوم سابق بعد تسجيل مخزون لأيام لاحقة؛ راجع التسلسل الزمني أولًا.");
+                JSONObject stock=get(date,"stock");
+                if(stock.length()==0) throw new IllegalStateException("احفظ رصيد المخزن لهذا التاريخ أولًا قبل تسجيل استهلاك المواد.");
+                JSONObject old=get(date,"costing"); JSONObject oldApplied=old.optJSONObject("inventory_applied");
+                if(oldApplied==null) oldApplied=new JSONObject();
+                JSONObject requested=new JSONObject();
+                String[][] items={{"yeast_count","yeast"},{"bags_quantity","bags"},{"oil_quantity","oil"},{"salt_quantity","salt"},{"wood_quantity","wood"},{"gas_quantity","gas"},{"kerosene_quantity","kerosene"},{"fuel_quantity","fuel_other"}};
+                for(String[] item:items) {
+                    long prior=oldApplied.optLong(item[1],0L), next=parseLong(costing.optString(item[0],"0"));
+                    if(next<0) throw new IllegalArgumentException("كمية الاستهلاك لا يمكن أن تكون سالبة: "+item[1]);
+                    String raw=stock.optString(item[1],"");
+                    if(raw.trim().isEmpty() && (prior>0 || next>0)) throw new IllegalStateException("حدد رصيد الصنف «"+item[1]+"» في المخزن أولًا.");
+                    long current=raw.trim().isEmpty()?0L:parseLong(raw);
+                    long adjusted=Math.subtractExact(Math.addExact(current,prior),next);
+                    if(adjusted<0) throw new IllegalStateException("رصيد الصنف "+item[1]+" لا يكفي. المتاح بعد إعادة الاستهلاك السابق: "+Math.addExact(current,prior)+". المطلوب: "+next+".");
+                    stock.put(item[1],String.valueOf(adjusted)); requested.put(item[1],next);
+                }
+                ContentValues scv=new ContentValues(); scv.put("day",date); scv.put("module","stock"); scv.put("payload",stock.toString()); scv.put("updated_at",System.currentTimeMillis());
+                db.insertWithOnConflict("records",null,scv,SQLiteDatabase.CONFLICT_REPLACE);
+                costing.put("inventory_applied",requested);
+                ContentValues ccv=new ContentValues(); ccv.put("day",date); ccv.put("module","costing"); ccv.put("payload",costing.toString()); ccv.put("updated_at",System.currentTimeMillis());
+                db.insertWithOnConflict("records",null,ccv,SQLiteDatabase.CONFLICT_REPLACE);
+                db.setTransactionSuccessful();
+            } finally { db.endTransaction(); }
+        }
+
         long usageForDate(String date) {
             Cursor c=getReadableDatabase().rawQuery("SELECT flour_bags FROM inventory_usage WHERE day=?",new String[]{date});
             try { return c.moveToFirst()?c.getLong(0):0L; } finally { c.close(); }
@@ -1037,6 +1075,17 @@ public class MainActivity extends Activity {
                 long closing=Math.subtractExact(opening,usage);
                 if(closing<0) throw new IllegalStateException("رصيد الدقيق الافتتاحي أقل من شغل اليوم.");
                 stockInput.put("flour",String.valueOf(closing));
+                JSONObject costing=get(date,"costing"); JSONObject applied=costing.optJSONObject("inventory_applied");
+                if(applied!=null) {
+                    String[][] itemKeys={{"yeast","yeast"},{"bags","bags"},{"oil","oil"},{"salt","salt"},{"wood","wood"},{"gas","gas"},{"kerosene","kerosene"},{"fuel_other","fuel_other"}};
+                    for(String[] pair:itemKeys) {
+                        long consumed=applied.optLong(pair[1],0L); String rawQty=stockInput.optString(pair[0],"");
+                        if(rawQty.trim().isEmpty() && consumed>0) throw new IllegalStateException("حدد رصيد "+pair[0]+" قبل حفظ المخزن.");
+                        long openingQty=rawQty.trim().isEmpty()?0L:parseLong(rawQty), remaining=Math.subtractExact(openingQty,consumed);
+                        if(remaining<0) throw new IllegalStateException("رصيد "+pair[0]+" أقل من الاستهلاك اليومي.");
+                        stockInput.put(pair[0],String.valueOf(remaining));
+                    }
+                }
                 ContentValues cv=new ContentValues(); cv.put("day",date); cv.put("module","stock"); cv.put("payload",stockInput.toString()); cv.put("updated_at",System.currentTimeMillis());
                 db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
                 db.setTransactionSuccessful();
