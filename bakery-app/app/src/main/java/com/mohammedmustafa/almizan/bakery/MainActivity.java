@@ -483,7 +483,6 @@ public class MainActivity extends Activity {
             case "stock": return new Field[]{
                 f("flour","رصيد الدقيق قبل خصم شغل اليوم — الكمية بالجوال"),f("flour_unit_price","سعر جوال الدقيق الواحد (جنيه)"),
                 f("fuel_other","رصيد الوقود الآخر — الكمية"),f("fuel_other_unit_price","سعر وحدة الوقود الآخر (جنيه)"),
-                f("fuel_other","رصيد الوقود الآخر — الكمية"),f("fuel_other_unit_price","سعر وحدة الوقود الآخر (جنيه)"),
                 f("yeast","الخميرة — الكمية"),f("yeast_unit_price","سعر وحدة الخميرة الواحدة (جنيه)"),
                 f("bags","الأكياس — الكمية"),f("bags_unit_price","سعر الكيس الواحد (جنيه)"),
                 f("oil","الزيت — الكمية"),f("oil_unit_price","سعر وحدة الزيت (جنيه)"),
@@ -574,7 +573,9 @@ public class MainActivity extends Activity {
                 {"salt_unit_price","salt_unit_price"},
                 {"wood_unit_price","wood_unit_price"},
                 {"gas_unit_price","gas_unit_price"},
-                {"kerosene_unit_price","kerosene_unit_price"}
+                {"kerosene_unit_price","kerosene_unit_price"},
+                {"bags_unit_price","bags_unit_price"},
+                {"fuel_unit_price","fuel_other_unit_price"}
             };
             for (String[] pair : priceMap) {
                 if (saved.optString(pair[0], "").trim().isEmpty()) {
