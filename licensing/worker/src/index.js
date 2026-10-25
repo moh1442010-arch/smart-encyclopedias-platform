@@ -173,7 +173,8 @@ async function handle(request, env) {
       issued = await issueToken(env, order.device_id, order.plan);
     } catch (e) {
       const code = String(e && e.message || e);
-      return json({ error: code === "LICENSE_KEY_PAIR_MISMATCH" ? code : "LICENSE_SIGNING_NOT_CONFIGURED" }, 503);
+      const safeCode = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH"].includes(code) ? code : "LICENSE_SIGNING_NOT_CONFIGURED";
+      return json({ error: safeCode }, 503);
     }
     await env.DB.prepare("UPDATE license_orders SET status='approved',updated_at=?,reviewed_at=?,reviewer_note=?,activation_token=?,token_expires=? WHERE id=? AND status='pending'")
       .bind(now, now, note || "تمت مراجعة الدفع وإصدار الترخيص.", issued.token, issued.expires, orderId).run();
