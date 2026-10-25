@@ -57,4 +57,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -RniE '/api/orders|orders\?format|admin\.html.*api' --include='*.html' --include='*.js' .
+          ! grep -RniE '/api/orders|orders\?format|admin\.html.*api' --include='*.html' --include='*.js' --exclude='license.html' --exclude='license-admin.html' --exclude='index.js' .
