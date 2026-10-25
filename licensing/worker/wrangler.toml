@@ -1,0 +1,12 @@
+name = "al-mizan-bakery-licensing"
+main = "src/index.js"
+compatibility_date = "2026-10-25"
+
+[vars]
+APP_VERSION = "2.5.8"
+STORE_ORIGIN = "https://moh1442010-arch.github.io"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "al-mizan-bakery-licenses"
+database_id = "REPLACE_WITH_CREATED_D1_DATABASE_ID"
