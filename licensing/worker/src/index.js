@@ -163,8 +163,9 @@ async function handle(request, env) {
     const note = cleanText(body.note, 500);
     const now = new Date().toISOString();
     if (action === "reject") {
-      await env.DB.prepare("UPDATE license_orders SET status='rejected',updated_at=?,reviewed_at=?,reviewer_note=? WHERE id=? AND status='pending'")
+      const result = await env.DB.prepare("UPDATE license_orders SET status='rejected',updated_at=?,reviewed_at=?,reviewer_note=? WHERE id=? AND status='pending'")
         .bind(now, now, note || "لم يتم تأكيد الدفع.", orderId).run();
+      if (!result.meta || result.meta.changes !== 1) return json({ error: "ORDER_ALREADY_REVIEWED" }, 409);
       await audit(env, orderId, "order_rejected", "admin", note);
       return json({ orderId, status: "rejected" });
     }
@@ -176,8 +177,10 @@ async function handle(request, env) {
       const safeCode = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH"].includes(code) ? code : "LICENSE_SIGNING_NOT_CONFIGURED";
       return json({ error: safeCode }, 503);
     }
-    await env.DB.prepare("UPDATE license_orders SET status='approved',updated_at=?,reviewed_at=?,reviewer_note=?,activation_token=?,token_expires=? WHERE id=? AND status='pending'")
+    const result = await env.DB.prepare("UPDATE license_orders SET status='approved',updated_at=?,reviewed_at=?,reviewer_note=?,activation_token=?,token_expires=? WHERE id=? AND status='pending'")
       .bind(now, now, note || "تمت مراجعة الدفع وإصدار الترخيص.", issued.token, issued.expires, orderId).run();
+    // Concurrent admin requests must not issue multiple successful approvals for one order.
+    if (!result.meta || result.meta.changes !== 1) return json({ error: "ORDER_ALREADY_REVIEWED" }, 409);
     await audit(env, orderId, "license_issued", "admin", `plan=${order.plan};version=${issued.appVersion}`);
     return json({ orderId, status: "approved", activationToken: issued.token, expiresAt: issued.expires, appVersion: issued.appVersion });
   }
