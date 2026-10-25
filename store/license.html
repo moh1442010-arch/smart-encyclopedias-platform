@@ -21,7 +21,7 @@
 <p>الميزان المحاسبي للمخابز — طلب الترخيص، متابعة حالة الطلب، واستلام الرمز بعد التحقق من الدفع.</p>
 </div></header>
 <main class="wrap">
-<section class="card notice" id="serviceNotice"><strong>حالة الخدمة:</strong> بوابة التفعيل قيد الإعداد. لن يُقبل أي دفع عبر هذه الصفحة حتى يتم نشر خدمة الترخيص وربطها واختبارها. لا ترسل كلمات مرور بنكك أو رموز التحقق لأي شخص.</section>
+<section class="card notice" id="serviceNotice"><strong>حالة الخدمة:</strong> جارٍ التحقق من اتصال خدمة الترخيص. لا ترسل كلمات مرور بنكك أو رموز التحقق لأي شخص.</section>
 <section class="card">
 <h2>1. اختر الترخيص</h2>
 <div class="plans">
@@ -69,11 +69,7 @@
 </main>
 <footer>متجر المحاسب الميزان — لا يُعتبر الطلب معتمدًا إلا بعد تأكيد الدفع وإصدار الرمز.</footer>
 <script>
-/*
- * Set this to the deployed Cloudflare Worker origin after configuring D1,
- * ADMIN_API_KEY, and the matching RSA signing-key secrets.
- * Do not place an admin key or private key in this file.
- */
+/* Public API origin only. Never place ADMIN_API_KEY or private-key material in this page. */
 const API_BASE = "https://al-mizan-bakery-licensing.moh1442010.workers.dev";
 const configured = /^https:\/\/[a-z0-9.-]+\.workers\.dev$/i.test(API_BASE);
 const form = document.getElementById("orderForm");
@@ -82,9 +78,25 @@ const checkBtn = document.getElementById("checkBtn");
 const formResult = document.getElementById("formResult");
 const statusResult = document.getElementById("statusResult");
 const tokenArea = document.getElementById("tokenArea");
-submitBtn.disabled = !configured;
-checkBtn.disabled = !configured;
-if (configured) document.getElementById("serviceNotice").innerHTML = "<strong>تنبيه:</strong> لا يصدر الترخيص إلا بعد مراجعة التحويل الوارد فعليًا.";
+submitBtn.disabled = true;
+checkBtn.disabled = true;
+const serviceNotice = document.getElementById("serviceNotice");
+if (!configured) {
+  serviceNotice.textContent = "تعذر إعداد عنوان خدمة الترخيص. لا ترسل أي تحويل قبل التأكد من الخدمة.";
+} else {
+  serviceNotice.innerHTML = "<strong>حالة الخدمة:</strong> جارٍ التحقق من اتصال خدمة الترخيص. لا يصدر الترخيص إلا بعد مراجعة التحويل الوارد فعليًا.";
+  api("/health").then((health) => {
+    if (health.ok === true && health.service === "al-mizan-bakery-licensing") {
+      submitBtn.disabled = false;
+      checkBtn.disabled = false;
+      serviceNotice.innerHTML = "<strong>الخدمة متصلة.</strong> الطلبات تخضع لمراجعة الدفع يدويًا؛ فحص الاتصال لا يعني أن مفاتيح إصدار الرخصة جاهزة.";
+    } else {
+      serviceNotice.textContent = "خدمة الترخيص لا تؤكد جاهزيتها. حاول لاحقًا ولا تُجرِ أي تحويل اعتمادًا على هذه الصفحة.";
+    }
+  }).catch(() => {
+    serviceNotice.textContent = "تعذر الاتصال بخدمة الترخيص. أوقف إرسال الطلبات وحاول لاحقًا؛ لا تُجرِ أي تحويل اعتمادًا على هذه الصفحة.";
+  });
+}
 async function api(path, options={}) {
   const response = await fetch(API_BASE + path, { ...options, headers: { "content-type": "application/json", ...(options.headers || {}) }});
   const data = await response.json().catch(() => ({}));
