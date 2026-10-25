@@ -44,7 +44,7 @@ jobs:
           case "$PLAN" in monthly|annual|lifetime) ;; *) echo "::error::Unsupported plan."; exit 1;; esac
           printf '%s' "$PRIVATE_KEY_B64" | base64 --decode > license-private.pem
           openssl pkey -in license-private.pem -noout >/dev/null
-          EXPECTED_PUBLIC_KEY_DER_B64="$(sed -n 's/.*LICENSE_PUBLIC_KEY_B64 = "\\([^"]*\\)".*/\\1/p' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | head -1)"
+          EXPECTED_PUBLIC_KEY_DER_B64="$(sed -n 's/.*LICENSE_PUBLIC_KEY_B64 = "\([^"]*\)".*/\1/p' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | head -1)"
           ACTUAL_PUBLIC_KEY_DER_B64="$(openssl pkey -in license-private.pem -pubout -outform DER | base64 -w0)"
           test -n "$EXPECTED_PUBLIC_KEY_DER_B64" || { echo "::error::Could not read the app's public activation key."; exit 1; }
           test "$ACTUAL_PUBLIC_KEY_DER_B64" = "$EXPECTED_PUBLIC_KEY_DER_B64" || { echo "::error::Activation private key does not match the public key embedded in the app; no token was issued."; exit 1; }
