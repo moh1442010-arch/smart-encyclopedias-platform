@@ -532,7 +532,8 @@ public class MainActivity extends Activity {
                 t("notes","ملاحظات المخزن","")
             };
             case "cuts": return new Field[]{
-                f("work_units","عدد جوالات الدقيق المستخدمة في شغل اليوم"),f("loaves_per_unit","عدد الأرغفة الناتجة من جوال دقيق واحد"),
+                f("work_units","عدد جوالات الدقيق المستخدمة في شغل اليوم"),
+                t("production_rows","القطعيات — رقم الجوال | عدد الأرغفة المنتجة","1 | 700\n2 | 800\n3 | 650\nكل جوال في سطر مستقل"),
                 f("loaves_per_1000","عدد الأرغفة التي تساوي 1,000 جنيه")
             };
             case "workers": return new Field[]{
@@ -545,7 +546,7 @@ public class MainActivity extends Activity {
                 t("notes","ملاحظات بيع الشباك","")
             };
             case "distribution": return new Field[]{
-                t("rows","سجل التوزيع — سطر لكل عميل","العميل | الكمية | الكاش | الديون | التحويل البنكي | فرق السعر\nمثال: بقالة النيل | 200 | 50000 | 10000 | 0 | 0"),
+                t("rows","التوزيع — العميل | عدد الأرغفة | سعر التوزيع الإجمالي | فرق السعر","أحمد | 100 | 22000 | 3000\nبقالة النيل | 200 | 44000 | 0\nكل عميل في سطر مستقل"),
                 t("notes","ملاحظات التوزيع","")
             };
             case "expenses": return new Field[]{
@@ -555,12 +556,12 @@ public class MainActivity extends Activity {
             };
             case "spoilage": return new Field[]{f("loaves","عدد العيش التالف"),t("reason","سبب التلف / الملاحظات","")};
             case "costing": return new Field[]{
-                f("fuel_quantity","الوقود — الكمية المستخدمة"),f("fuel_unit_price","سعر وحدة الوقود (جنيه)"),
-                f("flour_bags","الدقيق — الجوالات المستخدمة (تُزامن تلقائيًا مع شغل اليوم)"),f("flour_bag_price","سعر جوال الدقيق الواحد (جنيه)"),
-                f("yeast_count","الخميرة — عدد القطع المستخدمة"),f("yeast_piece_price","سعر قطعة الخميرة (جنيه)"),
-                f("oil_quantity","الزيت — الكمية المستخدمة بالرطل"),f("oil_pound_price","سعر رطل الزيت (جنيه)"),
-                f("salt_quantity","الملح — الكمية المستخدمة"),f("salt_unit_price","سعر وحدة الملح (جنيه)"),
-                f("bags_total_price","جملة سعر الأكياس المستخدمة (جنيه)")
+                f("unit_flour","دقيق — تكلفة الجوال الواحد (جنيه)"),f("unit_yeast","خميرة — تكلفة الجوال الواحد (جنيه)"),
+                f("unit_oil","زيت — تكلفة الجوال الواحد (جنيه)"),f("unit_bags","أكياس — تكلفة الجوال الواحد (جنيه)"),
+                f("unit_salt","ملح — تكلفة الجوال الواحد (جنيه)"),f("unit_wood","حطب — تكلفة الجوال الواحد (جنيه)"),
+                f("unit_gas","غاز — تكلفة الجوال الواحد (جنيه)"),f("unit_diesel","جاز — تكلفة الجوال الواحد (جنيه)"),
+                f("unit_other1","تكلفة أخرى 1 لكل جوال (جنيه)"),f("unit_other2","تكلفة أخرى 2 لكل جوال (جنيه)"),
+                f("unit_other3","تكلفة أخرى 3 لكل جوال (جنيه)")
             };
             default: return new Field[0];
         }
@@ -704,7 +705,22 @@ public class MainActivity extends Activity {
         catch (Exception ignored) { return 0L; }
     }
 
-    private long productionLoaves() { return BakeryMath.productionLoaves(val("cuts","work_units"),val("cuts","loaves_per_unit")); }
+    private long productionLoaves() {
+        String rows=record("cuts").optString("production_rows","").trim();
+        if(!rows.isEmpty()) {
+            long total=0L;
+            for(String line:rows.split("\\r?\\n")) {
+                if(line.trim().isEmpty()) continue;
+                String[] p=line.split("\\|",-1);
+                if(p.length<2) throw new IllegalArgumentException("اكتب رقم الجوال | عدد الأرغفة");
+                long number=parseLong(p[0].trim()), loaves=parseLong(p[1].trim());
+                if(number<1 || loaves<0) throw new IllegalArgumentException("راجع رقم الجوال وعدد الأرغفة");
+                total=Math.addExact(total,loaves);
+            }
+            return total;
+        }
+        return BakeryMath.productionLoaves(val("cuts","work_units"),val("cuts","loaves_per_unit"));
+    }
     private long valueForLoaves(long loaves) {
         long perThousand=val("cuts","loaves_per_1000");
         if(perThousand<=0) return 0;
@@ -717,13 +733,18 @@ public class MainActivity extends Activity {
     private Totals distribution() { return rowTotals("distribution","rows",6); }
     private long productionValue() { return valueForLoaves(productionLoaves()); }
     private long costingTotal() {
-        return BakeryMath.operatingCost(
-            val("costing","fuel_quantity"),val("costing","fuel_unit_price"),
-            val("cuts","work_units"),val("costing","flour_bag_price"),
-            val("costing","yeast_count"),val("costing","yeast_piece_price"),
-            val("costing","oil_quantity"),val("costing","oil_pound_price"),
-            val("costing","salt_quantity"),val("costing","salt_unit_price"),
-            val("costing","bags_total_price"));
+        long sacks=val("cuts","work_units"), perSack=0L;
+        String[] keys={"unit_flour","unit_yeast","unit_oil","unit_bags","unit_salt","unit_wood","unit_gas","unit_diesel","unit_other1","unit_other2","unit_other3"};
+        boolean hasNewCost=false;
+        for(String key:keys) {
+            if(!record("costing").optString(key,"").trim().isEmpty()) hasNewCost=true;
+            perSack=Math.addExact(perSack,val("costing",key));
+        }
+        if(hasNewCost) return Math.multiplyExact(perSack,sacks);
+        return BakeryMath.operatingCost(val("costing","fuel_quantity"),val("costing","fuel_unit_price"),sacks,
+            val("costing","flour_bag_price"),val("costing","yeast_count"),val("costing","yeast_piece_price"),
+            val("costing","oil_quantity"),val("costing","oil_pound_price"),val("costing","salt_quantity"),
+            val("costing","salt_unit_price"),val("costing","bags_total_price"));
     }
 
     private void showCosting() {
