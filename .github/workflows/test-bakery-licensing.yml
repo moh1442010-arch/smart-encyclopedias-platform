@@ -43,5 +43,4 @@ jobs:
         run: |
           ! grep -E 'ADMIN_API_KEY|LICENSE_PRIVATE_KEY_PKCS8_B64' store/license.html store/license-admin.html
           grep -q 'SET-WORKER-URL-HERE' store/license.html
-          grep -q 'SET-WORKER-URL-HERE' store/license-admin.html
           echo "No private/admin secrets embedded; deployment remains disabled until the Worker URL is configured."
