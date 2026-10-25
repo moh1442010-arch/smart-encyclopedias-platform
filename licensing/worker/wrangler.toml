@@ -9,4 +9,4 @@ STORE_ORIGIN = "https://moh1442010-arch.github.io"
 [[d1_databases]]
 binding = "DB"
 database_name = "al-mizan-bakery-licenses"
-database_id = "REPLACE_WITH_CREATED_D1_DATABASE_ID"
+database_id = "690347da-5de8-41de-b9c0-b2421db66f57"
