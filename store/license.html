@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="بوابة طلب ترخيص وتفعيل الميزان المحاسبي للمخابز. إرسال طلب شراء ومتابعة مراجعة الدفع واستلام رمز التفعيل بعد اعتماد الطلب.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://moh1442010-arch.github.io/smart-encyclopedias-platform/store/license.html">
+<meta name="theme-color" content="#0b1f3a">
+<title>الترخيص والتفعيل | الميزان المحاسبي للمخابز</title>
+<style>
+:root{--n:#0b1f3a;--b:#173b63;--g:#d4af37;--ink:#172438;--muted:#627084;--line:#dce4ee;--bg:#f4f7fb;--white:#fff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;line-height:1.85}
+.wrap{width:min(850px,calc(100% - 26px));margin:auto}header{background:linear-gradient(135deg,var(--n),var(--b));color:white;padding:24px 0;border-bottom:5px solid var(--g)}h1{margin:0;font-size:clamp(26px,5vw,38px)}header p{color:#e5edf6}nav{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px}nav a{color:#fff}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;margin:16px 0}h2{color:var(--n);margin:0 0 10px;font-size:22px}.notice{background:#fff8df;border:1px solid #ead68b;border-right:5px solid var(--g);padding:13px 15px;border-radius:12px}.field{margin:12px 0}label{display:block;font-weight:750;margin-bottom:4px}input,select{width:100%;font:inherit;padding:11px 12px;border:1px solid #bcc9d9;border-radius:10px;background:#fff;color:var(--ink)}button,.button{font:inherit;display:inline-block;border:0;border-radius:10px;padding:11px 16px;background:var(--g);color:var(--n);font-weight:850;cursor:pointer;margin:4px 0;text-decoration:none}button:disabled{opacity:.5;cursor:not-allowed}.muted{color:var(--muted);font-size:14px}.result{white-space:pre-wrap;overflow-wrap:anywhere;background:#f0f4fa;border:1px solid var(--line);padding:12px;border-radius:10px}.hidden{display:none}.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.plan{border:1px solid var(--line);padding:12px;border-radius:12px}.price{font-size:20px;font-weight:900;color:var(--n)}footer{text-align:center;padding:20px;color:var(--muted);font-size:13px}@media(max-width:600px){.plans{grid-template-columns:1fr}.card{padding:15px}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<nav><a href="./bakery.html">صفحة المنتج والأسعار</a><a href="../downloads/">التنزيلات</a><a href="../bakery-guide/">الدليل الإرشادي</a></nav>
+<h1>🔐 بوابة الترخيص والتفعيل</h1>
+<p>الميزان المحاسبي للمخابز — طلب الترخيص، متابعة حالة الطلب، واستلام الرمز بعد التحقق من الدفع.</p>
+</div></header>
+<main class="wrap">
+<section class="card notice" id="serviceNotice"><strong>حالة الخدمة:</strong> بوابة التفعيل قيد الإعداد. لن يُقبل أي دفع عبر هذه الصفحة حتى يتم نشر خدمة الترخيص وربطها واختبارها. لا ترسل كلمات مرور بنكك أو رموز التحقق لأي شخص.</section>
+<section class="card">
+<h2>1. اختر الترخيص</h2>
+<div class="plans">
+<div class="plan"><strong>شهري</strong><div class="price">30,000 ج.س</div><div class="muted">30 يومًا</div></div>
+<div class="plan"><strong>سنوي</strong><div class="price">300,000 ج.س</div><div class="muted">365 يومًا</div></div>
+<div class="plan"><strong>دائم لهذا الإصدار</strong><div class="price">450,000 ج.س</div><div class="muted">لا يشمل تحديثات الإصدارات المستقبلية</div></div>
+</div>
+</section>
+<section class="card">
+<h2>2. إنشاء طلب ترخيص</h2>
+<p>انسخ معرّف الجهاز من داخل التطبيق: الاشتراك والأسعار والتفعيل ← «نسخ معرّف الجهاز». أرسل مرجع عملية بنكك فقط بعد التحويل. الطلب يبقى «قيد المراجعة» حتى يتحقق المسؤول من وصول المال فعليًا.</p>
+<form id="orderForm">
+<div class="field"><label for="customerName">الاسم أو اسم المخبز</label><input id="customerName" maxlength="100" required autocomplete="name"></div>
+<div class="field"><label for="contact">رقم التواصل (واتساب)</label><input id="contact" maxlength="80" required autocomplete="tel"></div>
+<div class="field"><label for="deviceId">معرّف الجهاز من التطبيق</label><input id="deviceId" maxlength="100" required autocapitalize="off" autocomplete="off"></div>
+<div class="field"><label for="plan">الباقة</label><select id="plan" required><option value="monthly">شهري — 30,000 ج.س</option><option value="annual">سنوي — 300,000 ج.س</option><option value="lifetime">دائم لهذا الإصدار — 450,000 ج.س</option></select></div>
+<div class="field"><label for="receiptReference">مرجع عملية التحويل</label><input id="receiptReference" maxlength="100" required placeholder="رقم العملية كما يظهر في بنكك"></div>
+<p class="muted">لا ترفع هنا صورة إيصال أو مستند هوية. سيطلب منك الدعم معلومات إضافية فقط عند الحاجة. لا يتم إصدار رمز التفعيل اعتمادًا على رقم المرجع وحده.</p>
+<button id="submitBtn" type="submit" disabled>إرسال طلب الترخيص</button>
+<div id="formResult" class="result hidden" role="status" aria-live="polite"></div>
+</form>
+</section>
+<section class="card">
+<h2>3. متابعة الطلب واستلام الرمز</h2>
+<div class="field"><label for="orderId">رقم الطلب</label><input id="orderId" placeholder="ألصق رقم الطلب الذي ظهر بعد الإرسال"></div>
+<button id="checkBtn" type="button" disabled>فحص حالة الطلب</button>
+<div id="statusResult" class="result hidden" role="status" aria-live="polite"></div>
+<div id="tokenArea" class="hidden">
+<label for="activationToken">رمز التفعيل — لا تشاركه مع غير صاحب الترخيص</label>
+<input id="activationToken" readonly>
+<button id="copyTokenBtn" type="button">نسخ رمز التفعيل</button>
+<p class="muted">بعد النسخ، افتح التطبيق ← الاشتراك والأسعار والتفعيل ← «أدخل رمز التفعيل»، ثم الصق الرمز. هذه الخطوة اليدوية مطلوبة في إصدار التطبيق الحالي.</p>
+</div>
+</section>
+<section class="card">
+<h2>كيف تتم المراجعة؟</h2>
+<ol>
+<li>يسجل المتجر الطلب ولا يعتبره مدفوعًا تلقائيًا.</li>
+<li>يراجع المسؤول التحويل الوارد في بنكك.</li>
+<li>بعد الاعتماد، يصدر النظام رمزًا موقّعًا مرتبطًا بمعرّف الجهاز والباقة.</li>
+<li>يتحقق التطبيق من التوقيع وتطابق الجهاز ومدة الصلاحية.</li>
+</ol>
+<p class="muted">الترخيص الشهري والسنوي صالحان دون اتصال بعد التفعيل وفق سياسة التطبيق، مع مراعاة صلاحية الاشتراك. يجب اختبار تغيير الهاتف وإعادة التثبيت قبل البيع العام.</p>
+</section>
+</main>
+<footer>متجر المحاسب الميزان — لا يُعتبر الطلب معتمدًا إلا بعد تأكيد الدفع وإصدار الرمز.</footer>
+<script>
+/*
+ * Set this to the deployed Cloudflare Worker origin after configuring D1,
+ * ADMIN_API_KEY, and the matching RSA signing-key secrets.
+ * Do not place an admin key or private key in this file.
+ */
+const API_BASE = "https://SET-WORKER-URL-HERE";
+const configured = /^https:\/\/[a-z0-9.-]+(?:\.workers\.dev|\.example\.com)$/i.test(API_BASE) && !API_BASE.includes("SET-WORKER");
+const form = document.getElementById("orderForm");
+const submitBtn = document.getElementById("submitBtn");
+const checkBtn = document.getElementById("checkBtn");
+const formResult = document.getElementById("formResult");
+const statusResult = document.getElementById("statusResult");
+const tokenArea = document.getElementById("tokenArea");
+submitBtn.disabled = !configured;
+checkBtn.disabled = !configured;
+if (configured) document.getElementById("serviceNotice").innerHTML = "<strong>تنبيه:</strong> لا يصدر الترخيص إلا بعد مراجعة التحويل الوارد فعليًا.";
+async function api(path, options={}) {
+  const response = await fetch(API_BASE + path, { ...options, headers: { "content-type": "application/json", ...(options.headers || {}) }});
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "تعذر الاتصال بخدمة الترخيص.");
+  return data;
+}
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!configured) return;
+  submitBtn.disabled = true;
+  formResult.classList.remove("hidden");
+  formResult.textContent = "جارٍ إرسال الطلب…";
+  try {
+    const data = await api("/api/orders", { method: "POST", body: JSON.stringify({
+      customerName: document.getElementById("customerName").value.trim(),
+      contact: document.getElementById("contact").value.trim(),
+      deviceId: document.getElementById("deviceId").value.trim(),
+      plan: document.getElementById("plan").value,
+      receiptReference: document.getElementById("receiptReference").value.trim()
+    })});
+    document.getElementById("orderId").value = data.orderId;
+    formResult.textContent = "تم تسجيل الطلب بنجاح. رقم الطلب: " + data.orderId + "\nالمبلغ: " + data.amountSdg.toLocaleString("en-US") + " ج.س\nالحالة: قيد المراجعة. احتفظ برقم الطلب لمتابعته.";
+  } catch (error) {
+    formResult.textContent = "لم يُرسل الطلب: " + error.message;
+  } finally { submitBtn.disabled = false; }
+});
+checkBtn.addEventListener("click", async () => {
+  const id = document.getElementById("orderId").value.trim();
+  if (!id) { statusResult.classList.remove("hidden"); statusResult.textContent = "أدخل رقم الطلب أولًا."; return; }
+  checkBtn.disabled = true;
+  statusResult.classList.remove("hidden");
+  statusResult.textContent = "جارٍ فحص حالة الطلب…";
+  tokenArea.classList.add("hidden");
+  try {
+    const data = await api("/api/orders/" + encodeURIComponent(id));
+    const names = {pending:"قيد مراجعة الدفع",approved:"تم اعتماد الترخيص",rejected:"لم تتم الموافقة على الطلب"};
+    statusResult.textContent = "رقم الطلب: " + data.orderId + "\nالحالة: " + (names[data.status] || data.status) + (data.note ? "\nملاحظة: " + data.note : "") + (data.appVersion ? "\nالإصدار: " + data.appVersion : "");
+    if (data.status === "approved" && data.activationToken) {
+      document.getElementById("activationToken").value = data.activationToken;
+      tokenArea.classList.remove("hidden");
+    }
+  } catch (error) { statusResult.textContent = "تعذر فحص الطلب: " + error.message; }
+  finally { checkBtn.disabled = false; }
+});
+document.getElementById("copyTokenBtn").addEventListener("click", async () => {
+  const field = document.getElementById("activationToken");
+  try { await navigator.clipboard.writeText(field.value); alert("تم نسخ رمز التفعيل. ألصقه داخل التطبيق."); }
+  catch { field.select(); field.setSelectionRange(0, field.value.length); alert("حدد الرمز ثم اختر نسخ."); }
+});
+</script>
+</body>
+</html>
