@@ -1025,13 +1025,17 @@ public class MainActivity extends Activity {
     private void toast(String s) { Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
 
     private class Store extends SQLiteOpenHelper {
-        Store(){super(MainActivity.this,"almizan_bakery_250.db",null,2);}
+        Store(){super(MainActivity.this,"almizan_bakery_250.db",null,3);}
         @Override public void onCreate(SQLiteDatabase db) {
             db.execSQL("CREATE TABLE records (day TEXT NOT NULL, module TEXT NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(day,module))");
             db.execSQL("CREATE TABLE inventory_usage (day TEXT PRIMARY KEY NOT NULL, flour_bags INTEGER NOT NULL DEFAULT 0)");
         }
         @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion) {
-            if (oldVersion < 2) db.execSQL("CREATE TABLE IF NOT EXISTS inventory_usage (day TEXT PRIMARY KEY NOT NULL, flour_bags INTEGER NOT NULL DEFAULT 0)");
+            // Schema v3 keeps the existing records table intact and ensures the stock-usage ledger exists.
+            // Never drop or recreate user accounting data during an upgrade.
+            if (oldVersion < 3) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS inventory_usage (day TEXT PRIMARY KEY NOT NULL, flour_bags INTEGER NOT NULL DEFAULT 0)");
+            }
         }
         JSONObject get(String date,String module) {
             SQLiteDatabase db=getReadableDatabase(); Cursor c=db.rawQuery("SELECT payload FROM records WHERE day=? AND module=?",new String[]{date,module});
