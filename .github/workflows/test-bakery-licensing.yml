@@ -1,0 +1,47 @@
+name: Validate bakery licensing portal
+on:
+  push:
+    paths:
+      - "licensing/**"
+      - "store/license.html"
+      - "store/license-admin.html"
+      - ".github/workflows/test-bakery-licensing.yml"
+  pull_request:
+    paths:
+      - "licensing/**"
+      - "store/license.html"
+      - "store/license-admin.html"
+      - ".github/workflows/test-bakery-licensing.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check Worker JavaScript syntax
+        run: node --check licensing/worker/src/index.js
+      - name: Validate SQL schema
+        run: |
+          python3 - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          sql = Path("licensing/schema.sql").read_text(encoding="utf-8")
+          db = sqlite3.connect(":memory:")
+          db.executescript(sql)
+          tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+          assert {"license_orders", "license_audit"}.issubset(tables), tables
+          print("D1 schema SQL parsed successfully.")
+          PY
+      - name: Ensure storefront has no embedded admin or private key
+        run: |
+          ! grep -E 'ADMIN_API_KEY|LICENSE_PRIVATE_KEY_PKCS8_B64' store/license.html store/license-admin.html
+          grep -q 'SET-WORKER-URL-HERE' store/license.html
+          grep -q 'SET-WORKER-URL-HERE' store/license-admin.html
+          echo "No private/admin secrets embedded; deployment remains disabled until the Worker URL is configured."
