@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0b1f3a">
+<title>إدارة تراخيص المخابز | المحاسب الميزان</title>
+<style>
+:root{--n:#0b1f3a;--g:#d4af37;--ink:#172438;--muted:#627084;--line:#dce4ee;--bg:#f4f7fb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;line-height:1.7}.wrap{width:min(1100px,calc(100% - 24px));margin:auto}header{background:var(--n);color:#fff;padding:22px 0;border-bottom:5px solid var(--g)}h1{margin:0}main{padding:20px 0}.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0}label{display:block;font-weight:800;margin:8px 0 4px}input{width:100%;font:inherit;padding:10px;border:1px solid #bdc9d8;border-radius:9px}button{font:inherit;border:0;border-radius:9px;background:var(--g);color:var(--n);font-weight:850;padding:9px 13px;margin:4px;cursor:pointer}button.danger{background:#fbe4e4;color:#8a1f1f}button:disabled{opacity:.5}.muted{color:var(--muted);font-size:13px}.result{white-space:pre-wrap;overflow-wrap:anywhere;background:#f0f4fa;padding:10px;border-radius:9px}.order{border:1px solid var(--line);border-radius:12px;padding:13px;margin:10px 0}.order h3{margin:0;color:var(--n)}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row button{flex:0 0 auto}.hidden{display:none}
+</style></head>
+<body><header><div class="wrap"><h1>🔐 إدارة تراخيص الميزان للمخابز</h1><div>مراجعة طلبات بنكك وإصدار رموز التفعيل بعد التحقق اليدوي فقط.</div></div></header>
+<main class="wrap">
+<section class="card">
+<h2>اتصال الإدارة</h2>
+<p class="muted">أدخل مفتاح الإدارة الذي تم ضبطه سرًا على Cloudflare Worker. لا تشارك المفتاح ولا تحفظه على جهاز عام. هذه الصفحة لا تحتوي على المفتاح ولا تخزنه.</p>
+<label for="apiBase">رابط خدمة الترخيص (Worker URL)</label><input id="apiBase" placeholder="https://اسم-الخدمة.اسمك.workers.dev">
+<label for="adminKey">مفتاح الإدارة</label><input id="adminKey" type="password" autocomplete="current-password">
+<div class="row"><button id="loadBtn">تحميل الطلبات المعلقة</button><button id="approvedBtn">عرض التراخيص المعتمدة</button></div>
+<div id="globalResult" class="result hidden" role="status" aria-live="polite"></div>
+</section>
+<section class="card"><h2 id="listTitle">الطلبات</h2><div id="orders"><p class="muted">اتصل بالخدمة لعرض الطلبات.</p></div></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+function apiBase(){return $("apiBase").value.trim().replace(/\/$/,"");}
+function auth(){return $("adminKey").value.trim();}
+async function call(path,options={}){
+ const base=apiBase(), key=auth();
+ if(!/^https:\/\//i.test(base)) throw new Error("أدخل رابط Worker صحيحًا.");
+ if(!key) throw new Error("أدخل مفتاح الإدارة.");
+ const r=await fetch(base+path,{...options,headers:{"content-type":"application/json","authorization":"Bearer "+key,...(options.headers||{})}});
+ const data=await r.json().catch(()=>({}));
+ if(!r.ok) throw new Error(data.error||("HTTP "+r.status));
+ return data;
+}
+function showMessage(message){$("globalResult").classList.remove("hidden");$("globalResult").textContent=message;}
+async function load(status="pending"){
+ $("orders").textContent="جارٍ التحميل…";
+ $("listTitle").textContent=status==="pending"?"الطلبات المعلقة": "التراخيص المعتمدة";
+ try{
+  const data=await call("/admin/orders?status="+status);
+  const host=$("orders");host.replaceChildren();
+  if(!data.orders||!data.orders.length){host.textContent="لا توجد طلبات في هذه الحالة.";return;}
+  for(const o of data.orders){
+   const card=document.createElement("article");card.className="order";
+   const h=document.createElement("h3");h.textContent=o.customer_name+" — "+o.plan;card.append(h);
+   const details=document.createElement("p");
+   details.textContent="رقم الطلب: "+o.id+"\nالتواصل: "+o.contact+"\nمعرّف الجهاز: "+o.device_id+"\nالمبلغ: "+Number(o.amount_sdg).toLocaleString("en-US")+" ج.س\nمرجع بنكك: "+o.receipt_reference+"\nالإصدار المسجل: "+o.app_version+"\nتاريخ الطلب: "+o.created_at;
+   card.append(details);
+   if(status==="pending"){
+    const note=document.createElement("input");note.placeholder="ملاحظة للمراجعة (اختياري)";note.maxLength=500;card.append(note);
+    const row=document.createElement("div");row.className="row";
+    const approve=document.createElement("button");approve.textContent="اعتماد وإصدار الرمز";
+    approve.addEventListener("click",async()=>{
+     if(!confirm("تأكدت بنفسك من وصول مبلغ "+Number(o.amount_sdg).toLocaleString("en-US")+" ج.س إلى الحساب؟ لن تعتمد الطلب إلا بعد التحقق الفعلي."))return;
+     approve.disabled=true;
+     try{
+      const result=await call("/admin/orders/"+encodeURIComponent(o.id)+"/approve",{method:"POST",body:JSON.stringify({note:note.value.trim()})});
+      showMessage("صدر الترخيص بنجاح. أرسل رقم الطلب للعميل ليحصل على الرمز من بوابة التفعيل.\nرقم الطلب: "+result.orderId+"\nالإصدار: "+result.appVersion+"\nانتهاء الصلاحية (Unix): "+result.expiresAt+"\n\nمهم: لم يتم إرسال الرمز تلقائيًا عبر واتساب.");
+      await load("pending");
+     }catch(e){showMessage("فشل الإصدار: "+e.message);approve.disabled=false;}
+    });
+    const reject=document.createElement("button");reject.textContent="رفض الطلب";reject.className="danger";
+    reject.addEventListener("click",async()=>{
+     if(!confirm("رفض الطلب؟ تأكد من سبب الرفض قبل المتابعة."))return;
+     reject.disabled=true;
+     try{await call("/admin/orders/"+encodeURIComponent(o.id)+"/reject",{method:"POST",body:JSON.stringify({note:note.value.trim()})});showMessage("تم تسجيل رفض الطلب.");await load("pending");}
+     catch(e){showMessage("تعذر رفض الطلب: "+e.message);reject.disabled=false;}
+    });
+    row.append(approve,reject);card.append(row);
+   }
+   host.append(card);
+  }
+ }catch(e){$("orders").textContent="تعذر تحميل الطلبات.";showMessage(e.message);}
+}
+$("loadBtn").addEventListener("click",()=>load("pending"));
+$("approvedBtn").addEventListener("click",()=>load("approved"));
+</script></body></html>
