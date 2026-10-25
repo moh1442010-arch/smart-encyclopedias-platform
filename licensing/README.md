@@ -33,9 +33,9 @@ The app requires:
    - `ADMIN_API_KEY`: long random admin-only secret.
    - `LICENSE_PRIVATE_KEY_PKCS8_B64`: base64 PKCS#8 DER private key that matches the public key embedded in the released APK.
    - `LICENSE_PUBLIC_KEY_DER_B64`: base64 DER SubjectPublicKeyInfo for the same key.
-5. Never put private key material in GitHub files, public HTML, client JavaScript, or chat. If the matching private key cannot be recovered securely, rotate the app key pair in a controlled new app release; do not generate unrelated tokens.
-6. Set `STORE_ORIGIN` to the exact Pages origin, deploy the Worker, and set its URL in `store/license.html`.
-7. Run the acceptance checklist below with a low-value test transaction before public sales.
+5. The protected browser admin console is `https://moh1442010-arch.github.io/smart-encyclopedias-platform/store/license-admin.html`; it is only a UI and is protected by the Worker admin key, not by its URL.\n6. Never put private key material in GitHub files, public HTML, client JavaScript, or chat. If the matching private key cannot be recovered securely, rotate the app key pair in a controlled new app release; do not generate unrelated tokens.
+7. Set `STORE_ORIGIN` to the exact Pages origin, deploy the Worker, and replace the placeholder Worker URL in both `store/license.html` and `store/license-admin.html`.
+8. Run the acceptance checklist below with a low-value test transaction before public sales.
 
 ## API
 
