@@ -74,8 +74,8 @@
  * ADMIN_API_KEY, and the matching RSA signing-key secrets.
  * Do not place an admin key or private key in this file.
  */
-const API_BASE = "https://SET-WORKER-URL-HERE";
-const configured = /^https:\/\/[a-z0-9.-]+(?:\.workers\.dev|\.example\.com)$/i.test(API_BASE) && !API_BASE.includes("SET-WORKER");
+const API_BASE = "https://al-mizan-bakery-licensing.moh1442010.workers.dev";
+const configured = /^https:\/\/[a-z0-9.-]+\.workers\.dev$/i.test(API_BASE);
 const form = document.getElementById("orderForm");
 const submitBtn = document.getElementById("submitBtn");
 const checkBtn = document.getElementById("checkBtn");
