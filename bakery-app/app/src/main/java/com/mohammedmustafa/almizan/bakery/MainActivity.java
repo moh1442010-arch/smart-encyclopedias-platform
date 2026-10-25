@@ -686,10 +686,19 @@ public class MainActivity extends Activity {
                     if(count<0||rate<0) throw new IllegalArgumentException();
                     out.amount=Math.addExact(out.amount,Math.multiplyExact(count,rate));
                 } else if(module.equals("distribution")) {
-                    long qty=parseLong(p[1]), cash=parseLong(p[2]), debt=parseLong(p[3]), bank=parseLong(p[4]), diff=parseLong(p[5]);
-                    if(qty<0||cash<0||debt<0||bank<0) throw new IllegalArgumentException();
-                    out.qty=Math.addExact(out.qty,qty); out.cash=Math.addExact(out.cash,cash);
-                    out.debt=Math.addExact(out.debt,debt); out.bank=Math.addExact(out.bank,bank); out.diff=Math.addExact(out.diff,diff);
+                    long qty=parseLong(p[1]);
+                    if(qty<0) throw new IllegalArgumentException();
+                    if(p.length>=6) {
+                        long cash=parseLong(p[2]), debt=parseLong(p[3]), bank=parseLong(p[4]), diff=parseLong(p[5]);
+                        if(cash<0||debt<0||bank<0) throw new IllegalArgumentException();
+                        out.cash=Math.addExact(out.cash,cash); out.debt=Math.addExact(out.debt,debt);
+                        out.bank=Math.addExact(out.bank,bank); out.diff=Math.addExact(out.diff,diff);
+                    } else {
+                        long price=parseLong(p[2]), diff=parseLong(p[3]);
+                        if(price<0||diff<0) throw new IllegalArgumentException();
+                        out.cash=Math.addExact(out.cash,price); out.diff=Math.addExact(out.diff,diff);
+                    }
+                    out.qty=Math.addExact(out.qty,qty);
                 } else {
                     long amount=parseLong(p[1]); if(amount<0) throw new IllegalArgumentException();
                     out.amount=Math.addExact(out.amount,amount);
@@ -730,7 +739,7 @@ public class MainActivity extends Activity {
     private long otherExpenses() { return rowTotals("expenses","rows",2).amount; }
     private long expenseTotal() { return Math.addExact(Math.addExact(val("expenses","meals"),val("expenses","maintenance")),Math.addExact(val("expenses","purchases"),otherExpenses())); }
     private long spoilageValue() { return valueForLoaves(val("spoilage","loaves")); }
-    private Totals distribution() { return rowTotals("distribution","rows",6); }
+    private Totals distribution() { return rowTotals("distribution","rows",4); }
     private long productionValue() { return valueForLoaves(productionLoaves()); }
     private long costingTotal() {
         long sacks=val("cuts","work_units"), perSack=0L;
