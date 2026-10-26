@@ -836,8 +836,28 @@ public class MainActivity extends Activity {
             .longValueExact();
     }
 
+    private long stockUnitPriceTotal() {
+        JSONObject stock=store.get(day,"stock");
+        if(stock.length()==0) stock=store.getLatest(day,"stock");
+        String rows=stock.optString("items_rows","").trim();
+        if(rows.isEmpty()) return 0L;
+        long total=0L;
+        for(String line:rows.split("\\r?\\n")) {
+            if(line.trim().isEmpty()) continue;
+            String[] p=line.split("\\|",-1);
+            if(p.length<3) throw new IllegalArgumentException("راجع جدول المخزن: الصنف | الكمية والوحدة | سعر الوحدة");
+            long price=parseLong(p[2].trim());
+            if(price<0) throw new IllegalArgumentException("سعر الوحدة لا يمكن أن يكون سالبًا");
+            total=Math.addExact(total,price);
+        }
+        return total;
+    }
+
     private long costingTotal() {
-        long sacks=val("cuts","work_units"), perSack=0L;
+        long sacks=val("cuts","work_units");
+        long stockUnitPrices=stockUnitPriceTotal();
+        if(stockUnitPrices>0) return Math.multiplyExact(stockUnitPrices,sacks);
+        long perSack=0L;
         String[] keys={"unit_flour","unit_yeast","unit_oil","unit_bags","unit_salt","unit_wood","unit_gas","unit_diesel","unit_other1","unit_other2","unit_other3"};
         boolean hasNewCost=false;
         for(String key:keys) {
