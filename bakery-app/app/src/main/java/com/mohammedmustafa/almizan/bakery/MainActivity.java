@@ -635,10 +635,12 @@ public class MainActivity extends Activity {
             String raw=saved.optString("items_rows","").trim();
             if(raw.isEmpty()) raw=legacyStockRows(saved);
             long flourQty=stockFlourQuantity(saved);
-            long applied=current.length()>0?store.usageForDate(day):0L;
-            if(applied>0) flourQty=Math.addExact(flourQty,applied);
             raw=setStockFlourQuantity(raw,flourQty);
-            if(current.length()>0) raw=store.adjustMaterialRows(raw,store.readMaterialUsage(day),true);
+            if(current.length()>0) {
+                JSONObject applied=store.readMaterialUsage(day);
+                if(applied.length()==0 && store.usageForDate(day)>0) applied.put("دقيق",store.usageForDate(day));
+                raw=store.adjustMaterialRows(raw,applied,true);
+            }
             saved.put("items_rows",raw);
         } catch(Exception ex) { toast("تعذر تجهيز المخزون للتحرير؛ لم تُمسح أي بيانات."); return; }
 
