@@ -69,8 +69,15 @@ public class BakeryMathTest {
     @Test(expected=IllegalArgumentException.class) public void rejectsNegativeStockMovementInputs() {
         BakeryMath.stockAfterUsage(10,-1,7);
     }
-    @Test public void netMarginSubtractsSpoilageWagesExpensesAndOperatingCost() {
+    @Test public void netMarginSubtractsSpoilageWagesExpensesOperatingCostAndPriceDifference() {
+        assertEquals(37000L, BakeryMath.netMargin(200000,10000,30000,20000,100000,3000));
         assertEquals(40000L, BakeryMath.netMargin(200000,10000,30000,20000,100000));
+    }
+    @Test public void operatingCostUsesEnteredPerWorkUnitRatesTimesDailyWork() {
+        assertEquals(180000L, BakeryMath.operatingCostPerWorkUnit(10, 6000, 5000, 7000));
+    }
+    @Test(expected=IllegalArgumentException.class) public void rejectsNegativePerWorkUnitCost() {
+        BakeryMath.operatingCostPerWorkUnit(10, 500, -1);
     }
     @Test(expected=IllegalArgumentException.class) public void netMarginRejectsNegativeInputs() {
         BakeryMath.netMargin(100000,-1,0,0,0);
