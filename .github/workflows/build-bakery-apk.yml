@@ -104,6 +104,17 @@ jobs:
           sha256sum release/AlMizan-Bakery-2.6.1-review.apk > release/SHA256SUMS.txt
           rm -f release/AlMizan-Bakery-2.6.1-aligned.apk signing/release.jks
 
+      - name: Upload signed review APK and verification records
+        uses: actions/upload-artifact@v4
+        with:
+          name: al-mizan-bakery-2.6.1-signed-review
+          path: |
+            bakery-app/release/AlMizan-Bakery-2.6.1-review.apk
+            bakery-app/release/SHA256SUMS.txt
+            bakery-app/release/SIGNING-CERTIFICATE.txt
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Publish review-only GitHub Release
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
