@@ -1384,29 +1384,30 @@ public class MainActivity extends Activity {
         }
 
         void saveCutsWithInventory(String date,JSONObject cuts,long newWork) throws Exception {
-            if (newWork < 0) throw new IllegalArgumentException("عدد جوالات الدقيق لا يمكن أن يكون سالبًا");
+            if(newWork<0) throw new IllegalArgumentException("عدد جوالات الدقيق لا يمكن أن يكون سالبًا");
             SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
             try {
-                long previouslyApplied=0L;
-                Cursor usage=db.rawQuery("SELECT flour_bags FROM inventory_usage WHERE day=?",new String[]{date});
-                try { if(usage.moveToFirst()) previouslyApplied=usage.getLong(0); } finally { usage.close(); }
+                long previouslyApplied=usageForDate(date);
+                JSONObject previousUsage=readMaterialUsage(date);
+                if(previousUsage.length()==0 && previouslyApplied>0) previousUsage.put("دقيق",previouslyApplied);
                 if(newWork!=previouslyApplied && hasFutureStockAfter(date))
-                    throw new IllegalStateException("لا يمكن تغيير استخدام الدقيق ليوم سابق بعد تسجيل أرصدة مخزن لأيام لاحقة؛ صحح التسلسل الزمني أولًا.");
+                    throw new IllegalStateException("لا يمكن تغيير شغل يوم سابق بعد تسجيل أرصدة لأيام لاحقة.");
                 JSONObject stock=getLatest(date,"stock");
-                if (stock.length()==0 && (newWork>0 || previouslyApplied>0)) throw new IllegalStateException("أدخل رصيد الدقيق في قسم المخزن أولًا، ثم احفظ شغل اليوم.");
-                if (stock.length()>0) {
-                    String raw=stock.optString("flour","");
-                    if (raw.trim().isEmpty() && (newWork>0 || previouslyApplied>0)) throw new IllegalStateException("رصيد الدقيق غير محدد. أدخل عدد الجوالات في المخزن أولًا.");
-                    long current=raw.trim().isEmpty()?0L:parseLong(raw);
-                    long adjusted=BakeryMath.stockAfterUsage(current,previouslyApplied,newWork);
-                    if (adjusted<0) throw new IllegalStateException("رصيد الدقيق لا يكفي لشغل اليوم. الرصيد الحالي: "+current+" جوال.");
-                    stock.put("flour",String.valueOf(adjusted));
-                    if (!stock.optString("items_rows","").trim().isEmpty())
-                        stock.put("items_rows",setStockFlourQuantity(stock.optString("items_rows",""),adjusted));
+                if(stock.length()==0 && (newWork>0 || previouslyApplied>0))
+                    throw new IllegalStateException("أدخل أرصدة المواد في المخزن أولًا، ثم احفظ شغل اليوم.");
+                JSONObject newUsage=new JSONObject();
+                if(stock.length()>0) {
+                    String raw=stock.optString("items_rows","");
+                    if(raw.trim().isEmpty()) raw=legacyStockRows(stock);
+                    raw=adjustMaterialRows(raw,previousUsage,true);
+                    newUsage=materialUsageFor(raw,newWork);
+                    raw=adjustMaterialRows(raw,newUsage,false);
+                    stock.put("items_rows",raw);
+                    stock.put("flour",String.valueOf(stockFlourQuantityFromRows(raw)));
                     ContentValues scv=new ContentValues(); scv.put("day",date); scv.put("module","stock"); scv.put("payload",stock.toString()); scv.put("updated_at",System.currentTimeMillis());
                     db.insertWithOnConflict("records",null,scv,SQLiteDatabase.CONFLICT_REPLACE);
                 }
-                ContentValues uv=new ContentValues(); uv.put("day",date); uv.put("flour_bags",newWork);
+                ContentValues uv=new ContentValues(); uv.put("day",date); uv.put("flour_bags",newWork); uv.put("material_usage",newUsage.toString());
                 db.insertWithOnConflict("inventory_usage",null,uv,SQLiteDatabase.CONFLICT_REPLACE);
                 JSONObject cost=get(date,"costing"); cost.put("flour_bags",String.valueOf(newWork));
                 ContentValues ccv=new ContentValues(); ccv.put("day",date); ccv.put("module","costing"); ccv.put("payload",cost.toString()); ccv.put("updated_at",System.currentTimeMillis());
@@ -1415,6 +1416,14 @@ public class MainActivity extends Activity {
                 db.insertWithOnConflict("records",null,cutcv,SQLiteDatabase.CONFLICT_REPLACE);
                 db.setTransactionSuccessful();
             } finally { db.endTransaction(); }
+        }
+        private long stockFlourQuantityFromRows(String raw) {
+            for(String line:raw.split("\\r?\\n")) {
+                String[] p=line.split("\\|",-1);
+                if(p.length>=2 && (p[0].trim().contains("دقيق") || p[0].trim().equalsIgnoreCase("flour")))
+                    return parseLong(p[1].trim().split("\\s+")[0]);
+            }
+            return 0L;
         }
         long usageForDate(String date) {
             Cursor c=getReadableDatabase().rawQuery("SELECT flour_bags FROM inventory_usage WHERE day=?",new String[]{date});
