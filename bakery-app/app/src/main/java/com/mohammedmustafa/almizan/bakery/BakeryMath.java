@@ -25,6 +25,11 @@ public final class BakeryMath {
     public static long difference(long expectedProduction, long recordedCategories) {
         return Math.subtractExact(expectedProduction, recordedCategories);
     }
+    /** A daily reconciliation is acceptable only with configured pricing, valid rows, and zero difference. */
+    public static boolean isReconciliationValid(long difference, int invalidRows, boolean priceConfigured) {
+        if (invalidRows < 0) throw new IllegalArgumentException("Negative invalid-row count");
+        return priceConfigured && invalidRows == 0 && difference == 0;
+    }
     /** Daily ingredient/fuel cost. Quantities and unit prices must be non-negative. */
     public static long operatingCost(long fuelQty,long fuelPrice,long flourBags,long flourBagPrice,
             long yeastCount,long yeastPrice,long oilQty,long oilPoundPrice,
