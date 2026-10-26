@@ -1000,7 +1000,7 @@ public class MainActivity extends Activity {
             long production=productionValue(), cost=costingTotal();
             long spoilage=spoilageCost(), labor=wages(), expenses=expenseTotal();
             long beforeCost=Math.subtractExact(Math.subtractExact(Math.subtractExact(production,spoilage),labor),expenses);
-            long margin=BakeryMath.netMargin(salesRevenue(),spoilageCost(),labor,expenses,cost);
+            long margin=BakeryMath.netMargin(salesRevenue(),spoilageCost(),labor,expenses,cost,distributionDiff());
             String message="تاريخ التكلفة: "+day+
                 "\nقيمة القطعيات/الإنتاج: "+fmt(production)+" جنيه"+
                 "\n(-) قيمة التالف: "+fmt(spoilage)+" جنيه"+
