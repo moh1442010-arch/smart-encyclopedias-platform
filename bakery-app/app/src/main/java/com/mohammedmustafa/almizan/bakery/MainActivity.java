@@ -534,9 +534,14 @@ public class MainActivity extends Activity {
     private Field[] schema(String module) {
         switch(module) {
             case "stock": return new Field[]{
-                f("flour","رصيد الدقيق قبل خصم شغل اليوم — عدد الجوالات"),f("yeast","الخميرة — الكمية"),f("bags","الأكياس — الكمية"),
-                f("oil","الزيت — الكمية"),f("salt","الملح — الكمية"),f("wood","الحطب — الكمية"),
-                f("gas","الغاز — الكمية"),t("equipment","الجهاز / المعدات","اسم الجهاز وحالته وأي ملاحظة"),
+                f("flour","رصيد الدقيق قبل خصم شغل اليوم — عدد الجوالات"),f("flour_unit_price","سعر جوال الدقيق الواحد (جنيه)"),
+                f("yeast","الخميرة — الكمية"),f("yeast_unit_price","سعر وحدة الخميرة (جنيه)"),
+                f("bags","الأكياس — الكمية"),f("bags_unit_price","سعر وحدة الأكياس (جنيه)"),
+                f("oil","الزيت — الكمية"),f("oil_unit_price","سعر وحدة الزيت (جنيه)"),
+                f("salt","الملح — الكمية"),f("salt_unit_price","سعر وحدة الملح (جنيه)"),
+                f("wood","الحطب — الكمية"),f("wood_unit_price","سعر وحدة الحطب (جنيه)"),
+                f("gas","الغاز — الكمية"),f("gas_unit_price","سعر وحدة الغاز (جنيه)"),
+                t("equipment","الجهاز / المعدات","اسم الجهاز وحالته وأي ملاحظة"),
                 t("notes","ملاحظات المخزن","")
             };
             case "cuts": return new Field[]{
@@ -797,31 +802,51 @@ public class MainActivity extends Activity {
 
     private void showAccounts() {
         try {
-            long loaves=productionLoaves(), expected=productionValue(), actual=accountedTotal(), difference=Math.subtractExact(expected,actual);
-            Totals dist=distribution(); int bad=rowTotals("workers","rows",4).badRows+dist.badRows+rowTotals("expenses","rows",2).badRows;
+            long loaves=productionLoaves();
+            long expected=productionValue();
+            long cash=cashTotal(), debts=debtTotal(), bank=bankTotal(), diffPrice=distributionDiff();
+            long labor=wages(), expenses=expenseTotal(), spoilage=spoilageValue();
+            // The approved daily reconciliation compares production value with only the owner's listed categories.
+            long actual=BakeryMath.accountedTotal(cash,debts,bank,diffPrice,labor,expenses,spoilage);
+            long difference=Math.subtractExact(expected,actual);
+            Totals dist=distribution();
+            int bad=rowTotals("workers","rows",4).badRows+dist.badRows+rowTotals("expenses","rows",2).badRows;
             String status=difference==0?"متوازن حسابيًا":difference>0?"عجز غير مفسر":"زيادة غير مفسرة";
+            String costLine, marginLine;
+            try {
+                long cost=costingTotal();
+                costLine="\nتكلفة شغل اليوم حسب أسعار المخزن/التشغيل: "+fmt(cost)+" جنيه";
+                marginLine="\nهامش الربح التقديري: "+fmt(BakeryMath.netMargin(expected,spoilage,labor,expenses,cost))+" جنيه";
+            } catch(Exception costError) {
+                costLine="\nتكلفة شغل اليوم: تعذر حسابها — راجع كميات وأسعار المخزن والتشغيل";
+                marginLine="\nهامش الربح التقديري: غير متاح حتى تصحيح بيانات التكلفة";
+                android.util.Log.e("AlMizanBakery","Optional costing calculation failed while opening accounting",costError);
+            }
             String message="تاريخ الدفتر: "+day+
                 "\n\nالعيش المنتج: "+fmt(loaves)+" رغيف"+
-                "\nقيمة القطعيات حسب السعر المدخل: "+fmt(expected)+" جنيه"+
-                "\nالكاش (الشباك والتوزيع): "+fmt(cashTotal())+" جنيه"+
-                "\nالديون المستحقة: "+fmt(debtTotal())+" جنيه"+
-                "\nالتحويلات البنكية: "+fmt(bankTotal())+" جنيه"+
-                "\nكمية التوزيع المسجلة: "+fmt(dist.qty)+" رغيف"+
-                "\nفرق السعر: "+fmt(distributionDiff())+" جنيه"+
-                "\nيومية العمال المحسوبة من السطور: "+fmt(wages())+" جنيه"+
-                "\nمنصرفات المحل: "+fmt(expenseTotal())+" جنيه"+
-                "\nقيمة التالف: "+fmt(spoilageValue())+" جنيه"+
-                "\nتكلفة التشغيل التقديرية (للمقارنة فقط): "+fmt(costingTotal())+" جنيه"+
-                "\nهامش الربح التقديري: "+fmt(BakeryMath.netMargin(expected,spoilageValue(),wages(),expenseTotal(),costingTotal()))+" جنيه"+
-                "\n\nإجمالي البنود المسجلة: "+fmt(actual)+" جنيه"+
+                "\nمعادلة القطعيات: "+fmt(loaves)+" ÷ "+fmt(val("cuts","loaves_per_1000"))+" × 1,000"+
+                "\nقيمة القطعيات/الإنتاج: "+fmt(expected)+" جنيه"+
+                "\n\nالطرف الثاني — مجموع البنود المعتمدة:"+
+                "\nالكاش: "+fmt(cash)+" جنيه"+
+                "\nالديون/التوزيع: "+fmt(debts)+" جنيه"+
+                "\nالتحويلات البنكية: "+fmt(bank)+" جنيه"+
+                "\nفرق السعر: "+fmt(diffPrice)+" جنيه"+
+                "\nيومية العمال: "+fmt(labor)+" جنيه"+
+                "\nالمنصرفات: "+fmt(expenses)+" جنيه"+
+                "\nالتالف: "+fmt(spoilage)+" جنيه"+
+                "\nإجمالي الطرف الثاني: "+fmt(actual)+" جنيه"+
                 "\nفرق التسوية (المطلوب صفر): "+fmt(difference)+" جنيه"+
-                "\nالنتيجة: "+status+
+                "\nالنتيجة: "+status+costLine+marginLine+
+                "\n\nكمية التوزيع المسجلة: "+fmt(dist.qty)+" رغيف"+
                 (bad>0?"\n\n⚠ توجد "+bad+" سطور غير مكتملة أو غير رقمية. راجع صيغة السطور.":"")+
-                (val("cuts","loaves_per_1000")<=0?"\n⚠ أدخل عدد العيش المقابل لـ 1,000 جنيه في القطعيات.":"");
+                (val("cuts","loaves_per_1000")<=0?"\n⚠ أدخل عدد الأرغفة المقابل لـ 1,000 جنيه في القطعيات.":"");
             new AlertDialog.Builder(this).setTitle("🧮 المحاسب والحساب — "+day).setMessage(message)
                 .setNegativeButton("إغلاق",null).setNeutralButton("مشاركة التقرير",(d,w)->shareReport(message))
                 .setPositiveButton("حفظ التقرير", (d,w)->{store.put(day,"accounting",jsonSummary(message));toast("تم حفظ ملخص التسوية لهذا التاريخ");}).show();
-        } catch(Exception ex) { toast("تعذر إتمام الحساب بسبب رقم كبير جدًا أو بيانات غير صحيحة. راجع المدخلات."); }
+        } catch(Exception ex) {
+            android.util.Log.e("AlMizanBakery","Daily reconciliation failed",ex);
+            toast("تعذر حساب التسوية: راجع رقم الأرغفة وسعر القطعيات ومبالغ الطرف الثاني. لم تُعدّل أي بيانات.");
+        }
     }
     private JSONObject jsonSummary(String message) { JSONObject j=new JSONObject(); try{j.put("summary",message);j.put("saved_at",System.currentTimeMillis());}catch(Exception ignored){} return j; }
     private void shareReport(String report) {
@@ -908,7 +933,7 @@ public class MainActivity extends Activity {
     private void showGuide() {
         String guide="دليل الاستخدام اليومي — المحاسب الميزان للمخابز 2.5.16\n\n"+
             "1) اختر تاريخ شغل اليوم؛ يحفظ التطبيق دفترًا مستقلًا لكل تاريخ. صدّر نسخة احتياطية قبل أي تحديث مهم.\n"+
-            "2) المخزن: أدخل رصيد الدقيق والمواد المتاحة. راجع رصيد أول اليوم، كمية الدقيق المصروفة للإنتاج، والمتبقي الفعلي آخر اليوم؛ لا تسجل الصرف نفسه مرتين.\n"+
+            "2) المخزن: أدخل كمية كل صنف وسعر وحدته بالجنيه بوضوح. قيمة الصنف = الكمية × سعر الوحدة. الدقيق: الرصيد قبل شغل اليوم ناقص جوالات شغل اليوم = الرصيد المتبقي. لا تسجل الصرف نفسه مرتين؛ احفظ رصيد أول اليوم وسعر الوحدة ثم راجع المستهلك والمتبقي وقيمة كل منهما.\n"+
             "3) القطعيات والإنتاج: أدخل عدد جوالات الدقيق المستخدمة. سجّل كل جوال في سطر مستقل بصيغة رقم الجوال | عدد الأرغفة، مثل 1 | 700 ثم 2 | 800 ثم 3 | 650. يجمع التطبيق الأرغفة المسجلة. أدخل عدد الأرغفة التي تساوي 1,000 جنيه. مثال: إذا كانت كل 4 أرغفة = 1,000 جنيه وكان مجموع القطعيات 12,000 رغيف، فقيمة القطعيات = 12,000 ÷ 4 × 1,000 = 3,000,000 جنيه.\n"+
             "4) تكلفة شغل اليوم: أدخل سعر تكلفة الجوال الواحد لكل صنف: دقيق، خميرة، زيت، ملح، أكياس، حطب، غاز، جاز، وثلاثة بنود أخرى. اكتب صفرًا إذا لم تستخدم الصنف، واترك البند الإضافي فارغًا إذا لم توجد تكلفة. إجمالي تكلفة الجوال = مجموع أسعار الأصناف، وإجمالي تكلفة التشغيل = تكلفة الجوال × عدد جوالات شغل اليوم. راجع الأسعار قبل اعتماد التقرير.\n"+
             "5) يومية العمال: سطر لكل عامل بصيغة الاسم | الوظيفة | عدد الجوالات التي عملها | أجرة العامل لكل جوال. مثال: أحمد | خباز | 5 | 2000، وفران | فران | 5 | 2000. أجر العامل اليومي = عدد الجوالات × أجره لكل جوال؛ في المثال 10,000 لكل عامل، وإجمالي العاملين 20,000 جنيه. لا تكتب أجرة اليوم في خانة أجرة الجوال.\n"+
