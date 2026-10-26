@@ -381,6 +381,9 @@ public class MainActivity extends Activity {
         addCard("🏭 9. حساب التشغيل والتكلفة","تكلفة الوقود والدقيق والخميرة والزيت والملح والأكياس، وتقدير هامش الربح",this::showCosting);
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
+        Button update = button("⬆️ التحقق من التحديثات وتنزيل أحدث إصدار");
+        update.setOnClickListener(v -> showUpdateDialog());
+        content.addView(update);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
         Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + ".")); content.addView(support);
         updateStatus();
@@ -1024,6 +1027,23 @@ public class MainActivity extends Activity {
                     }).show();
             }
         } catch(Exception ex) { toast("تعذر التعامل مع ملف النسخة الاحتياطية. لم يتم حذف البيانات الحالية."); }
+    }
+
+    private void showUpdateDialog() {
+        new AlertDialog.Builder(this)
+            .setTitle("⬆️ تحديث المحاسب الميزان للمخابز")
+            .setMessage("الإصدار المثبت: " + BuildConfig.VERSION_NAME +
+                "\\nافتح صفحة الإصدار لمراجعة أحدث نسخة وتنزيلها. عند التحديث، لا تحذف التطبيق الحالي؛ نزّل ملف APK وثبّته فوق النسخة الموجودة للمحافظة على بياناتك. إذا رفض الهاتف التحديث، لا تحذف النسخة الحالية قبل أخذ نسخة احتياطية.")
+            .setNegativeButton("إلغاء", null)
+            .setPositiveButton("فتح صفحة التحديث", (dialog, which) -> {
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/tag/al-mizan-bakery-2.6.2-review"));
+                    startActivity(intent);
+                } catch (Exception ex) {
+                    toast("تعذر فتح صفحة التحديث. تحقق من اتصال الإنترنت ثم أعد المحاولة.");
+                }
+            })
+            .show();
     }
 
     private void showGuide() {
