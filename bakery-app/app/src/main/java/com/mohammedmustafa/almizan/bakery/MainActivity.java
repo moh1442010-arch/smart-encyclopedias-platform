@@ -657,6 +657,8 @@ public class MainActivity extends Activity {
                         updateStatus();
                         toast("حُفظ شغل اليوم. تم تحديث رصيد الدقيق والتكلفة تلقائيًا.");
                     } else if (module.equals("stock")) {
+                        validateStockRows(record.optString("items_rows",""));
+                        record.put("flour", String.valueOf(stockFlourQuantity(record)));
                         store.saveStockWithInventory(day, record);
                         updateStatus();
                         toast("حُفظ رصيد المخزن. الرصيد الظاهر في الملخص هو المتبقي بعد خصم شغل اليوم.");
@@ -720,6 +722,67 @@ public class MainActivity extends Activity {
         }
         return out;
     }
+    private String legacyStockRows(JSONObject stock) {
+        StringBuilder rows = new StringBuilder();
+        String[][] items = {{"دقيق","flour","جوال"},{"ملح","salt","كيلو"},{"خميرة","yeast","باكو"},{"زيت","oil","رطل"},{"أكياس","bags","لفة"},{"جاز","diesel","جالون"},{"غاز","gas","أسطوانة"},{"حطب","wood","قنطار"}};
+        for (String[] item : items) {
+            String qty = stock.optString(item[1],"0").trim();
+            if (qty.isEmpty()) qty = "0";
+            if (rows.length()>0) rows.append("\\n");
+            rows.append(item[0]).append(" | ").append(qty).append(" ").append(item[2]).append(" | 0");
+        }
+        return rows.toString();
+    }
+    private void validateStockRows(String raw) {
+        if (raw.trim().isEmpty()) throw new IllegalArgumentException("أدخل أصناف المخزن: الصنف | الكمية والوحدة | سعر الوحدة");
+        boolean flourFound=false;
+        for (String line : raw.split("\\r?\\n")) {
+            if (line.trim().isEmpty()) continue;
+            String[] p=line.split("\\|",-1);
+            if (p.length<3 || p[0].trim().isEmpty() || p[1].trim().isEmpty() || p[2].trim().isEmpty())
+                throw new IllegalArgumentException("راجع سطر المخزن. الصيغة: الصنف | الكمية والوحدة | سعر الوحدة");
+            String[] q=p[1].trim().split("\\s+");
+            long qty=parseLong(q[0]), price=parseLong(p[2].trim());
+            if(qty<0 || price<0) throw new IllegalArgumentException("كمية وسعر الوحدة لا يقبلان القيم السالبة");
+            if(p[0].trim().contains("دقيق") || p[0].trim().equalsIgnoreCase("flour")) flourFound=true;
+        }
+        if(!flourFound) throw new IllegalArgumentException("أضف صنف الدقيق إلى المخزن لأن شغل اليوم يخصم من رصيده");
+    }
+    private long stockFlourQuantity(JSONObject stock) {
+        String rows=stock.optString("items_rows","").trim();
+        if(!rows.isEmpty()) {
+            for(String line:rows.split("\\r?\\n")) {
+                String[] p=line.split("\\|",-1);
+                if(p.length>=2 && (p[0].trim().contains("دقيق") || p[0].trim().equalsIgnoreCase("flour"))) {
+                    String[] q=p[1].trim().split("\\s+");
+                    return parseLong(q[0]);
+                }
+            }
+        }
+        return Math.max(0L,parseLong(stock.optString("flour","0")));
+    }
+    private String setStockFlourQuantity(String raw,long quantity) {
+        StringBuilder out=new StringBuilder(); boolean found=false;
+        for(String line:raw.split("\\r?\\n")) {
+            if(line.trim().isEmpty()) continue;
+            String[] p=line.split("\\|",-1);
+            if(p.length>=3 && (p[0].trim().contains("دقيق") || p[0].trim().equalsIgnoreCase("flour"))) {
+                String old=p[1].trim();
+                String[] oldParts=old.split("\\s+",2);
+                String unit=oldParts.length>1?oldParts[1]:"جوال";
+                line=p[0].trim()+" | "+quantity+" "+unit+" | "+p[2].trim();
+                found=true;
+            }
+            if(out.length()>0) out.append("\\n");
+            out.append(line);
+        }
+        if(!found) {
+            if(out.length()>0) out.append("\\n");
+            out.append("دقيق | ").append(quantity).append(" جوال | 0");
+        }
+        return out.toString();
+    }
+
     private long stockFlourValue() {
         JSONObject stock = store.get(day, "stock");
         if (stock.length() == 0) stock = store.getLatest(day, "stock");
