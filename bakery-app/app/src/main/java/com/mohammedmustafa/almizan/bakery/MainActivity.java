@@ -799,7 +799,9 @@ public class MainActivity extends Activity {
         try {
             long loaves=productionLoaves(), expected=productionValue(), actual=accountedTotal(), difference=Math.subtractExact(expected,actual);
             Totals dist=distribution(); int bad=rowTotals("workers","rows",4).badRows+dist.badRows+rowTotals("expenses","rows",2).badRows;
-            String status=difference==0?"متوازن حسابيًا":difference>0?"عجز غير مفسر":"زيادة غير مفسرة";
+            boolean priceConfigured=val("cuts","loaves_per_1000")>0;
+            boolean reconciliationValid=priceConfigured && bad==0 && difference==0;
+            String status=!priceConfigured?"غير مكتمل — أدخل عدد الأرغفة المقابل لـ 1,000 جنيه":bad>0?"غير مكتمل — توجد سطور غير صالحة":difference==0?"متوازن حسابيًا":difference>0?"عجز غير مفسر":"زيادة غير مفسرة";
             String message="تاريخ الدفتر: "+day+
                 "\n\nالعيش المنتج: "+fmt(loaves)+" رغيف"+
                 "\nقيمة القطعيات حسب السعر المدخل: "+fmt(expected)+" جنيه"+
@@ -818,9 +820,21 @@ public class MainActivity extends Activity {
                 "\nالنتيجة: "+status+
                 (bad>0?"\n\n⚠ توجد "+bad+" سطور غير مكتملة أو غير رقمية. راجع صيغة السطور.":"")+
                 (val("cuts","loaves_per_1000")<=0?"\n⚠ أدخل عدد العيش المقابل لـ 1,000 جنيه في القطعيات.":"");
-            new AlertDialog.Builder(this).setTitle("🧮 المحاسب والحساب — "+day).setMessage(message)
+            AlertDialog dialog=new AlertDialog.Builder(this).setTitle("🧮 المحاسب والحساب — "+day).setMessage(message)
                 .setNegativeButton("إغلاق",null).setNeutralButton("مشاركة التقرير",(d,w)->shareReport(message))
-                .setPositiveButton("حفظ التقرير", (d,w)->{store.put(day,"accounting",jsonSummary(message));toast("تم حفظ ملخص التسوية لهذا التاريخ");}).show();
+                .setPositiveButton("حفظ التقرير", null).create();
+            dialog.setOnShowListener(v -> {
+                Button save=dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+                save.setEnabled(reconciliationValid);
+                save.setText(reconciliationValid?"حفظ التقرير":"أكمل البيانات أولًا");
+                save.setOnClickListener(btn -> {
+                    if(!reconciliationValid) { toast("لا يمكن اعتماد التسوية قبل اكتمال البيانات وتطابق الطرفين."); return; }
+                    store.put(day,"accounting",jsonSummary(message));
+                    toast("تم حفظ ملخص التسوية المتوازنة لهذا التاريخ");
+                    dialog.dismiss();
+                });
+            });
+            dialog.show();
         } catch(Exception ex) { toast("تعذر إتمام الحساب بسبب رقم كبير جدًا أو بيانات غير صحيحة. راجع المدخلات."); }
     }
     private JSONObject jsonSummary(String message) { JSONObject j=new JSONObject(); try{j.put("summary",message);j.put("saved_at",System.currentTimeMillis());}catch(Exception ignored){} return j; }
