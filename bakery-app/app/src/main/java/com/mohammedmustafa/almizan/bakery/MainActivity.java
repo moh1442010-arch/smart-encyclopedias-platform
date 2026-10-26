@@ -95,7 +95,7 @@ public class MainActivity extends Activity {
         base("⚠️ تعذر فتح التطبيق");
         content.addView(text("تم تسجيل الخطأ بدل إغلاق التطبيق فجأة. لم تُحذف بيانات الدفاتر. أرسل التقرير للدعم لتحديد السبب بدقة.", 16));
         Button send = button("إرسال تقرير الخطأ عبر واتساب");
-        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل المحاسب الميزان للمخابز 2.5.16\n" + report));
+        send.setOnClickListener(v -> openWhatsApp("تقرير تعطل المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + "\n" + report));
         content.addView(send);
         Button retry = button("إعادة محاولة فتح الصفحة الرئيسية");
         retry.setOnClickListener(v -> continueAfterPinAccepted());
@@ -361,7 +361,7 @@ public class MainActivity extends Activity {
     }
 
     private void buildHome() {
-        base("🥖 المحاسب الميزان للمخابز 2.5.16");
+        base("🥖 المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + "");
         TextView intro = text("منظومة يومية متكاملة للمخبز — من رصيد الدقيق إلى الإنتاج والتحصيل وهامش الربح.",16);
         content.addView(intro);
         addBakeryHero();
@@ -382,7 +382,7 @@ public class MainActivity extends Activity {
         Button backup = button("🗂️ نسخ احتياطي واستعادة البيانات"); backup.setOnClickListener(v->backupRestoreMenu()); content.addView(backup);
         Button guide = button("📘 اللوحة الإرشادية وطريقة الاستخدام"); guide.setOnClickListener(v->showGuide()); content.addView(guide);
         Button pricing = button("🔐 الاشتراك والأسعار والتفعيل"); pricing.setOnClickListener(v->showPaywall()); content.addView(pricing);
-        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق المحاسب الميزان للمخابز 2.5.16.")); content.addView(support);
+        Button support = button("🟢 الدعم الفني والتفعيل عبر واتساب"); support.setOnClickListener(v->openWhatsApp("السلام عليكم، أحتاج دعمًا فنيًا لتطبيق المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + ".")); content.addView(support);
         updateStatus();
     }
 
@@ -920,7 +920,7 @@ public class MainActivity extends Activity {
     }
 
     private void showGuide() {
-        String guide="دليل الاستخدام اليومي — المحاسب الميزان للمخابز 2.5.16\n\n"+
+        String guide="دليل الاستخدام اليومي — المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + "\n\n"+
             "1) اختر تاريخ شغل اليوم؛ يحفظ التطبيق دفترًا مستقلًا لكل تاريخ. صدّر نسخة احتياطية قبل أي تحديث مهم.\n"+
             "2) المخزن: أدخل رصيد الدقيق والمواد المتاحة. راجع رصيد أول اليوم، كمية الدقيق المصروفة للإنتاج، والمتبقي الفعلي آخر اليوم؛ لا تسجل الصرف نفسه مرتين.\n"+
             "3) القطعيات والإنتاج: أدخل عدد جوالات الدقيق المستخدمة. سجّل كل جوال في سطر مستقل بصيغة رقم الجوال | عدد الأرغفة، مثل 1 | 700 ثم 2 | 800 ثم 3 | 650. يجمع التطبيق الأرغفة المسجلة. أدخل عدد الأرغفة التي تساوي 1,000 جنيه. مثال: إذا كانت كل 4 أرغفة = 1,000 جنيه وكان مجموع القطعيات 12,000 رغيف، فقيمة القطعيات = 12,000 ÷ 4 × 1,000 = 3,000,000 جنيه.\n"+
@@ -995,7 +995,7 @@ public class MainActivity extends Activity {
     }
 
     private void requestActivation(String plan,String amount) {
-        final String message="السلام عليكم، أطلب تفعيل المحاسب الميزان للمخابز 2.5.16.\n"+
+        final String message="السلام عليكم، أطلب تفعيل المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + ".\n"+
             "الباقة المختارة: "+plan+"\n"+
             "المبلغ: "+amount+"\n"+
             "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\n"+
@@ -1041,7 +1041,7 @@ public class MainActivity extends Activity {
     }
 
     private void chooseCompanyLogo() {
-        pendingActivationMessage = "السلام عليكم، أرسل شعار نشاطي لتخصيص فواتير المحاسب الميزان للمخابز 2.5.16.\n"+
+        pendingActivationMessage = "السلام عليكم، أرسل شعار نشاطي لتخصيص فواتير المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + ".\n"+
             "معرّف الجهاز: "+deviceId()+"\n"+
             "اسم النشاط: [اكتب اسم المخبز]\n"+
             "يرجى استخدام الشعار في الفواتير بعد مراجعة الطلب.";
