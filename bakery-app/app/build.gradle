@@ -9,8 +9,8 @@ android {
         applicationId 'com.mohammedmustafa.almizan.bakery'
         minSdk 23
         targetSdk 35
-        versionCode 260001
-        versionName '2.6.1'
+        versionCode 260002
+        versionName '2.6.2'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     testOptions { unitTests.includeAndroidResources = true }
