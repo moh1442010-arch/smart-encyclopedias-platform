@@ -836,26 +836,28 @@ public class MainActivity extends Activity {
     }
     private String legacyStockRows(JSONObject stock) {
         StringBuilder rows = new StringBuilder();
-        String[][] items = {{"دقيق","flour","جوال"},{"ملح","salt","كيلو"},{"خميرة","yeast","باكو"},{"زيت","oil","رطل"},{"أكياس","bags","لفة"},{"جاز","diesel","جالون"},{"غاز","gas","أسطوانة"},{"حطب","wood","قنطار"}};
+        String[][] items = {{"دقيق","flour","جوال","1"},{"ملح","salt","كيلو","0"},{"خميرة","yeast","باكو","0"},{"زيت","oil","رطل","0"},{"أكياس","bags","لفة","0"},{"جاز","diesel","جالون","0"},{"غاز","gas","أسطوانة","0"},{"حطب","wood","قنطار","0"}};
         for (String[] item : items) {
             String qty = stock.optString(item[1],"0").trim();
             if (qty.isEmpty()) qty = "0";
             if (rows.length()>0) rows.append("\n");
-            rows.append(item[0]).append(" | ").append(qty).append(" ").append(item[2]).append(" | 0");
+            rows.append(item[0]).append(" | ").append(qty).append(" ").append(item[2]).append(" | ").append(item[3]).append(" | 0");
         }
         return rows.toString();
     }
     private void validateStockRows(String raw) {
-        if (raw.trim().isEmpty()) throw new IllegalArgumentException("أدخل أصناف المخزن: الصنف | الكمية والوحدة | سعر الوحدة");
+        if (raw.trim().isEmpty()) throw new IllegalArgumentException("أدخل أصناف المخزن أولًا.");
         boolean flourFound=false;
         for (String line : raw.split("\\r?\\n")) {
             if (line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
-            if (p.length<3 || p[0].trim().isEmpty() || p[1].trim().isEmpty() || p[2].trim().isEmpty())
-                throw new IllegalArgumentException("راجع سطر المخزن. الصيغة: الصنف | الكمية والوحدة | سعر الوحدة");
+            if (p.length<4 || p[0].trim().isEmpty() || p[1].trim().isEmpty() || p[2].trim().isEmpty() || p[3].trim().isEmpty())
+                throw new IllegalArgumentException("كل سطر: الصنف | الرصيد والوحدة | الاستهلاك مع جوال واحد | سعر وحدة الاستهلاك");
             String[] q=p[1].trim().split("\\s+");
-            long qty=parseLong(q[0]), price=parseLong(p[2].trim());
-            if(qty<0 || price<0) throw new IllegalArgumentException("كمية وسعر الوحدة لا يقبلان القيم السالبة");
+            long qty=parseLong(q[0]), used=parseLong(p[2].trim()), price=parseLong(p[3].trim());
+            if(qty<0 || used<0 || price<0) throw new IllegalArgumentException("الرصيد والاستهلاك والسعر لا تقبل القيم السالبة");
+            if((p[0].trim().contains("دقيق") || p[0].trim().equalsIgnoreCase("flour")) && used!=1)
+                throw new IllegalArgumentException("استهلاك الدقيق الافتراضي جوال واحد لكل جوال شغل.");
             if(p[0].trim().contains("دقيق") || p[0].trim().equalsIgnoreCase("flour")) flourFound=true;
         }
         if(!flourFound) throw new IllegalArgumentException("أضف صنف الدقيق إلى المخزن لأن شغل اليوم يخصم من رصيده");
