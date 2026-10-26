@@ -4,7 +4,10 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class BakeryMathTest {
-    @Test public void correctedCutValueUsesLoavesPerOneThousand() {\n        assertEquals(3000000L, BakeryMath.valueForLoaves(12000L, 4L));\n    }\n    @Test public void productionMultipliesWorkUnitsByLoaves() {
+    @Test public void correctedCutValueUsesLoavesPerOneThousand() {
+        assertEquals(3000000L, BakeryMath.valueForLoaves(12000L, 4L));
+    }
+    @Test public void productionMultipliesWorkUnitsByLoaves() {
         assertEquals(2000L, BakeryMath.productionLoaves(4,500));
     }
     @Test public void valuesLoavesUsingConfiguredPriceBasis() {
@@ -13,7 +16,10 @@ public class BakeryMathTest {
     @Test public void roundsMoneyToWholeSudanesePounds() {
         assertEquals(333L, BakeryMath.valueForLoaves(1,3));
     }
-    @Test public void workerWagesPerSackMultiplyBySacksWorked() {\n        assertEquals(20000L, BakeryMath.sum(Math.multiplyExact(2000L,5L), Math.multiplyExact(2000L,5L)));\n    }\n    @Test public void reconciliationAddsAllRecordedCategoriesExactlyOnce() {
+    @Test public void workerWagesPerSackMultiplyBySacksWorked() {
+        assertEquals(20000L, BakeryMath.sum(Math.multiplyExact(2000L,5L), Math.multiplyExact(2000L,5L)));
+    }
+    @Test public void reconciliationAddsAllRecordedCategoriesExactlyOnce() {
         assertEquals(150000L, BakeryMath.accountedTotal(50000,20000,10000,0,30000,25000,15000));
     }
     @Test public void balancedLedgerHasZeroDifference() {
