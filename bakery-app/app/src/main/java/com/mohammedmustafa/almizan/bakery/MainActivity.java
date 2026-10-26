@@ -905,7 +905,7 @@ public class MainActivity extends Activity {
     }
     private String setStockFlourQuantity(String raw,long quantity) {
         StringBuilder out=new StringBuilder(); boolean found=false;
-        for(String line:raw.split("\\r?\\n")) {
+        for(String line:normalizeRows(raw).split("\\r?\\n")) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             if(p.length>=3 && (p[0].trim().contains("دقيق") || p[0].trim().equalsIgnoreCase("flour"))) {
@@ -936,7 +936,7 @@ public class MainActivity extends Activity {
         String rows=record("cuts").optString("production_rows","").trim();
         if(!rows.isEmpty()) {
             long total=0L;
-            for(String line:rows.split("\\r?\\n")) {
+            for(String line:normalizeRows(rows).split("\\r?\\n")) {
                 if(line.trim().isEmpty()) continue;
                 String[] p=line.split("\\|",-1);
                 if(p.length<2) throw new IllegalArgumentException("اكتب رقم الجوال | عدد الأرغفة");
@@ -985,7 +985,7 @@ public class MainActivity extends Activity {
         String rows=stock.optString("items_rows","").trim();
         if(rows.isEmpty()) return 0L;
         long total=0L;
-        for(String line:rows.split("\\r?\\n")) {
+        for(String line:normalizeRows(rows).split("\\r?\\n")) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             if(p.length<3) throw new IllegalArgumentException("راجع جدول المخزن: الصنف | الكمية والوحدة | سعر الوحدة");
@@ -1002,7 +1002,7 @@ public class MainActivity extends Activity {
         String raw=stock.optString("items_rows","");
         if(raw.trim().isEmpty()) raw=legacyStockRows(stock);
         long total=0L;
-        for(String line:raw.split("\\r?\\n")) {
+        for(String line:normalizeRows(raw).split("\\r?\\n")) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             if(p.length==3) p=new String[]{p[0],p[1],(p[0].trim().contains("دقيق")?"1":"0"),p[2]};
@@ -1410,7 +1410,7 @@ public class MainActivity extends Activity {
 
         private JSONObject materialUsageFor(String raw,long workUnits) throws Exception {
             JSONObject usage=new JSONObject();
-            for(String line:raw.split("\\r?\\n")) {
+            for(String line:normalizeRows(raw).split("\\r?\\n")) {
                 if(line.trim().isEmpty()) continue;
                 String[] p=line.split("\\|",-1);
                 if(p.length==3) p=new String[]{p[0],p[1],(p[0].trim().contains("دقيق")?"1":"0"),p[2]};
@@ -1422,7 +1422,7 @@ public class MainActivity extends Activity {
         }
         private String adjustMaterialRows(String raw,JSONObject usage,boolean restore) throws Exception {
             StringBuilder out=new StringBuilder();
-            for(String line:raw.split("\\r?\\n")) {
+            for(String line:normalizeRows(raw).split("\\r?\\n")) {
                 if(line.trim().isEmpty()) continue;
                 String[] p=line.split("\\|",-1);
                 if(p.length==3) p=new String[]{p[0],p[1],(p[0].trim().contains("دقيق")?"1":"0"),p[2]};
@@ -1479,7 +1479,7 @@ public class MainActivity extends Activity {
             } finally { db.endTransaction(); }
         }
         private long stockFlourQuantityFromRows(String raw) {
-            for(String line:raw.split("\\r?\\n")) {
+            for(String line:normalizeRows(raw).split("\\r?\\n")) {
                 String[] p=line.split("\\|",-1);
                 if(p.length>=2 && (p[0].trim().contains("دقيق") || p[0].trim().equalsIgnoreCase("flour")))
                     return parseLong(p[1].trim().split("\\s+")[0]);
