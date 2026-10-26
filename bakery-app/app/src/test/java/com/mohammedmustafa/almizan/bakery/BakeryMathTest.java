@@ -7,6 +7,22 @@ public class BakeryMathTest {
     @Test public void correctedCutValueUsesLoavesPerOneThousand() {
         assertEquals(3000000L, BakeryMath.valueForLoaves(12000L, 4L));
     }
+    @Test public void approvedLoafPriceEquationUsesThousandPoundBasis() {
+        assertEquals(1000000L, BakeryMath.valueForLoaves(1000L, 1L));
+        assertEquals(3000000L, BakeryMath.valueForLoaves(12000L, 4L));
+        assertEquals(100000L, BakeryMath.valueForLoaves(1000L, 10L));
+    }
+    @Test public void reconciliationIncludesApprovedCategoriesAndShowsDifference() {
+        long productionValue = BakeryMath.valueForLoaves(12000L, 4L);
+        long otherSide = BakeryMath.accountedTotal(500000L, 2000000L, 100000L, 50000L, 20000L, 250000L, 80000L);
+        assertEquals(3000000L, productionValue);
+        assertEquals(3000000L, otherSide);
+        assertEquals(0L, BakeryMath.difference(productionValue, otherSide));
+    }
+    @Test public void stockBalanceDeductsDailyWorkOnce() {
+        assertEquals(3L, BakeryMath.stockAfterUsage(10L, 0L, 7L));
+        assertEquals(3L, BakeryMath.stockAfterUsage(3L, 7L, 7L));
+    }
     @Test public void productionMultipliesWorkUnitsByLoaves() {
         assertEquals(2000L, BakeryMath.productionLoaves(4,500));
     }
