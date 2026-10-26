@@ -537,9 +537,9 @@ public class MainActivity extends Activity {
     private Field[] schema(String module) {
         switch(module) {
             case "stock": return new Field[]{
-                f("flour","رصيد الدقيق قبل خصم شغل اليوم — عدد الجوالات"),f("yeast","الخميرة — الكمية"),f("bags","الأكياس — الكمية"),
-                f("oil","الزيت — الكمية"),f("salt","الملح — الكمية"),f("wood","الحطب — الكمية"),
-                f("gas","الغاز — الكمية"),t("equipment","الجهاز / المعدات","اسم الجهاز وحالته وأي ملاحظة"),
+                t("items_rows","جدول المخزون — الصنف | الكمية والوحدة | سعر الوحدة بالجنيه",
+                    "دقيق | 50 جوال | 60000\nملح | 25 كيلو | 2000\nخميرة | 45 باكو | 6000\nزيت | 108 رطل | 5000\nأكياس | 50 لفة | 2000\nجاز | 0 جالون | 0\nغاز | 0 أسطوانة | 0\nحطب | 0 قنطار | 0\nأضف كل صنف في سطر مستقل: الصنف | الكمية والوحدة | سعر الوحدة"),
+                t("equipment","المعدات (اختياري)","اسم المعدة وحالتها"),
                 t("notes","ملاحظات المخزن","")
             };
             case "cuts": return new Field[]{
@@ -615,11 +615,17 @@ public class MainActivity extends Activity {
         final java.util.Map<String,EditText> inputs = new java.util.LinkedHashMap<>();
         for(Field field:fields) {
             box.addView(text(field.label,15));
-            EditText e = new EditText(this); e.setTextSize(16); e.setHint(field.hint); e.setPadding(10,8,10,8);
+            EditText e = new EditText(this); e.setTextSize(16); e.setHint(field.hint); e.setPadding(12,10,12,10);
+            GradientDrawable inputBorder = rounded(Color.WHITE,8);
+            inputBorder.setStroke(Math.max(1,(int)(1f*getResources().getDisplayMetrics().density)),Color.rgb(177,188,201));
+            e.setBackground(inputBorder);
+            LinearLayout.LayoutParams inputLp = new LinearLayout.LayoutParams(-1,-2);
+            inputLp.setMargins(0,2,0,10);
+            e.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
             if(field.numeric) { e.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED); e.setSingleLine(true); }
             else { e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE); e.setMinLines(field.key.equals("items_rows")?8:field.key.equals("production_rows")?5:field.key.equals("rows")?4:1); e.setGravity(Gravity.TOP|Gravity.START); }
             if (module.equals("costing") && field.key.equals("flour_bags")) { e.setEnabled(false); e.setAlpha(0.75f); }
-            e.setText(saved.optString(field.key,"")); inputs.put(field.key,e); box.addView(e);
+            e.setText(saved.optString(field.key,"")); inputs.put(field.key,e); box.addView(e,inputLp);
         }
         new AlertDialog.Builder(this).setTitle(titleFor(module)+" — "+day).setView(sc)
             .setNegativeButton("إلغاء",null).setNeutralButton("مسح خانات هذا القسم",(d,w)->{
@@ -654,17 +660,17 @@ public class MainActivity extends Activity {
                         }
                         record.put(field.key,val);
                     }
-                    if (module.equals("cuts")) {
-                        long newWork = parseLong(record.optString("work_units","0"));
-                        store.saveCutsWithInventory(day, record, newWork);
-                        updateStatus();
-                        toast("حُفظ شغل اليوم. تم تحديث رصيد الدقيق والتكلفة تلقائيًا.");
-                    } else if (module.equals("stock")) {
+                    if (module.equals("stock")) {
                         validateStockRows(record.optString("items_rows",""));
                         record.put("flour", String.valueOf(stockFlourQuantity(record)));
                         store.saveStockWithInventory(day, record);
                         updateStatus();
-                        toast("حُفظ رصيد المخزن. الرصيد الظاهر في الملخص هو المتبقي بعد خصم شغل اليوم.");
+                        toast("حُفظ جدول المخزون. راجع الكميات وأسعار الوحدات.");
+                    } else if (module.equals("cuts")) {
+                        long newWork = parseLong(record.optString("work_units","0"));
+                        store.saveCutsWithInventory(day, record, newWork);
+                        updateStatus();
+                        toast("حُفظ شغل اليوم. تم تحديث رصيد الدقيق والتكلفة تلقائيًا.");
                     } else {
                         store.put(day,module,record); updateStatus(); toast("حُفظ "+titleFor(module)+" بتاريخ "+day);
                     }
