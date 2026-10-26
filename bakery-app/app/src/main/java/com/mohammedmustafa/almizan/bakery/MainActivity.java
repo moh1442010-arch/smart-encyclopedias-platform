@@ -586,7 +586,133 @@ public class MainActivity extends Activity {
         }
     }
 
+    private EditText inventoryCell(String value, String hint, boolean numeric) {
+        EditText e = new EditText(this);
+        e.setText(value);
+        e.setHint(hint);
+        e.setTextSize(14);
+        e.setSingleLine(true);
+        e.setPadding(6,8,6,8);
+        if (numeric) e.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        GradientDrawable border = rounded(Color.WHITE,4);
+        border.setStroke(Math.max(1,(int)(1f*getResources().getDisplayMetrics().density)),Color.rgb(150,165,181));
+        e.setBackground(border);
+        return e;
+    }
+
+    private void addInventoryRow(LinearLayout table, java.util.List<EditText[]> rows, String item, String quantity, String price) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        EditText name = inventoryCell(item,"الصنف",false);
+        EditText qty = inventoryCell(quantity,"الكمية والوحدة",false);
+        EditText unitPrice = inventoryCell(price,"سعر الوحدة",true);
+        LinearLayout.LayoutParams cell = new LinearLayout.LayoutParams(0,-2,1f);
+        cell.setMargins(2,2,2,2);
+        row.addView(name,cell);
+        row.addView(qty,cell);
+        row.addView(unitPrice,cell);
+        table.addView(row,new LinearLayout.LayoutParams(-1,-2));
+        rows.add(new EditText[]{name,qty,unitPrice});
+    }
+
+    private void openStockTable() {
+        JSONObject saved = store.get(day,"stock");
+        JSONObject current = store.get(day,"stock");
+        if (current.length()==0) {
+            JSONObject previous = store.getLatest(day,"stock");
+            if (previous.length()>0) saved=previous;
+        }
+        try {
+            if (saved.optString("items_rows","").trim().isEmpty()) saved.put("items_rows",legacyStockRows(saved));
+            long flourQty=stockFlourQuantity(saved);
+            long applied=current.length()>0?store.usageForDate(day):0L;
+            if (applied>0) flourQty=Math.addExact(flourQty,applied);
+            saved.put("items_rows",setStockFlourQuantity(saved.optString("items_rows",""),flourQty));
+        } catch(Exception ex) {
+            toast("تعذر تجهيز المخزون للتحرير؛ لم تُمسح أي بيانات.");
+            return;
+        }
+
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout box=new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(10,8,10,12);
+        scroll.addView(box);
+        box.addView(text("أدخل كل صنف في صف مستقل. الكمية تتضمن وحدة القياس، وسعر الوحدة هو سعر وحدة الصنف بالجنيه.",14));
+        LinearLayout table=new LinearLayout(this);
+        table.setOrientation(LinearLayout.VERTICAL);
+        table.setPadding(2,2,2,2);
+        table.setBackground(rounded(Color.rgb(222,229,237),4));
+        LinearLayout header=new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        String[] headings={"الصنف","الكمية والوحدة","سعر الوحدة (جنيه)"};
+        for(String heading:headings) {
+            TextView h=text(heading,13);
+            h.setTextColor(Color.WHITE);
+            h.setTypeface(null,1);
+            h.setGravity(Gravity.CENTER);
+            h.setBackground(rounded(NAVY,3));
+            LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(0,-2,1f);
+            hp.setMargins(2,2,2,2);
+            header.addView(h,hp);
+        }
+        table.addView(header);
+        java.util.List<EditText[]> rows=new java.util.ArrayList<>();
+        String raw=saved.optString("items_rows","");
+        for(String line:raw.split("\\r?\\n")) {
+            if(line.trim().isEmpty()) continue;
+            String[] p=line.split("\\|",-1);
+            if(p.length>=3) addInventoryRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim());
+        }
+        if(rows.isEmpty()) {
+            String[][] defaults={{"دقيق","0 جوال","0"},{"ملح","0 كيلو","0"},{"خميرة","0 باكو","0"},{"زيت","0 رطل","0"},{"أكياس","0 لفة","0"},{"جاز","0 جالون","0"},{"غاز","0 أسطوانة","0"},{"حطب","0 قنطار","0"}};
+            for(String[] item:defaults) addInventoryRow(table,rows,item[0],item[1],item[2]);
+        }
+        box.addView(table);
+        Button add=button("＋ إضافة صنف للمخزون");
+        add.setOnClickListener(v->addInventoryRow(table,rows,"","",""));
+        box.addView(add);
+        box.addView(text("المعدات (اختياري)",14));
+        EditText equipment=inventoryCell(saved.optString("equipment",""),"اسم المعدة وحالتها",false);
+        box.addView(equipment,new LinearLayout.LayoutParams(-1,-2));
+        box.addView(text("ملاحظات المخزن",14));
+        EditText notes=inventoryCell(saved.optString("notes",""),"ملاحظات",false);
+        box.addView(notes,new LinearLayout.LayoutParams(-1,-2));
+
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("📦 جدول المخزون — "+day).setView(scroll)
+            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ جدول المخزون",null).create();
+        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+            try {
+                StringBuilder textRows=new StringBuilder();
+                for(EditText[] cells:rows) {
+                    String name=cells[0].getText().toString().trim();
+                    String qty=cells[1].getText().toString().trim();
+                    String price=cells[2].getText().toString().trim();
+                    if(name.isEmpty()&&qty.isEmpty()&&price.isEmpty()) continue;
+                    if(textRows.length()>0) textRows.append("\\n");
+                    textRows.append(name).append(" | ").append(qty).append(" | ").append(price);
+                }
+                JSONObject record=new JSONObject();
+                record.put("items_rows",textRows.toString());
+                record.put("equipment",equipment.getText().toString().trim());
+                record.put("notes",notes.getText().toString().trim());
+                validateStockRows(record.optString("items_rows",""));
+                record.put("flour",String.valueOf(stockFlourQuantity(record)));
+                store.saveStockWithInventory(day,record);
+                updateStatus();
+                dialog.dismiss();
+                toast("حُفظ جدول المخزون. راجع الكميات وأسعار الوحدات.");
+            } catch(Exception ex) {
+                toast("لم يُحفظ المخزون: "+ex.getMessage());
+            }
+        }));
+        dialog.show();
+    }
+
     private void openModule(String module) {
+        if (module.equals("stock")) { openStockTable(); return; }
         Field[] fields = schema(module);
         JSONObject saved = store.get(day,module);
         if (module.equals("stock")) {
