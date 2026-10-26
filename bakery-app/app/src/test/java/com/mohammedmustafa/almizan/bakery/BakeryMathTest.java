@@ -106,4 +106,16 @@ public class BakeryMathTest {
         assertFalse(BakeryMath.isReconciliationValid(0L, 2, true));
         assertTrue(BakeryMath.isReconciliationValid(0L, 0, true));
     }
+
+    @Test public void approvedBakeryReconciliationExampleBalancesDistributionPlusPriceDifferenceWagesExpensesAndSpoilage() {
+        long productionValue = BakeryMath.valueForLoaves(12000L, 4L); // 12,000 / 4 x 1,000
+        assertEquals(3000000L, productionValue);
+        long distributionCollections = BakeryMath.sum(2500000L, 200000L, 100000L);
+        long secondSide = BakeryMath.accountedTotal(
+                2500000L, 200000L, 100000L, 50000L, 80000L, 40000L, 30000L);
+        assertEquals(3000000L, secondSide);
+        assertEquals(0L, BakeryMath.difference(productionValue, secondSide));
+        assertEquals(0L, BakeryMath.difference(productionValue,
+                BakeryMath.accountedTotal(2500000L, 200000L, 100000L, 50000L, 80000L, 40000L, 30000L)));
+    }
 }
