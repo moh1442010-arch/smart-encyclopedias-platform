@@ -88,4 +88,22 @@ public class BakeryMathTest {
     @Test(expected=ArithmeticException.class) public void rejectsCostOverflow() {
         BakeryMath.operatingCost(Long.MAX_VALUE,2,0,0,0,0,0,0,0,0,0);
     }
+
+    @Test(expected=ArithmeticException.class) public void rejectsOverflowWhenSummingMoneyCategories() {
+        BakeryMath.sum(Long.MAX_VALUE, 1L);
+    }
+    @Test(expected=ArithmeticException.class) public void rejectsOverflowWhenCalculatingReconciliationDifference() {
+        BakeryMath.difference(Long.MAX_VALUE, -1L);
+    }
+    @Test(expected=IllegalArgumentException.class) public void rejectsNegativeLoafCountForValuation() {
+        BakeryMath.valueForLoaves(-1L, 4L);
+    }
+    @Test(expected=ArithmeticException.class) public void rejectsOverflowWhenCalculatingDailyProduction() {
+        BakeryMath.productionLoaves(Long.MAX_VALUE, 2L);
+    }
+    @Test public void reconciliationKeepsPriceBasisAndInvalidRowsAsHardStops() {
+        assertFalse(BakeryMath.isReconciliationValid(0L, 0, false));
+        assertFalse(BakeryMath.isReconciliationValid(0L, 2, true));
+        assertTrue(BakeryMath.isReconciliationValid(0L, 0, true));
+    }
 }
