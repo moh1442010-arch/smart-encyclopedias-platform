@@ -1349,6 +1349,40 @@ public class MainActivity extends Activity {
             return new JSONObject();
         }
 
+        private JSONObject materialUsageFor(String raw,long workUnits) throws Exception {
+            JSONObject usage=new JSONObject();
+            for(String line:raw.split("\\r?\\n")) {
+                if(line.trim().isEmpty()) continue;
+                String[] p=line.split("\\|",-1);
+                if(p.length<4) throw new IllegalArgumentException("راجع أعمدة المخزون الأربعة");
+                long amount=Math.multiplyExact(parseLong(p[2].trim()),workUnits);
+                if(amount>0) usage.put(p[0].trim(),amount);
+            }
+            return usage;
+        }
+        private String adjustMaterialRows(String raw,JSONObject usage,boolean restore) throws Exception {
+            StringBuilder out=new StringBuilder();
+            for(String line:raw.split("\\r?\\n")) {
+                if(line.trim().isEmpty()) continue;
+                String[] p=line.split("\\|",-1);
+                if(p.length<4) throw new IllegalArgumentException("صيغة صنف المخزن غير مكتملة");
+                String name=p[0].trim();
+                String[] qp=p[1].trim().split("\\s+",2);
+                long qty=parseLong(qp[0]); String unit=qp.length>1?qp[1]:"وحدة";
+                long used=usage.optLong(name,0L);
+                long next=restore?Math.addExact(qty,used):Math.subtractExact(qty,used);
+                if(next<0) throw new IllegalStateException("الرصيد لا يكفي من الصنف: "+name+"؛ المطلوب "+used+" والمتاح "+qty);
+                if(out.length()>0) out.append("\n");
+                out.append(name).append(" | ").append(next).append(" ").append(unit).append(" | ").append(p[2].trim()).append(" | ").append(p[3].trim());
+            }
+            return out.toString();
+        }
+        private JSONObject readMaterialUsage(String date) {
+            Cursor c=getReadableDatabase().rawQuery("SELECT material_usage FROM inventory_usage WHERE day=?",new String[]{date});
+            try { if(c.moveToFirst()) return new JSONObject(c.getString(0)); } catch(Exception ignored) { } finally { c.close(); }
+            return new JSONObject();
+        }
+
         void saveCutsWithInventory(String date,JSONObject cuts,long newWork) throws Exception {
             if (newWork < 0) throw new IllegalArgumentException("عدد جوالات الدقيق لا يمكن أن يكون سالبًا");
             SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
