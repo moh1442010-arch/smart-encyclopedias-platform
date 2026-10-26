@@ -1316,16 +1316,19 @@ public class MainActivity extends Activity {
     private void toast(String s) { Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
 
     private class Store extends SQLiteOpenHelper {
-        Store(){super(MainActivity.this,"almizan_bakery_250.db",null,3);}
+        Store(){super(MainActivity.this,"almizan_bakery_250.db",null,4);}
         @Override public void onCreate(SQLiteDatabase db) {
             db.execSQL("CREATE TABLE records (day TEXT NOT NULL, module TEXT NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(day,module))");
-            db.execSQL("CREATE TABLE inventory_usage (day TEXT PRIMARY KEY NOT NULL, flour_bags INTEGER NOT NULL DEFAULT 0)");
+            db.execSQL("CREATE TABLE inventory_usage (day TEXT PRIMARY KEY NOT NULL, flour_bags INTEGER NOT NULL DEFAULT 0, material_usage TEXT NOT NULL DEFAULT '{}')");
         }
         @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion) {
             // Schema v3 keeps the existing records table intact and ensures the stock-usage ledger exists.
             // Never drop or recreate user accounting data during an upgrade.
             if (oldVersion < 3) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS inventory_usage (day TEXT PRIMARY KEY NOT NULL, flour_bags INTEGER NOT NULL DEFAULT 0)");
+            }
+            if (oldVersion < 4) {
+                try { db.execSQL("ALTER TABLE inventory_usage ADD COLUMN material_usage TEXT NOT NULL DEFAULT '{}'"); } catch (Exception ignored) { }
             }
         }
         JSONObject get(String date,String module) {
