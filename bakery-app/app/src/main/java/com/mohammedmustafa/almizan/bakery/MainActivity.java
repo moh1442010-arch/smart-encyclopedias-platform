@@ -786,7 +786,7 @@ public class MainActivity extends Activity {
     private void showCosting() {
         try {
             long production=productionValue(), cost=costingTotal();
-            long spoilage=spoilageValue(), labor=wages(), expenses=expenseTotal();
+            long spoilage=spoilageCost(), labor=wages(), expenses=expenseTotal();
             long beforeCost=Math.subtractExact(Math.subtractExact(Math.subtractExact(production,spoilage),labor),expenses);
             long margin=BakeryMath.netMargin(salesRevenue(),spoilageCost(),labor,expenses,cost);
             String message="تاريخ التكلفة: "+day+
