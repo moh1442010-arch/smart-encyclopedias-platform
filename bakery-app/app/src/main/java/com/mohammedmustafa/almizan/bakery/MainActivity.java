@@ -1461,15 +1461,17 @@ public class MainActivity extends Activity {
             try {
                 if(hasFutureStockAfter(date)) throw new IllegalStateException("لا يمكن حذف شغل يوم سابق بعد تسجيل أرصدة مخزن لأيام لاحقة.");
                 long usage=usageForDate(date);
+                JSONObject previousUsage=readMaterialUsage(date);
+                if(previousUsage.length()==0 && usage>0) previousUsage.put("دقيق",usage);
                 Cursor c=db.rawQuery("SELECT payload FROM records WHERE day=? AND module='stock'",new String[]{date});
                 try {
-                    if(c.moveToFirst() && usage>0) {
+                    if(c.moveToFirst() && (usage>0 || previousUsage.length()>0)) {
                         JSONObject stock=new JSONObject(c.getString(0));
-                        long closing=parseLong(stock.optString("flour","0"));
-                        long restored=Math.addExact(closing,usage);
+                        String raw=stock.optString("items_rows","");
+                        if(!raw.trim().isEmpty()) raw=adjustMaterialRows(raw,previousUsage,true);
+                        long restored=stockFlourQuantityFromRows(raw);
                         stock.put("flour",String.valueOf(restored));
-                        if (!stock.optString("items_rows","").trim().isEmpty())
-                            stock.put("items_rows",setStockFlourQuantity(stock.optString("items_rows",""),restored));
+                        if(!raw.trim().isEmpty()) stock.put("items_rows",raw);
                         ContentValues cv=new ContentValues(); cv.put("day",date); cv.put("module","stock"); cv.put("payload",stock.toString()); cv.put("updated_at",System.currentTimeMillis());
                         db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
                     }
