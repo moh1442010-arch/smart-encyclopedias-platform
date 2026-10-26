@@ -399,7 +399,15 @@ public class MainActivity extends Activity {
         hero.setBackground(background);
         hero.setElevation(4f);
 
-        android.widget.ImageView emblem = new android.widget.ImageView(this);\n        emblem.setImageResource(R.drawable.ic_bakery);\n        emblem.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);\n        LinearLayout.LayoutParams emblemLp = new LinearLayout.LayoutParams(76,76);\n        emblemLp.gravity = Gravity.CENTER_HORIZONTAL;\n        emblemLp.bottomMargin = 8;\n        hero.addView(emblem, emblemLp);\n\n        TextView brand = text("🌾  سنابل القمح والخبز  •  رغيف اليوم بميزان دقيق",19);
+        android.widget.ImageView emblem = new android.widget.ImageView(this);
+        emblem.setImageResource(R.drawable.ic_bakery);
+        emblem.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        LinearLayout.LayoutParams emblemLp = new LinearLayout.LayoutParams(76,76);
+        emblemLp.gravity = Gravity.CENTER_HORIZONTAL;
+        emblemLp.bottomMargin = 8;
+        hero.addView(emblem, emblemLp);
+
+        TextView brand = text("🌾  سنابل القمح والخبز  •  رغيف اليوم بميزان دقيق",19);
         brand.setTextColor(Color.WHITE);
         brand.setTypeface(null,1);
         hero.addView(brand);
