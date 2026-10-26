@@ -621,8 +621,8 @@ public class MainActivity extends Activity {
 
     private String normalizeRows(String raw) {
         if (raw == null || raw.isEmpty()) return "";
-        // Older builds accidentally saved the two characters \\ and n instead of real line breaks.
-        return raw.replace("\\\\n", "\\n").replace("\\r\\n", "\\n").replace("\\r", "\\n");
+        // Recover rows saved by older builds with literal backslash-n separators.
+        return raw.replace("\\n", "\n").replace("\r\n", "\n").replace("\r", "\n");
     }
 
     private String[] stockParts(String line) {
@@ -689,7 +689,7 @@ public class MainActivity extends Activity {
                     String name=cells[0].getText().toString().trim(), qty=cells[1].getText().toString().trim(),
                         consumption=cells[2].getText().toString().trim(), price=cells[3].getText().toString().trim();
                     if(name.isEmpty()&&qty.isEmpty()&&consumption.isEmpty()&&price.isEmpty()) continue;
-                    if(textRows.length()>0) textRows.append("\\n");
+                    if(textRows.length()>0) textRows.append("\n");
                     textRows.append(name).append(" | ").append(qty).append(" | ").append(consumption).append(" | ").append(price);
                 }
                 JSONObject record=new JSONObject(); record.put("items_rows",textRows.toString());
