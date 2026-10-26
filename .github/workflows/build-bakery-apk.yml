@@ -116,7 +116,7 @@ jobs:
           retention-days: 30
 
       - name: Publish review-only GitHub Release
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/bakery-2.6.2-review'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/bakery-2.6.2-profit-and-entry-fixes'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: al-mizan-bakery-2.6.2-review
