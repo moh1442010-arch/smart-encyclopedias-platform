@@ -638,6 +638,7 @@ public class MainActivity extends Activity {
             long applied=current.length()>0?store.usageForDate(day):0L;
             if(applied>0) flourQty=Math.addExact(flourQty,applied);
             raw=setStockFlourQuantity(raw,flourQty);
+            if(current.length()>0) raw=store.adjustMaterialRows(raw,store.readMaterialUsage(day),true);
             saved.put("items_rows",raw);
         } catch(Exception ex) { toast("تعذر تجهيز المخزون للتحرير؛ لم تُمسح أي بيانات."); return; }
 
@@ -1439,14 +1440,14 @@ public class MainActivity extends Activity {
             try {
                 if(hasFutureStockAfter(date)) throw new IllegalStateException("لا يمكن تعديل رصيد مخزن سابق بعد تسجيل أرصدة لأيام لاحقة.");
                 long usage=usageForDate(date);
-                String raw=stockInput.optString("flour","");
-                if(raw.trim().isEmpty() && usage>0) throw new IllegalStateException("أدخل رصيد الدقيق الافتتاحي قبل حفظ المخزن.");
-                long opening=raw.trim().isEmpty()?0L:parseLong(raw);
-                long closing=Math.subtractExact(opening,usage);
-                if(closing<0) throw new IllegalStateException("رصيد الدقيق الافتتاحي أقل من شغل اليوم.");
+                String raw=stockInput.optString("items_rows","");
+                if(raw.trim().isEmpty() && usage>0) throw new IllegalStateException("أدخل رصيد المواد الافتتاحي قبل حفظ المخزن.");
+                JSONObject applied=readMaterialUsage(date);
+                String closingRows=raw.trim().isEmpty()?raw:adjustMaterialRows(raw,applied,false);
+                long closing=stockFlourQuantityFromRows(closingRows);
+                if(closing<0) throw new IllegalStateException("رصيد الدقيق لا يكفي لشغل اليوم.");
                 stockInput.put("flour",String.valueOf(closing));
-                if (!stockInput.optString("items_rows","").trim().isEmpty())
-                    stockInput.put("items_rows",setStockFlourQuantity(stockInput.optString("items_rows",""),closing));
+                if(!closingRows.trim().isEmpty()) stockInput.put("items_rows",closingRows);
                 ContentValues cv=new ContentValues(); cv.put("day",date); cv.put("module","stock"); cv.put("payload",stockInput.toString()); cv.put("updated_at",System.currentTimeMillis());
                 db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
                 db.setTransactionSuccessful();
