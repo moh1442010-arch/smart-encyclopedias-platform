@@ -619,6 +619,12 @@ public class MainActivity extends Activity {
         rows.add(cells);
     }
 
+    private String normalizeRows(String raw) {
+        if (raw == null || raw.isEmpty()) return "";
+        // Older builds accidentally saved the two characters \\ and n instead of real line breaks.
+        return raw.replace("\\\\n", "\\n").replace("\\r\\n", "\\n").replace("\\r", "\\n");
+    }
+
     private String[] stockParts(String line) {
         String[] p=line.split("\\|",-1);
         if(p.length>=4) return new String[]{p[0].trim(),p[1].trim(),p[2].trim(),p[3].trim()};
@@ -662,7 +668,7 @@ public class MainActivity extends Activity {
         }
         table.addView(header);
         java.util.List<EditText[]> rows=new java.util.ArrayList<>();
-        for(String line:saved.optString("items_rows","").split("\\r?\\n")) {
+        for(String line:normalizeRows(saved.optString("items_rows","")).split("\\r?\\n")) {
             if(line.trim().isEmpty()) continue;
             String[] p=stockParts(line);
             addInventoryRow(table,rows,p[0],p[1],p[2],p[3]);
@@ -870,7 +876,7 @@ public class MainActivity extends Activity {
     private void validateStockRows(String raw) {
         if (raw.trim().isEmpty()) throw new IllegalArgumentException("أدخل أصناف المخزن أولًا.");
         boolean flourFound=false;
-        for (String line : raw.split("\\r?\\n")) {
+        for (String line : normalizeRows(raw).split("\\r?\\n")) {
             if (line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             if (p.length<4 || p[0].trim().isEmpty() || p[1].trim().isEmpty() || p[2].trim().isEmpty() || p[3].trim().isEmpty())
@@ -887,7 +893,7 @@ public class MainActivity extends Activity {
     private long stockFlourQuantity(JSONObject stock) {
         String rows=stock.optString("items_rows","").trim();
         if(!rows.isEmpty()) {
-            for(String line:rows.split("\\r?\\n")) {
+            for(String line:normalizeRows(rows).split("\\r?\\n")) {
                 String[] p=line.split("\\|",-1);
                 if(p.length>=2 && (p[0].trim().contains("دقيق") || p[0].trim().equalsIgnoreCase("flour"))) {
                     String[] q=p[1].trim().split("\\s+");
