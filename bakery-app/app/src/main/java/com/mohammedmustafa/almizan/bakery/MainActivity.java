@@ -1145,6 +1145,8 @@ public class MainActivity extends Activity {
                     long adjusted=BakeryMath.stockAfterUsage(current,previouslyApplied,newWork);
                     if (adjusted<0) throw new IllegalStateException("رصيد الدقيق لا يكفي لشغل اليوم. الرصيد الحالي: "+current+" جوال.");
                     stock.put("flour",String.valueOf(adjusted));
+                    if (!stock.optString("items_rows","").trim().isEmpty())
+                        stock.put("items_rows",setStockFlourQuantity(stock.optString("items_rows",""),adjusted));
                     ContentValues scv=new ContentValues(); scv.put("day",date); scv.put("module","stock"); scv.put("payload",stock.toString()); scv.put("updated_at",System.currentTimeMillis());
                     db.insertWithOnConflict("records",null,scv,SQLiteDatabase.CONFLICT_REPLACE);
                 }
@@ -1178,6 +1180,8 @@ public class MainActivity extends Activity {
                 long closing=Math.subtractExact(opening,usage);
                 if(closing<0) throw new IllegalStateException("رصيد الدقيق الافتتاحي أقل من شغل اليوم.");
                 stockInput.put("flour",String.valueOf(closing));
+                if (!stockInput.optString("items_rows","").trim().isEmpty())
+                    stockInput.put("items_rows",setStockFlourQuantity(stockInput.optString("items_rows",""),closing));
                 ContentValues cv=new ContentValues(); cv.put("day",date); cv.put("module","stock"); cv.put("payload",stockInput.toString()); cv.put("updated_at",System.currentTimeMillis());
                 db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
                 db.setTransactionSuccessful();
@@ -1194,7 +1198,10 @@ public class MainActivity extends Activity {
                     if(c.moveToFirst() && usage>0) {
                         JSONObject stock=new JSONObject(c.getString(0));
                         long closing=parseLong(stock.optString("flour","0"));
-                        stock.put("flour",String.valueOf(Math.addExact(closing,usage)));
+                        long restored=Math.addExact(closing,usage);
+                        stock.put("flour",String.valueOf(restored));
+                        if (!stock.optString("items_rows","").trim().isEmpty())
+                            stock.put("items_rows",setStockFlourQuantity(stock.optString("items_rows",""),restored));
                         ContentValues cv=new ContentValues(); cv.put("day",date); cv.put("module","stock"); cv.put("payload",stock.toString()); cv.put("updated_at",System.currentTimeMillis());
                         db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
                     }
