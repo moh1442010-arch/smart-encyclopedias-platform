@@ -593,7 +593,7 @@ public class MainActivity extends Activity {
         e.setTextSize(14);
         e.setSingleLine(true);
         e.setPadding(6,8,6,8);
-        if (numeric) e.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        if (numeric) e.setInputType(InputType.TYPE_CLASS_NUMBER);
         GradientDrawable border = rounded(Color.WHITE,4);
         border.setStroke(Math.max(1,(int)(1f*getResources().getDisplayMetrics().density)),Color.rgb(150,165,181));
         e.setBackground(border);
@@ -691,7 +691,7 @@ public class MainActivity extends Activity {
                     String qty=cells[1].getText().toString().trim();
                     String price=cells[2].getText().toString().trim();
                     if(name.isEmpty()&&qty.isEmpty()&&price.isEmpty()) continue;
-                    if(textRows.length()>0) textRows.append("\\n");
+                    if(textRows.length()>0) textRows.append("\n");
                     textRows.append(name).append(" | ").append(qty).append(" | ").append(price);
                 }
                 JSONObject record=new JSONObject();
