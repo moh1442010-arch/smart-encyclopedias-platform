@@ -986,6 +986,7 @@ public class MainActivity extends Activity {
         for(String line:raw.split("\\r?\\n")) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
+            if(p.length==3) p=new String[]{p[0],p[1],(p[0].trim().contains("دقيق")?"1":"0"),p[2]};
             if(p.length<4) continue;
             long consumption=parseLong(p[2].trim());
             long unitPrice=parseLong(p[3].trim());
@@ -1393,6 +1394,7 @@ public class MainActivity extends Activity {
             for(String line:raw.split("\\r?\\n")) {
                 if(line.trim().isEmpty()) continue;
                 String[] p=line.split("\\|",-1);
+                if(p.length==3) p=new String[]{p[0],p[1],(p[0].trim().contains("دقيق")?"1":"0"),p[2]};
                 if(p.length<4) throw new IllegalArgumentException("راجع أعمدة المخزون الأربعة");
                 long amount=Math.multiplyExact(parseLong(p[2].trim()),workUnits);
                 if(amount>0) usage.put(p[0].trim(),amount);
@@ -1404,6 +1406,7 @@ public class MainActivity extends Activity {
             for(String line:raw.split("\\r?\\n")) {
                 if(line.trim().isEmpty()) continue;
                 String[] p=line.split("\\|",-1);
+                if(p.length==3) p=new String[]{p[0],p[1],(p[0].trim().contains("دقيق")?"1":"0"),p[2]};
                 if(p.length<4) throw new IllegalArgumentException("صيغة صنف المخزن غير مكتملة");
                 String name=p[0].trim();
                 String[] qp=p[1].trim().split("\\s+",2);
