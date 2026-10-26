@@ -621,8 +621,13 @@ public class MainActivity extends Activity {
 
     private String[] stockParts(String line) {
         String[] p=line.split("\\|",-1);
-        if(p.length<4) return new String[]{line.trim(),"0 وحدة","0","0"};
-        return new String[]{p[0].trim(),p[1].trim(),p[2].trim(),p[3].trim()};
+        if(p.length>=4) return new String[]{p[0].trim(),p[1].trim(),p[2].trim(),p[3].trim()};
+        if(p.length==3) {
+            String name=p[0].trim();
+            String rate=(name.contains("دقيق") || name.equalsIgnoreCase("flour"))?"1":"0";
+            return new String[]{name,p[1].trim(),rate,p[2].trim()};
+        }
+        return new String[]{line.trim(),"0 وحدة","0","0"};
     }
 
     private void openStockTable() {
