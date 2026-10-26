@@ -450,7 +450,7 @@ public class MainActivity extends Activity {
         long production = 0L, margin = 0L;
         try {
             production = productionValue();
-            margin = BakeryMath.netMargin(production, spoilageValue(), wages(), expenseTotal(), costingTotal());
+            margin = BakeryMath.netMargin(salesRevenue(), spoilageCost(), wages(), expenseTotal(), costingTotal());
         } catch (Exception ignored) { /* keep the dashboard available if a daily record needs correction */ }
         addMetricTile(second, "production", "💵 قيمة الإنتاج", fmt(production) + " ج", "بحسب سعر القطعيات");
         addMetricTile(second, "margin", "📈 هامش الربح", fmt(margin) + " ج", "تقديري بعد التكاليف");
@@ -749,6 +749,25 @@ public class MainActivity extends Activity {
     private long spoilageValue() { return valueForLoaves(val("spoilage","loaves")); }
     private Totals distribution() { return rowTotals("distribution","rows",4); }
     private long productionValue() { return valueForLoaves(productionLoaves()); }
+
+    // Profit uses actual recorded sales collections/receivables, not theoretical production value.
+    private long salesRevenue() {
+        return Math.addExact(Math.addExact(cashTotal(), debtTotal()), bankTotal());
+    }
+
+    // Spoilage is valued at estimated production cost per loaf, never at selling price.
+    private long spoilageCost() {
+        long produced = productionLoaves();
+        if (produced <= 0) return 0L;
+        long spoiled = val("spoilage", "loaves");
+        if (spoiled < 0 || spoiled > produced)
+            throw new IllegalArgumentException("عدد التالف لا يجوز أن يتجاوز الإنتاج");
+        return java.math.BigDecimal.valueOf(costingTotal())
+            .multiply(java.math.BigDecimal.valueOf(spoiled))
+            .divide(java.math.BigDecimal.valueOf(produced), 0, java.math.RoundingMode.HALF_UP)
+            .longValueExact();
+    }
+
     private long costingTotal() {
         long sacks=val("cuts","work_units"), perSack=0L;
         String[] keys={"unit_flour","unit_yeast","unit_oil","unit_bags","unit_salt","unit_wood","unit_gas","unit_diesel","unit_other1","unit_other2","unit_other3"};
@@ -769,7 +788,7 @@ public class MainActivity extends Activity {
             long production=productionValue(), cost=costingTotal();
             long spoilage=spoilageValue(), labor=wages(), expenses=expenseTotal();
             long beforeCost=Math.subtractExact(Math.subtractExact(Math.subtractExact(production,spoilage),labor),expenses);
-            long margin=BakeryMath.netMargin(production,spoilage,labor,expenses,cost);
+            long margin=BakeryMath.netMargin(salesRevenue(),spoilageCost(),labor,expenses,cost);
             String message="تاريخ التكلفة: "+day+
                 "\nقيمة القطعيات/الإنتاج: "+fmt(production)+" جنيه"+
                 "\n(-) قيمة التالف: "+fmt(spoilage)+" جنيه"+
@@ -814,7 +833,7 @@ public class MainActivity extends Activity {
                 "\nمنصرفات المحل: "+fmt(expenseTotal())+" جنيه"+
                 "\nقيمة التالف: "+fmt(spoilageValue())+" جنيه"+
                 "\nتكلفة التشغيل التقديرية (للمقارنة فقط): "+fmt(costingTotal())+" جنيه"+
-                "\nهامش الربح التقديري: "+fmt(BakeryMath.netMargin(expected,spoilageValue(),wages(),expenseTotal(),costingTotal()))+" جنيه"+
+                "\nهامش الربح التقديري: "+fmt(BakeryMath.netMargin(salesRevenue(),spoilageCost(),wages(),expenseTotal(),costingTotal()))+" جنيه"+
                 "\n\nإجمالي البنود المسجلة: "+fmt(actual)+" جنيه"+
                 "\nفرق التسوية (المطلوب صفر): "+fmt(difference)+" جنيه"+
                 "\nالنتيجة: "+status+
@@ -927,11 +946,11 @@ public class MainActivity extends Activity {
             "4) تكلفة شغل اليوم: أدخل سعر تكلفة الجوال الواحد لكل صنف: دقيق، خميرة، زيت، ملح، أكياس، حطب، غاز، جاز، وثلاثة بنود أخرى. اكتب صفرًا إذا لم تستخدم الصنف، واترك البند الإضافي فارغًا إذا لم توجد تكلفة. إجمالي تكلفة الجوال = مجموع أسعار الأصناف، وإجمالي تكلفة التشغيل = تكلفة الجوال × عدد جوالات شغل اليوم. راجع الأسعار قبل اعتماد التقرير.\n"+
             "5) يومية العمال: سطر لكل عامل بصيغة الاسم | الوظيفة | عدد الجوالات التي عملها | أجرة العامل لكل جوال. مثال: أحمد | خباز | 5 | 2000، وفران | فران | 5 | 2000. أجر العامل اليومي = عدد الجوالات × أجره لكل جوال؛ في المثال 10,000 لكل عامل، وإجمالي العاملين 20,000 جنيه. لا تكتب أجرة اليوم في خانة أجرة الجوال.\n"+
             "6) بيع الشباك: أدخل الكاش المقبوض والديون والتحويلات البنكية كلٌّ في خانته، واحتفظ برقم العملية في المرجع.\n"+
-            "7) التوزيع: سطر لكل عميل بهذه الصيغة: اسم العميل | عدد الأرغفة | سعر التوزيع الإجمالي | فرق السعر. مثال: أحمد | 100 | 22000 | 3000. السعر هنا إجمالي قيمة التوزيع وليس سعر الرغيف الواحد؛ يسجله التطبيق مبدئيًا ضمن الديون المستحقة على العميل لأن صيغة الأعمدة الأربع لا تحدد طريقة التحصيل. عند السداد، راجع دفتر العميل وسجل التحصيل دون تكرار قيمة البيع.\n"+
+            "7) التوزيع: سطر لكل عميل بهذه الصيغة: اسم العميل | عدد الأرغفة | نقداً | ديون | بنكك | فرق السعر. مثال: أحمد | 100 | 22000 | 0 | 0 | 3000. اكتب قيمة البيع في طريقة التحصيل الفعلية فقط، ولا تكرر المبلغ في أكثر من خانة.\n"+
             "8) المنصرفات: أدخل الوجبات والصيانة والمشتريات والمنصرفات الإضافية، مع تجنب تكرار المصروف نفسه في بندين.\n"+
             "9) التالف: أدخل عدد الأرغفة التالفة وسبب التلف؛ تراجع قيمة التالف وفق سعر القطعيات.\n"+
             "10) المحاسب والحساب: راجع الإنتاج والكاش والديون والتحويلات وكمية التوزيع وفرق السعر والأجور والمنصرفات والتالف. فرق التسوية غير الصفري يعني أن هناك بندًا يحتاج للمراجعة؛ لا تعتمد الدفتر قبل تفسير الفرق. أدخل كل عملية مرة واحدة فقط؛ لا تسجل قيمة فاتورة التوزيع في الشباك والديون معًا، ولا تكرر المصروف في أكثر من شاشة.\n"+
-            "11) الربح: التقرير تقديري ويعرض قيمة الإنتاج مطروحًا منها التالف والأجور والمنصرفات وتكلفة التشغيل. انتبه إلى أن المصروف الذي أدخلته في تكلفة التشغيل لا ينبغي طرحه مرة أخرى كمصروف محل عند إعداد صافي الربح النهائي.\n\n"+
+            "11) الربح: صافي هامش الربح التقديري = إيرادات البيع الفعلية (نقداً + ديون + بنكك) − تكلفة المواد المستهلكة − تكلفة التالف المقدرة بسعر التكلفة − أجور العمال − مصروفات التشغيل. فرق السعر يظهر في التسوية ولا يضاف مرة ثانية إذا كان مبلغ البيع الفعلي مسجلاً بالفعل. لا تكرر أي تكلفة في بندين.\n\n"+
             "حفظ البيانات: السجلات تحفظ محليًا على هذا الجهاز. من قائمة النسخ الاحتياطي صدّر ملف JSON إلى مكان آمن واختبر الاستعادة. قبل تحديث التطبيق، احتفظ بنسخة. هذه نسخة مراجعة؛ اختبر دورة يوم كاملة ومطابقة النقد والمخزون قبل الاعتماد المالي أو الضريبي.";
         new AlertDialog.Builder(this).setTitle("📘 اللوحة الإرشادية").setMessage(guide).setPositiveButton("فهمت",null).show();
     }
