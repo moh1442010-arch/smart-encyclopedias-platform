@@ -453,7 +453,7 @@ public class MainActivity extends Activity {
         long production = 0L, margin = 0L;
         try {
             production = productionValue();
-            margin = BakeryMath.netMargin(salesRevenue(), spoilageCost(), wages(), expenseTotal(), costingTotal());
+            margin = BakeryMath.netMargin(salesRevenue(), spoilageCost(), wages(), expenseTotal(), costingTotal(), distributionDiff());
         } catch (Exception ignored) { /* keep the dashboard available if a daily record needs correction */ }
         addMetricTile(second, "production", "💵 قيمة الإنتاج", fmt(production) + " ج", "بحسب سعر القطعيات");
         addMetricTile(second, "margin", "📈 هامش الربح", fmt(margin) + " ج", "تقديري بعد التكاليف");
@@ -864,15 +864,12 @@ public class MainActivity extends Activity {
     }
 
     private long costingTotal() {
-        // Inventory purchase prices are not daily consumption rates. Use only the explicitly
-        // entered operating cost per work unit, multiplied by today's work count.
-        long workUnits=val("cuts","work_units");
-        long perWorkUnit=0L;
-        String[] keys={"unit_flour","unit_yeast","unit_oil","unit_bags","unit_salt","unit_wood","unit_gas","unit_diesel","unit_other1","unit_other2","unit_other3"};
-        for(String key:keys) {
-            perWorkUnit=Math.addExact(perWorkUnit,val("costing",key));
-        }
-        return Math.multiplyExact(perWorkUnit,workUnits);
+        // Inventory purchase prices are not daily consumption rates.
+        return BakeryMath.operatingCostPerWorkUnit(val("cuts","work_units"),
+            val("costing","unit_flour"),val("costing","unit_yeast"),val("costing","unit_oil"),
+            val("costing","unit_bags"),val("costing","unit_salt"),val("costing","unit_wood"),
+            val("costing","unit_gas"),val("costing","unit_diesel"),val("costing","unit_other1"),
+            val("costing","unit_other2"),val("costing","unit_other3"));
     }
 
     private void showCosting() {
@@ -925,7 +922,7 @@ public class MainActivity extends Activity {
                 "\nمنصرفات المحل: "+fmt(expenseTotal())+" جنيه"+
                 "\nقيمة التالف: "+fmt(spoilageValue())+" جنيه"+
                 "\nتكلفة التشغيل التقديرية (للمقارنة فقط): "+fmt(costingTotal())+" جنيه"+
-                "\nهامش الربح التقديري: "+fmt(BakeryMath.netMargin(salesRevenue(),spoilageCost(),wages(),expenseTotal(),costingTotal()))+" جنيه"+
+                "\nهامش الربح التقديري: "+fmt(BakeryMath.netMargin(salesRevenue(),spoilageCost(),wages(),expenseTotal(),costingTotal(),distributionDiff()))+" جنيه"+
                 "\n\nإجمالي البنود المسجلة: "+fmt(actual)+" جنيه"+
                 "\nفرق التسوية (المطلوب صفر): "+fmt(difference)+" جنيه"+
                 "\nالنتيجة: "+status+
@@ -966,7 +963,7 @@ public class MainActivity extends Activity {
         if (workMetric != null) workMetric.setText(fmt(val("cuts","work_units")) + " جوال");
         try {
             long production = productionValue();
-            long margin = BakeryMath.netMargin(salesRevenue(), spoilageCost(), wages(), expenseTotal(), costingTotal());
+            long margin = BakeryMath.netMargin(salesRevenue(), spoilageCost(), wages(), expenseTotal(), costingTotal(), distributionDiff());
             if (productionMetric != null) productionMetric.setText(fmt(production) + " ج");
             if (marginMetric != null) marginMetric.setText(fmt(margin) + " ج");
         } catch (Exception ex) {
