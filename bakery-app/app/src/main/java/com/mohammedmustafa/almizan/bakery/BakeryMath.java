@@ -48,11 +48,27 @@ public final class BakeryMath {
         return Math.subtractExact(currentStock, Math.subtractExact(newUsage, previouslyAppliedUsage));
     }
 
-    /** Net daily margin after spoilage, wages, shop expenses, and operating costs. */
-    public static long netMargin(long productionValue,long spoilageValue,long wages,long expenses,long operatingCost) {
-        long[] values={productionValue,spoilageValue,wages,expenses,operatingCost};
+    /** Sum operating rates per work unit and multiply by the day's work count. */
+    public static long operatingCostPerWorkUnit(long workUnits, long... unitCosts) {
+        if (workUnits < 0) throw new IllegalArgumentException("Negative work units");
+        long perWorkUnit = 0L;
+        for (long cost : unitCosts) {
+            if (cost < 0) throw new IllegalArgumentException("Negative unit operating cost");
+            perWorkUnit = Math.addExact(perWorkUnit, cost);
+        }
+        return Math.multiplyExact(perWorkUnit, workUnits);
+    }
+
+    /** Net daily margin after spoilage, wages, shop expenses, operating costs, and distribution price difference. */
+    public static long netMargin(long salesRevenue,long spoilageCost,long wages,long expenses,long operatingCost,long priceDifference) {
+        long[] values={salesRevenue,spoilageCost,wages,expenses,operatingCost,priceDifference};
         for(long value:values) if(value<0) throw new IllegalArgumentException("Negative amount");
-        return Math.subtractExact(Math.subtractExact(Math.subtractExact(Math.subtractExact(productionValue,spoilageValue),wages),expenses),operatingCost);
+        return Math.subtractExact(Math.subtractExact(Math.subtractExact(Math.subtractExact(Math.subtractExact(salesRevenue,spoilageCost),wages),expenses),operatingCost),priceDifference);
+    }
+
+    /** Compatibility overload for calculations where no separate price difference is recorded. */
+    public static long netMargin(long productionValue,long spoilageValue,long wages,long expenses,long operatingCost) {
+        return netMargin(productionValue,spoilageValue,wages,expenses,operatingCost,0L);
     }
 
     /** Estimated margin before any additional costs not included in the supplied cost list. */
