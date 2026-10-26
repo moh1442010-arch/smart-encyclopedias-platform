@@ -728,7 +728,7 @@ public class MainActivity extends Activity {
         for (String[] item : items) {
             String qty = stock.optString(item[1],"0").trim();
             if (qty.isEmpty()) qty = "0";
-            if (rows.length()>0) rows.append("\\n");
+            if (rows.length()>0) rows.append("\n");
             rows.append(item[0]).append(" | ").append(qty).append(" ").append(item[2]).append(" | 0");
         }
         return rows.toString();
@@ -773,11 +773,11 @@ public class MainActivity extends Activity {
                 line=p[0].trim()+" | "+quantity+" "+unit+" | "+p[2].trim();
                 found=true;
             }
-            if(out.length()>0) out.append("\\n");
+            if(out.length()>0) out.append("\n");
             out.append(line);
         }
         if(!found) {
-            if(out.length()>0) out.append("\\n");
+            if(out.length()>0) out.append("\n");
             out.append("دقيق | ").append(quantity).append(" جوال | 0");
         }
         return out.toString();
