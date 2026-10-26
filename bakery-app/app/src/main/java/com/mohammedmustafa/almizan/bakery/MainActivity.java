@@ -591,12 +591,17 @@ public class MainActivity extends Activity {
             if (currentStock.length() == 0) {
                 JSONObject previous = store.getLatest(day,"stock");
                 if (previous.length() > 0) saved = previous;
-            } else {
-                long appliedUsage = store.usageForDate(day);
-                if (appliedUsage > 0) {
-                    try { saved.put("flour", String.valueOf(Math.addExact(parseLong(saved.optString("flour","0")), appliedUsage))); }
-                    catch (Exception ex) { toast("تعذر تجهيز رصيد الدقيق للتحرير. لا تحفظ التغييرات حتى مراجعة البيانات."); }
-                }
+            }
+            try {
+                if (saved.optString("items_rows","").trim().isEmpty())
+                    saved.put("items_rows", legacyStockRows(saved));
+                long flourQty = stockFlourQuantity(saved);
+                long appliedUsage = currentStock.length() > 0 ? store.usageForDate(day) : 0L;
+                if (appliedUsage > 0) flourQty = Math.addExact(flourQty, appliedUsage);
+                saved.put("flour", String.valueOf(flourQty));
+                saved.put("items_rows", setStockFlourQuantity(saved.optString("items_rows",""), flourQty));
+            } catch (Exception ex) {
+                toast("تعذر تجهيز سجل المخزن للتحرير. لا تحفظ التغييرات حتى مراجعة البيانات.");
             }
         }
         if (module.equals("costing") && val("cuts","work_units") > 0) {
