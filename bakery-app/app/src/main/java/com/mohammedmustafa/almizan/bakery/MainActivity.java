@@ -791,17 +791,30 @@ public class MainActivity extends Activity {
     }
 
     private long parseLong(String value) {
+        if (value == null) return 0L;
         StringBuilder normalized=new StringBuilder();
         for(int i=0;i<value.length();i++) {
             char ch=value.charAt(i);
-            if(ch>='٠' && ch<='٩') normalized.append((char)('0'+(ch-'٠')));
-            else if(ch>='۰' && ch<='۹') normalized.append((char)('0'+(ch-'۰')));
-            else if(ch==',' || ch=='٬' || Character.isWhitespace(ch)) { /* ignore grouping spaces */ }
-            else normalized.append(ch);
+            int digit=Character.digit(ch,10);
+            if(digit>=0) normalized.append((char)('0'+digit));
+            else if(ch==',' || ch=='٬' || ch=='\u00A0' || ch=='\u202F' || Character.isWhitespace(ch)) {
+                // Accept common thousands separators and spaces used by Arabic keyboards.
+            } else if(ch=='٫') {
+                // Arabic decimal separator: preserve decimal semantics; integer fields reject non-zero fractions below.
+                normalized.append('.');
+            } else {
+                normalized.append(ch);
+            }
         }
         String s=normalized.toString().trim();
         if(s.isEmpty()) return 0L;
-        return new BigDecimal(s).setScale(0,RoundingMode.UNNECESSARY).longValueExact();
+        try {
+            return new BigDecimal(s).setScale(0,RoundingMode.UNNECESSARY).longValueExact();
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("القيمة «"+value+"» ليست رقمًا صحيحًا. استخدم الأرقام دون رموز أو فواصل عشرية.",ex);
+        } catch (ArithmeticException ex) {
+            throw new IllegalArgumentException("القيمة «"+value+"» تحتوي كسرًا عشريًا أو تتجاوز الحد الرقمي المسموح.",ex);
+        }
     }
     private JSONObject record(String module) { return store.get(day,module); }
     private long val(String module,String key) {
