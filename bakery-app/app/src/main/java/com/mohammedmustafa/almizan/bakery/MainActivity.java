@@ -554,7 +554,7 @@ public class MainActivity extends Activity {
                 t("notes","ملاحظات بيع الشباك","")
             };
             case "distribution": return new Field[]{
-                t("rows","التوزيع — العميل | عدد الأرغفة | سعر التوزيع الإجمالي | فرق السعر","أحمد | 100 | 22000 | 3000\nبقالة النيل | 200 | 44000 | 0\nكل عميل في سطر مستقل"),
+                t("rows","التوزيع — العميل | عدد الأرغفة | نقداً | ديون | بنكك | فرق السعر","أحمد | 100 | 19000 | 0 | 3000 | 0\nبقالة النيل | 200 | 44000 | 0 | 0 | 0\nكل عميل في سطر مستقل. سجّل مبلغ كل عملية في وسيلة التحصيل الفعلية فقط، ولا تكرر المبلغ."),
                 t("notes","ملاحظات التوزيع","")
             };
             case "expenses": return new Field[]{
@@ -874,7 +874,7 @@ public class MainActivity extends Activity {
         if (workMetric != null) workMetric.setText(fmt(val("cuts","work_units")) + " جوال");
         try {
             long production = productionValue();
-            long margin = BakeryMath.netMargin(production, spoilageValue(), wages(), expenseTotal(), costingTotal());
+            long margin = BakeryMath.netMargin(salesRevenue(), spoilageCost(), wages(), expenseTotal(), costingTotal());
             if (productionMetric != null) productionMetric.setText(fmt(production) + " ج");
             if (marginMetric != null) marginMetric.setText(fmt(margin) + " ج");
         } catch (Exception ex) {
