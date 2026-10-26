@@ -567,12 +567,12 @@ public class MainActivity extends Activity {
             };
             case "spoilage": return new Field[]{f("loaves","عدد العيش التالف"),t("reason","سبب التلف / الملاحظات","")};
             case "costing": return new Field[]{
-                f("unit_flour","دقيق — تكلفة الجوال الواحد (جنيه)"),f("unit_yeast","خميرة — تكلفة الجوال الواحد (جنيه)"),
-                f("unit_oil","زيت — تكلفة الجوال الواحد (جنيه)"),f("unit_bags","أكياس — تكلفة الجوال الواحد (جنيه)"),
-                f("unit_salt","ملح — تكلفة الجوال الواحد (جنيه)"),f("unit_wood","حطب — تكلفة الجوال الواحد (جنيه)"),
-                f("unit_gas","غاز — تكلفة الجوال الواحد (جنيه)"),f("unit_diesel","جاز — تكلفة الجوال الواحد (جنيه)"),
-                f("unit_other1","تكلفة أخرى 1 لكل جوال (جنيه)"),f("unit_other2","تكلفة أخرى 2 لكل جوال (جنيه)"),
-                f("unit_other3","تكلفة أخرى 3 لكل جوال (جنيه)")
+                f("unit_flour","دقيق — تكلفة الدقيق لكل وحدة شغل (جنيه)"),f("unit_yeast","خميرة — تكلفة الخميرة لكل وحدة شغل (جنيه)"),
+                f("unit_oil","زيت — تكلفة الزيت لكل وحدة شغل (جنيه)"),f("unit_bags","أكياس — تكلفة الأكياس لكل وحدة شغل (جنيه)"),
+                f("unit_salt","ملح — تكلفة الملح لكل وحدة شغل (جنيه)"),f("unit_wood","حطب — تكلفة الحطب لكل وحدة شغل (جنيه)"),
+                f("unit_gas","غاز — تكلفة الغاز لكل وحدة شغل (جنيه)"),f("unit_diesel","جاز — تكلفة الجاز لكل وحدة شغل (جنيه)"),
+                f("unit_other1","تكلفة أخرى 1 لكل وحدة شغل (جنيه)"),f("unit_other2","تكلفة أخرى 2 لكل وحدة شغل (جنيه)"),
+                f("unit_other3","تكلفة أخرى 3 لكل وحدة شغل (جنيه)")
             };
             default: return new Field[0];
         }
@@ -828,6 +828,7 @@ public class MainActivity extends Activity {
     private long productionValue() { return valueForLoaves(productionLoaves()); }
 
     // Profit uses actual recorded sales collections/receivables, not theoretical production value.
+    // Stock purchase prices are stored separately from consumption costs to avoid mixing units.
     private long salesRevenue() {
         return Math.addExact(Math.addExact(cashTotal(), debtTotal()), bankTotal());
     }
@@ -863,21 +864,15 @@ public class MainActivity extends Activity {
     }
 
     private long costingTotal() {
-        long sacks=val("cuts","work_units");
-        long stockUnitPrices=stockUnitPriceTotal();
-        if(stockUnitPrices>0) return Math.multiplyExact(stockUnitPrices,sacks);
-        long perSack=0L;
+        // Inventory purchase prices are not daily consumption rates. Use only the explicitly
+        // entered operating cost per work unit, multiplied by today's work count.
+        long workUnits=val("cuts","work_units");
+        long perWorkUnit=0L;
         String[] keys={"unit_flour","unit_yeast","unit_oil","unit_bags","unit_salt","unit_wood","unit_gas","unit_diesel","unit_other1","unit_other2","unit_other3"};
-        boolean hasNewCost=false;
         for(String key:keys) {
-            if(!record("costing").optString(key,"").trim().isEmpty()) hasNewCost=true;
-            perSack=Math.addExact(perSack,val("costing",key));
+            perWorkUnit=Math.addExact(perWorkUnit,val("costing",key));
         }
-        if(hasNewCost) return Math.multiplyExact(perSack,sacks);
-        return BakeryMath.operatingCost(val("costing","fuel_quantity"),val("costing","fuel_unit_price"),sacks,
-            val("costing","flour_bag_price"),val("costing","yeast_count"),val("costing","yeast_piece_price"),
-            val("costing","oil_quantity"),val("costing","oil_pound_price"),val("costing","salt_quantity"),
-            val("costing","salt_unit_price"),val("costing","bags_total_price"));
+        return Math.multiplyExact(perWorkUnit,workUnits);
     }
 
     private void showCosting() {
