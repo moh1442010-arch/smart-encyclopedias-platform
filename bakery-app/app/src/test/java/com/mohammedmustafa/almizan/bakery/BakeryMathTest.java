@@ -25,6 +25,20 @@ public class BakeryMathTest {
     @Test public void balancedLedgerHasZeroDifference() {
         assertEquals(0L, BakeryMath.difference(150000,150000));
     }
+    @Test public void reconciliationRequiresZeroDifferenceConfiguredPriceAndValidRows() {
+        assertTrue(BakeryMath.isReconciliationValid(0L, 0, true));
+        assertFalse(BakeryMath.isReconciliationValid(0L, 1, true));
+        assertFalse(BakeryMath.isReconciliationValid(0L, 0, false));
+        assertFalse(BakeryMath.isReconciliationValid(1L, 0, true));
+        assertFalse(BakeryMath.isReconciliationValid(-1L, 0, true));
+    }
+    @Test(expected=IllegalArgumentException.class) public void rejectsNegativeInvalidRowCount() {
+        BakeryMath.isReconciliationValid(0L, -1, true);
+    }
+    @Test public void reconciliationIncludesExpensesAndSpoilageInRecordedCategories() {
+        assertEquals(150000L, BakeryMath.accountedTotal(50000L,20000L,10000L,0L,30000L,25000L,15000L));
+        assertEquals(0L, BakeryMath.difference(150000L, BakeryMath.accountedTotal(50000L,20000L,10000L,0L,30000L,25000L,15000L)));
+    }
     @Test(expected=IllegalArgumentException.class) public void rejectsZeroPriceBasis() {
         BakeryMath.valueForLoaves(100,0);
     }
