@@ -969,12 +969,20 @@ public class MainActivity extends Activity {
     }
 
     private long costingTotal() {
-        // Inventory purchase prices are not daily consumption rates.
-        return BakeryMath.operatingCostPerWorkUnit(val("cuts","work_units"),
-            val("costing","unit_flour"),val("costing","unit_yeast"),val("costing","unit_oil"),
-            val("costing","unit_bags"),val("costing","unit_salt"),val("costing","unit_wood"),
-            val("costing","unit_gas"),val("costing","unit_diesel"),val("costing","unit_other1"),
-            val("costing","unit_other2"),val("costing","unit_other3"));
+        long workUnits=val("cuts","work_units");
+        JSONObject stock=store.get(day,"stock");
+        String raw=stock.optString("items_rows","");
+        if(raw.trim().isEmpty()) raw=legacyStockRows(stock);
+        long total=0L;
+        for(String line:raw.split("\\r?\\n")) {
+            if(line.trim().isEmpty()) continue;
+            String[] p=line.split("\\|",-1);
+            if(p.length<4) continue;
+            long consumption=parseLong(p[2].trim());
+            long unitPrice=parseLong(p[3].trim());
+            total=Math.addExact(total,Math.multiplyExact(Math.multiplyExact(consumption,unitPrice),workUnits));
+        }
+        return total;
     }
 
     private void showCosting() {
