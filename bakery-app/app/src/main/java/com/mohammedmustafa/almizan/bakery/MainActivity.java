@@ -614,7 +614,7 @@ public class MainActivity extends Activity {
             box.addView(text(field.label,15));
             EditText e = new EditText(this); e.setTextSize(16); e.setHint(field.hint); e.setPadding(10,8,10,8);
             if(field.numeric) { e.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED); e.setSingleLine(true); }
-            else { e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE); e.setMinLines(field.key.equals("rows")?4:1); e.setGravity(Gravity.TOP|Gravity.START); }
+            else { e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE); e.setMinLines(field.key.equals("items_rows")?8:field.key.equals("production_rows")?5:field.key.equals("rows")?4:1); e.setGravity(Gravity.TOP|Gravity.START); }
             if (module.equals("costing") && field.key.equals("flour_bags")) { e.setEnabled(false); e.setAlpha(0.75f); }
             e.setText(saved.optString(field.key,"")); inputs.put(field.key,e); box.addView(e);
         }
