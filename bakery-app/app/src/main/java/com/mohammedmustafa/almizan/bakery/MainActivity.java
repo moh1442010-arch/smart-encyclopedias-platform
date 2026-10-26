@@ -1529,12 +1529,13 @@ public class MainActivity extends Activity {
                     row.put("payload",new JSONObject(c.getString(2))); row.put("updated_at",c.getLong(3)); result.put(row);
                 }
             } finally { c.close(); }
-            Cursor u=getReadableDatabase().rawQuery("SELECT day,flour_bags FROM inventory_usage ORDER BY day",null);
+            Cursor u=getReadableDatabase().rawQuery("SELECT day,flour_bags,material_usage FROM inventory_usage ORDER BY day",null);
             try {
                 while(u.moveToNext()) {
                     JSONObject row=new JSONObject(); row.put("day",u.getString(0)); row.put("module","inventory_usage");
-                    JSONObject payload=new JSONObject(); payload.put("flour_bags",u.getLong(1)); row.put("payload",payload);
-                    row.put("updated_at",System.currentTimeMillis()); result.put(row);
+                    JSONObject payload=new JSONObject(); payload.put("flour_bags",u.getLong(1));
+                    try { payload.put("material_usage",new JSONObject(u.getString(2))); } catch(Exception ignored) { payload.put("material_usage",new JSONObject()); }
+                    row.put("payload",payload); row.put("updated_at",System.currentTimeMillis()); result.put(row);
                 }
             } finally { u.close(); }
             return result;
@@ -1559,6 +1560,7 @@ public class MainActivity extends Activity {
                     if ("inventory_usage".equals(cv.getAsString("module"))) {
                         JSONObject payload=new JSONObject(cv.getAsString("payload"));
                         ContentValues uv=new ContentValues(); uv.put("day",cv.getAsString("day")); uv.put("flour_bags",payload.getLong("flour_bags"));
+                        uv.put("material_usage",payload.optJSONObject("material_usage")!=null?payload.optJSONObject("material_usage").toString():"{}");
                         db.insertWithOnConflict("inventory_usage",null,uv,SQLiteDatabase.CONFLICT_REPLACE);
                     } else {
                         db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
