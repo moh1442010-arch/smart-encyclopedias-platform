@@ -600,113 +600,90 @@ public class MainActivity extends Activity {
         return e;
     }
 
-    private void addInventoryRow(LinearLayout table, java.util.List<EditText[]> rows, String item, String quantity, String price) {
+    private void addInventoryRow(LinearLayout table, java.util.List<EditText[]> rows, String item, String quantity, String consumption, String price) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
         EditText name = inventoryCell(item,"الصنف",false);
-        EditText qty = inventoryCell(quantity,"الكمية والوحدة",false);
+        EditText qty = inventoryCell(quantity,"الرصيد + الوحدة",false);
+        EditText used = inventoryCell(consumption,"استهلاك/جوال",true);
         EditText unitPrice = inventoryCell(price,"سعر الوحدة",true);
-        LinearLayout.LayoutParams cell = new LinearLayout.LayoutParams(0,-2,1f);
-        cell.setMargins(2,2,2,2);
-        row.addView(name,cell);
-        row.addView(qty,cell);
-        row.addView(unitPrice,cell);
+        EditText[] cells={name,qty,used,unitPrice};
+        for(EditText e:cells) {
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);
+            lp.setMargins(2,2,2,2);
+            row.addView(e,lp);
+        }
         table.addView(row,new LinearLayout.LayoutParams(-1,-2));
-        rows.add(new EditText[]{name,qty,unitPrice});
+        rows.add(cells);
+    }
+
+    private String[] stockParts(String line) {
+        String[] p=line.split("\\|",-1);
+        if(p.length<4) return new String[]{line.trim(),"0 وحدة","0","0"};
+        return new String[]{p[0].trim(),p[1].trim(),p[2].trim(),p[3].trim()};
     }
 
     private void openStockTable() {
-        JSONObject saved = store.get(day,"stock");
-        JSONObject current = store.get(day,"stock");
-        if (current.length()==0) {
-            JSONObject previous = store.getLatest(day,"stock");
-            if (previous.length()>0) saved=previous;
+        JSONObject saved=store.get(day,"stock");
+        JSONObject current=store.get(day,"stock");
+        if(current.length()==0) {
+            JSONObject previous=store.getLatest(day,"stock");
+            if(previous.length()>0) saved=previous;
         }
         try {
-            if (saved.optString("items_rows","").trim().isEmpty()) saved.put("items_rows",legacyStockRows(saved));
+            String raw=saved.optString("items_rows","").trim();
+            if(raw.isEmpty()) raw=legacyStockRows(saved);
             long flourQty=stockFlourQuantity(saved);
             long applied=current.length()>0?store.usageForDate(day):0L;
-            if (applied>0) flourQty=Math.addExact(flourQty,applied);
-            saved.put("items_rows",setStockFlourQuantity(saved.optString("items_rows",""),flourQty));
-        } catch(Exception ex) {
-            toast("تعذر تجهيز المخزون للتحرير؛ لم تُمسح أي بيانات.");
-            return;
-        }
+            if(applied>0) flourQty=Math.addExact(flourQty,applied);
+            raw=setStockFlourQuantity(raw,flourQty);
+            saved.put("items_rows",raw);
+        } catch(Exception ex) { toast("تعذر تجهيز المخزون للتحرير؛ لم تُمسح أي بيانات."); return; }
 
         ScrollView scroll=new ScrollView(this);
-        LinearLayout box=new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(10,8,10,12);
-        scroll.addView(box);
-        box.addView(text("أدخل كل صنف في صف مستقل. الكمية تتضمن وحدة القياس، وسعر الوحدة هو سعر وحدة الصنف بالجنيه.",14));
-        LinearLayout table=new LinearLayout(this);
-        table.setOrientation(LinearLayout.VERTICAL);
-        table.setPadding(2,2,2,2);
-        table.setBackground(rounded(Color.rgb(222,229,237),4));
-        LinearLayout header=new LinearLayout(this);
-        header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        String[] headings={"الصنف","الكمية والوحدة","سعر الوحدة (جنيه)"};
+        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(8,8,8,12); scroll.addView(box);
+        box.addView(text("أدخل رصيد كل مادة، وكمية استهلاكها مع جوال دقيق واحد، وسعر وحدة الاستهلاك. يُخصم الاستهلاك تلقائيًا عند حفظ شغل اليوم.",14));
+        LinearLayout table=new LinearLayout(this); table.setOrientation(LinearLayout.VERTICAL); table.setPadding(2,2,2,2); table.setBackground(rounded(Color.rgb(222,229,237),4));
+        LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL); header.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        String[] headings={"الصنف","الرصيد والوحدة","استهلاك/جوال","سعر الوحدة"};
         for(String heading:headings) {
-            TextView h=text(heading,13);
-            h.setTextColor(Color.WHITE);
-            h.setTypeface(null,1);
-            h.setGravity(Gravity.CENTER);
-            h.setBackground(rounded(NAVY,3));
-            LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(0,-2,1f);
-            hp.setMargins(2,2,2,2);
-            header.addView(h,hp);
+            TextView h=text(heading,12); h.setTextColor(Color.WHITE); h.setTypeface(null,1); h.setGravity(Gravity.CENTER); h.setBackground(rounded(NAVY,3));
+            LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(0,-2,1f); hp.setMargins(2,2,2,2); header.addView(h,hp);
         }
         table.addView(header);
         java.util.List<EditText[]> rows=new java.util.ArrayList<>();
-        String raw=saved.optString("items_rows","");
-        for(String line:raw.split("\\r?\\n")) {
+        for(String line:saved.optString("items_rows","").split("\\r?\\n")) {
             if(line.trim().isEmpty()) continue;
-            String[] p=line.split("\\|",-1);
-            if(p.length>=3) addInventoryRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim());
+            String[] p=stockParts(line);
+            addInventoryRow(table,rows,p[0],p[1],p[2],p[3]);
         }
         if(rows.isEmpty()) {
-            String[][] defaults={{"دقيق","0 جوال","0"},{"ملح","0 كيلو","0"},{"خميرة","0 باكو","0"},{"زيت","0 رطل","0"},{"أكياس","0 لفة","0"},{"جاز","0 جالون","0"},{"غاز","0 أسطوانة","0"},{"حطب","0 قنطار","0"}};
-            for(String[] item:defaults) addInventoryRow(table,rows,item[0],item[1],item[2]);
+            String[][] defaults={{"دقيق","50 جوال","1","60000"},{"ملح","25 كيلو","0","2000"},{"خميرة","45 باكو","0","6000"},{"زيت","108 رطل","0","5000"},{"أكياس","50 لفة","0","2000"},{"جاز","0 جالون","0","0"},{"غاز","0 أسطوانة","0","0"},{"حطب","0 قنطار","0","0"}};
+            for(String[] item:defaults) addInventoryRow(table,rows,item[0],item[1],item[2],item[3]);
         }
         box.addView(table);
-        Button add=button("＋ إضافة صنف للمخزون");
-        add.setOnClickListener(v->addInventoryRow(table,rows,"","",""));
-        box.addView(add);
-        box.addView(text("المعدات (اختياري)",14));
-        EditText equipment=inventoryCell(saved.optString("equipment",""),"اسم المعدة وحالتها",false);
-        box.addView(equipment,new LinearLayout.LayoutParams(-1,-2));
-        box.addView(text("ملاحظات المخزن",14));
-        EditText notes=inventoryCell(saved.optString("notes",""),"ملاحظات",false);
-        box.addView(notes,new LinearLayout.LayoutParams(-1,-2));
-
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("📦 جدول المخزون — "+day).setView(scroll)
-            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ جدول المخزون",null).create();
+        Button add=button("＋ إضافة مادة للمخزون"); add.setOnClickListener(v->addInventoryRow(table,rows,"","","","")); box.addView(add);
+        box.addView(text("المعدات (اختياري)",14)); EditText equipment=inventoryCell(saved.optString("equipment",""),"اسم المعدة وحالتها",false); box.addView(equipment);
+        box.addView(text("ملاحظات المخزن",14)); EditText notes=inventoryCell(saved.optString("notes",""),"ملاحظات",false); box.addView(notes);
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("📦 المخزن والتكلفة حسب الاستهلاك — "+day).setView(scroll).setNegativeButton("إلغاء",null).setPositiveButton("حفظ جدول المخزون",null).create();
         dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
             try {
                 StringBuilder textRows=new StringBuilder();
                 for(EditText[] cells:rows) {
-                    String name=cells[0].getText().toString().trim();
-                    String qty=cells[1].getText().toString().trim();
-                    String price=cells[2].getText().toString().trim();
-                    if(name.isEmpty()&&qty.isEmpty()&&price.isEmpty()) continue;
-                    if(textRows.length()>0) textRows.append("\n");
-                    textRows.append(name).append(" | ").append(qty).append(" | ").append(price);
+                    String name=cells[0].getText().toString().trim(), qty=cells[1].getText().toString().trim(),
+                        consumption=cells[2].getText().toString().trim(), price=cells[3].getText().toString().trim();
+                    if(name.isEmpty()&&qty.isEmpty()&&consumption.isEmpty()&&price.isEmpty()) continue;
+                    if(textRows.length()>0) textRows.append("\\n");
+                    textRows.append(name).append(" | ").append(qty).append(" | ").append(consumption).append(" | ").append(price);
                 }
-                JSONObject record=new JSONObject();
-                record.put("items_rows",textRows.toString());
-                record.put("equipment",equipment.getText().toString().trim());
-                record.put("notes",notes.getText().toString().trim());
+                JSONObject record=new JSONObject(); record.put("items_rows",textRows.toString());
+                record.put("equipment",equipment.getText().toString().trim()); record.put("notes",notes.getText().toString().trim());
                 validateStockRows(record.optString("items_rows",""));
                 record.put("flour",String.valueOf(stockFlourQuantity(record)));
-                store.saveStockWithInventory(day,record);
-                updateStatus();
-                dialog.dismiss();
-                toast("حُفظ جدول المخزون. راجع الكميات وأسعار الوحدات.");
-            } catch(Exception ex) {
-                toast("لم يُحفظ المخزون: "+ex.getMessage());
-            }
+                store.saveStockWithInventory(day,record); updateStatus(); dialog.dismiss();
+                toast("حُفظ جدول المواد ومعدلات الاستهلاك. سيُخصم الاستخدام عند حفظ شغل اليوم.");
+            } catch(Exception ex) { toast("لم يُحفظ المخزون: "+ex.getMessage()); }
         }));
         dialog.show();
     }
