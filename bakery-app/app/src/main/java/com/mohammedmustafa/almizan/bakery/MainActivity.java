@@ -800,7 +800,7 @@ public class MainActivity extends Activity {
             long loaves=productionLoaves(), expected=productionValue(), actual=accountedTotal(), difference=Math.subtractExact(expected,actual);
             Totals dist=distribution(); int bad=rowTotals("workers","rows",4).badRows+dist.badRows+rowTotals("expenses","rows",2).badRows;
             boolean priceConfigured=val("cuts","loaves_per_1000")>0;
-            boolean reconciliationValid=priceConfigured && bad==0 && difference==0;
+            boolean reconciliationValid=BakeryMath.isReconciliationValid(difference,bad,priceConfigured);
             String status=!priceConfigured?"غير مكتمل — أدخل عدد الأرغفة المقابل لـ 1,000 جنيه":bad>0?"غير مكتمل — توجد سطور غير صالحة":difference==0?"متوازن حسابيًا":difference>0?"عجز غير مفسر":"زيادة غير مفسرة";
             String message="تاريخ الدفتر: "+day+
                 "\n\nالعيش المنتج: "+fmt(loaves)+" رغيف"+
