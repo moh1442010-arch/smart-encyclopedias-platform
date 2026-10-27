@@ -870,8 +870,8 @@ public class MainActivity extends Activity {
         box.addView(text("عدد شغل اليوم (جوال دقيق)",15));
         EditText work=ruledCell(saved.optString("work_units",""),"عدد الجوالات",true);
         box.addView(work);
-        box.addView(text("كم رغيفًا يساوي 1,000 جنيه؟",15));
-        EditText perThousand=ruledCell(saved.optString("loaves_per_1000",""),"مثال: 700",true);
+        box.addView(text("كم رغيفًا يساوي 1,000 جنيه؟ (يحدده المحاسب حسب سعر الفرن؛ مثل 3 أو 4 أو 5)",15));
+        EditText perThousand=ruledCell(saved.optString("loaves_per_1000",""),"مثال: 3 أو 4 أو 5 أرغفة",true);
         box.addView(perThousand);
         LinearLayout table=new LinearLayout(this); table.setOrientation(LinearLayout.VERTICAL); table.setPadding(2,2,2,2); table.setBackground(rounded(Color.rgb(100,116,139),0));
         LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL); header.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
