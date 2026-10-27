@@ -888,7 +888,6 @@ public class MainActivity extends Activity {
         }
         if(loafCells.isEmpty()) addCutRow(table,loafCells,1,"");
         box.addView(table);
-        Button add=button("＋ إضافة قطعية"); add.setOnClickListener(v->addCutRow(table,loafCells,loafCells.size()+1,"")); box.addView(add);
         TextView total=text("إجمالي الرغيف المنتج: 0 رغيف",16); total.setTypeface(null,1); box.addView(total);
         TextView amount=text("قيمة الإنتاج: أدخل سعر القطعيات",16); amount.setTypeface(null,1); box.addView(amount);
         Runnable recalc=()->{
@@ -911,6 +910,13 @@ public class MainActivity extends Activity {
         };
         perThousand.addTextChangedListener(watcher);
         for(EditText cell:loafCells) cell.addTextChangedListener(watcher);
+        Button add=button("＋ إضافة قطعية");
+        add.setOnClickListener(v->{
+            addCutRow(table,loafCells,loafCells.size()+1,"");
+            loafCells.get(loafCells.size()-1).addTextChangedListener(watcher);
+            recalc.run();
+        });
+        box.addView(add);
         recalc.run();
         EditText notes=ruledCell(saved.optString("notes",""),"ملاحظات شغل اليوم (اختياري)",false);
         box.addView(text("ملاحظات شغل اليوم",14)); box.addView(notes);
@@ -928,7 +934,7 @@ public class MainActivity extends Activity {
                     if(value.isEmpty()) continue;
                     long count=parseLong(value);
                     if(count<0) throw new IllegalArgumentException("عدد الأرغفة لا يقبل قيمة سالبة.");
-                    if(rows.length()>0) rows.append("\\n");
+                    if(rows.length()>0) rows.append("\n");
                     rows.append(++used).append(" | ").append(count);
                     sum=Math.addExact(sum,count);
                 }
@@ -937,6 +943,8 @@ public class MainActivity extends Activity {
                 record.put("work_units",String.valueOf(units));
                 record.put("production_rows",rows.toString());
                 record.put("loaves_per_1000",String.valueOf(price));
+                record.put("total_loaves",String.valueOf(sum));
+                record.put("production_value",String.valueOf(BakeryMath.valueForLoaves(sum,price)));
                 record.put("notes",notes.getText().toString().trim());
                 store.saveCutsWithInventory(day,record,units);
                 updateStatus(); dialog.dismiss();
