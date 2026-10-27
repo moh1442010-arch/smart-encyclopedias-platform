@@ -80,7 +80,7 @@ async function issueToken(env, deviceId, plan) {
   const key = await importPrivateKey(env);
   const now = Math.floor(Date.now() / 1000);
   const expires = plan === "lifetime" ? 0 : now + PLANS[plan].seconds;
-  const appVersion = cleanText(env.APP_VERSION || "2.5.12", 32);
+  const appVersion = cleanText(env.APP_VERSION || "2.6.13", 32);
   // This exact payload format is consumed by MainActivity.verifyLicenseToken().
   const payload = `app=${APP_ID};device=${deviceId};plan=${plan};max_version=${plan === "lifetime" ? appVersion : "any"};expires=${expires}`;
   const bytes = encoder.encode(payload);
@@ -112,7 +112,7 @@ async function handle(request, env) {
     if (!customer || !contact || !receiptRef || !validDevice(deviceId) || !PLANS[plan]) {
       return json({ error: "INVALID_FIELDS" }, 400);
     }
-    const appVersion = cleanText(env.APP_VERSION || "2.5.12", 32);
+    const appVersion = cleanText(env.APP_VERSION || "2.6.13", 32);
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     await env.DB.prepare(
