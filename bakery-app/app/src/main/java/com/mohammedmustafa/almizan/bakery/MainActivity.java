@@ -956,6 +956,7 @@ public class MainActivity extends Activity {
     }
 
     private void openModule(String module) {
+        if (module.equals("cuts")) { openCutsTable(); return; }
         if (module.equals("distribution")) { openDistributionTable(); return; }
         if (module.equals("workers")) { openWorkersTable(); return; }
         if (module.equals("window")) { openWindowTable(); return; }
