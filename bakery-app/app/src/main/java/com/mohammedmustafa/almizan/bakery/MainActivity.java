@@ -1217,7 +1217,12 @@ public class MainActivity extends Activity {
             }
             return total;
         }
-        return BakeryMath.productionLoaves(val("cuts","work_units"),val("cuts","loaves_per_unit"));
+        // Current bakery workflow records actual loaf counts by dynamic cut rows.
+        // Prefer the saved total for records that have no row payload (legacy/imported data);
+        // never infer production from a fixed cut count or a flour-bag multiplier.
+        long savedTotal = val("cuts", "total_loaves");
+        if (savedTotal > 0L) return savedTotal;
+        return 0L;
     }
     private long valueForLoaves(long loaves) {
         long perThousand=val("cuts","loaves_per_1000");
