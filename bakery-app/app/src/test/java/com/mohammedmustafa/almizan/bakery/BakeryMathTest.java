@@ -4,8 +4,22 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class BakeryMathTest {
+    @Test public void dynamicCutRowsDoNotAssumeAFixedNumberOfCuts() {
+        assertEquals(4900L, BakeryMath.sum(700L, 700L, 700L, 700L, 700L, 700L, 700L));
+        assertEquals(1225000L, BakeryMath.valueForLoaves(
+                BakeryMath.sum(700L, 700L, 700L, 700L, 700L, 700L, 700L), 4L));
+        assertEquals(1400L, BakeryMath.sum(700L, 700L));
+        assertEquals(466667L, BakeryMath.valueForLoaves(1400L, 3L));
+        assertEquals(350000L, BakeryMath.valueForLoaves(1400L, 4L));
+        assertEquals(280000L, BakeryMath.valueForLoaves(1400L, 5L));
+    }
     @Test public void correctedCutValueUsesLoavesPerOneThousand() {
         assertEquals(3000000L, BakeryMath.valueForLoaves(12000L, 4L));
+    }
+    @Test public void sumsCutRowsAndValuesDailyProductionFromLoavesPerThousand() {
+        long totalLoaves = Math.addExact(700L, 700L);
+        assertEquals(1400L, totalLoaves);
+        assertEquals(2000L, BakeryMath.valueForLoaves(totalLoaves, 700L));
     }
     @Test public void productionMultipliesWorkUnitsByLoaves() {
         assertEquals(2000L, BakeryMath.productionLoaves(4,500));
@@ -69,8 +83,15 @@ public class BakeryMathTest {
     @Test(expected=IllegalArgumentException.class) public void rejectsNegativeStockMovementInputs() {
         BakeryMath.stockAfterUsage(10,-1,7);
     }
-    @Test public void netMarginSubtractsSpoilageWagesExpensesAndOperatingCost() {
+    @Test public void netMarginSubtractsSpoilageWagesExpensesOperatingCostAndPriceDifference() {
+        assertEquals(37000L, BakeryMath.netMargin(200000,10000,30000,20000,100000,3000));
         assertEquals(40000L, BakeryMath.netMargin(200000,10000,30000,20000,100000));
+    }
+    @Test public void operatingCostUsesEnteredPerWorkUnitRatesTimesDailyWork() {
+        assertEquals(180000L, BakeryMath.operatingCostPerWorkUnit(10, 6000, 5000, 7000));
+    }
+    @Test(expected=IllegalArgumentException.class) public void rejectsNegativePerWorkUnitCost() {
+        BakeryMath.operatingCostPerWorkUnit(10, 500, -1);
     }
     @Test(expected=IllegalArgumentException.class) public void netMarginRejectsNegativeInputs() {
         BakeryMath.netMargin(100000,-1,0,0,0);
@@ -87,5 +108,43 @@ public class BakeryMathTest {
     }
     @Test(expected=ArithmeticException.class) public void rejectsCostOverflow() {
         BakeryMath.operatingCost(Long.MAX_VALUE,2,0,0,0,0,0,0,0,0,0);
+    }
+
+    @Test(expected=ArithmeticException.class) public void rejectsOverflowWhenSummingMoneyCategories() {
+        BakeryMath.sum(Long.MAX_VALUE, 1L);
+    }
+    @Test(expected=ArithmeticException.class) public void rejectsOverflowWhenCalculatingReconciliationDifference() {
+        BakeryMath.difference(Long.MAX_VALUE, -1L);
+    }
+    @Test(expected=IllegalArgumentException.class) public void rejectsNegativeLoafCountForValuation() {
+        BakeryMath.valueForLoaves(-1L, 4L);
+    }
+    @Test(expected=ArithmeticException.class) public void rejectsOverflowWhenCalculatingDailyProduction() {
+        BakeryMath.productionLoaves(Long.MAX_VALUE, 2L);
+    }
+    @Test public void reconciliationKeepsPriceBasisAndInvalidRowsAsHardStops() {
+        assertFalse(BakeryMath.isReconciliationValid(0L, 0, false));
+        assertFalse(BakeryMath.isReconciliationValid(0L, 2, true));
+        assertTrue(BakeryMath.isReconciliationValid(0L, 0, true));
+    }
+
+    @Test public void cutLoavesSumAndAccountantChosenRateUseCorrectProductionValue() {
+        long totalLoaves = BakeryMath.sum(700L, 700L);
+        assertEquals(1400L, totalLoaves);
+        assertEquals(466667L, BakeryMath.valueForLoaves(totalLoaves, 3L));
+        assertEquals(350000L, BakeryMath.valueForLoaves(totalLoaves, 4L));
+        assertEquals(280000L, BakeryMath.valueForLoaves(totalLoaves, 5L));
+    }
+
+    @Test public void approvedBakeryReconciliationExampleBalancesDistributionPlusPriceDifferenceWagesExpensesAndSpoilage() {
+        long productionValue = BakeryMath.valueForLoaves(12000L, 4L); // 12,000 / 4 x 1,000
+        assertEquals(3000000L, productionValue);
+        long distributionCollections = BakeryMath.sum(2500000L, 200000L, 100000L);
+        long secondSide = BakeryMath.accountedTotal(
+                2500000L, 200000L, 100000L, 50000L, 80000L, 40000L, 30000L);
+        assertEquals(3000000L, secondSide);
+        assertEquals(0L, BakeryMath.difference(productionValue, secondSide));
+        assertEquals(0L, BakeryMath.difference(productionValue,
+                BakeryMath.accountedTotal(2500000L, 200000L, 100000L, 50000L, 80000L, 40000L, 30000L)));
     }
 }
