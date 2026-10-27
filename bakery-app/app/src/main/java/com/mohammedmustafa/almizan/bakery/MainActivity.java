@@ -806,7 +806,64 @@ public class MainActivity extends Activity {
         dialog.show();
     }
 
+    private void openDistributionTable() {
+        JSONObject saved=store.get(day,"distribution");
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(8,8,8,12); scroll.addView(box);
+        box.addView(text("جدول التوزيع — كل عميل في صف مستقل. أدخل عدد الأرغفة والنقد والديون وفرق السعر. التحويلات عبر بنكك تُسجّل في جدول الشباك حتى لا تتكرر الحسابات.",14));
+        LinearLayout table=new LinearLayout(this); table.setOrientation(LinearLayout.VERTICAL); table.setPadding(2,2,2,2); table.setBackground(rounded(Color.rgb(100,116,139),0));
+        LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL); header.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        String[] titles={"العميل","عدد العيش","نقدي","ديون","فرق السعر"};
+        for(String title:titles) { TextView h=ruledHeading(title); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f); lp.setMargins(1,1,1,1); header.addView(h,lp); }
+        table.addView(header);
+        java.util.List<EditText[]> rows=new java.util.ArrayList<>();
+        String raw=normalizeRows(saved.optString("rows",""));
+        for(String line:raw.split("\\r?\\n")) {
+            if(line.trim().isEmpty()) continue;
+            String[] p=line.split("\\|",-1);
+            if(p.length>=6) {
+                addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),p[3].trim(),p[5].trim());
+            } else if(p.length>=4) {
+                addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),p[3].trim(),p.length>4?p[4].trim():"0");
+            } else addDistributionTableRow(table,rows,p.length>0?p[0].trim():"","","","","");
+        }
+        if(rows.isEmpty()) addDistributionTableRow(table,rows,"","","","","");
+        box.addView(table);
+        Button add=button("＋ إضافة عميل"); add.setOnClickListener(v->addDistributionTableRow(table,rows,"","","","","")); box.addView(add);
+        box.addView(text("ملاحظات التوزيع",14));
+        EditText notes=ruledCell(saved.optString("notes",""),"ملاحظات اختيارية",false); notes.setGravity(Gravity.TOP|Gravity.RIGHT); notes.setMinLines(2); box.addView(notes);
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("التوزيع — "+day).setView(scroll)
+            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ الجدول",null).create();
+        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+            try {
+                StringBuilder out=new StringBuilder();
+                for(EditText[] row:rows) {
+                    String customer=row[0].getText().toString().trim();
+                    String qty=row[1].getText().toString().trim(), cash=row[2].getText().toString().trim();
+                    String debt=row[3].getText().toString().trim(), diff=row[4].getText().toString().trim();
+                    if(customer.isEmpty()&&qty.isEmpty()&&cash.isEmpty()&&debt.isEmpty()&&diff.isEmpty()) continue;
+                    if(customer.isEmpty()) throw new IllegalArgumentException("أدخل اسم العميل في كل صف مستخدم.");
+                    long q=parseLong(qty), c=parseLong(cash), d=parseLong(debt), f=parseLong(diff);
+                    if(q<0||c<0||d<0||f<0) throw new IllegalArgumentException("الكميات والمبالغ لا تقبل القيم السالبة.");
+                    if(out.length()>0) out.append("\n");
+                    out.append(customer.replace("|","/")).append(" | ").append(q).append(" | ").append(c).append(" | ").append(d).append(" | ").append(f);
+                }
+                JSONObject record=new JSONObject(); record.put("rows",out.toString()); record.put("notes",notes.getText().toString().trim());
+                store.put(day,"distribution",record); updateStatus(); toast("تم حفظ جدول التوزيع المسطّر."); dialog.dismiss();
+            } catch(Exception ex) { toast("لم يُحفظ جدول التوزيع: "+ex.getMessage()); }
+        }));
+        dialog.show();
+    }
+
+    private void addDistributionTableRow(LinearLayout table, java.util.List<EditText[]> rows, String customer, String qty, String cash, String debt, String diff) {
+        LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL); row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        EditText[] cells={ruledCell(customer,"العميل",false),ruledCell(qty,"عدد العيش",true),ruledCell(cash,"نقدي",true),ruledCell(debt,"ديون",true),ruledCell(diff,"فرق السعر",true)};
+        for(EditText cell:cells) { LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f); lp.setMargins(1,1,1,1); row.addView(cell,lp); }
+        table.addView(row,new LinearLayout.LayoutParams(-1,-2)); rows.add(cells);
+    }
+
     private void openModule(String module) {
+        if (module.equals("distribution")) { openDistributionTable(); return; }
         if (module.equals("workers")) { openWorkersTable(); return; }
         if (module.equals("window")) { openWindowTable(); return; }
         if (module.equals("stock")) { openStockTable(); return; }
@@ -949,10 +1006,17 @@ public class MainActivity extends Activity {
                     long qty=parseLong(p[1]);
                     if(qty<0) throw new IllegalArgumentException();
                     if(p.length>=6) {
+                        // Legacy row: customer | loaves | cash | debt | bank | price difference.
                         long cash=parseLong(p[2]), debt=parseLong(p[3]), bank=parseLong(p[4]), diff=parseLong(p[5]);
                         if(cash<0||debt<0||bank<0) throw new IllegalArgumentException();
                         out.cash=Math.addExact(out.cash,cash); out.debt=Math.addExact(out.debt,debt);
                         out.bank=Math.addExact(out.bank,bank); out.diff=Math.addExact(out.diff,diff);
+                    } else if(p.length>=5) {
+                        // Current ruled table: customer | loaves | cash | debt | price difference.
+                        long cash=parseLong(p[2]), debt=parseLong(p[3]), diff=parseLong(p[4]);
+                        if(cash<0||debt<0) throw new IllegalArgumentException();
+                        out.cash=Math.addExact(out.cash,cash); out.debt=Math.addExact(out.debt,debt);
+                        out.diff=Math.addExact(out.diff,diff);
                     } else {
                         long price=parseLong(p[2]), diff=parseLong(p[3]);
                         if(price<0||diff<0) throw new IllegalArgumentException();
