@@ -862,6 +862,99 @@ public class MainActivity extends Activity {
         table.addView(row,new LinearLayout.LayoutParams(-1,-2)); rows.add(cells);
     }
 
+    private void openCutsTable() {
+        JSONObject saved=store.get(day,"cuts");
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(8,8,8,12); scroll.addView(box);
+        box.addView(text("شغل اليوم — أدخل عدد جوالات الشغل، وعدد الأرغفة التي تساوي 1,000 جنيه. سجّل كل قطعية في صف مستقل؛ الإجمالي وقيمة الإنتاج يُحسبان تلقائيًا ويُحفظان مع التاريخ.",14));
+        box.addView(text("عدد شغل اليوم (جوال دقيق)",15));
+        EditText work=ruledCell(saved.optString("work_units",""),"عدد الجوالات",true);
+        box.addView(work);
+        box.addView(text("كم رغيفًا يساوي 1,000 جنيه؟",15));
+        EditText perThousand=ruledCell(saved.optString("loaves_per_1000",""),"مثال: 700",true);
+        box.addView(perThousand);
+        LinearLayout table=new LinearLayout(this); table.setOrientation(LinearLayout.VERTICAL); table.setPadding(2,2,2,2); table.setBackground(rounded(Color.rgb(100,116,139),0));
+        LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL); header.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        for(String title:new String[]{"ترقيم القطعيات","عدد الرغيف الناتج"}) { TextView h=ruledHeading(title); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f); lp.setMargins(1,1,1,1); header.addView(h,lp); }
+        table.addView(header);
+        java.util.List<EditText> loafCells=new java.util.ArrayList<>();
+        String raw=normalizeRows(saved.optString("production_rows",""));
+        int next=1;
+        for(String line:raw.split("\\r?\\n")) {
+            if(line.trim().isEmpty()) continue;
+            String[] p=line.split("\\|",-1);
+            String loaf=p.length>1?p[1].trim():"";
+            addCutRow(table,loafCells,next++,loaf);
+        }
+        if(loafCells.isEmpty()) addCutRow(table,loafCells,1,"");
+        box.addView(table);
+        Button add=button("＋ إضافة قطعية"); add.setOnClickListener(v->addCutRow(table,loafCells,loafCells.size()+1,"")); box.addView(add);
+        TextView total=text("إجمالي الرغيف المنتج: 0 رغيف",16); total.setTypeface(null,1); box.addView(total);
+        TextView amount=text("قيمة الإنتاج: أدخل سعر القطعيات",16); amount.setTypeface(null,1); box.addView(amount);
+        Runnable recalc=()->{
+            try {
+                long sum=0L;
+                for(EditText cell:loafCells) { String v=cell.getText().toString().trim(); if(!v.isEmpty()) sum=Math.addExact(sum,parseLong(v)); }
+                total.setText("إجمالي الرغيف المنتج من جميع القطعيات: "+fmt(sum)+" رغيف");
+                String price=perThousand.getText().toString().trim();
+                if(price.isEmpty()||parseLong(price)<=0) amount.setText("قيمة الإنتاج: أدخل عدد الأرغفة المقابل لـ 1,000 جنيه");
+                else amount.setText("قيمة الإنتاج: "+fmt(BakeryMath.valueForLoaves(sum,parseLong(price)))+" جنيه");
+            } catch(Exception ex) {
+                total.setText("إجمالي الرغيف المنتج: راجع الأرقام");
+                amount.setText("قيمة الإنتاج: راجع الأرقام المدخلة");
+            }
+        };
+        android.text.TextWatcher watcher=new android.text.TextWatcher(){
+            public void beforeTextChanged(CharSequence s,int start,int count,int after){}
+            public void onTextChanged(CharSequence s,int start,int before,int count){recalc.run();}
+            public void afterTextChanged(android.text.Editable e){}
+        };
+        perThousand.addTextChangedListener(watcher);
+        for(EditText cell:loafCells) cell.addTextChangedListener(watcher);
+        recalc.run();
+        EditText notes=ruledCell(saved.optString("notes",""),"ملاحظات شغل اليوم (اختياري)",false);
+        box.addView(text("ملاحظات شغل اليوم",14)); box.addView(notes);
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("🥖 شغل اليوم والقطعيات — "+day).setView(scroll)
+            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ شغل اليوم",null).create();
+        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+            try {
+                long units=parseLong(work.getText().toString());
+                long price=parseLong(perThousand.getText().toString());
+                if(units<0) throw new IllegalArgumentException("عدد شغل اليوم لا يقبل قيمة سالبة.");
+                if(price<=0) throw new IllegalArgumentException("أدخل عدد الأرغفة التي تساوي 1,000 جنيه.");
+                StringBuilder rows=new StringBuilder(); long sum=0L; int used=0;
+                for(EditText cell:loafCells) {
+                    String value=cell.getText().toString().trim();
+                    if(value.isEmpty()) continue;
+                    long count=parseLong(value);
+                    if(count<0) throw new IllegalArgumentException("عدد الأرغفة لا يقبل قيمة سالبة.");
+                    if(rows.length()>0) rows.append("\\n");
+                    rows.append(++used).append(" | ").append(count);
+                    sum=Math.addExact(sum,count);
+                }
+                if(used==0) throw new IllegalArgumentException("أدخل عدد الأرغفة في قطعية واحدة على الأقل.");
+                JSONObject record=new JSONObject();
+                record.put("work_units",String.valueOf(units));
+                record.put("production_rows",rows.toString());
+                record.put("loaves_per_1000",String.valueOf(price));
+                record.put("notes",notes.getText().toString().trim());
+                store.saveCutsWithInventory(day,record,units);
+                updateStatus(); dialog.dismiss();
+                toast("تم حفظ شغل اليوم والقطعيات وعدد الأرغفة وسعر 1,000 جنيه. إجمالي الإنتاج "+fmt(sum)+" رغيف، وقيمته "+fmt(BakeryMath.valueForLoaves(sum,price))+" جنيه.");
+            } catch(Exception ex) { toast("لم يُحفظ شغل اليوم: "+ex.getMessage()); }
+        }));
+        dialog.show();
+    }
+
+    private void addCutRow(LinearLayout table, java.util.List<EditText> cells, int number, String loaves) {
+        LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL); row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        TextView index=ruledHeading(String.valueOf(number));
+        EditText count=ruledCell(loaves,"عدد الأرغفة",true);
+        LinearLayout.LayoutParams lp1=new LinearLayout.LayoutParams(0,-2,1f); lp1.setMargins(1,1,1,1);
+        LinearLayout.LayoutParams lp2=new LinearLayout.LayoutParams(0,-2,1f); lp2.setMargins(1,1,1,1);
+        row.addView(index,lp1); row.addView(count,lp2); table.addView(row,new LinearLayout.LayoutParams(-1,-2)); cells.add(count);
+    }
+
     private void openModule(String module) {
         if (module.equals("distribution")) { openDistributionTable(); return; }
         if (module.equals("workers")) { openWorkersTable(); return; }
