@@ -4,6 +4,15 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class BakeryMathTest {
+    @Test public void dynamicCutRowsDoNotAssumeAFixedNumberOfCuts() {
+        assertEquals(7000L, BakeryMath.sum(700L, 700L, 700L, 700L, 700L, 700L, 700L));
+        assertEquals(1750000L, BakeryMath.valueForLoaves(
+                BakeryMath.sum(700L, 700L, 700L, 700L, 700L, 700L, 700L), 4L));
+        assertEquals(1400L, BakeryMath.sum(700L, 700L));
+        assertEquals(466667L, BakeryMath.valueForLoaves(1400L, 3L));
+        assertEquals(350000L, BakeryMath.valueForLoaves(1400L, 4L));
+        assertEquals(280000L, BakeryMath.valueForLoaves(1400L, 5L));
+    }
     @Test public void correctedCutValueUsesLoavesPerOneThousand() {
         assertEquals(3000000L, BakeryMath.valueForLoaves(12000L, 4L));
     }
