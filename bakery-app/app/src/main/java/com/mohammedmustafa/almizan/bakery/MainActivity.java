@@ -946,10 +946,20 @@ public class MainActivity extends Activity {
                 record.put("total_loaves",String.valueOf(sum));
                 record.put("production_value",String.valueOf(BakeryMath.valueForLoaves(sum,price)));
                 record.put("notes",notes.getText().toString().trim());
-                store.saveCutsWithInventory(day,record,units);
-                updateStatus(); dialog.dismiss();
-                toast("تم حفظ شغل اليوم والقطعيات وعدد الأرغفة وسعر 1,000 جنيه. إجمالي الإنتاج "+fmt(sum)+" رغيف، وقيمته "+fmt(BakeryMath.valueForLoaves(sum,price))+" جنيه.");
-            } catch(Exception ex) { toast("لم يُحفظ شغل اليوم: "+ex.getMessage()); }
+                try {
+                    store.saveCutsWithInventory(day,record,units);
+                    updateStatus(); dialog.dismiss();
+                    toast("تم حفظ شغل اليوم والقطعيات وتحديث المخزون والتكلفة. إجمالي الإنتاج "+fmt(sum)+" رغيف، وقيمته "+fmt(BakeryMath.valueForLoaves(sum,price))+" جنيه.");
+                } catch(Exception inventoryError) {
+                    // Preserve the accountant's entered production rows and price if inventory validation blocks posting.
+                    // Do not apply stock/costing usage or pretend the full accounting post succeeded.
+                    record.put("inventory_pending", true);
+                    record.put("inventory_pending_reason", String.valueOf(inventoryError.getMessage()));
+                    store.saveCutsDraft(day,record);
+                    updateStatus(); dialog.dismiss();
+                    toast("حُفظت بيانات الإنتاج والسعر كمسودة، لكن لم يُرحّل المخزون أو التكلفة: "+inventoryError.getMessage()+"؛ راجع رصيد الصنف ووحدته ثم أعد الحفظ.");
+                }
+            } catch(Exception ex) { toast("تعذر حفظ بيانات شغل اليوم: "+ex.getMessage()); }
         }));
         dialog.show();
     }
@@ -1718,6 +1728,13 @@ public class MainActivity extends Activity {
             Cursor c=getReadableDatabase().rawQuery("SELECT material_usage FROM inventory_usage WHERE day=?",new String[]{date});
             try { if(c.moveToFirst()) return new JSONObject(c.getString(0)); } catch(Exception ignored) { } finally { c.close(); }
             return new JSONObject();
+        }
+
+        void saveCutsDraft(String date,JSONObject cuts) throws Exception {
+            SQLiteDatabase db=getWritableDatabase();
+            ContentValues cv=new ContentValues();
+            cv.put("day",date); cv.put("module","cuts"); cv.put("payload",cuts.toString()); cv.put("updated_at",System.currentTimeMillis());
+            db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
         }
 
         void saveCutsWithInventory(String date,JSONObject cuts,long newWork) throws Exception {
