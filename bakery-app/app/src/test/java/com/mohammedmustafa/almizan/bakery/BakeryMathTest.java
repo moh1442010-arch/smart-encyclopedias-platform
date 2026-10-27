@@ -7,6 +7,11 @@ public class BakeryMathTest {
     @Test public void correctedCutValueUsesLoavesPerOneThousand() {
         assertEquals(3000000L, BakeryMath.valueForLoaves(12000L, 4L));
     }
+    @Test public void sumsCutRowsAndValuesDailyProductionFromLoavesPerThousand() {
+        long totalLoaves = Math.addExact(700L, 700L);
+        assertEquals(1400L, totalLoaves);
+        assertEquals(2000L, BakeryMath.valueForLoaves(totalLoaves, 700L));
+    }
     @Test public void productionMultipliesWorkUnitsByLoaves() {
         assertEquals(2000L, BakeryMath.productionLoaves(4,500));
     }
