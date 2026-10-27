@@ -127,6 +127,14 @@ public class BakeryMathTest {
         assertEquals(280000L, BakeryMath.valueForLoaves(totalLoaves, 5L));
     }
 
+    @Test public void cutLoavesSumAndAccountantChosenRateUseCorrectProductionValue() {
+        long totalLoaves = BakeryMath.sum(700L, 700L);
+        assertEquals(1400L, totalLoaves);
+        assertEquals(466667L, BakeryMath.valueForLoaves(totalLoaves, 3L));
+        assertEquals(350000L, BakeryMath.valueForLoaves(totalLoaves, 4L));
+        assertEquals(280000L, BakeryMath.valueForLoaves(totalLoaves, 5L));
+    }
+
     @Test public void approvedBakeryReconciliationExampleBalancesDistributionPlusPriceDifferenceWagesExpensesAndSpoilage() {
         long productionValue = BakeryMath.valueForLoaves(12000L, 4L); // 12,000 / 4 x 1,000
         assertEquals(3000000L, productionValue);
