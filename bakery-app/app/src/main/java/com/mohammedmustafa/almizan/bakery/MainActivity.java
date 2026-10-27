@@ -703,7 +703,112 @@ public class MainActivity extends Activity {
         dialog.show();
     }
 
+    private EditText ruledCell(String value, String hint, boolean numeric) {
+        EditText e = inventoryCell(value, hint, numeric);
+        e.setTextSize(13);
+        e.setGravity(Gravity.CENTER);
+        e.setMinHeight((int)(48 * getResources().getDisplayMetrics().density));
+        GradientDrawable border = rounded(Color.WHITE, 0);
+        border.setStroke(Math.max(1,(int)(1f*getResources().getDisplayMetrics().density)),Color.rgb(100,116,139));
+        e.setBackground(border);
+        return e;
+    }
+
+    private TextView ruledHeading(String value) {
+        TextView h = text(value, 12);
+        h.setTextColor(Color.WHITE); h.setTypeface(null,1); h.setGravity(Gravity.CENTER);
+        h.setPadding(3,10,3,10); h.setBackground(rounded(NAVY,0));
+        return h;
+    }
+
+    private void openWorkersTable() {
+        JSONObject saved=store.get(day,"workers");
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(8,8,8,12); scroll.addView(box);
+        box.addView(text("جدول يومية العمال — كل عامل في صف مستقل. الأجرة هي سعر الجوال الواحد للشغل، ويُحسب الإجمالي تلقائيًا من عدد الشغل × الأجرة.",14));
+        LinearLayout table=new LinearLayout(this); table.setOrientation(LinearLayout.VERTICAL); table.setPadding(2,2,2,2); table.setBackground(rounded(Color.rgb(100,116,139),0));
+        LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL); header.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        String[] titles={"الاسم","الوظيفة","عدد الشغل","سعر الجوال الواحد للشغل"};
+        for(String title:titles) { TextView h=ruledHeading(title); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f); lp.setMargins(1,1,1,1); header.addView(h,lp); }
+        table.addView(header);
+        java.util.List<EditText[]> rows=new java.util.ArrayList<>();
+        String raw=normalizeRows(saved.optString("rows",""));
+        for(String line:raw.split("\\r?\\n")) {
+            if(line.trim().isEmpty()) continue;
+            String[] p=line.split("\\|",-1);
+            addWorkerTableRow(table,rows,p.length>0?p[0].trim():"",p.length>1?p[1].trim():"",p.length>2?p[2].trim():"",p.length>3?p[3].trim():"");
+        }
+        if(rows.isEmpty()) addWorkerTableRow(table,rows,"","","","");
+        box.addView(table);
+        Button add=button("＋ إضافة عامل"); add.setOnClickListener(v->addWorkerTableRow(table,rows,"","","","")); box.addView(add);
+        box.addView(text("ملاحظات يومية العمال",14));
+        EditText notes=ruledCell(saved.optString("notes",""),"ملاحظات اختيارية",false); notes.setGravity(Gravity.TOP|Gravity.RIGHT); notes.setMinLines(2); box.addView(notes);
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("يومية العمال — "+day).setView(scroll)
+            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ الجدول",null).create();
+        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+            try {
+                StringBuilder out=new StringBuilder();
+                for(EditText[] row:rows) {
+                    String name=row[0].getText().toString().trim(), job=row[1].getText().toString().trim();
+                    String count=row[2].getText().toString().trim(), rate=row[3].getText().toString().trim();
+                    if(name.isEmpty()&&job.isEmpty()&&count.isEmpty()&&rate.isEmpty()) continue;
+                    if(name.isEmpty()||job.isEmpty()) throw new IllegalArgumentException("أدخل اسم العامل والوظيفة في كل صف مستخدم.");
+                    long n=parseLong(count), w=parseLong(rate);
+                    if(n<0||w<0) throw new IllegalArgumentException("عدد الشغل والأجرة لا يقبلان القيم السالبة.");
+                    if(out.length()>0) out.append("\\n");
+                    out.append(name.replace("|","/")).append(" | ").append(job.replace("|","/")).append(" | ").append(n).append(" | ").append(w);
+                }
+                JSONObject record=new JSONObject(); record.put("rows",out.toString()); record.put("notes",notes.getText().toString().trim());
+                store.put(day,"workers",record); updateStatus(); toast("تم حفظ جدول العمال المسطّر.");
+                dialog.dismiss();
+            } catch(Exception ex) { toast("لم يُحفظ جدول العمال: "+ex.getMessage()); }
+        }));
+        dialog.show();
+    }
+
+    private void addWorkerTableRow(LinearLayout table, java.util.List<EditText[]> rows, String name, String job, String count, String rate) {
+        LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL); row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        EditText[] cells={ruledCell(name,"الاسم",false),ruledCell(job,"الوظيفة",false),ruledCell(count,"عدد الشغل",true),ruledCell(rate,"سعر الجوال",true)};
+        for(EditText cell:cells) { LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f); lp.setMargins(1,1,1,1); row.addView(cell,lp); }
+        table.addView(row,new LinearLayout.LayoutParams(-1,-2)); rows.add(cells);
+    }
+
+    private void openWindowTable() {
+        JSONObject saved=store.get(day,"window");
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(8,8,8,12); scroll.addView(box);
+        box.addView(text("جدول بيع الشباك والتحصيل — أدخل إجمالي كل طريقة تحصيل مرة واحدة فقط. لا تُعد إدخال مبيعات التوزيع هنا.",14));
+        LinearLayout table=new LinearLayout(this); table.setOrientation(LinearLayout.VERTICAL); table.setPadding(2,2,2,2); table.setBackground(rounded(Color.rgb(100,116,139),0));
+        LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL); header.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        String[] titles={"النقد","تحويل بنكك","رقم العملية","ديون"};
+        for(String title:titles) { TextView h=ruledHeading(title); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f); lp.setMargins(1,1,1,1); header.addView(h,lp); }
+        table.addView(header);
+        LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL); row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        EditText cash=ruledCell(saved.optString("cash",""),"المبلغ",true);
+        EditText bank=ruledCell(saved.optString("bank",""),"المبلغ",true);
+        EditText ref=ruledCell(saved.optString("bank_ref",""),"رقم العملية",false);
+        EditText debt=ruledCell(saved.optString("debt",""),"المبلغ",true);
+        for(EditText cell:new EditText[]{cash,bank,ref,debt}) { LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f); lp.setMargins(1,1,1,1); row.addView(cell,lp); }
+        table.addView(row); box.addView(table);
+        box.addView(text("ملاحظات بيع الشباك",14));
+        EditText notes=ruledCell(saved.optString("notes",""),"ملاحظات اختيارية",false); notes.setGravity(Gravity.TOP|Gravity.RIGHT); notes.setMinLines(2); box.addView(notes);
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("بيع الشباك والتحصيل — "+day).setView(scroll)
+            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ الجدول",null).create();
+        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+            try {
+                long c=parseLong(cash.getText().toString()), b=parseLong(bank.getText().toString()), d=parseLong(debt.getText().toString());
+                if(c<0||b<0||d<0) throw new IllegalArgumentException("المبالغ لا تقبل القيم السالبة.");
+                JSONObject record=new JSONObject(); record.put("cash",String.valueOf(c)); record.put("bank",String.valueOf(b));
+                record.put("bank_ref",ref.getText().toString().trim()); record.put("debt",String.valueOf(d)); record.put("notes",notes.getText().toString().trim());
+                store.put(day,"window",record); updateStatus(); toast("تم حفظ جدول بيع الشباك المسطّر."); dialog.dismiss();
+            } catch(Exception ex) { toast("لم يُحفظ جدول الشباك: "+ex.getMessage()); }
+        }));
+        dialog.show();
+    }
+
     private void openModule(String module) {
+        if (module.equals("workers")) { openWorkersTable(); return; }
+        if (module.equals("window")) { openWindowTable(); return; }
         if (module.equals("stock")) { openStockTable(); return; }
         Field[] fields = schema(module);
         JSONObject saved = store.get(day,module);
