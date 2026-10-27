@@ -5,8 +5,8 @@ import static org.junit.Assert.*;
 
 public class BakeryMathTest {
     @Test public void dynamicCutRowsDoNotAssumeAFixedNumberOfCuts() {
-        assertEquals(7000L, BakeryMath.sum(700L, 700L, 700L, 700L, 700L, 700L, 700L));
-        assertEquals(1750000L, BakeryMath.valueForLoaves(
+        assertEquals(4900L, BakeryMath.sum(700L, 700L, 700L, 700L, 700L, 700L, 700L));
+        assertEquals(1225000L, BakeryMath.valueForLoaves(
                 BakeryMath.sum(700L, 700L, 700L, 700L, 700L, 700L, 700L), 4L));
         assertEquals(1400L, BakeryMath.sum(700L, 700L));
         assertEquals(466667L, BakeryMath.valueForLoaves(1400L, 3L));
