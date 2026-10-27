@@ -755,7 +755,7 @@ public class MainActivity extends Activity {
                     if(name.isEmpty()||job.isEmpty()) throw new IllegalArgumentException("أدخل اسم العامل والوظيفة في كل صف مستخدم.");
                     long n=parseLong(count), w=parseLong(rate);
                     if(n<0||w<0) throw new IllegalArgumentException("عدد الشغل والأجرة لا يقبلان القيم السالبة.");
-                    if(out.length()>0) out.append("\\n");
+                    if(out.length()>0) out.append("\n");
                     out.append(name.replace("|","/")).append(" | ").append(job.replace("|","/")).append(" | ").append(n).append(" | ").append(w);
                 }
                 JSONObject record=new JSONObject(); record.put("rows",out.toString()); record.put("notes",notes.getText().toString().trim());
@@ -990,7 +990,7 @@ public class MainActivity extends Activity {
     }
     private static class Totals { long cash,debt,bank,diff,qty,amount; int badRows; }
     private Totals rowTotals(String module,String key,int columns) {
-        Totals out=new Totals(); String raw=record(module).optString(key,"");
+        Totals out=new Totals(); String raw=normalizeRows(record(module).optString(key,""));
         if(raw.trim().isEmpty()) return out;
         String[] lines=raw.split("\\r?\n");
         for(String line:lines) {
