@@ -1,9 +1,9 @@
 const APP_ID = "com.mohammedmustafa.almizan.bakery";
 const EXPECTED_APP_PUBLIC_KEY_DER_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqlGWpIPqSpXdEP67uticpomJ5nKGkHrZkKDgnueolx8cFKyov/PydmJuAnxUaRnggcNte4/PfGzwrXtmoJ6hrpXfYUVjyL3UZ9MdCmPKevrdBftzWYoJ6NG2Dda6ZdlQoDdD/Mads1uJYACKxbipsgWSUr9MzmJdmTSYexDHBS6MWMPyjK+L60Jy3sn6k85bPE+AnPtOW38/no2ucz6h8kANgpd/4XDusR07l6EYOSg8TXuVny6SKUzH6PWf/TC6fXt2erASsPkvc5MehBMI9vXCTpj0PGZikAdyj/Hw6IKyr5HmG8vLgzofB1AfXPgIrJdhGMhdsUn8iD+4ZLBucQIDAQAB";
 const PLANS = {
-  monthly: { amount: 30000, seconds: 30 * 86400 },
-  annual: { amount: 300000, seconds: 365 * 86400 },
-  lifetime: { amount: 450000, seconds: 0 }
+  monthly: { amount: 55000, seconds: 30 * 86400 },
+  annual: { amount: 550000, seconds: 365 * 86400 },
+  lifetime: { amount: 1050000, seconds: 0 }
 };
 const encoder = new TextEncoder();
 
