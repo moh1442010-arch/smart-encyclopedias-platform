@@ -73,8 +73,7 @@ jobs:
             if (!app.includes(price)) throw new Error(`App is missing approved price: ${price}`);
           }
           for (const [plan, amount] of Object.entries({monthly:55000, annual:550000, lifetime:1050000})) {
-            const pattern = new RegExp(plan + String.raw`:\\s*\\{\\s*amount:\\s*` + amount + String.raw`\\b`);
-            if (!pattern.test(worker)) throw new Error(`Licensing service amount mismatch for ${plan}`);
+            if (!worker.includes(`${plan}: { amount: ${amount}`)) throw new Error(`Licensing service amount mismatch for ${plan}`);
           }
           console.log("Release identity and all three approved bakery prices verified.");
           NODE
