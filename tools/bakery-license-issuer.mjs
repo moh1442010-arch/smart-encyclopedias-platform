@@ -18,8 +18,8 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const APP_ID = "com.mohammedmustafa.almizan.bakery";
-const CURRENT_APP_VERSION = "2.5.12";
-const EXPECTED_PUBLIC_KEY_DER_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqlGWpIPqSpXdEP67uticpomJ5nKGkHrZkKDgnueolx8cFKyov/PydmJuAnxUaRnggcNte4/PfGzwrXtmoJ6hrpXfYUVjyL3UZ9MdCmPKevrdBftzWYoJ6NG2Dda6ZdlQoDdD/Mads1uJYACKxbipsgWSUr9MzmJdmTSYexDHBS6MWMPyjK+L60Jy3sn6k85bPE+AnPtOW38/no2ucz6h8kANgpd/4XDusR07l6EYOSg8TXuVny6SKUzH6PWf/TC6fXt2erASsPkvc5MehBMI9vXCTpj0PGZikAdyj/Hw6IKyr5HmG8vLgzofB1AfXPgIrJdhGMhdsUn8iD+4ZLBucQIDAQAB";
+const CURRENT_APP_VERSION = "2.6.15";
+const EXPECTED_PUBLIC_KEY_DER_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvgckZd2FQ7qw17OgD6vjGldC8QHW2cbaBwQYJ6yS7yr4RwrU2qsmvanAQR6qpJqmJrGpKuszNhekEzVjDTRIoihpn5PeMf4qGxhGw7xonhRWkr8l2z52OIcbeFO0EAdG1etsKywAE/aIeUYET4kIUHGizuLSi89Uka+ZAGTs0HFSxKBFpwMBz6IBrNyc39IbGE4SDCMYcmpLzcz+YUPuVJD2wTb/iGjg5/vo9UMJ+kcigSk96KQUzSprvPqTJSqqxCwd213s8V+OnKQfWlZx56ufyEkjxjMeUVBWNHEAd9enMEnR1ZOIj2cSq+aksV1XJuMsgtWArF6rKALYMIOXTwIDAQAB";
 
 function fail(message) {
   console.error(message);
