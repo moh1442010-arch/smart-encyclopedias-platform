@@ -74,7 +74,7 @@ jobs:
           for (const [key, value] of Object.entries(expected)) {
             if (!gradle.includes(`${key} '${value}'`)) throw new Error(`Release identity mismatch: ${key}`);
           }
-          if (!gradle.includes("versionCode 260015")) throw new Error("Release identity mismatch: versionCode");
+          if (!gradle.includes("versionCode 260016")) throw new Error("Release identity mismatch: versionCode");
           for (const price of ["55,000 جنيه سوداني", "550,000 جنيه سوداني", "1,050,000 جنيه سوداني"]) {
             if (!app.includes(price)) throw new Error(`App is missing approved price: ${price}`);
           }
