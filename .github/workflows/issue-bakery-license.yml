@@ -43,8 +43,22 @@ jobs:
           DEVICE_ID="$(printf '%s' "$DEVICE_ID_INPUT" | tr -d '[:space:]')"
           [[ "$DEVICE_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]] || { echo "::error::Device ID format is invalid after whitespace cleanup."; exit 1; }
           case "$PLAN" in monthly|annual|lifetime) ;; *) echo "::error::Unsupported plan."; exit 1;; esac
-          printf '%s' "$PRIVATE_KEY_B64" | base64 --decode > license-private.pem
-          openssl pkey -in license-private.pem -noout >/dev/null
+          # Accept either the documented Base64 secret or a PEM value pasted directly.
+          KEY_INPUT="$(printf '%s' "$PRIVATE_KEY_B64" | tr -d '\r')"
+          if [[ "$KEY_INPUT" == *"-----BEGIN "* ]]; then
+            printf '%s\n' "$KEY_INPUT" > license-private.pem
+          else
+            KEY_B64="$(printf '%s' "$KEY_INPUT" | tr -d '[:space:]' | tr '_-' '/+')"
+            [[ "$KEY_B64" =~ ^[A-Za-z0-9+/]*={0,2}$ ]] || { echo "::error::The signing secret is neither PEM nor valid Base64. Recreate the Actions secret from the complete private.pem.b64 file."; exit 1; }
+            case $((${#KEY_B64} % 4)) in
+              0) ;;
+              2) KEY_B64+="==" ;;
+              3) KEY_B64+="=" ;;
+              *) echo "::error::The signing secret has an invalid Base64 length."; exit 1 ;;
+            esac
+            printf '%s' "$KEY_B64" | base64 --decode > license-private.pem
+          fi
+          openssl pkey -in license-private.pem -check -noout >/dev/null
           EXPECTED_PUBLIC_KEY_DER_B64="$(sed -n 's/.*LICENSE_PUBLIC_KEY_B64 = "\\([^"]*\\)".*/\\1/p' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | head -1)"
           ACTUAL_PUBLIC_KEY_DER_B64="$(openssl pkey -in license-private.pem -pubout -outform DER | base64 -w0)"
           test -n "$EXPECTED_PUBLIC_KEY_DER_B64" || { echo "::error::Could not read the app's public activation key."; exit 1; }
