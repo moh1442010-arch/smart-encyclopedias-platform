@@ -9,7 +9,7 @@ android {
         applicationId 'com.mohammedmustafa.almizan.bakery'
         minSdk 23
         targetSdk 35
-        versionCode 260015
+        versionCode 260016
         versionName '2.6.15'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
