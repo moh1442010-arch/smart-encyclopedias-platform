@@ -16,7 +16,7 @@
 <p class="muted">أدخل مفتاح الإدارة الذي تم ضبطه سرًا على Cloudflare Worker. لا تشارك المفتاح ولا تحفظه على جهاز عام. هذه الصفحة لا تحتوي على المفتاح ولا تخزنه.</p>
 <label for="apiBase">رابط خدمة الترخيص (Worker URL)</label><input id="apiBase" value="https://al-mizan-bakery-licensing.moh1442010.workers.dev" placeholder="https://اسم-الخدمة.اسمك.workers.dev">
 <label for="adminKey">مفتاح الإدارة</label><input id="adminKey" type="password" autocomplete="current-password">
-<div class="row"><button id="loadBtn">تحميل الطلبات المعلقة</button><button id="approvedBtn">عرض التراخيص المعتمدة</button></div>
+<div class="row"><button id="signCheckBtn">فحص جاهزية مفتاح التوقيع</button><button id="loadBtn">تحميل الطلبات المعلقة</button><button id="approvedBtn">عرض التراخيص المعتمدة</button></div>
 <div id="globalResult" class="result hidden" role="status" aria-live="polite"></div>
 </section>
 <section class="card"><h2 id="listTitle">الطلبات</h2><div id="orders"><p class="muted">اتصل بالخدمة لعرض الطلبات.</p></div></section>
@@ -79,6 +79,12 @@ async function load(status="pending"){
   }
  }catch(e){$("orders").textContent="تعذر تحميل الطلبات.";showMessage(e.message);}
 }
+$("signCheckBtn").addEventListener("click",async()=>{
+ try{
+  const result=await call("/admin/signing-check");
+  showMessage("مفتاح التوقيع جاهز ومتطابق مع التطبيق. إصدار الخدمة: "+result.appVersion+". لم يتم إصدار أي ترخيص أثناء هذا الفحص.");
+ }catch(e){showMessage("خدمة التوقيع غير جاهزة. لم يصدر أي ترخيص. السبب: "+e.message);}
+});
 $("loadBtn").addEventListener("click",()=>load("pending"));
 $("approvedBtn").addEventListener("click",()=>load("approved"));
 </script></body></html>
