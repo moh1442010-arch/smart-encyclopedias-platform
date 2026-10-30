@@ -54,6 +54,31 @@ jobs:
           console.log(`Offline activation issuer matches app ${appVersion} and its public key.`);
           NODE
 
+      - name: Verify release identity and approved bakery prices
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const gradle = fs.readFileSync('bakery-app/app/build.gradle', 'utf8');
+          const app = fs.readFileSync('bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java', 'utf8');
+          const worker = fs.readFileSync('licensing/worker/src/index.js', 'utf8');
+          const expected = {
+            applicationId: "com.mohammedmustafa.almizan.bakery",
+            versionCode: "260015",
+            versionName: "2.6.15"
+          };
+          for (const [key, value] of Object.entries(expected)) {
+            if (!gradle.includes(`${key} '${value}'`)) throw new Error(`Release identity mismatch: ${key}`);
+          }
+          for (const price of ["55,000 جنيه سوداني", "550,000 جنيه سوداني", "1,050,000 جنيه سوداني"]) {
+            if (!app.includes(price)) throw new Error(`App is missing approved price: ${price}`);
+          }
+          for (const [plan, amount] of Object.entries({monthly:55000, annual:550000, lifetime:1050000})) {
+            const pattern = new RegExp(plan + String.raw`:\\s*\\{\\s*amount:\\s*` + amount + String.raw`\\b`);
+            if (!pattern.test(worker)) throw new Error(`Licensing service amount mismatch for ${plan}`);
+          }
+          console.log("Release identity and all three approved bakery prices verified.");
+          NODE
+
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
