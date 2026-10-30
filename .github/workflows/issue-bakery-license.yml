@@ -50,7 +50,7 @@ jobs:
           else
             KEY_B64="$(printf '%s' "$KEY_INPUT" | tr -d '[:space:]' | tr '_-' '/+' | tr -cd 'A-Za-z0-9+/=')"
             test -n "$KEY_B64" || { echo "::error::Signing secret is empty after Base64 normalization."; exit 1; }
-            case $((\${#KEY_B64} % 4)) in
+            case $((${#KEY_B64} % 4)) in
               0) ;;
               2) KEY_B64+="==" ;;
               3) KEY_B64+="=" ;;
