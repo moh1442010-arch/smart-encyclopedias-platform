@@ -42,7 +42,7 @@ public class MainActivity extends Activity {
     private static final int NAVY = Color.rgb(11,31,58), GOLD = Color.rgb(212,175,55), BG = Color.rgb(246,248,251);
     private static final String SUPPORT = "249121851285", BANKAK = "1882224";
     // Public verification key only. The corresponding private key is stored as a GitHub Actions secret.
-    private static final String LICENSE_PUBLIC_KEY_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvgckZd2FQ7qw17OgD6vjGldC8QHW2cbaBwQYJ6yS7yr4RwrU2qsmvanAQR6qpJqmJrGpKuszNhekEzVjDTRIoihpn5PeMf4qGxhGw7xonhRWkr8l2z52OIcbeFO0EAdG1etsKywAE/aIeUYET4kIUHGizuLSi89Uka+ZAGTs0HFSxKBFpwMBz6IBrNyc39IbGE4SDCMYcmpLzcz+YUPuVJD2wTb/iGjg5/vo9UMJ+kcigSk96KQUzSprvPqTJSqqxCwd213s8V+OnKQfWlZx56ufyEkjxjMeUVBWNHEAd9enMEnR1ZOIj2cSq+aksV1XJuMsgtWArF6rKALYMIOXTwIDAQAB";
+    private static final String LICENSE_PUBLIC_KEY_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3frqcepNGSoat1ZsLo3/Qcgm9/q26bLU5zLRM/9Ff47rstfdrUzQH18PqHLhR3HiSv4jYWAEQEaA008BLnCAyBxtv73s8VQKR39BUNGCea/KiL3xXDmVkujr52kL7QySidKFoV8NaUZLHmNCfHFcOPifTdkEz316HWrcYt9RVC2SDYFXt4IzH5X8p1gKxLJFFMR73p3a28uPAszn8XMqIdXwNQRWNOGCf1NjLL1od1EWVcFvQwEW1nfVesskYLeaPnHxa+U+tx3TVckRJV5Brbao4yT0ozAZLiapFQDyekPs23jHB7rrCC1Zub/oWIm4PSQa0Uc/j9CGUE/V8R9W0wIDAQAB";
     private static final int REQUEST_EXPORT_BACKUP = 4250, REQUEST_IMPORT_BACKUP = 4251, REQUEST_PAYMENT_RECEIPT = 4252, REQUEST_COMPANY_LOGO = 4253;
     private String pendingActivationMessage = "";
     private Store store;
