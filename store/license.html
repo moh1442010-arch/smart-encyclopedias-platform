@@ -72,6 +72,10 @@
 /* Public API origin only. Never place ADMIN_API_KEY or private-key material in this page. */
 const API_BASE = "https://al-mizan-bakery-licensing.moh1442010.workers.dev";
 const configured = /^https:\/\/[a-z0-9.-]+\.workers\.dev$/i.test(API_BASE);
+const query = new URLSearchParams(location.search);
+const planParam = query.get("plan");
+if (query.get("deviceId")) document.getElementById("deviceId").value = query.get("deviceId");
+if (["monthly","annual","lifetime"].includes(planParam)) document.getElementById("plan").value = planParam;
 const form = document.getElementById("orderForm");
 const submitBtn = document.getElementById("submitBtn");
 const checkBtn = document.getElementById("checkBtn");
@@ -118,7 +122,14 @@ form.addEventListener("submit", async (event) => {
       receiptReference: document.getElementById("receiptReference").value.trim()
     })});
     document.getElementById("orderId").value = data.orderId;
-    formResult.textContent = "تم تسجيل الطلب بنجاح. رقم الطلب: " + data.orderId + "\nالمبلغ: " + data.amountSdg.toLocaleString("en-US") + " ج.س\nالحالة: قيد المراجعة. احتفظ برقم الطلب لمتابعته.";
+    const planLabels = {monthly:"شهري — 55,000 جنيه",annual:"سنوي — 550,000 جنيه",lifetime:"دائم — 1,050,000 جنيه"};
+    const adminMessage = "طلب ترخيص جديد للميزان للمخابز 2.6.15\\nرقم الطلب: " + data.orderId + "\\nالعميل: " + document.getElementById("customerName").value.trim() + "\\nالباقة: " + planLabels[document.getElementById("plan").value] + "\\nالمبلغ: " + data.amountSdg.toLocaleString("en-US") + " جنيه سوداني\\nمرجع بنكك: " + document.getElementById("receiptReference").value.trim() + "\\nمعرّف الجهاز: " + document.getElementById("deviceId").value.trim() + "\\nيرجى مراجعة وصول المبلغ فعليًا ثم اعتماد الطلب من لوحة الإدارة: https://moh1442010-arch.github.io/smart-encyclopedias-platform/store/license-admin.html";
+    const wa = document.createElement("a");
+    wa.className = "button";
+    wa.href = "https://wa.me/249121851285?text=" + encodeURIComponent(adminMessage);
+    wa.target = "_blank"; wa.rel = "noopener"; wa.textContent = "إرسال إشعار طلب المراجعة إلى واتساب المالك";
+    formResult.textContent = "تم تسجيل الطلب بنجاح. رقم الطلب: " + data.orderId + "\\nالمبلغ: " + data.amountSdg.toLocaleString("en-US") + " ج.س\\nالحالة: ينتظر مراجعة المالك والتحقق من وصول التحويل. لم يصدر أي ترخيص.";
+    formResult.appendChild(document.createElement("br")); formResult.appendChild(wa);
   } catch (error) {
     formResult.textContent = "لم يُرسل الطلب: " + error.message;
   } finally { submitBtn.disabled = false; }
