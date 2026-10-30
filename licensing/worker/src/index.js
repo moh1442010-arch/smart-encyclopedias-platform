@@ -137,6 +137,20 @@ async function handle(request, env) {
     });
   }
 
+  if (url.pathname === "/admin/signing-check" && request.method === "GET") {
+    if (!env.ADMIN_API_KEY || request.headers.get("Authorization") !== `Bearer ${env.ADMIN_API_KEY}`) {
+      return json({ error: "UNAUTHORIZED" }, 401);
+    }
+    try {
+      await importPrivateKey(env);
+      return json({ ok: true, publicKeyMatchesApp: true, appVersion: cleanText(env.APP_VERSION || "2.6.15", 32) });
+    } catch (e) {
+      const code = String(e && e.message || e);
+      const safeCode = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH"].includes(code) ? code : "LICENSE_SIGNING_NOT_CONFIGURED";
+      return json({ ok: false, error: safeCode }, 503);
+    }
+  }
+
   if (url.pathname === "/admin/orders" && request.method === "GET") {
     if (!env.ADMIN_API_KEY || request.headers.get("Authorization") !== `Bearer ${env.ADMIN_API_KEY}`) {
       return json({ error: "UNAUTHORIZED" }, 401);
