@@ -1578,19 +1578,24 @@ public class MainActivity extends Activity {
     }
 
     private void requestActivation(String plan,String amount) {
-        final String message="السلام عليكم، أطلب تفعيل المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + ".\n"+
-            "الباقة المختارة: "+plan+"\n"+
-            "المبلغ: "+amount+"\n"+
-            "رقم حساب بنكك المحوّل إليه: "+BANKAK+"\n"+
-            "تاريخ الطلب: "+day+"\n"+
-            "معرّف الجهاز: "+deviceId()+"\n"+
-            "رقم عملية بنكك: [اكتب رقم العملية]\n"+
-            "أرفق إيصال التحويل في هذه المحادثة. بعد التحقق أرجو إرسال رمز تفعيل مرتبط بهذا الجهاز والباقة.";
-        new AlertDialog.Builder(this).setTitle("إرسال طلب التفعيل")
-            .setMessage("اختر إرسال الطلب النصي إلى واتساب أو إرفاق صورة/PDF لإيصال التحويل. لا ترسل الرقم السري أو رمز التحقق الخاص ببنكك.")
-            .setNegativeButton("إلغاء",null)
-            .setNeutralButton("إرسال الطلب النصي",(d,w)->openWhatsApp(message))
-            .setPositiveButton("📎 إرفاق الإيصال",(d,w)->choosePaymentReceipt(message))
+        String planCode = "شهرية".equals(plan) ? "monthly" :
+            "سنوية".equals(plan) ? "annual" : "lifetime";
+        android.net.Uri portal = android.net.Uri.parse(
+            "https://moh1442010-arch.github.io/smart-encyclopedias-platform/store/license.html")
+            .buildUpon()
+            .appendQueryParameter("deviceId", deviceId())
+            .appendQueryParameter("plan", planCode)
+            .appendQueryParameter("appVersion", BuildConfig.VERSION_NAME)
+            .appendQueryParameter("amount", amount)
+            .build();
+        new AlertDialog.Builder(this)
+            .setTitle("طلب ترخيص — موافقة المالك إلزامية")
+            .setMessage("ستفتح بوابة طلب الترخيص لتسجيل اسم العميل ورقم التواصل ومرجع التحويل. بعد إرسال الطلب، أرسل إشعار واتساب إلى المالك. لن يصدر أي ترخيص إلا بعد مراجعة وصول المبلغ وموافقة المالك.")
+            .setNegativeButton("إلغاء", null)
+            .setPositiveButton("متابعة إلى طلب الترخيص", (d,w) -> {
+                try { startActivity(new Intent(Intent.ACTION_VIEW, portal)); }
+                catch (Exception ex) { toast("تعذر فتح بوابة الترخيص. تحقق من اتصال الإنترنت."); }
+            })
             .show();
     }
 
