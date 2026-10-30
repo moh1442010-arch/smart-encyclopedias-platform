@@ -3,7 +3,7 @@ main = "src/index.js"
 compatibility_date = "2026-10-25"
 
 [vars]
-APP_VERSION = "2.6.14"
+APP_VERSION = "2.6.15"
 STORE_ORIGIN = "https://moh1442010-arch.github.io"
 
 [[d1_databases]]
