@@ -148,7 +148,7 @@ jobs:
           expected="159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
           test "$cert_sha" = "$expected" || { echo "::error::Signing certificate fingerprint mismatch; do not distribute this APK"; exit 1; }
           badging="$("$build_tools/aapt" dump badging release/AlMizan-Bakery-2.6.15-review.apk)"
-          echo "$badging" | grep -F "package: name='com.mohammedmustafa.almizan.bakery' versionCode='260015' versionName='2.6.15'"
+          echo "$badging" | grep -F "package: name='com.mohammedmustafa.almizan.bakery' versionCode='260016' versionName='2.6.15'"
           echo "$badging" | grep -F "application-label:'المحاسب الميزان للمخابز'"
           sha256sum release/AlMizan-Bakery-2.6.15-review.apk > release/SHA256SUMS.txt
           rm -f release/AlMizan-Bakery-2.6.15-aligned.apk signing/release.jks
