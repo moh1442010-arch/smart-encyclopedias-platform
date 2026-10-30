@@ -57,7 +57,12 @@ async function load(status="pending"){
      approve.disabled=true;
      try{
       const result=await call("/admin/orders/"+encodeURIComponent(o.id)+"/approve",{method:"POST",body:JSON.stringify({note:note.value.trim()})});
-      showMessage("صدر الترخيص بنجاح. أرسل رقم الطلب للعميل ليحصل على الرمز من بوابة التفعيل.\nرقم الطلب: "+result.orderId+"\nالإصدار: "+result.appVersion+"\nانتهاء الصلاحية (Unix): "+result.expiresAt+"\n\nمهم: لم يتم إرسال الرمز تلقائيًا عبر واتساب.");
+      showMessage("تمت الموافقة وإصدار الترخيص وفق الباقة التي راجعتها.\\nرقم الطلب: "+result.orderId+"\\nالباقة: "+o.plan+"\\nالمبلغ: "+Number(o.amount_sdg).toLocaleString("en-US")+" جنيه سوداني\\nالإصدار: "+result.appVersion+"\\nانتهاء الصلاحية (Unix): "+result.expiresAt);
+      const phone = String(o.contact||"").replace(/[^0-9]/g,"").replace(/^0/,"249");
+      const message = "تمت الموافقة على طلب ترخيص الميزان للمخابز.\\nرقم الطلب: "+result.orderId+"\\nالباقة: "+o.plan+"\\nرمز التفعيل الخاص بجهازك: "+result.activationToken+"\\nافتح التطبيق ثم الاشتراك والتفعيل وأدخل الرمز.";
+      const send = document.createElement("a"); send.className="button"; send.target="_blank"; send.rel="noopener";
+      send.href = "https://wa.me/"+phone+"?text="+encodeURIComponent(message); send.textContent="إرسال رمز التفعيل للعميل عبر واتساب";
+      $("globalResult").appendChild(document.createElement("br")); $("globalResult").appendChild(send);
       await load("pending");
      }catch(e){showMessage("فشل الإصدار: "+e.message);approve.disabled=false;}
     });
