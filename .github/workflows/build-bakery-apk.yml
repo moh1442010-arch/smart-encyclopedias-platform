@@ -61,6 +61,12 @@ jobs:
           const gradle = fs.readFileSync('bakery-app/app/build.gradle', 'utf8');
           const app = fs.readFileSync('bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java', 'utf8');
           const worker = fs.readFileSync('licensing/worker/src/index.js', 'utf8');
+          const workerConfig = fs.readFileSync('licensing/worker/wrangler.toml', 'utf8');
+          const appMain = fs.readFileSync('bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java', 'utf8');
+          const appKey = appMain.match(/LICENSE_PUBLIC_KEY_B64 = "([^"]+)"/)?.[1];
+          const workerKey = worker.match(/EXPECTED_APP_PUBLIC_KEY_DER_B64 = "([^"]+)"/)?.[1];
+          if (!appKey || appKey !== workerKey) throw new Error("Worker signing public key does not match Android app.");
+          if (!workerConfig.includes('APP_VERSION = "2.6.15"')) throw new Error("Worker APP_VERSION must be 2.6.15.");
           const expected = {
             applicationId: "com.mohammedmustafa.almizan.bakery",
             versionName: "2.6.15"
