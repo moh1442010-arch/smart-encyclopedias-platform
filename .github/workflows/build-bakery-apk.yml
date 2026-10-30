@@ -34,6 +34,25 @@ jobs:
 
       - name: Validate offline activation issuer syntax
         run: node --check tools/bakery-license-issuer.mjs
+      - name: Verify offline issuer matches app version and public key
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const app = fs.readFileSync('bakery-app/app/build.gradle', 'utf8');
+          const main = fs.readFileSync('bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java', 'utf8');
+          const issuer = fs.readFileSync('tools/bakery-license-issuer.mjs', 'utf8');
+          const appVersion = app.match(/versionName '([^']+)'/)?.[1];
+          const issuerVersion = issuer.match(/CURRENT_APP_VERSION = "([^"]+)"/)?.[1];
+          const appKey = main.match(/LICENSE_PUBLIC_KEY_B64 = "([^"]+)"/)?.[1];
+          const issuerKey = issuer.match(/EXPECTED_PUBLIC_KEY_DER_B64 = "([^"]+)"/)?.[1];
+          if (!appVersion || !issuerVersion || appVersion !== issuerVersion) {
+            throw new Error(`Offline issuer version mismatch: app=${appVersion}, issuer=${issuerVersion}`);
+          }
+          if (!appKey || !issuerKey || appKey !== issuerKey) {
+            throw new Error('Offline issuer public key does not match the key embedded in the app.');
+          }
+          console.log(`Offline activation issuer matches app ${appVersion} and its public key.`);
+          NODE
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
