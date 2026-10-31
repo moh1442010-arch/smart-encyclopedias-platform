@@ -1,0 +1,43 @@
+name: Verify Al-Mizan Bakery Signing Key
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-signing-key:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout app source
+        uses: actions/checkout@v4
+
+      - name: Validate private key and match app public key
+        shell: bash
+        env:
+          PRIVATE_KEY_INPUT: ${{ secrets.BAKERY_LICENSE_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$PRIVATE_KEY_INPUT" || { echo "::error::BAKERY_LICENSE_PRIVATE_KEY_B64 is missing."; exit 1; }
+          KEY_INPUT="$(printf '%s' "$PRIVATE_KEY_INPUT" | tr -d '\r')"
+          if [[ "$KEY_INPUT" == *"-----BEGIN "* ]]; then
+            printf '%s\n' "$KEY_INPUT" > signing-private.pem
+          else
+            KEY_B64="$(printf '%s' "$KEY_INPUT" | tr -d '[:space:]' | tr '_-' '/+' | tr -cd 'A-Za-z0-9+/=')"
+            test -n "$KEY_B64" || { echo "::error::Secret is empty after Base64 normalization."; exit 1; }
+            case $((${#KEY_B64} % 4)) in
+              0) ;;
+              2) KEY_B64+="==" ;;
+              3) KEY_B64+="=" ;;
+              *) echo "::error::Invalid Base64 length."; exit 1 ;;
+            esac
+            printf '%s' "$KEY_B64" | base64 --decode > signing-private.pem || { echo "::error::Secret could not be Base64-decoded."; exit 1; }
+          fi
+          openssl pkey -in signing-private.pem -check -noout >/dev/null || { echo "::error::Secret is not a valid private key."; exit 1; }
+          EXPECTED="$(grep -oE 'LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | head -1 | cut -d '"' -f2)"
+          ACTUAL="$(openssl pkey -in signing-private.pem -pubout -outform DER | base64 -w0)"
+          test -n "$EXPECTED" || { echo "::error::App public key was not found."; exit 1; }
+          test "$ACTUAL" = "$EXPECTED" || { echo "::error::Private key does not match the app public key."; exit 1; }
+          echo "Signing key is valid and matches the public key embedded in the bakery app."
+          rm -f signing-private.pem
