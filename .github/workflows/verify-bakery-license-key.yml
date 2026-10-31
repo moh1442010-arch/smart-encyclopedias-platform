@@ -45,6 +45,10 @@ jobs:
                   print("::error::PEM secret contains non-ASCII characters.")
                   sys.exit(1)
           else:
+              # Remove only the exact Termux status text if it was accidentally pasted after the key.
+              raw = raw.rstrip()
+              if raw.endswith("تم النسخ"):
+                  raw = raw[:-len("تم النسخ")].rstrip()
               compact = "".join(raw.split())
               if not compact or not re.fullmatch(r"[A-Za-z0-9+/_-]*={0,2}", compact):
                   print("::error::Secret contains characters outside Base64. Store Base64 only.")
