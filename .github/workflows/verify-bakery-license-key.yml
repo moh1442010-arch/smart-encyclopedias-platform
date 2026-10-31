@@ -1,4 +1,4 @@
-name: Verify Al-Mizan Bakery Signing Key
+name: Verify Al-Mizan Bakery Signing Configuration
 
 on:
   workflow_dispatch:
@@ -6,95 +6,30 @@ on:
     paths:
       - ".github/workflows/verify-bakery-license-key.yml"
       - "bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java"
+      - "tools/bakery-license-issuer.mjs"
+      - "licensing/worker/src/index.js"
 
 permissions:
   contents: read
 
 jobs:
-  verify-signing-key:
+  verify-public-key-consistency:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout app source
         uses: actions/checkout@v4
 
-      - name: Validate private key and match app public key
+      - name: Verify public key consistency without exposing private keys
         shell: bash
-        env:
-          PRIVATE_KEY_INPUT: ${{ secrets.BAKERY_LICENSE_PRIVATE_KEY_B64 }}
         run: |
           set -euo pipefail
-          umask 077
-          KEY_FILE="$RUNNER_TEMP/bakery-signing-private.pem"
-          trap 'rm -f "$KEY_FILE"' EXIT
-
-          test -n "${PRIVATE_KEY_INPUT:-}" || { echo "::error::BAKERY_LICENSE_PRIVATE_KEY_B64 is missing."; exit 1; }
-
-          # Decode strictly. Do not silently strip non-Base64 characters (such as Arabic text).
-          python3 - <<'PY'
-          import base64
-          import os
-          import re
-          import sys
-
-          raw = os.environ["PRIVATE_KEY_INPUT"]
-          # Accept either a multiline PEM value or a Base64-encoded PEM.
-          if raw.lstrip().startswith("-----BEGIN "):
-              try:
-                  data = raw.strip().replace("\r\n", "\n").replace("\r", "\n").encode("ascii")
-              except UnicodeEncodeError:
-                  print("::error::PEM secret contains non-ASCII characters.")
-                  sys.exit(1)
-          else:
-              # Remove only the exact Termux status text if it was accidentally pasted after the key.
-              raw = raw.rstrip()
-              if raw.endswith("تم النسخ"):
-                  raw = raw[:-len("تم النسخ")].rstrip()
-              compact = "".join(raw.split())
-              if not compact or not re.fullmatch(r"[A-Za-z0-9+/_-]*={0,2}", compact):
-                  # If mobile paste added surrounding text, accept only one long Base64
-                  # block. The decoded private key must still match the app's public key below.
-                  candidates = re.findall(r"[A-Za-z0-9+/]{1000,}={0,2}", compact)
-                  if len(candidates) != 1:
-                      print("::error::Secret must contain one Base64 private-key block only.")
-                      sys.exit(1)
-                  compact = candidates[0]
-              if len(compact) % 4 == 1:
-                  print("::error::Secret has an invalid Base64 length.")
-                  sys.exit(1)
-              compact = compact.translate(str.maketrans("-_", "+/"))
-              padded = compact + ("=" * ((-len(compact)) % 4))
-              try:
-                  data = base64.b64decode(padded, validate=True)
-              except Exception:
-                  print("::error::Secret is not valid Base64.")
-                  sys.exit(1)
-
-          if data.startswith(b"-----BEGIN ") and b"PRIVATE KEY-----" in data[:100]:
-              with open(os.environ["RUNNER_TEMP"] + "/bakery-signing-private.pem", "wb") as f:
-                  f.write(data)
-          else:
-              # Also accept PKCS#8 DER Base64, the format used by Cloudflare.
-              with open(os.environ["RUNNER_TEMP"] + "/bakery-signing-private.der", "wb") as f:
-                  f.write(data)
-          PY
-
-          if [ ! -s "$KEY_FILE" ] && [ -s "$RUNNER_TEMP/bakery-signing-private.der" ]; then
-            openssl pkey -inform DER -in "$RUNNER_TEMP/bakery-signing-private.der" -out "$KEY_FILE" 2>/dev/null || {
-              echo "::error::Decoded Base64 is neither PEM text nor a valid PKCS#8 DER private key."; exit 1;
-            }
-          fi
-          openssl pkey -in "$KEY_FILE" -check -noout >/dev/null 2>&1 || {
-            echo "::error::Secret decoded, but it is not a valid private key."; exit 1;
-          }
-
-          EXPECTED="$(grep -oE 'LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | head -1 | cut -d '"' -f2)"
-          test -n "$EXPECTED" || { echo "::error::App public key was not found."; exit 1; }
-
-          ACTUAL="$(openssl pkey -in "$KEY_FILE" -pubout -outform DER 2>/dev/null | base64 -w0)"
-          test "$ACTUAL" = "$EXPECTED" || {
-            echo "::error::Private key does not match the public key embedded in the bakery app."; exit 1;
-          }
-
-          echo "PASS: Base64/PEM decoding, private-key integrity, and embedded public-key match."
-
-# Re-run signing-key verification after the repository secret was refreshed.
+          APP_KEY="$(grep -oE 'LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | head -1 | cut -d '"' -f2)"
+          ISSUER_KEY="$(grep -oE 'EXPECTED_PUBLIC_KEY_DER_B64 = "[^"]+"' tools/bakery-license-issuer.mjs | head -1 | cut -d '"' -f2)"
+          WORKER_KEY="$(grep -oE 'EXPECTED_APP_PUBLIC_KEY_DER_B64 = "[^"]+"' licensing/worker/src/index.js | head -1 | cut -d '"' -f2)"
+          test -n "$APP_KEY" || { echo "::error::App public key missing."; exit 1; }
+          test -n "$ISSUER_KEY" || { echo "::error::Offline issuer public key missing."; exit 1; }
+          test -n "$WORKER_KEY" || { echo "::error::Worker public key missing."; exit 1; }
+          test "$APP_KEY" = "$ISSUER_KEY" || { echo "::error::App and offline issuer public keys differ."; exit 1; }
+          test "$APP_KEY" = "$WORKER_KEY" || { echo "::error::App and Worker public keys differ."; exit 1; }
+          echo "PASS: App, offline issuer, and Cloudflare Worker public keys are identical."
+          echo "Private keys are intentionally not stored in GitHub Actions."
