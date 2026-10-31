@@ -45,3 +45,30 @@ jobs:
           grep -q 'https://al-mizan-bakery-licensing.moh1442010.workers.dev' store/license.html
           ! grep -q 'SET-WORKER-URL-HERE' store/license.html
           echo "No private/admin secrets embedded; storefront points to the deployed Worker."
+
+      - name: Check bakery release version and public-key consistency
+        run: |
+          APP_VERSION="$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" bakery-app/app/build.gradle)"
+          WORKER_VERSION="$(sed -n 's/^APP_VERSION = "\(.*\)"/\1/p' licensing/worker/wrangler.toml)"
+          test -n "$APP_VERSION" && test "$APP_VERSION" = "$WORKER_VERSION"
+          APP_KEY="$(grep -oE 'LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | cut -d '"' -f2)"
+          WORKER_KEY="$(grep -oE 'EXPECTED_APP_PUBLIC_KEY_DER_B64 = "[^"]+"' licensing/worker/src/index.js | cut -d '"' -f2)"
+          test -n "$APP_KEY" && test "$APP_KEY" = "$WORKER_KEY"
+          echo "Bakery version and app/Worker public keys are consistent."
+
+      - name: Syntax-check storefront and admin browser scripts
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          for source, target in [
+              ("store/license.html", "/tmp/bakery-store.js"),
+              ("store/license-admin.html", "/tmp/bakery-admin.js"),
+          ]:
+              html = Path(source).read_text(encoding="utf-8")
+              scripts = re.findall(r"<script[^>]*>(.*?)</script>", html, re.S | re.I)
+              assert scripts, f"No inline script found in {source}"
+              Path(target).write_text("\n".join(scripts), encoding="utf-8")
+          PY
+          node --check /tmp/bakery-store.js
+          node --check /tmp/bakery-admin.js
