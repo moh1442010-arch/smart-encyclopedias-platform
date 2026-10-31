@@ -112,7 +112,7 @@ async function handle(request, env) {
     if (!customer || !contact || !receiptRef || !validDevice(deviceId) || !PLANS[plan]) {
       return json({ error: "INVALID_FIELDS" }, 400);
     }
-    const appVersion = cleanText(env.APP_VERSION || "2.6.13", 32);
+    const appVersion = cleanText(env.APP_VERSION || "2.6.15", 32);
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     await env.DB.prepare(
