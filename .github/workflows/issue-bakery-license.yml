@@ -87,14 +87,14 @@ jobs:
             echo "::error::Decoded secret is not a valid supported private key. No token was issued."; exit 1;
           }
 
-          EXPECTED_PUBLIC_KEY_DER_B64="$(grep -oE 'LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | head -1 | cut -d "'"'"'"' -f2)"
+          EXPECTED_PUBLIC_KEY_DER_B64="$(grep -oE 'LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | head -1 | cut -d '"' -f2)"
           test -n "$EXPECTED_PUBLIC_KEY_DER_B64" || { echo "::error::Could not read the app's public activation key."; exit 1; }
           ACTUAL_PUBLIC_KEY_DER_B64="$(openssl pkey -in "$KEY_FILE" -pubout -outform DER 2>/dev/null | base64 -w0)"
           test "$ACTUAL_PUBLIC_KEY_DER_B64" = "$EXPECTED_PUBLIC_KEY_DER_B64" || {
             echo "::error::Activation private key does not match the public key embedded in the app; no token was issued."; exit 1;
           }
 
-          APP_VERSION="$(grep -oE "versionName '[^']+'" bakery-app/app/build.gradle | head -1 | cut -d "'"'"'"' -f2)"
+          APP_VERSION="$(grep -oE "versionName '[^']+'" bakery-app/app/build.gradle | head -1 | cut -d '"' -f2)"
           test -n "$APP_VERSION" || { echo "::error::Could not read current bakery app version."; exit 1; }
 
           if [ "$PLAN" = "lifetime" ]; then
