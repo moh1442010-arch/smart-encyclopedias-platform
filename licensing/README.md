@@ -15,7 +15,7 @@ Payment is manual Bankak review; this is not an integrated payment gateway and n
 
 ## Critical compatibility gate
 
-The repository's current Android source/build configuration says version **2.5.8**, while earlier owner reports refer to **2.5.11**. The existing local issuer script also declares **2.5.7**. Do not issue or sell lifetime licenses until the actual distributed APK version, its embedded public key, and this service's `APP_VERSION` have been reconciled and tested together.
+The current repository build and Worker configuration both identify the bakery app as **2.6.15**. Keep `bakery-app/app/build.gradle` and `licensing/worker/wrangler.toml` synchronized for every release. Do not issue a lifetime license until the distributed APK version, embedded public key, and Worker `APP_VERSION` have been reconciled and tested together.
 
 The app requires:
 - app ID: `com.mohammedmustafa.almizan.bakery`
@@ -23,6 +23,10 @@ The app requires:
 - payload format: `app=<app>;device=<device>;plan=<monthly|annual|lifetime>;max_version=<any|exact version>;expires=<unix seconds>`
 - monthly/annual expiry currently follows 30/365 days
 - lifetime token must set `expires=0` and `max_version` equal to `BuildConfig.VERSION_NAME`
+
+## Two independent signing paths
+
+The repository has two separate issuers. GitHub Actions uses the repository secret `BAKERY_LICENSE_PRIVATE_KEY_B64` in PEM-Base64 form. The customer portal and admin console use the Cloudflare Worker secrets `LICENSE_PRIVATE_KEY_PKCS8_B64` and `LICENSE_PUBLIC_KEY_DER_B64`. These are different encodings and separate settings, but both private-key values must represent the same RSA key pair whose public key is embedded in the APK. A passing GitHub key-verification run does not prove that Cloudflare signing is configured.
 
 ## Deployment steps
 
