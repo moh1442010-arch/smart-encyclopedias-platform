@@ -87,3 +87,5 @@ jobs:
           }
 
           echo "PASS: Base64/PEM decoding, private-key integrity, and embedded public-key match."
+
+# Re-run signing-key verification after the repository secret was refreshed.
