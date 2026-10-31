@@ -46,12 +46,13 @@ jobs:
                   sys.exit(1)
           else:
               compact = "".join(raw.split())
-              if not compact or not re.fullmatch(r"[A-Za-z0-9+/]*={0,2}", compact):
+              if not compact or not re.fullmatch(r"[A-Za-z0-9+/_-]*={0,2}", compact):
                   print("::error::Secret contains characters outside Base64. Store Base64 only.")
                   sys.exit(1)
               if len(compact) % 4 == 1:
                   print("::error::Secret has an invalid Base64 length.")
                   sys.exit(1)
+              compact = compact.translate(str.maketrans("-_", "+/"))
               padded = compact + ("=" * ((-len(compact)) % 4))
               try:
                   data = base64.b64decode(padded, validate=True)
@@ -59,14 +60,20 @@ jobs:
                   print("::error::Secret is not valid Base64.")
                   sys.exit(1)
 
-          if not data.startswith(b"-----BEGIN ") or b"PRIVATE KEY-----" not in data[:100]:
-              print("::error::Decoded content is not a PEM private key.")
-              sys.exit(1)
-
-          with open(os.environ["RUNNER_TEMP"] + "/bakery-signing-private.pem", "wb") as f:
-              f.write(data)
+          if data.startswith(b"-----BEGIN ") and b"PRIVATE KEY-----" in data[:100]:
+              with open(os.environ["RUNNER_TEMP"] + "/bakery-signing-private.pem", "wb") as f:
+                  f.write(data)
+          else:
+              # Also accept PKCS#8 DER Base64, the format used by Cloudflare.
+              with open(os.environ["RUNNER_TEMP"] + "/bakery-signing-private.der", "wb") as f:
+                  f.write(data)
           PY
 
+          if [ ! -s "$KEY_FILE" ] && [ -s "$RUNNER_TEMP/bakery-signing-private.der" ]; then
+            openssl pkey -inform DER -in "$RUNNER_TEMP/bakery-signing-private.der" -out "$KEY_FILE" 2>/dev/null || {
+              echo "::error::Decoded Base64 is neither PEM text nor a valid PKCS#8 DER private key."; exit 1;
+            }
+          fi
           openssl pkey -in "$KEY_FILE" -check -noout >/dev/null 2>&1 || {
             echo "::error::Secret decoded, but it is not a valid private key."; exit 1;
           }
