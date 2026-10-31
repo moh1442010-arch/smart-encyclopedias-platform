@@ -36,7 +36,7 @@ jobs:
           # Accept either a multiline PEM value or a Base64-encoded PEM.
           if raw.lstrip().startswith("-----BEGIN "):
               try:
-                  data = raw.strip().replace("\\r\\n", "\\n").replace("\\r", "\\n").encode("ascii")
+                  data = raw.strip().replace("\r\n", "\n").replace("\r", "\n").encode("ascii")
               except UnicodeEncodeError:
                   print("::error::PEM secret contains non-ASCII characters.")
                   sys.exit(1)
