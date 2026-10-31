@@ -29,6 +29,7 @@ async function call(path,options={}){
  const base=apiBase(), key=auth();
  if(!/^https:\/\//i.test(base)) throw new Error("أدخل رابط Worker صحيحًا.");
  if(!key) throw new Error("أدخل مفتاح الإدارة.");
+ if([...key].some(ch=>ch.charCodeAt(0)<32||ch.charCodeAt(0)>126)) throw new Error("مفتاح الإدارة يحتوي على محارف غير مدعومة. استخدم القيمة الأصلية من Cloudflare كما هي، ولا تلصق اسم المتغير أو وصفًا عربيًا معها.");
  const r=await fetch(base+path,{...options,headers:{"content-type":"application/json","authorization":"Bearer "+key,...(options.headers||{})}});
  const data=await r.json().catch(()=>({}));
  if(!r.ok) throw new Error(data.error||("HTTP "+r.status));
