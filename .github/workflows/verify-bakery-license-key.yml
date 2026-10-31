@@ -19,25 +19,56 @@ jobs:
           PRIVATE_KEY_INPUT: ${{ secrets.BAKERY_LICENSE_PRIVATE_KEY_B64 }}
         run: |
           set -euo pipefail
-          test -n "$PRIVATE_KEY_INPUT" || { echo "::error::BAKERY_LICENSE_PRIVATE_KEY_B64 is missing."; exit 1; }
-          KEY_INPUT="$(printf '%s' "$PRIVATE_KEY_INPUT" | tr -d '\r')"
-          if [[ "$KEY_INPUT" == *"-----BEGIN "* ]]; then
-            printf '%s\n' "$KEY_INPUT" > signing-private.pem
-          else
-            KEY_B64="$(printf '%s' "$KEY_INPUT" | tr -d '[:space:]' | tr '_-' '/+' | tr -cd 'A-Za-z0-9+/=')"
-            test -n "$KEY_B64" || { echo "::error::Secret is empty after Base64 normalization."; exit 1; }
-            case $((${#KEY_B64} % 4)) in
-              0) ;;
-              2) KEY_B64+="==" ;;
-              3) KEY_B64+="=" ;;
-              *) echo "::error::Invalid Base64 length."; exit 1 ;;
-            esac
-            printf '%s' "$KEY_B64" | base64 --decode > signing-private.pem || { echo "::error::Secret could not be Base64-decoded."; exit 1; }
-          fi
-          openssl pkey -in signing-private.pem -check -noout >/dev/null || { echo "::error::Secret is not a valid private key."; exit 1; }
+          umask 077
+          KEY_FILE="$RUNNER_TEMP/bakery-signing-private.pem"
+          trap 'rm -f "$KEY_FILE"' EXIT
+
+          test -n "${PRIVATE_KEY_INPUT:-}" || { echo "::error::BAKERY_LICENSE_PRIVATE_KEY_B64 is missing."; exit 1; }
+
+          # Decode strictly. Do not silently strip non-Base64 characters (such as Arabic text).
+          python3 - <<'PY'
+          import base64
+          import os
+          import re
+          import sys
+
+          raw = os.environ["PRIVATE_KEY_INPUT"]
+          compact = "".join(raw.split())
+
+          if compact.startswith("-----BEGIN "):
+              data = compact.encode("ascii", "strict")
+          else:
+              if not compact or not re.fullmatch(r"[A-Za-z0-9+/]*={0,2}", compact):
+                  print("::error::Secret contains characters outside PEM/Base64. Replace it with the complete Base64 value only.")
+                  sys.exit(1)
+              if len(compact) % 4 == 1:
+                  print("::error::Secret has an invalid Base64 length.")
+                  sys.exit(1)
+              padded = compact + ("=" * ((-len(compact)) % 4))
+              try:
+                  data = base64.b64decode(padded, validate=True)
+              except Exception:
+                  print("::error::Secret is not valid Base64.")
+                  sys.exit(1)
+
+          if not data.startswith(b"-----BEGIN "):
+              print("::error::Decoded content is not a PEM private key.")
+              sys.exit(1)
+
+          with open(os.environ["RUNNER_TEMP"] + "/bakery-signing-private.pem", "wb") as f:
+              f.write(data)
+          PY
+
+          openssl pkey -in "$KEY_FILE" -check -noout >/dev/null 2>&1 || {
+            echo "::error::Secret decoded, but it is not a valid private key."; exit 1;
+          }
+
           EXPECTED="$(grep -oE 'LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | head -1 | cut -d '"' -f2)"
-          ACTUAL="$(openssl pkey -in signing-private.pem -pubout -outform DER | base64 -w0)"
           test -n "$EXPECTED" || { echo "::error::App public key was not found."; exit 1; }
-          test "$ACTUAL" = "$EXPECTED" || { echo "::error::Private key does not match the app public key."; exit 1; }
-          echo "Signing key is valid and matches the public key embedded in the bakery app."
-          rm -f signing-private.pem
+
+          ACTUAL="$(openssl pkey -in "$KEY_FILE" -pubout -outform DER 2>/dev/null | base64 -w0)"
+          test "$ACTUAL" = "$EXPECTED" || {
+            echo "::error::Private key does not match the public key embedded in the bakery app."; exit 1;
+          }
+
+          echo "PASS: Base64/PEM decoding, private-key integrity, and embedded public-key match."
