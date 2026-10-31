@@ -53,7 +53,7 @@ jobs:
               if not compact or not re.fullmatch(r"[A-Za-z0-9+/_-]*={0,2}", compact):
                   # If mobile paste added surrounding text, accept only one long Base64
                   # block. The decoded private key must still match the app's public key below.
-                  candidates = re.findall(r"[A-Za-z0-9+/]{1000,}={0,2}", raw)
+                  candidates = re.findall(r"[A-Za-z0-9+/]{1000,}={0,2}", compact)
                   if len(candidates) != 1:
                       print("::error::Secret must contain one Base64 private-key block only.")
                       sys.exit(1)
