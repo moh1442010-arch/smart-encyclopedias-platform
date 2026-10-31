@@ -2,6 +2,10 @@ name: Verify Al-Mizan Bakery Signing Key
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/verify-bakery-license-key.yml"
+      - "bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java"
 
 permissions:
   contents: read
