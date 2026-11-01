@@ -41,7 +41,7 @@ jobs:
           set -euo pipefail
           umask 077
           KEY_FILE="$RUNNER_TEMP/bakery-license-private.pem"
-          trap 'rm -f "$KEY_FILE" license-payload.txt license-signature.bin' EXIT
+          trap 'rm -f "$KEY_FILE" "$RUNNER_TEMP/bakery-license-private.der" license-payload.txt license-signature.bin' EXIT
 
           test -n "${PRIVATE_KEY_INPUT:-}" || { echo "::error::Add BAKERY_LICENSE_PRIVATE_KEY_B64 in repository Actions secrets first."; exit 1; }
 
@@ -62,7 +62,7 @@ jobs:
 
           if raw.startswith("-----BEGIN "):
               try:
-                  data = raw.replace("\\r\\n", "\\n").replace("\\r", "\\n").encode("ascii")
+                  data = raw.encode("ascii")
               except UnicodeEncodeError:
                   print("::error::PEM secret contains non-ASCII characters.")
                   sys.exit(1)
