@@ -113,6 +113,25 @@ async function handle(request, env, ctx) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204 });
   if (!env.DB) return json({ error: "SERVICE_NOT_CONFIGURED" }, 503);
 
+  if (url.pathname === "/admin/panel" && request.method === "GET") {
+    if (!ctx || !ctx.access) return json({ error: "ACCESS_REQUIRED" }, 403);
+    try {
+      const panel = await fetch("https://moh1442010-arch.github.io/smart-encyclopedias-platform/store/license-admin.html", {
+        headers: { "accept": "text/html", "user-agent": "Al-Mizan-Admin-Panel" }
+      });
+      if (!panel.ok) return json({ error: "ADMIN_PANEL_UNAVAILABLE" }, 502);
+      return new Response(await panel.text(), {
+        status: 200,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store, private",
+          "x-content-type-options": "nosniff",
+          "referrer-policy": "no-referrer"
+        }
+      });
+    } catch { return json({ error: "ADMIN_PANEL_UNAVAILABLE" }, 502); }
+  }
+
   if (url.pathname === "/health" && request.method === "GET") {
     return json({ ok: true, service: "al-mizan-bakery-licensing", mode: "manual-payment-review" });
   }
