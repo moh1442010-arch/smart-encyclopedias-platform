@@ -159,7 +159,7 @@ async function handle(request, env) {
   if (url.pathname === "/admin/signing-check" && request.method === "GET") {
     if (!adminAuthorized(request, env)) {
       const authorization = request.headers.get("Authorization") || "";
-      const bearer = authorization.trim().match(/^Bearer\\s+(.+)$/i);
+      const bearer = authorization.trim().match(/^Bearer\s+(.+)$/i);
       const suppliedValue = bearer ? bearer[1] : (request.headers.get("X-Admin-Key") || "");
       return json({
         error: "UNAUTHORIZED",
