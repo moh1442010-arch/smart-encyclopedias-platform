@@ -37,7 +37,13 @@ function cleanText(v, max = 160) {
 function normalizeAdminKey(value) {
   return typeof value === "string" ? value.trim().replace(/^Bearer\s+/i, "").trim() : "";
 }
-function adminAuthorized(request, env) {
+async function adminAuthorized(request, env, ctx) {
+  // This is trusted only when the exact /admin/* path is protected by Cloudflare Access.
+  if (ctx && ctx.access) {
+    const identity = await ctx.access.getIdentity();
+    const allowed = String(env.ADMIN_EMAIL || "").trim().toLowerCase();
+    return Boolean(identity && identity.email && allowed && identity.email.toLowerCase() === allowed);
+  }
   const expected = encoder.encode(normalizeAdminKey(env.ADMIN_API_KEY));
   const authorization = request.headers.get("Authorization") || "";
   const bearer = authorization.trim().match(/^Bearer\s+(.+)$/i);
