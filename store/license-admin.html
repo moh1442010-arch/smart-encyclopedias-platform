@@ -13,8 +13,9 @@
 <main class="wrap">
 <section class="card">
 <h2>اتصال الإدارة</h2>
-<p class="muted">هذه لوحة خاصة. سجّل الدخول عبر Cloudflare Access بحساب البريد المصرح له. لا تحتاج إلى إدخال مفاتيح أو رموز سرية.</p>
-<div class="row"><button id="signCheckBtn">فحص جاهزية مفتاح التوقيع</button><button id="loadBtn">تحميل الطلبات المعلقة</button><button id="approvedBtn">عرض التراخيص المعتمدة</button><button id="logoutBtn" class="danger" type="button">تسجيل الخروج</button></div>
+<p class="muted">أدخل مفتاح الإدارة الذي ضُبط في أسرار Worker. لا تحفظ اللوحة المفتاح في المتصفح، ويُستخدم أثناء الجلسة الحالية فقط.</p>
+<label for="adminKey">مفتاح الإدارة</label><input id="adminKey" type="password" autocomplete="off" spellcheck="false" placeholder="أدخل مفتاح الإدارة">
+<div class="row"><button id="signCheckBtn">فحص جاهزية مفتاح التوقيع</button><button id="loadBtn">تحميل الطلبات المعلقة</button><button id="approvedBtn">عرض التراخيص المعتمدة</button><button id="logoutBtn" class="danger" type="button">مسح المفتاح وتسجيل الخروج</button></div>
 <div id="globalResult" class="result hidden" role="status" aria-live="polite"></div>
 </section>
 <section class="card"><h2 id="listTitle">الطلبات</h2><div id="orders"><p class="muted">اتصل بالخدمة لعرض الطلبات.</p></div></section>
@@ -22,10 +23,12 @@
 <script>
 const $=id=>document.getElementById(id);
 function apiBase(){return location.origin;}
-$("logoutBtn").addEventListener("click",()=>{location.href="/cdn-cgi/access/logout";});
+$("logoutBtn").addEventListener("click",()=>{$("adminKey").value="";showMessage("تم مسح المفتاح من الذاكرة. أدخله مجددًا عند الحاجة.");});
 async function call(path,options={}){
- const base=apiBase();
- const r=await fetch(base+path,{...options,credentials:"same-origin",headers:{"content-type":"application/json",...(options.headers||{})}});
+ const base=apiBase(), key=$("adminKey").value.trim();
+ if(!key) throw new Error("أدخل مفتاح الإدارة أولاً.");
+ if([...key].some(ch=>ch.charCodeAt(0)<32||ch.charCodeAt(0)>126)) throw new Error("مفتاح الإدارة يحتوي على محارف غير مدعومة. الصق المفتاح كما هو.");
+ const r=await fetch(base+path,{...options,credentials:"same-origin",headers:{"content-type":"application/json","authorization":"Bearer "+key,...(options.headers||{})}});
  const data=await r.json().catch(()=>({}));
  if(!r.ok) { const error=new Error(data.error||("HTTP "+r.status)); error.response=data; throw error; }
  return data;
