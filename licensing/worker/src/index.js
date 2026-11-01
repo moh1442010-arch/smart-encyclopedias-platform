@@ -256,7 +256,7 @@ async function handle(request, env, ctx) {
   return json({ error: "NOT_FOUND" }, 404);
 }
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     try {
       const response = await handle(request, env, ctx);
       return withCors(response, request, env);
