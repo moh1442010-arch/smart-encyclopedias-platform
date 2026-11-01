@@ -236,6 +236,24 @@ async function handle(request, env) {
     });
   }
 
+  if (url.pathname === "/diagnostics/signing-pair" && request.method === "GET") {
+    try {
+      await importPrivateKey(env);
+      return json({ signingPairMatches: true, signingReady: true, appVersion: cleanText(env.APP_VERSION || "2.6.15", 32) });
+    } catch (e) {
+      const code = String(e && e.message || e);
+      const allowedCodes = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH", "LICENSE_PRIVATE_KEY_INVALID", "LICENSE_PUBLIC_KEY_INVALID"];
+      return json({
+        signingPairMatches: false,
+        signingReady: false,
+        error: allowedCodes.includes(code) ? code : "LICENSE_SIGNING_INTERNAL_ERROR",
+        ...signingDiagnostics(env),
+        privateKeyFormat: privateKeyFormat(env.LICENSE_PRIVATE_KEY_PKCS8_B64),
+        appVersion: cleanText(env.APP_VERSION || "2.6.15", 32)
+      }, 503);
+    }
+  }
+
   if (url.pathname === "/health" && request.method === "GET") {
     return json({ ok: true, service: "al-mizan-bakery-licensing", mode: "manual-payment-review" });
   }
