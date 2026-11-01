@@ -170,7 +170,7 @@ async function handle(request, env) {
           xAdminKeyHeaderPresent: Boolean(request.headers.get("X-Admin-Key")),
           expectedKeyLength: normalizeAdminKey(env.ADMIN_API_KEY).length,
           receivedKeyLength: normalizeAdminKey(suppliedValue).length,
-          receivedKeyIsAscii: /^[\\x20-\\x7E]*$/.test(normalizeAdminKey(suppliedValue))
+          receivedKeyIsAscii: /^[\x20-\x7E]*$/.test(normalizeAdminKey(suppliedValue))
         }
       }, 401);
     }
