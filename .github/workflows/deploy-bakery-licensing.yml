@@ -56,8 +56,8 @@ jobs:
             exit 1
           fi
 
-      - name: Verify Production admin secret binding
+      - name: Verify Production admin login secrets
         run: |
           response="$(curl --fail --silent --show-error https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/admin-config)"
           echo "$response"
-          node -e 'const x=JSON.parse(process.argv[1]); if (x.adminApiKeyConfigured !== true) { console.error("::error::Production Worker cannot read ADMIN_API_KEY"); process.exit(1); }' "$response"
+          node -e 'const x=JSON.parse(process.argv[1]); if (x.adminPasswordConfigured !== true || x.adminSessionSecretConfigured !== true) { console.error("::error::Set ADMIN_PASSWORD (16+ chars) and ADMIN_SESSION_SECRET (32+ chars) as Worker secrets before deployment."); process.exit(1); }' "$response"
