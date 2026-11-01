@@ -158,7 +158,21 @@ async function handle(request, env) {
 
   if (url.pathname === "/admin/signing-check" && request.method === "GET") {
     if (!adminAuthorized(request, env)) {
-      return json({ error: "UNAUTHORIZED" }, 401);
+      const authorization = request.headers.get("Authorization") || "";
+      const bearer = authorization.trim().match(/^Bearer\\s+(.+)$/i);
+      const suppliedValue = bearer ? bearer[1] : (request.headers.get("X-Admin-Key") || "");
+      return json({
+        error: "UNAUTHORIZED",
+        diagnostic: {
+          adminKeyConfigured: Boolean(env.ADMIN_API_KEY),
+          authorizationHeaderPresent: Boolean(authorization),
+          bearerFormatRecognized: Boolean(bearer),
+          xAdminKeyHeaderPresent: Boolean(request.headers.get("X-Admin-Key")),
+          expectedKeyLength: normalizeAdminKey(env.ADMIN_API_KEY).length,
+          receivedKeyLength: normalizeAdminKey(suppliedValue).length,
+          receivedKeyIsAscii: /^[\\x20-\\x7E]*$/.test(normalizeAdminKey(suppliedValue))
+        }
+      }, 401);
     }
     try {
       await importPrivateKey(env);
