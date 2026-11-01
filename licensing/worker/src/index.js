@@ -64,11 +64,11 @@ function signingDiagnostics(env) {
   return {
     privateKeyConfigured: privateValue.length > 0,
     publicKeyConfigured: publicValue.length > 0,
-    publicKeyMatchesApp: publicValue.replace(/\\s+/g, "") === EXPECTED_APP_PUBLIC_KEY_DER_B64
+    publicKeyMatchesApp: publicValue.replace(/\s+/g, "") === EXPECTED_APP_PUBLIC_KEY_DER_B64
   };
 }
 function decodeBase64Value(value) {
-  return fromBase64(value.replace(/\\s+/g, ""));
+  return fromBase64(value.replace(/\s+/g, ""));
 }
 async function importPrivateKey(env) {
   const diagnostics = signingDiagnostics(env);
@@ -76,7 +76,7 @@ async function importPrivateKey(env) {
     throw new Error("LICENSE_SIGNING_NOT_CONFIGURED");
   }
   const privateValue = env.LICENSE_PRIVATE_KEY_PKCS8_B64.trim();
-  const publicValue = env.LICENSE_PUBLIC_KEY_DER_B64.trim().replace(/\\s+/g, "");
+  const publicValue = env.LICENSE_PUBLIC_KEY_DER_B64.trim().replace(/\s+/g, "");
   if (publicValue !== EXPECTED_APP_PUBLIC_KEY_DER_B64) {
     throw new Error("LICENSE_PUBLIC_KEY_MISMATCH");
   }
