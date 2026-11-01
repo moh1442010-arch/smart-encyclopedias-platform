@@ -64,3 +64,9 @@ jobs:
           response="$(curl --fail --silent --show-error https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/admin-config)"
           echo "$response"
           node -e 'const x=JSON.parse(process.argv[1]); if (x.adminPasswordConfigured !== true) { console.error("::error::Set ADMIN_PASSWORD (32+ random characters) as a Worker secret before deployment."); process.exit(1); }' "$response"
+
+      - name: Verify Production signing key configuration
+        run: |
+          response="$(curl --fail --silent --show-error https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/signing-config)"
+          echo "$response"
+          node -e 'const x=JSON.parse(process.argv[1]); if (x.privateKeyConfigured !== true || x.publicKeyConfigured !== true || x.publicKeyMatchesApp !== true) { console.error("::error::Production signing keys are missing or the public key does not match the bakery app. Set LICENSE_PRIVATE_KEY_PKCS8_B64 and LICENSE_PUBLIC_KEY_DER_B64 as Worker secrets, then redeploy."); process.exit(1); }' "$response"
