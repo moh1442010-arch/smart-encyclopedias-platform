@@ -47,7 +47,7 @@ async function call(path,options={}){
  if([...key].some(ch=>ch.charCodeAt(0)<32||ch.charCodeAt(0)>126)) throw new Error("مفتاح الإدارة يحتوي على محارف غير مدعومة. استخدم القيمة الأصلية من Cloudflare كما هي، ولا تلصق اسم المتغير أو وصفًا عربيًا معها.");
  const r=await fetch(base+path,{...options,headers:{"content-type":"application/json","authorization":"Bearer "+key,...(options.headers||{})}});
  const data=await r.json().catch(()=>({}));
- if(!r.ok) throw new Error(data.error||("HTTP "+r.status));
+ if(!r.ok) { const error=new Error(data.error||("HTTP "+r.status)); error.response=data; throw error; }
  return data;
 }
 function showMessage(message){$("globalResult").classList.remove("hidden");$("globalResult").textContent=message;}
@@ -100,7 +100,7 @@ $("signCheckBtn").addEventListener("click",async()=>{
  try{
   const result=await call("/admin/signing-check");
   showMessage("مفتاح التوقيع جاهز ومتطابق مع التطبيق. إصدار الخدمة: "+result.appVersion+". لم يتم إصدار أي ترخيص أثناء هذا الفحص.");
- }catch(e){showMessage("خدمة التوقيع غير جاهزة. لم يصدر أي ترخيص. السبب: "+e.message);}
+ }catch(e){const d=e.response&&e.response.diagnostic;showMessage("خدمة التوقيع غير جاهزة. لم يصدر أي ترخيص. السبب: "+e.message+(d?"\nتفاصيل التشخيص الآمن: "+JSON.stringify(d,null,2):""));}
 });
 $("loadBtn").addEventListener("click",()=>load("pending"));
 $("approvedBtn").addEventListener("click",()=>load("approved"));
