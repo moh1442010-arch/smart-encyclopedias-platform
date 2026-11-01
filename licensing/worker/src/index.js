@@ -43,7 +43,7 @@ async function verifyAdminSession(request,env){if(!env.ADMIN_PASSWORD||env.ADMIN
 async function loginRateState(request,env){await env.DB.prepare("CREATE TABLE IF NOT EXISTS admin_login_attempts (ip_hash TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL)").run();const ip=request.headers.get("CF-Connecting-IP")||"unknown";const digest=await crypto.subtle.digest("SHA-256",encoder.encode(ip+"|"+env.ADMIN_PASSWORD));const ipHash=base64url(digest),now=Math.floor(Date.now()/1000);const row=await env.DB.prepare("SELECT window_start,attempts FROM admin_login_attempts WHERE ip_hash=?").bind(ipHash).first();return{ipHash,now,blocked:Boolean(row&&row.window_start>now-900&&row.attempts>=8)};}
 async function recordLoginFailure(env,s){await env.DB.prepare("INSERT INTO admin_login_attempts(ip_hash,window_start,attempts) VALUES(?,?,1) ON CONFLICT(ip_hash) DO UPDATE SET attempts=CASE WHEN admin_login_attempts.window_start<=? THEN 1 ELSE admin_login_attempts.attempts+1 END,window_start=CASE WHEN admin_login_attempts.window_start<=? THEN ? ELSE admin_login_attempts.window_start END").bind(s.ipHash,s.now,s.now-900,s.now-900,s.now).run();}
 async function clearLoginFailures(env,s){await env.DB.prepare("DELETE FROM admin_login_attempts WHERE ip_hash=?").bind(s.ipHash).run();}
-const ADMIN_LOGIN_HTML=`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>دخول إدارة التراخيص</title><style>body{margin:0;background:#f2f5fa;color:#14243a;font-family:system-ui,Tahoma,Arial;display:grid;min-height:100vh;place-items:center}.box{background:white;width:min(420px,calc(100% - 36px));padding:25px;border-radius:16px;box-shadow:0 8px 32px #10243a18}h2{margin-top:0}label{display:block;margin:12px 0 5px}input,button{font:inherit;width:100%;padding:12px;border-radius:9px;box-sizing:border-box}input{border:1px solid #bbc7d5}button{margin-top:16px;border:0;background:#d4af37;color:#0b1f3a;font-weight:800}p{color:#66758a;font-size:14px}#msg{color:#a32121;min-height:24px}</style><main class="box"><h2>إدارة تراخيص الميزان للمخابز</h2><p>سجّل الدخول للوصول إلى طلبات العملاء وإصدار التراخيص.</p><form id="f"><label for="pw">كلمة مرور الإدارة</label><input id="pw" type="password" minlength="16" maxlength="256" autocomplete="current-password" required><button id="go">تسجيل الدخول</button></form><p id="msg" role="status"></p></main><script>const f=document.getElementById('f'),pw=document.getElementById('pw'),msg=document.getElementById('msg'),go=document.getElementById('go');f.addEventListener('submit',async e=>{e.preventDefault();go.disabled=true;msg.textContent='جارٍ التحقق…';try{const r=await fetch('/admin/login',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({password:pw.value})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error==='TOO_MANY_ATTEMPTS'?'محاولات كثيرة. انتظر 15 دقيقة ثم حاول مجدداً.':'تعذر تسجيل الدخول. تحقق من كلمة المرور أو إعداد الخدمة.');location.replace('/admin/panel')}catch(err){msg.textContent=err.message;pw.value='';pw.focus();go.disabled=false}});</script></html>`;
+const ADMIN_LOGIN_HTML=`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>دخول إدارة التراخيص</title><style>body{margin:0;background:#f2f5fa;color:#14243a;font-family:system-ui,Tahoma,Arial;display:grid;min-height:100vh;place-items:center}.box{background:white;width:min(420px,calc(100% - 36px));padding:25px;border-radius:16px;box-shadow:0 8px 32px #10243a18}h2{margin-top:0}label{display:block;margin:12px 0 5px}input,button{font:inherit;width:100%;padding:12px;border-radius:9px;box-sizing:border-box}input{border:1px solid #bbc7d5}button{margin-top:16px;border:0;background:#d4af37;color:#0b1f3a;font-weight:800}p{color:#66758a;font-size:14px}#msg{color:#a32121;min-height:24px}</style><main class="box"><h2>إدارة تراخيص الميزان للمخابز</h2><p>سجّل الدخول للوصول إلى طلبات العملاء وإصدار التراخيص.</p><form id="f"><label for="pw">كلمة مرور الإدارة</label><input id="pw" type="password" minlength="32" maxlength="256" autocomplete="current-password" required><button id="go">تسجيل الدخول</button></form><p id="msg" role="status"></p></main><script>const f=document.getElementById('f'),pw=document.getElementById('pw'),msg=document.getElementById('msg'),go=document.getElementById('go');f.addEventListener('submit',async e=>{e.preventDefault();go.disabled=true;msg.textContent='جارٍ التحقق…';try{const r=await fetch('/admin/login',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({password:pw.value})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error==='TOO_MANY_ATTEMPTS'?'محاولات كثيرة. انتظر 15 دقيقة ثم حاول مجدداً.':'تعذر تسجيل الدخول. تحقق من كلمة المرور أو إعداد الخدمة.');location.replace('/admin/panel')}catch(err){msg.textContent=err.message;pw.value='';pw.focus();go.disabled=false}});</script></html>`;
 function validDevice(v) {
   return /^[A-Za-z0-9-]{8,100}$/.test(v) && !v.includes(";") && !v.includes("=");
 }
@@ -58,27 +58,52 @@ function fromBase64(s) {
   for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
   return out;
 }
+function signingDiagnostics(env) {
+  const privateValue = typeof env.LICENSE_PRIVATE_KEY_PKCS8_B64 === "string" ? env.LICENSE_PRIVATE_KEY_PKCS8_B64.trim() : "";
+  const publicValue = typeof env.LICENSE_PUBLIC_KEY_DER_B64 === "string" ? env.LICENSE_PUBLIC_KEY_DER_B64.trim() : "";
+  return {
+    privateKeyConfigured: privateValue.length > 0,
+    publicKeyConfigured: publicValue.length > 0,
+    publicKeyMatchesApp: publicValue.replace(/\\s+/g, "") === EXPECTED_APP_PUBLIC_KEY_DER_B64
+  };
+}
+function decodeBase64Value(value) {
+  return fromBase64(value.replace(/\\s+/g, ""));
+}
 async function importPrivateKey(env) {
-  if (!env.LICENSE_PRIVATE_KEY_PKCS8_B64 || !env.LICENSE_PUBLIC_KEY_DER_B64) {
+  const diagnostics = signingDiagnostics(env);
+  if (!diagnostics.privateKeyConfigured || !diagnostics.publicKeyConfigured) {
     throw new Error("LICENSE_SIGNING_NOT_CONFIGURED");
   }
-  if (env.LICENSE_PUBLIC_KEY_DER_B64 !== EXPECTED_APP_PUBLIC_KEY_DER_B64) {
+  const privateValue = env.LICENSE_PRIVATE_KEY_PKCS8_B64.trim();
+  const publicValue = env.LICENSE_PUBLIC_KEY_DER_B64.trim().replace(/\\s+/g, "");
+  if (publicValue !== EXPECTED_APP_PUBLIC_KEY_DER_B64) {
     throw new Error("LICENSE_PUBLIC_KEY_MISMATCH");
   }
-  const privateKey = await crypto.subtle.importKey(
-    "pkcs8",
-    fromBase64(env.LICENSE_PRIVATE_KEY_PKCS8_B64),
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const publicKey = await crypto.subtle.importKey(
-    "spki",
-    fromBase64(env.LICENSE_PUBLIC_KEY_DER_B64),
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    true,
-    ["verify"]
-  );
+  let privateKey;
+  try {
+    privateKey = await crypto.subtle.importKey(
+      "pkcs8",
+      decodeBase64Value(privateValue),
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+  } catch {
+    throw new Error("LICENSE_PRIVATE_KEY_INVALID");
+  }
+  let publicKey;
+  try {
+    publicKey = await crypto.subtle.importKey(
+      "spki",
+      decodeBase64Value(publicValue),
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      true,
+      ["verify"]
+    );
+  } catch {
+    throw new Error("LICENSE_PUBLIC_KEY_INVALID");
+  }
   // Refuse to issue unless the configured private key actually matches the app's embedded public key.
   const probe = encoder.encode("Al-Mizan Bakery key-pair check");
   const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", privateKey, probe);
@@ -185,8 +210,9 @@ async function handle(request, env) {
       return json({ ok: true, publicKeyMatchesApp: true, appVersion: cleanText(env.APP_VERSION || "2.6.15", 32) });
     } catch (e) {
       const code = String(e && e.message || e);
-      const safeCode = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH"].includes(code) ? code : "LICENSE_SIGNING_NOT_CONFIGURED";
-      return json({ ok: false, error: safeCode }, 503);
+      const allowedCodes = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH", "LICENSE_PRIVATE_KEY_INVALID", "LICENSE_PUBLIC_KEY_INVALID"];
+      const safeCode = allowedCodes.includes(code) ? code : "LICENSE_SIGNING_INTERNAL_ERROR";
+      return json({ ok: false, error: safeCode, diagnostic: signingDiagnostics(env) }, 503);
     }
   }
 
@@ -228,8 +254,9 @@ async function handle(request, env) {
       issued = await issueToken(env, order.device_id, order.plan);
     } catch (e) {
       const code = String(e && e.message || e);
-      const safeCode = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH"].includes(code) ? code : "LICENSE_SIGNING_NOT_CONFIGURED";
-      return json({ error: safeCode }, 503);
+      const allowedCodes = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH", "LICENSE_PRIVATE_KEY_INVALID", "LICENSE_PUBLIC_KEY_INVALID"];
+      const safeCode = allowedCodes.includes(code) ? code : "LICENSE_SIGNING_INTERNAL_ERROR";
+      return json({ error: safeCode, diagnostic: signingDiagnostics(env) }, 503);
     }
     const result = await env.DB.prepare("UPDATE license_orders SET status='approved',updated_at=?,reviewed_at=?,reviewer_note=?,activation_token=?,token_expires=? WHERE id=? AND status='pending'")
       .bind(now, now, note || "تمت مراجعة الدفع وإصدار الترخيص.", issued.token, issued.expires, orderId).run();
