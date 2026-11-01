@@ -12,13 +12,14 @@ jobs:
   recover:
     runs-on: ubuntu-latest
     steps:
-      - name: Cancel stale Pages deployment and retry the failed deployment
+      - name: Cancel stale Pages deployment and retry the current failed deployment
         uses: actions/github-script@v7
         with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const staleSha = '5a19624dec6d27c646001633caa7e6f83e910c9b';
+
             core.info('Cancelling stale GitHub Pages deployment: ' + staleSha);
             await github.request('POST /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}/cancel', {
               owner,
@@ -26,9 +27,36 @@ jobs:
               pages_deployment_id: staleSha
             });
             core.info('Stale Pages deployment cancellation accepted.');
-            await github.rest.actions.reRunFailedJobs({
-              owner,
-              repo,
-              run_id: 41289065937
-            });
-            core.info('Requested retry of failed Pages deployment run 41289065937.');
+
+            let currentPagesRun;
+            for (let attempt = 1; attempt <= 18; attempt++) {
+              const response = await github.rest.actions.listWorkflowRuns({
+                owner,
+                repo,
+                workflow_id: 342150531,
+                branch: 'main',
+                per_page: 20
+              });
+              currentPagesRun = response.data.workflow_runs.find(run => run.head_sha === context.sha);
+              if (currentPagesRun && currentPagesRun.status === 'completed') break;
+              core.info('Waiting for the Pages run for this recovery commit (attempt ' + attempt + '/18).');
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+
+            if (!currentPagesRun) {
+              throw new Error('Could not find the Pages workflow run for recovery commit ' + context.sha);
+            }
+            if (currentPagesRun.status !== 'completed') {
+              throw new Error('Pages workflow did not finish within 90 seconds; inspect run ' + currentPagesRun.id);
+            }
+            if (currentPagesRun.conclusion === 'success') {
+              core.info('Pages deployment already succeeded; no retry is needed.');
+            } else {
+              core.info('Retrying failed Pages workflow run ' + currentPagesRun.id);
+              await github.rest.actions.reRunFailedJobs({
+                owner,
+                repo,
+                run_id: currentPagesRun.id
+              });
+              core.info('Requested retry of failed Pages deployment run ' + currentPagesRun.id + '.');
+            }
