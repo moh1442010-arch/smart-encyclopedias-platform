@@ -13,10 +13,10 @@
 <main class="wrap">
 <section class="card">
 <h2>اتصال الإدارة</h2>
-<p class="muted">أدخل مفتاح الإدارة الذي تم ضبطه سرًا على Cloudflare Worker. لا تشارك المفتاح ولا تحفظه على جهاز عام. هذه الصفحة لا تحتوي على المفتاح ولا تخزنه.</p>
+<p class="muted">أدخل مفتاح الإدارة الذي تم ضبطه سرًا على Cloudflare Worker. سيُحفظ محليًا في هذا المتصفح لتجنب إدخاله كل مرة. لا تستخدم الحفظ على جهاز عام أو مشترك.</p>
 <label for="apiBase">رابط خدمة الترخيص (Worker URL)</label><input id="apiBase" value="https://al-mizan-bakery-licensing.moh1442010.workers.dev" placeholder="https://اسم-الخدمة.اسمك.workers.dev">
 <label for="adminKey">مفتاح الإدارة</label><input id="adminKey" type="password" autocomplete="current-password">
-<div class="row"><button id="signCheckBtn">فحص جاهزية مفتاح التوقيع</button><button id="loadBtn">تحميل الطلبات المعلقة</button><button id="approvedBtn">عرض التراخيص المعتمدة</button></div>
+<div class="row"><button id="signCheckBtn">فحص جاهزية مفتاح التوقيع</button><button id="loadBtn">تحميل الطلبات المعلقة</button><button id="approvedBtn">عرض التراخيص المعتمدة</button><button id="clearKeyBtn" class="danger" type="button">تسجيل الخروج ومسح المفتاح</button></div>
 <div id="globalResult" class="result hidden" role="status" aria-live="polite"></div>
 </section>
 <section class="card"><h2 id="listTitle">الطلبات</h2><div id="orders"><p class="muted">اتصل بالخدمة لعرض الطلبات.</p></div></section>
@@ -24,7 +24,22 @@
 <script>
 const $=id=>document.getElementById(id);
 function apiBase(){return $("apiBase").value.trim().replace(/\/$/,"");}
+const KEY_STORAGE="alMizanAdminKey";
 function auth(){return $("adminKey").value.trim();}
+function restoreAdminKey(){
+ try{const saved=localStorage.getItem(KEY_STORAGE);if(saved)$("adminKey").value=saved;}
+ catch(e){showMessage("تعذر الوصول إلى التخزين المحلي في المتصفح. أدخل المفتاح يدويًا.");}
+}
+function rememberAdminKey(){
+ try{const key=auth();if(key)localStorage.setItem(KEY_STORAGE,key);else localStorage.removeItem(KEY_STORAGE);}
+ catch(e){showMessage("تعذر حفظ المفتاح محليًا. يمكنك استخدام اللوحة بعد إدخاله يدويًا.");}
+}
+$("adminKey").addEventListener("input",rememberAdminKey);
+$("clearKeyBtn").addEventListener("click",()=>{
+ try{localStorage.removeItem(KEY_STORAGE);}catch(e){}
+ $("adminKey").value="";
+ showMessage("تم مسح المفتاح من هذا المتصفح. أدخله مجددًا عند الحاجة.");
+});
 async function call(path,options={}){
  const base=apiBase(), key=auth();
  if(!/^https:\/\//i.test(base)) throw new Error("أدخل رابط Worker صحيحًا.");
@@ -80,6 +95,7 @@ async function load(status="pending"){
   }
  }catch(e){$("orders").textContent="تعذر تحميل الطلبات.";showMessage(e.message);}
 }
+restoreAdminKey();
 $("signCheckBtn").addEventListener("click",async()=>{
  try{
   const result=await call("/admin/signing-check");
