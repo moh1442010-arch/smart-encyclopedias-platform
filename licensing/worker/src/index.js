@@ -20,7 +20,7 @@ function corsHeaders(request, env) {
     return {
       "access-control-allow-origin": origin,
       "access-control-allow-methods": "GET,POST,OPTIONS",
-      "access-control-allow-headers": "content-type,authorization,x-admin-key",
+      "access-control-allow-headers": "content-type",
       "vary": "Origin"
     };
   }
@@ -34,20 +34,16 @@ function withCors(response, request, env) {
 function cleanText(v, max = 160) {
   return typeof v === "string" ? v.trim().slice(0, max) : "";
 }
-function normalizeAdminKey(value) {
-  return typeof value === "string" ? value.trim().replace(/^Bearer\s+/i, "").trim() : "";
-}
-function adminAuthorized(request, env) {
-  const expected = encoder.encode(normalizeAdminKey(env.ADMIN_API_KEY));
-  const authorization = request.headers.get("Authorization") || "";
-  const bearer = authorization.trim().match(/^Bearer\s+(.+)$/i);
-  const suppliedValue = bearer ? bearer[1] : (request.headers.get("X-Admin-Key") || "");
-  const supplied = encoder.encode(normalizeAdminKey(suppliedValue));
-  if (!expected.length || expected.length !== supplied.length) return false;
-  let difference = 0;
-  for (let i = 0; i < expected.length; i++) difference |= expected[i] ^ supplied[i];
-  return difference === 0;
-}
+function cookieValue(request,name){const raw=request.headers.get("Cookie")||"";const part=raw.split(";").map(v=>v.trim()).find(v=>v.startsWith(name+"="));return part?part.slice(name.length+1):"";}
+function sameOriginPost(request,url){return request.method==="POST"&&request.headers.get("Origin")===url.origin;}
+function constantTimeEqual(a,b){const x=encoder.encode(String(a)),y=encoder.encode(String(b));let d=x.length^y.length;for(let i=0;i<Math.max(x.length,y.length);i++)d|=(x[i]||0)^(y[i]||0);return d===0;}
+async function sessionKey(secret){const material=await crypto.subtle.digest("SHA-256",encoder.encode("Al-Mizan-Admin-Session-v1:"+secret));return crypto.subtle.importKey("raw",material,{name:"HMAC",hash:"SHA-256"},false,["sign","verify"]);}
+async function createAdminSession(env){const payload=base64url(encoder.encode(JSON.stringify({exp:Math.floor(Date.now()/1000)+28800,nonce:base64url(crypto.getRandomValues(new Uint8Array(24)))})));const key=await sessionKey(env.ADMIN_PASSWORD);const sig=base64url(await crypto.subtle.sign("HMAC",key,encoder.encode(payload)));return payload+"."+sig;}
+async function verifyAdminSession(request,env){if(!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<32)return false;const p=cookieValue(request,"mizan_admin_session").split(".");if(p.length!==2)return false;try{const key=await sessionKey(env.ADMIN_PASSWORD);const sig=p[1].replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-p[1].length%4)%4);if(!await crypto.subtle.verify("HMAC",key,fromBase64(sig),encoder.encode(p[0])))return false;const raw=p[0].replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-p[0].length%4)%4);const data=JSON.parse(new TextDecoder().decode(fromBase64(raw)));return Number.isInteger(data.exp)&&data.exp>Math.floor(Date.now()/1000)&&typeof data.nonce==="string";}catch{return false;}}
+async function loginRateState(request,env){await env.DB.prepare("CREATE TABLE IF NOT EXISTS admin_login_attempts (ip_hash TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL)").run();const ip=request.headers.get("CF-Connecting-IP")||"unknown";const digest=await crypto.subtle.digest("SHA-256",encoder.encode(ip+"|"+env.ADMIN_PASSWORD));const ipHash=base64url(digest),now=Math.floor(Date.now()/1000);const row=await env.DB.prepare("SELECT window_start,attempts FROM admin_login_attempts WHERE ip_hash=?").bind(ipHash).first();return{ipHash,now,blocked:Boolean(row&&row.window_start>now-900&&row.attempts>=8)};}
+async function recordLoginFailure(env,s){await env.DB.prepare("INSERT INTO admin_login_attempts(ip_hash,window_start,attempts) VALUES(?,?,1) ON CONFLICT(ip_hash) DO UPDATE SET attempts=CASE WHEN admin_login_attempts.window_start<=? THEN 1 ELSE admin_login_attempts.attempts+1 END,window_start=CASE WHEN admin_login_attempts.window_start<=? THEN ? ELSE admin_login_attempts.window_start END").bind(s.ipHash,s.now,s.now-900,s.now-900,s.now).run();}
+async function clearLoginFailures(env,s){await env.DB.prepare("DELETE FROM admin_login_attempts WHERE ip_hash=?").bind(s.ipHash).run();}
+const ADMIN_LOGIN_HTML=`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>دخول إدارة التراخيص</title><style>body{margin:0;background:#f2f5fa;color:#14243a;font-family:system-ui,Tahoma,Arial;display:grid;min-height:100vh;place-items:center}.box{background:white;width:min(420px,calc(100% - 36px));padding:25px;border-radius:16px;box-shadow:0 8px 32px #10243a18}h2{margin-top:0}label{display:block;margin:12px 0 5px}input,button{font:inherit;width:100%;padding:12px;border-radius:9px;box-sizing:border-box}input{border:1px solid #bbc7d5}button{margin-top:16px;border:0;background:#d4af37;color:#0b1f3a;font-weight:800}p{color:#66758a;font-size:14px}#msg{color:#a32121;min-height:24px}</style><main class="box"><h2>إدارة تراخيص الميزان للمخابز</h2><p>سجّل الدخول للوصول إلى طلبات العملاء وإصدار التراخيص.</p><form id="f"><label for="pw">كلمة مرور الإدارة</label><input id="pw" type="password" minlength="16" maxlength="256" autocomplete="current-password" required><button id="go">تسجيل الدخول</button></form><p id="msg" role="status"></p></main><script>const f=document.getElementById('f'),pw=document.getElementById('pw'),msg=document.getElementById('msg'),go=document.getElementById('go');f.addEventListener('submit',async e=>{e.preventDefault();go.disabled=true;msg.textContent='جارٍ التحقق…';try{const r=await fetch('/admin/login',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({password:pw.value})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error==='TOO_MANY_ATTEMPTS'?'محاولات كثيرة. انتظر 15 دقيقة ثم حاول مجدداً.':'تعذر تسجيل الدخول. تحقق من كلمة المرور أو إعداد الخدمة.');location.replace('/admin/panel')}catch(err){msg.textContent=err.message;pw.value='';pw.focus();go.disabled=false}});</script></html>`;
 function validDevice(v) {
   return /^[A-Za-z0-9-]{8,100}$/.test(v) && !v.includes(";") && !v.includes("=");
 }
@@ -111,13 +107,39 @@ async function handle(request, env) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204 });
   if (!env.DB) return json({ error: "SERVICE_NOT_CONFIGURED" }, 503);
 
-  if (url.pathname === "/health" && request.method === "GET") {
-    return json({ ok: true, service: "al-mizan-bakery-licensing", mode: "manual-payment-review" });
+  if (url.pathname === "/admin/login" && request.method === "GET") return new Response(ADMIN_LOGIN_HTML,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store, private","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}});
+  if (url.pathname === "/admin/login" && request.method === "POST") {
+    if (!sameOriginPost(request,url)) return json({error:"INVALID_ORIGIN"},403);
+    if (!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<32) return json({error:"ADMIN_LOGIN_NOT_CONFIGURED"},503);
+    let body;try{body=await request.json();}catch{return json({error:"INVALID_JSON"},400);}
+    const password=typeof body.password==="string"?body.password:"";if(password.length>256)return json({error:"INVALID_CREDENTIALS"},401);
+    const state=await loginRateState(request,env);if(state.blocked)return json({error:"TOO_MANY_ATTEMPTS"},429);
+    if(!constantTimeEqual(password,env.ADMIN_PASSWORD)){await recordLoginFailure(env,state);return json({error:"INVALID_CREDENTIALS"},401);}
+    await clearLoginFailures(env,state);const token=await createAdminSession(env);
+    return json({ok:true},200,{"set-cookie":"mizan_admin_session="+token+"; Path=/admin; HttpOnly; Secure; SameSite=Strict; Max-Age=28800"});
+  }
+  if (url.pathname === "/admin/logout" && request.method === "POST") {
+    if(!sameOriginPost(request,url))return json({error:"INVALID_ORIGIN"},403);
+    return json({ok:true},200,{"set-cookie":"mizan_admin_session=; Path=/admin; HttpOnly; Secure; SameSite=Strict; Max-Age=0"});
+  }
+  if (url.pathname === "/admin/panel" && request.method === "GET") {
+    if(!await verifyAdminSession(request,env))return Response.redirect(new URL("/admin/login",url).toString(),302);
+    try{
+      const panel=await fetch("https://moh1442010-arch.github.io/smart-encyclopedias-platform/store/license-admin.html",{headers:{"accept":"text/html","user-agent":"Al-Mizan-Admin-Panel"}});
+      if(!panel.ok)return json({error:"ADMIN_PANEL_UNAVAILABLE"},502);
+      return new Response(await panel.text(),{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store, private","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}});
+    }catch{return json({error:"ADMIN_PANEL_UNAVAILABLE"},502);}
   }
 
-  // Temporary, non-secret diagnostic: confirms whether Production loaded the admin secret.
   if (url.pathname === "/diagnostics/admin-config" && request.method === "GET") {
-    return json({ adminApiKeyConfigured: Boolean(env.ADMIN_API_KEY), appVersion: cleanText(env.APP_VERSION || "2.6.15", 32) });
+    return json({
+      adminPasswordConfigured: Boolean(env.ADMIN_PASSWORD && env.ADMIN_PASSWORD.length >= 32),
+      appVersion: cleanText(env.APP_VERSION || "2.6.15", 32)
+    });
+  }
+
+  if (url.pathname === "/health" && request.method === "GET") {
+    return json({ ok: true, service: "al-mizan-bakery-licensing", mode: "manual-payment-review" });
   }
 
   if (url.pathname === "/api/orders" && request.method === "POST") {
@@ -157,23 +179,7 @@ async function handle(request, env) {
   }
 
   if (url.pathname === "/admin/signing-check" && request.method === "GET") {
-    if (!adminAuthorized(request, env)) {
-      const authorization = request.headers.get("Authorization") || "";
-      const bearer = authorization.trim().match(/^Bearer\s+(.+)$/i);
-      const suppliedValue = bearer ? bearer[1] : (request.headers.get("X-Admin-Key") || "");
-      return json({
-        error: "UNAUTHORIZED",
-        diagnostic: {
-          adminKeyConfigured: Boolean(env.ADMIN_API_KEY),
-          authorizationHeaderPresent: Boolean(authorization),
-          bearerFormatRecognized: Boolean(bearer),
-          xAdminKeyHeaderPresent: Boolean(request.headers.get("X-Admin-Key")),
-          expectedKeyLength: normalizeAdminKey(env.ADMIN_API_KEY).length,
-          receivedKeyLength: normalizeAdminKey(suppliedValue).length,
-          receivedKeyIsAscii: /^[\x20-\x7E]*$/.test(normalizeAdminKey(suppliedValue))
-        }
-      }, 401);
-    }
+    if (!await verifyAdminSession(request,env)) return json({error:"UNAUTHORIZED"},401);
     try {
       await importPrivateKey(env);
       return json({ ok: true, publicKeyMatchesApp: true, appVersion: cleanText(env.APP_VERSION || "2.6.15", 32) });
@@ -185,7 +191,7 @@ async function handle(request, env) {
   }
 
   if (url.pathname === "/admin/orders" && request.method === "GET") {
-    if (!adminAuthorized(request, env)) {
+    if (!await verifyAdminSession(request,env)) {
       return json({ error: "UNAUTHORIZED" }, 401);
     }
     const status = url.searchParams.get("status") || "pending";
@@ -198,7 +204,8 @@ async function handle(request, env) {
 
   const reviewMatch = url.pathname.match(/^\/admin\/orders\/([0-9a-f-]{36})\/(approve|reject)$/i);
   if (reviewMatch && request.method === "POST") {
-    if (!adminAuthorized(request, env)) {
+    if(!sameOriginPost(request,url))return json({error:"INVALID_ORIGIN"},403);
+    if (!await verifyAdminSession(request,env)) {
       return json({ error: "UNAUTHORIZED" }, 401);
     }
     const orderId = reviewMatch[1], action = reviewMatch[2];
