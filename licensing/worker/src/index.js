@@ -68,7 +68,62 @@ function signingDiagnostics(env) {
   };
 }
 function decodeBase64Value(value) {
-  return fromBase64(value.replace(/\s+/g, ""));
+  return fromBase64(value.replace(/\\s+/g, ""));
+}
+function derLength(length) {
+  if (length < 128) return new Uint8Array([length]);
+  const bytes = [];
+  for (let n = length; n > 0; n = Math.floor(n / 256)) bytes.unshift(n & 255);
+  return new Uint8Array([0x80 | bytes.length, ...bytes]);
+}
+function derElement(tag, content) {
+  const length = derLength(content.length);
+  const out = new Uint8Array(1 + length.length + content.length);
+  out[0] = tag;
+  out.set(length, 1);
+  out.set(content, 1 + length.length);
+  return out;
+}
+function joinBytes(...parts) {
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let offset = 0;
+  for (const part of parts) { out.set(part, offset); offset += part.length; }
+  return out;
+}
+function privateKeyDer(value) {
+  let text = String(value || "").trim();
+  let der;
+  if (/-----BEGIN (?:RSA )?PRIVATE KEY-----/.test(text)) {
+    const match = text.match(/-----BEGIN (?:RSA )?PRIVATE KEY-----([\\s\\S]*?)-----END (?:RSA )?PRIVATE KEY-----/);
+    if (!match) throw new Error("LICENSE_PRIVATE_KEY_INVALID");
+    der = decodeBase64Value(match[1]);
+  } else {
+    der = decodeBase64Value(text);
+    // Accept a base64-encoded PEM file as well as raw DER base64.
+    if (der.length > 20 && der[0] === 0x2d && der[1] === 0x2d) {
+      const pem = new TextDecoder().decode(der);
+      const match = pem.match(/-----BEGIN (?:RSA )?PRIVATE KEY-----([\\s\\S]*?)-----END (?:RSA )?PRIVATE KEY-----/);
+      if (!match) throw new Error("LICENSE_PRIVATE_KEY_INVALID");
+      der = decodeBase64Value(match[1]);
+    }
+  }
+  // WebCrypto requires PKCS#8. Convert a valid PKCS#1 RSA private key to PKCS#8.
+  // PKCS#1 starts SEQUENCE, INTEGER version, INTEGER modulus.
+  if (der[0] === 0x30 && der[2] === 0x02 && der[3] === 0x01 && der[4] === 0x00 && der[5] === 0x02) {
+    const algorithm = new Uint8Array([0x30,0x0d,0x06,0x09,0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x01,0x05,0x00]);
+    const version = new Uint8Array([0x02,0x01,0x00]);
+    return derElement(0x30, joinBytes(version, algorithm, derElement(0x04, der)));
+  }
+  return der;
+}
+function privateKeyFormat(value) {
+  try {
+    const der = privateKeyDer(value);
+    if (der[0] !== 0x30) return "unknown";
+    if (der[2] === 0x02 && der[3] === 0x01 && der[4] === 0x00 && der[5] === 0x30) return "pkcs8";
+    if (der[2] === 0x02 && der[3] === 0x01 && der[4] === 0x00 && der[5] === 0x02) return "pkcs1-convertible";
+    return "der-unrecognized";
+  } catch { return "invalid-encoding"; }
 }
 async function importPrivateKey(env) {
   const diagnostics = signingDiagnostics(env);
@@ -76,7 +131,7 @@ async function importPrivateKey(env) {
     throw new Error("LICENSE_SIGNING_NOT_CONFIGURED");
   }
   const privateValue = env.LICENSE_PRIVATE_KEY_PKCS8_B64.trim();
-  const publicValue = env.LICENSE_PUBLIC_KEY_DER_B64.trim().replace(/\s+/g, "");
+  const publicValue = env.LICENSE_PUBLIC_KEY_DER_B64.trim().replace(/\\s+/g, "");
   if (publicValue !== EXPECTED_APP_PUBLIC_KEY_DER_B64) {
     throw new Error("LICENSE_PUBLIC_KEY_MISMATCH");
   }
@@ -84,7 +139,7 @@ async function importPrivateKey(env) {
   try {
     privateKey = await crypto.subtle.importKey(
       "pkcs8",
-      decodeBase64Value(privateValue),
+      privateKeyDer(privateValue),
       { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
       false,
       ["sign"]
@@ -166,6 +221,7 @@ async function handle(request, env) {
   if (url.pathname === "/diagnostics/signing-config" && request.method === "GET") {
     return json({
       ...signingDiagnostics(env),
+      privateKeyFormat: privateKeyFormat(env.LICENSE_PRIVATE_KEY_PKCS8_B64),
       appVersion: cleanText(env.APP_VERSION || "2.6.15", 32)
     });
   }
@@ -219,7 +275,7 @@ async function handle(request, env) {
       const code = String(e && e.message || e);
       const allowedCodes = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH", "LICENSE_PRIVATE_KEY_INVALID", "LICENSE_PUBLIC_KEY_INVALID"];
       const safeCode = allowedCodes.includes(code) ? code : "LICENSE_SIGNING_INTERNAL_ERROR";
-      return json({ ok: false, error: safeCode, diagnostic: signingDiagnostics(env) }, 503);
+      return json({ ok: false, error: safeCode, diagnostic: { ...signingDiagnostics(env), privateKeyFormat: privateKeyFormat(env.LICENSE_PRIVATE_KEY_PKCS8_B64) } }, 503);
     }
   }
 
