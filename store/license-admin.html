@@ -20,6 +20,7 @@
 <section class="card"><h2 id="listTitle">الطلبات</h2><div id="orders"><p class="muted">اتصل بالخدمة لعرض الطلبات.</p></div></section>
 </main>
 <script>
+if(location.hostname==="moh1442010-arch.github.io"){location.replace("https://al-mizan-bakery-licensing.moh1442010.workers.dev/admin/login");}
 const $=id=>document.getElementById(id);
 function apiBase(){return location.origin;}
 $("logoutBtn").addEventListener("click",async()=>{try{await fetch("/admin/logout",{method:"POST",credentials:"same-origin"});}finally{location.replace("/admin/login");}});
