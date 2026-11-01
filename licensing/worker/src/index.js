@@ -20,7 +20,7 @@ function corsHeaders(request, env) {
     return {
       "access-control-allow-origin": origin,
       "access-control-allow-methods": "GET,POST,OPTIONS",
-      "access-control-allow-headers": "content-type,authorization,x-admin-key",
+      "access-control-allow-headers": "content-type",
       "vary": "Origin"
     };
   }
@@ -129,6 +129,14 @@ async function handle(request, env) {
       if(!panel.ok)return json({error:"ADMIN_PANEL_UNAVAILABLE"},502);
       return new Response(await panel.text(),{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store, private","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}});
     }catch{return json({error:"ADMIN_PANEL_UNAVAILABLE"},502);}
+  }
+
+  if (url.pathname === "/diagnostics/admin-config" && request.method === "GET") {
+    return json({
+      adminPasswordConfigured: Boolean(env.ADMIN_PASSWORD && env.ADMIN_PASSWORD.length >= 16),
+      adminSessionSecretConfigured: Boolean(env.ADMIN_SESSION_SECRET && env.ADMIN_SESSION_SECRET.length >= 32),
+      appVersion: cleanText(env.APP_VERSION || "2.6.15", 32)
+    });
   }
 
   if (url.pathname === "/health" && request.method === "GET") {
