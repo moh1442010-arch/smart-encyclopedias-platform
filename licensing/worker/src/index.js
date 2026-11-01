@@ -94,7 +94,7 @@ function privateKeyDer(value) {
   let text = String(value || "").trim();
   let der;
   if (/-----BEGIN (?:RSA )?PRIVATE KEY-----/.test(text)) {
-    const match = text.match(/-----BEGIN (?:RSA )?PRIVATE KEY-----([\s\\S]*?)-----END (?:RSA )?PRIVATE KEY-----/);
+    const match = text.match(/-----BEGIN (?:RSA )?PRIVATE KEY-----([\s\S]*?)-----END (?:RSA )?PRIVATE KEY-----/);
     if (!match) throw new Error("LICENSE_PRIVATE_KEY_INVALID");
     der = decodeBase64Value(match[1]);
   } else {
@@ -102,7 +102,7 @@ function privateKeyDer(value) {
     // Accept a base64-encoded PEM file as well as raw DER base64.
     if (der.length > 20 && der[0] === 0x2d && der[1] === 0x2d) {
       const pem = new TextDecoder().decode(der);
-      const match = pem.match(/-----BEGIN (?:RSA )?PRIVATE KEY-----([\s\\S]*?)-----END (?:RSA )?PRIVATE KEY-----/);
+      const match = pem.match(/-----BEGIN (?:RSA )?PRIVATE KEY-----([\s\S]*?)-----END (?:RSA )?PRIVATE KEY-----/);
       if (!match) throw new Error("LICENSE_PRIVATE_KEY_INVALID");
       der = decodeBase64Value(match[1]);
     }
