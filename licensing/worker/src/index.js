@@ -163,6 +163,13 @@ async function handle(request, env) {
     });
   }
 
+  if (url.pathname === "/diagnostics/signing-config" && request.method === "GET") {
+    return json({
+      ...signingDiagnostics(env),
+      appVersion: cleanText(env.APP_VERSION || "2.6.15", 32)
+    });
+  }
+
   if (url.pathname === "/health" && request.method === "GET") {
     return json({ ok: true, service: "al-mizan-bakery-licensing", mode: "manual-payment-review" });
   }
