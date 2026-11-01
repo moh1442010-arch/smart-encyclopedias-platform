@@ -47,9 +47,17 @@ jobs:
           for i in 1 2 3 4 5; do
             if curl --fail --silent --show-error https://al-mizan-bakery-licensing.moh1442010.workers.dev/health; then
               echo
-              exit 0
+              break
             fi
             sleep 3
           done
-          echo "::error::Deployment ran, but the health endpoint did not return success."
-          exit 1
+          if [ "$i" -eq 5 ]; then
+            echo "::error::Deployment ran, but the health endpoint did not return success."
+            exit 1
+          fi
+
+      - name: Verify Production admin secret binding
+        run: |
+          response="$(curl --fail --silent --show-error https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/admin-config)"
+          echo "$response"
+          node -e 'const x=JSON.parse(process.argv[1]); if (x.adminApiKeyConfigured !== true) { console.error("::error::Production Worker cannot read ADMIN_API_KEY"); process.exit(1); }' "$response"
