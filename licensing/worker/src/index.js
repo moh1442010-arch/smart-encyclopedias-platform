@@ -90,6 +90,14 @@ function joinBytes(...parts) {
   for (const part of parts) { out.set(part, offset); offset += part.length; }
   return out;
 }
+function derVersionEnd(der) {
+  if (!der || der[0] !== 0x30 || der.length < 8) return -1;
+  const firstLength = der[1];
+  const headerLength = firstLength < 0x80 ? 2 : 2 + (firstLength & 0x7f);
+  if (headerLength + 3 >= der.length) return -1;
+  if (der[headerLength] !== 0x02 || der[headerLength + 1] !== 0x01 || der[headerLength + 2] !== 0x00) return -1;
+  return headerLength + 3;
+}
 function privateKeyDer(value) {
   let text = String(value || "").trim();
   let der;
@@ -109,7 +117,8 @@ function privateKeyDer(value) {
   }
   // WebCrypto requires PKCS#8. Convert a valid PKCS#1 RSA private key to PKCS#8.
   // PKCS#1 starts SEQUENCE, INTEGER version, INTEGER modulus.
-  if (der[0] === 0x30 && der[2] === 0x02 && der[3] === 0x01 && der[4] === 0x00 && der[5] === 0x02) {
+  const versionEnd = derVersionEnd(der);
+  if (versionEnd >= 0 && der[versionEnd] === 0x02) {
     const algorithm = new Uint8Array([0x30,0x0d,0x06,0x09,0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x01,0x05,0x00]);
     const version = new Uint8Array([0x02,0x01,0x00]);
     return derElement(0x30, joinBytes(version, algorithm, derElement(0x04, der)));
@@ -119,9 +128,11 @@ function privateKeyDer(value) {
 function privateKeyFormat(value) {
   try {
     const der = privateKeyDer(value);
-    if (der[0] !== 0x30) return "unknown";
-    if (der[2] === 0x02 && der[3] === 0x01 && der[4] === 0x00 && der[5] === 0x30) return "pkcs8";
-    if (der[2] === 0x02 && der[3] === 0x01 && der[4] === 0x00 && der[5] === 0x02) return "pkcs1-convertible";
+    const versionEnd = derVersionEnd(der);
+    if (versionEnd < 0) return "der-unrecognized";
+    if (der[versionEnd] === 0x30) return "pkcs8";
+    if (der[versionEnd] === 0x02) return "pkcs1-convertible";
+    return "der-unrecognized";
     return "der-unrecognized";
   } catch { return "invalid-encoding"; }
 }
