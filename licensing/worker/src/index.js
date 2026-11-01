@@ -35,12 +35,12 @@ function cleanText(v, max = 160) {
   return typeof v === "string" ? v.trim().slice(0, max) : "";
 }
 function normalizeAdminKey(value) {
-  return typeof value === "string" ? value.trim().replace(/^Bearer\\s+/i, "").trim() : "";
+  return typeof value === "string" ? value.trim().replace(/^Bearer\s+/i, "").trim() : "";
 }
 function adminAuthorized(request, env) {
   const expected = encoder.encode(normalizeAdminKey(env.ADMIN_API_KEY));
   const authorization = request.headers.get("Authorization") || "";
-  const bearer = authorization.trim().match(/^Bearer\\s+(.+)$/i);
+  const bearer = authorization.trim().match(/^Bearer\s+(.+)$/i);
   const suppliedValue = bearer ? bearer[1] : (request.headers.get("X-Admin-Key") || "");
   const supplied = encoder.encode(normalizeAdminKey(suppliedValue));
   if (!expected.length || expected.length !== supplied.length) return false;
