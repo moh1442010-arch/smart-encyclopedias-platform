@@ -1,0 +1,34 @@
+name: Recover stuck GitHub Pages deployment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  actions: write
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel stale Pages deployment and retry the failed deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const staleSha = '5a19624dec6d27c646001633caa7e6f83e910c9b';
+            core.info('Cancelling stale GitHub Pages deployment: ' + staleSha);
+            await github.request('POST /repos/{owner}/{repo}/pages/deployments/{pages_deployment_id}/cancel', {
+              owner,
+              repo,
+              pages_deployment_id: staleSha
+            });
+            core.info('Stale Pages deployment cancellation accepted.');
+            await github.rest.actions.reRunFailedJobs({
+              owner,
+              repo,
+              run_id: 41289065937
+            });
+            core.info('Requested retry of failed Pages deployment run 41289065937.');
