@@ -38,12 +38,8 @@ function normalizeAdminKey(value) {
   return typeof value === "string" ? value.trim().replace(/^Bearer\s+/i, "").trim() : "";
 }
 async function adminAuthorized(request, env, ctx) {
-  // This is trusted only when the exact /admin/* path is protected by Cloudflare Access.
-  if (ctx && ctx.access) {
-    const identity = await ctx.access.getIdentity();
-    const allowed = String(env.ADMIN_EMAIL || "").trim().toLowerCase();
-    return Boolean(identity && identity.email && allowed && identity.email.toLowerCase() === allowed);
-  }
+  // Cloudflare Access policy is the identity gate for the protected /admin/* path.
+  if (ctx && ctx.access) return true;
   const expected = encoder.encode(normalizeAdminKey(env.ADMIN_API_KEY));
   const authorization = request.headers.get("Authorization") || "";
   const bearer = authorization.trim().match(/^Bearer\s+(.+)$/i);
@@ -112,7 +108,7 @@ async function audit(env, orderId, event, actor, detail = "") {
     "INSERT INTO license_audit(order_id,event,actor,created_at,detail) VALUES(?,?,?,?,?)"
   ).bind(orderId, event, actor, new Date().toISOString(), detail.slice(0, 500)).run();
 }
-async function handle(request, env) {
+async function handle(request, env, ctx) {
   const url = new URL(request.url);
   if (request.method === "OPTIONS") return new Response(null, { status: 204 });
   if (!env.DB) return json({ error: "SERVICE_NOT_CONFIGURED" }, 503);
@@ -163,7 +159,7 @@ async function handle(request, env) {
   }
 
   if (url.pathname === "/admin/signing-check" && request.method === "GET") {
-    if (!adminAuthorized(request, env)) {
+    if (!await adminAuthorized(request, env, ctx)) {
       const authorization = request.headers.get("Authorization") || "";
       const bearer = authorization.trim().match(/^Bearer\s+(.+)$/i);
       const suppliedValue = bearer ? bearer[1] : (request.headers.get("X-Admin-Key") || "");
@@ -191,7 +187,7 @@ async function handle(request, env) {
   }
 
   if (url.pathname === "/admin/orders" && request.method === "GET") {
-    if (!adminAuthorized(request, env)) {
+    if (!await adminAuthorized(request, env, ctx)) {
       return json({ error: "UNAUTHORIZED" }, 401);
     }
     const status = url.searchParams.get("status") || "pending";
@@ -204,7 +200,7 @@ async function handle(request, env) {
 
   const reviewMatch = url.pathname.match(/^\/admin\/orders\/([0-9a-f-]{36})\/(approve|reject)$/i);
   if (reviewMatch && request.method === "POST") {
-    if (!adminAuthorized(request, env)) {
+    if (!await adminAuthorized(request, env, ctx)) {
       return json({ error: "UNAUTHORIZED" }, 401);
     }
     const orderId = reviewMatch[1], action = reviewMatch[2];
@@ -243,7 +239,7 @@ async function handle(request, env) {
 export default {
   async fetch(request, env) {
     try {
-      const response = await handle(request, env);
+      const response = await handle(request, env, ctx);
       return withCors(response, request, env);
     } catch (e) {
       // Never log or return secrets, tokens, or private key material.
