@@ -133,7 +133,6 @@ function privateKeyFormat(value) {
     if (der[versionEnd] === 0x30) return "pkcs8";
     if (der[versionEnd] === 0x02) return "pkcs1-convertible";
     return "der-unrecognized";
-    return "der-unrecognized";
   } catch { return "invalid-encoding"; }
 }
 async function importPrivateKey(env) {
