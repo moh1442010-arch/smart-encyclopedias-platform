@@ -133,7 +133,7 @@ async function handle(request, env) {
 
   if (url.pathname === "/diagnostics/admin-config" && request.method === "GET") {
     return json({
-      adminPasswordConfigured: Boolean(env.ADMIN_PASSWORD && env.ADMIN_PASSWORD.length >= 16),
+      adminPasswordConfigured: Boolean(env.ADMIN_PASSWORD && env.ADMIN_PASSWORD.length >= 32),
       appVersion: cleanText(env.APP_VERSION || "2.6.15", 32)
     });
   }
