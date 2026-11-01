@@ -49,42 +49,50 @@ jobs:
           [[ "$DEVICE_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]] || { echo "::error::Device ID format is invalid after whitespace cleanup."; exit 1; }
           case "$PLAN" in monthly|annual|lifetime) ;; *) echo "::error::Unsupported plan."; exit 1;; esac
 
-          # Strict decoding: reject contamination instead of silently deleting invalid characters.
+          # Accept PEM, Base64-encoded PEM, or Base64-encoded PKCS8 DER.
           python3 - <<'PY'
           import base64
           import os
           import re
+          import subprocess
           import sys
 
-          raw = os.environ["PRIVATE_KEY_INPUT"]
-          # Accept either a multiline PEM value or a Base64-encoded PEM.
-          if raw.lstrip().startswith("-----BEGIN "):
+          raw = os.environ["PRIVATE_KEY_INPUT"].strip()
+          key_path = os.environ["RUNNER_TEMP"] + "/bakery-license-private.pem"
+
+          if raw.startswith("-----BEGIN "):
               try:
-                  data = raw.strip().replace("\r\n", "\n").replace("\r", "\n").encode("ascii")
+                  data = raw.replace("\\r\\n", "\\n").replace("\\r", "\\n").encode("ascii")
               except UnicodeEncodeError:
                   print("::error::PEM secret contains non-ASCII characters.")
                   sys.exit(1)
+              with open(key_path, "wb") as f:
+                  f.write(data)
           else:
               compact = "".join(raw.split())
-              if not compact or not re.fullmatch(r"[A-Za-z0-9+/]*={0,2}", compact):
-                  print("::error::Signing secret contains characters outside Base64. Store Base64 only.")
+              if not compact or not re.fullmatch(r"[A-Za-z0-9+/]*={0,2}", compact) or len(compact) % 4 == 1:
+                  print("::error::Signing secret is not clean Base64.")
                   sys.exit(1)
-              if len(compact) % 4 == 1:
-                  print("::error::Signing secret has an invalid Base64 length.")
-                  sys.exit(1)
-              padded = compact + ("=" * ((-len(compact)) % 4))
               try:
-                  data = base64.b64decode(padded, validate=True)
+                  data = base64.b64decode(compact + "=" * ((-len(compact)) % 4), validate=True)
               except Exception:
                   print("::error::Signing secret is not valid Base64.")
                   sys.exit(1)
 
-          if not data.startswith(b"-----BEGIN ") or b"PRIVATE KEY-----" not in data[:100]:
-              print("::error::Decoded content is not a PEM private key.")
-              sys.exit(1)
-
-          with open(os.environ["RUNNER_TEMP"] + "/bakery-license-private.pem", "wb") as f:
-              f.write(data)
+              if data.lstrip().startswith(b"-----BEGIN "):
+                  with open(key_path, "wb") as f:
+                      f.write(data)
+              else:
+                  der_path = os.environ["RUNNER_TEMP"] + "/bakery-license-private.der"
+                  with open(der_path, "wb") as f:
+                      f.write(data)
+                  result = subprocess.run(
+                      ["openssl", "pkey", "-inform", "DER", "-in", der_path, "-out", key_path],
+                      stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+                  )
+                  if result.returncode:
+                      print("::error::Base64 data is neither a supported PEM nor PKCS8 DER private key.")
+                      sys.exit(1)
           PY
 
           openssl pkey -in "$KEY_FILE" -check -noout >/dev/null 2>&1 || {
