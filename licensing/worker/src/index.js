@@ -20,7 +20,7 @@ function corsHeaders(request, env) {
     return {
       "access-control-allow-origin": origin,
       "access-control-allow-methods": "GET,POST,OPTIONS",
-      "access-control-allow-headers": "content-type,authorization",
+      "access-control-allow-headers": "content-type,authorization,x-admin-key",
       "vary": "Origin"
     };
   }
@@ -33,6 +33,20 @@ function withCors(response, request, env) {
 }
 function cleanText(v, max = 160) {
   return typeof v === "string" ? v.trim().slice(0, max) : "";
+}
+function normalizeAdminKey(value) {
+  return typeof value === "string" ? value.trim().replace(/^Bearer\\s+/i, "").trim() : "";
+}
+function adminAuthorized(request, env) {
+  const expected = encoder.encode(normalizeAdminKey(env.ADMIN_API_KEY));
+  const authorization = request.headers.get("Authorization") || "";
+  const bearer = authorization.trim().match(/^Bearer\\s+(.+)$/i);
+  const suppliedValue = bearer ? bearer[1] : (request.headers.get("X-Admin-Key") || "");
+  const supplied = encoder.encode(normalizeAdminKey(suppliedValue));
+  if (!expected.length || expected.length !== supplied.length) return false;
+  let difference = 0;
+  for (let i = 0; i < expected.length; i++) difference |= expected[i] ^ supplied[i];
+  return difference === 0;
 }
 function validDevice(v) {
   return /^[A-Za-z0-9-]{8,100}$/.test(v) && !v.includes(";") && !v.includes("=");
@@ -143,7 +157,7 @@ async function handle(request, env) {
   }
 
   if (url.pathname === "/admin/signing-check" && request.method === "GET") {
-    if (!env.ADMIN_API_KEY || request.headers.get("Authorization") !== `Bearer ${env.ADMIN_API_KEY}`) {
+    if (!adminAuthorized(request, env)) {
       return json({ error: "UNAUTHORIZED" }, 401);
     }
     try {
@@ -157,7 +171,7 @@ async function handle(request, env) {
   }
 
   if (url.pathname === "/admin/orders" && request.method === "GET") {
-    if (!env.ADMIN_API_KEY || request.headers.get("Authorization") !== `Bearer ${env.ADMIN_API_KEY}`) {
+    if (!adminAuthorized(request, env)) {
       return json({ error: "UNAUTHORIZED" }, 401);
     }
     const status = url.searchParams.get("status") || "pending";
@@ -170,7 +184,7 @@ async function handle(request, env) {
 
   const reviewMatch = url.pathname.match(/^\/admin\/orders\/([0-9a-f-]{36})\/(approve|reject)$/i);
   if (reviewMatch && request.method === "POST") {
-    if (!env.ADMIN_API_KEY || request.headers.get("Authorization") !== `Bearer ${env.ADMIN_API_KEY}`) {
+    if (!adminAuthorized(request, env)) {
       return json({ error: "UNAUTHORIZED" }, 401);
     }
     const orderId = reviewMatch[1], action = reviewMatch[2];
