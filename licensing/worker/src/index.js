@@ -101,6 +101,11 @@ async function handle(request, env) {
     return json({ ok: true, service: "al-mizan-bakery-licensing", mode: "manual-payment-review" });
   }
 
+  // Temporary, non-secret diagnostic: confirms whether Production loaded the admin secret.
+  if (url.pathname === "/diagnostics/admin-config" && request.method === "GET") {
+    return json({ adminApiKeyConfigured: Boolean(env.ADMIN_API_KEY), appVersion: cleanText(env.APP_VERSION || "2.6.15", 32) });
+  }
+
   if (url.pathname === "/api/orders" && request.method === "POST") {
     let body;
     try { body = await request.json(); } catch { return json({ error: "INVALID_JSON" }, 400); }
