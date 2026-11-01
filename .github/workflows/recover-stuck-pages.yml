@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Cancel known stale Pages deployments
+      - name: Cancel known stale Pages deployments safely
         uses: actions/github-script@v7
         with:
           script: |
@@ -36,11 +36,13 @@ jobs:
                 });
                 core.info('Cancellation accepted for stale Pages deployment ' + deployment);
               } catch (error) {
-                if (error.status === 404 || error.status === 409) {
-                  core.info('Stale deployment already inactive or not cancellable: ' + deployment + ' (HTTP ' + error.status + ')');
+                const message = String(error.message || '');
+                if ([400, 404, 409].includes(error.status) &&
+                    (error.status !== 400 || /finished|already|not in progress/i.test(message))) {
+                  core.info('Deployment is already inactive; no cancellation needed: ' + deployment);
                 } else {
                   throw error;
                 }
               }
             }
-            core.info('Stale deployment cleanup finished. The Pages workflow for this commit will perform the deployment.');
+            core.info('Stale deployment cleanup finished. GitHub Pages deployment is handled by the Pages workflow.');
