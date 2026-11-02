@@ -1,7 +1,7 @@
 # Smart Company commercial license API — first implementation
 
 ## Current scope
-This release adds a server-side license registry and seven-day trial API to the existing Cloudflare Worker, and connects the Android app to it. The Worker uses the existing D1 binding in `delivery/wrangler.jsonc`; it creates `app_licenses` and `app_trials` tables on first request. No manual SQL migration is required for these two tables.
+This release adds a server-side license registry and seven-day trial API to the existing Cloudflare Worker, and connects the Android app to it. The Worker uses the existing D1 binding in `delivery/wrangler.jsonc`; it creates the license, trial, audit, order, and price tables on first request. It seeds the approved default price catalogue with `INSERT OR IGNORE`, so owner-adjusted prices remain unchanged.
 
 API base URL: `https://smart-encyclopedias-delivery.moh1442010.workers.dev`
 
@@ -14,7 +14,7 @@ API base URL: `https://smart-encyclopedias-delivery.moh1442010.workers.dev`
 
 Static owner dashboard: `https://moh1442010-arch.github.io/smart-encyclopedias-platform/smart-company-admin.html`
 
-The page asks for `LICENSE_ADMIN_KEY` at runtime; the key is not embedded in the HTML and must never be committed or sent to customers. The protected API now includes:
+The page asks for the admin key at runtime; the Worker accepts `LICENSE_ADMIN_KEY` and temporarily supports the legacy Cloudflare secret name `Admin_Api_key`. The key is not embedded in the HTML and must never be committed or sent to customers. The protected API now includes:
 
 - `GET /api/app-license/admin/list` — lists up to 500 app licenses with limited administrative metadata and summary counts for licenses/trials. Requires `x-admin-key`.
 - `POST /api/app-license/admin/status` — changes a license to `active`, `suspended`, or `revoked`. Requires `x-admin-key`. This changes access status only; it does not delete customer data.
@@ -29,7 +29,7 @@ The owner dashboard uses these endpoints after the Worker deployment finishes:
 - `POST /api/app-license/admin/create` requires a positive integer `amountMinor` and `currency` (`SDG` or `USD`) alongside explicit owner payment approval. The dashboard sends whole SDG units and USD cents. A payment/order record and audit event are recorded with license creation.
 - `POST /api/app-license/admin/renew` requires owner authentication, `approved: true`, a positive amount, currency, and a unique payment reference. It renews monthly/annual licenses, preserves device binding, and extends from the later of current expiry or now. Revoked and perpetual licenses cannot be renewed by this endpoint.
 - `GET /api/app-license/admin/orders` returns recent order/payment rows and administrative audit events.
-- `GET /api/app-license/admin/prices` lists the server-side price catalog; `POST /api/app-license/admin/prices` sets a plan/term/currency price. License creation and renewal are rejected until a matching price is configured, and the amount must exactly match that price.
+- `GET /api/app-license/admin/prices` lists the server-side price catalog; `POST /api/app-license/admin/prices` sets a plan/term/currency price. The Worker seeds approved defaults for all four plans, three terms, and both currencies. Owner changes are preserved; creation and renewal require the amount to match the stored price.
 - `POST /api/app-license/admin/status` records a status-change event.
 
 The free dashboard helper prepares a WhatsApp message; it does not verify transfers or send messages automatically. The owner must confirm the actual payment before creating or renewing a paid license. The static dashboard is not itself an authentication boundary: all API calls must enforce the server-side admin key. Never expose provider keys or the admin secret in the page, the app, a QR code, or to the helper.
@@ -38,7 +38,7 @@ The free dashboard helper prepares a WhatsApp message; it does not verify transf
 1. Confirm payment outside the app and record the order reference.
 2. Call the admin endpoint from a private trusted environment. Never place `LICENSE_ADMIN_KEY` in the Android app, website JavaScript, a public file, or a message to a buyer.
 3. Send the returned activation code to the verified buyer over a private channel.
-4. The buyer enters the code in the app's Commercial License screen. One license is bound to one Android ID; device transfers require an owner-controlled reset workflow, which is not yet implemented for app licenses.
+4. The buyer enters the code in the app's Commercial License screen. One license is bound to one Android ID. An owner can transfer it through `POST /api/app-license/admin/reset-device` after explicit approval and a written reason.
 
 Example request body (do not include a real secret here):
 ```json
@@ -59,6 +59,8 @@ Example request body (do not include a real secret here):
 - This is a first licensing implementation, not a complete payment platform. Payments are still manually verified and license issuance is owner-controlled.
 - Google Play Billing is not integrated. If selling app functionality through Google Play, review the current Play Billing policy and integrate its purchase verification/backend lifecycle appropriately.
 - The app uses Android ID for device binding; this is not hardware DRM and may change in some device/profile scenarios.
+- Owner-controlled device transfer reset is implemented at `POST /api/app-license/admin/reset-device`. It requires `approved: true`, a valid license ID, and a reason of at least eight characters. The action expires the old device's remaining trial, clears only the device binding, records an audit event, preserves customer data, and refuses revoked licenses. An old device may retain cached offline access for up to 72 hours after its last successful verification.
+- The Worker seeds the approved 24-price catalogue (four plans, three terms, SDG and USD) using `INSERT OR IGNORE`. Existing owner-adjusted price rows are not overwritten.
 - The app allows a cached valid entitlement for up to 72 hours without connectivity. Test clock changes, reinstall, device replacement, expired monthly/annual terms, and concurrent activation.
 - Monthly and annual terms expire after 30 and 365 days respectively. Owner-approved renewals are supported by the admin endpoint; automated payment-provider webhooks are not implemented.
 - A perpetual license has no expiry but is tied to one device.

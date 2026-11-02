@@ -65,8 +65,14 @@ function clampInt(v, min, max, fallback) {
   return Number.isInteger(n) ? Math.min(max, Math.max(min, n)) : fallback;
 }
 
+function adminLicenseKey(env) {
+  // Support the legacy Cloudflare secret name while preferring the canonical binding.
+  const primary = String(env.LICENSE_ADMIN_KEY || "").trim();
+  return primary || String(env.Admin_Api_key || "").trim();
+}
+
 function isAdmin(request, env) {
-  const expected = String(env.LICENSE_ADMIN_KEY || "").trim();
+  const expected = adminLicenseKey(env);
   const suppliedHeader = String(request.headers.get("x-admin-key") || "").trim();
   const bearer = String(request.headers.get("authorization") || "");
   const suppliedBearer = bearer.replace(/^Bearer\s+/i, "").trim();
@@ -287,6 +293,35 @@ async function ensureAppLicenseTables(env) {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (plan, term_type, currency)
     )
+  `).run();
+  // Seed approved defaults only when no owner override exists for that plan/term/currency.
+  await env.DB.prepare(`
+    INSERT OR IGNORE INTO app_plan_prices (plan, term_type, currency, amount_minor, updated_by)
+    VALUES
+      ('basic','monthly','SDG',25000,'system-default'),
+      ('basic','annual','SDG',250000,'system-default'),
+      ('basic','perpetual','SDG',150000,'system-default'),
+      ('pro','monthly','SDG',45000,'system-default'),
+      ('pro','annual','SDG',450000,'system-default'),
+      ('pro','perpetual','SDG',300000,'system-default'),
+      ('business','monthly','SDG',80000,'system-default'),
+      ('business','annual','SDG',800000,'system-default'),
+      ('business','perpetual','SDG',600000,'system-default'),
+      ('enterprise','monthly','SDG',150000,'system-default'),
+      ('enterprise','annual','SDG',1500000,'system-default'),
+      ('enterprise','perpetual','SDG',1200000,'system-default'),
+      ('basic','monthly','USD',900,'system-default'),
+      ('basic','annual','USD',9000,'system-default'),
+      ('basic','perpetual','USD',24900,'system-default'),
+      ('pro','monthly','USD',1900,'system-default'),
+      ('pro','annual','USD',19000,'system-default'),
+      ('pro','perpetual','USD',49900,'system-default'),
+      ('business','monthly','USD',3900,'system-default'),
+      ('business','annual','USD',39000,'system-default'),
+      ('business','perpetual','USD',99900,'system-default'),
+      ('enterprise','monthly','USD',7900,'system-default'),
+      ('enterprise','annual','USD',79000,'system-default'),
+      ('enterprise','perpetual','USD',199900,'system-default')
   `).run();
 }
 
@@ -581,6 +616,38 @@ async function changeAppLicenseStatus(request, env) {
   return json({ ok: true, licenseId: id, status, dataPreserved: true }, 200, env);
 }
 
+async function resetAppLicenseDevice(request, env) {
+  if (!isAdmin(request, env)) return json({ ok: false, error: "unauthorized" }, 401, env);
+  const body = await request.json().catch(() => null);
+  const id = String(body?.licenseId || "").trim();
+  const reason = String(body?.reason || "").trim().slice(0, 300);
+  if (!/^[A-Z0-9_-]{6,80}$/i.test(id) || body?.approved !== true || reason.length < 8) {
+    return json({ ok: false, error: "explicit_owner_approval_license_id_and_reason_required" }, 400, env);
+  }
+  await ensureAppLicenseTables(env);
+  const license = await env.DB.prepare(
+    "SELECT id, customer_name, plan, term_type, status, device_hash FROM app_licenses WHERE id = ?"
+  ).bind(id).first();
+  if (!license) return json({ ok: false, error: "license_not_found" }, 404, env);
+  if (license.status === "revoked") return json({ ok: false, error: "revoked_license_device_cannot_be_reset" }, 409, env);
+  if (!license.device_hash) return json({ ok: false, error: "license_has_no_device_binding" }, 409, env);
+  // Expire any remaining trial for the old device so clearing the paid binding cannot revive its trial.
+  await env.DB.prepare(
+    "UPDATE app_trials SET expires_at = ? WHERE device_hash = ?"
+  ).bind(new Date().toISOString(), license.device_hash).run();
+  const updated = await env.DB.prepare(
+    "UPDATE app_licenses SET device_hash = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND device_hash IS NOT NULL AND status <> 'revoked'"
+  ).bind(id).run();
+  if (!updated.meta?.changes) return json({ ok: false, error: "device_binding_changed_retry" }, 409, env);
+  await env.DB.prepare(
+    "INSERT INTO app_admin_events (id, event_type, license_id, customer_name, plan, term_type, details, actor) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+  ).bind(
+    "EVT-" + crypto.randomUUID(), "license_device_reset", id, license.customer_name,
+    license.plan, license.term_type, "Owner-approved device transfer reset. Old device trial expired. Offline cached entitlement may remain valid for up to 72 hours after last verification. Reason: " + reason, "owner"
+  ).run();
+  return json({ ok: true, licenseId: id, deviceBindingReset: true, dataPreserved: true, status: license.status }, 200, env);
+}
+
 async function info(request, env, token) {
   const row = await lookup(token, env);
 
@@ -868,7 +935,7 @@ export default {
           service: "smart-encyclopedias-delivery",
           status: "online",
           version: "kv-delivery-v9-approval-diagnostics",
-          adminConfigured: Boolean(String(env.LICENSE_ADMIN_KEY || "").trim()),
+          adminConfigured: adminLicenseKey(env).length >= 32,
           book: BOOK_KEY
         }, 200, env);
       }
@@ -895,6 +962,10 @@ export default {
 
       if (url.pathname === "/api/app-license/admin/status" && request.method === "POST") {
         return changeAppLicenseStatus(request, env);
+      }
+
+      if (url.pathname === "/api/app-license/admin/reset-device" && request.method === "POST") {
+        return resetAppLicenseDevice(request, env);
       }
 
       if (url.pathname === "/api/app-license/admin/renew" && request.method === "POST") {

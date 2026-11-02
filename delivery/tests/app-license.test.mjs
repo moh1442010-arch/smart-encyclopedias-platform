@@ -13,8 +13,10 @@ class TestDate extends RealDate {
 function makeDb() {
   const trials = new Map();
   const licenses = new Map();
+  const statements = [];
   const db = {
     prepare(sql) {
+      statements.push(sql);
       let values = [];
       const stmt = {
         bind(...args) { values = args; return stmt; },
@@ -24,11 +26,21 @@ function makeDb() {
             if (!trials.has(hash)) trials.set(hash, { device_hash: hash, started_at: started, expires_at: expires });
             return { meta: { changes: 1 } };
           }
+          if (sql.includes("UPDATE app_trials SET expires_at")) {
+            const [expires, hash] = values; const row = [...trials.values()].find(x => x.device_hash === hash);
+            if (row) { row.expires_at = expires; return { meta: { changes: 1 } }; }
+            return { meta: { changes: 0 } };
+          }
           if (sql.includes("INSERT INTO app_licenses")) {
             const [id, codeHash, plan, termType, customerName, customerEmail, orderId, expiresAt, approvedBy] = values;
             if ([...licenses.values()].some(x => x.license_code_hash === codeHash) || licenses.has(id)) throw new Error("duplicate");
             licenses.set(id, { id, license_code_hash: codeHash, plan, term_type: termType, customer_name: customerName, customer_email: customerEmail, order_id: orderId, status: "active", device_hash: null, starts_at: new TestDate().toISOString(), expires_at: expiresAt, approved_by: approvedBy });
             return { meta: { changes: 1 } };
+          }
+          if (sql.includes("UPDATE app_licenses SET device_hash = NULL")) {
+            const [id] = values; const row = licenses.get(id);
+            if (row && row.status !== "revoked" && row.device_hash) { row.device_hash = null; return { meta: { changes: 1 } }; }
+            return { meta: { changes: 0 } };
           }
           if (sql.includes("UPDATE app_licenses SET device_hash")) {
             const [hash, id] = values; const row = licenses.get(id);
@@ -48,7 +60,7 @@ function makeDb() {
           if (sql.includes("FROM app_licenses WHERE device_hash = ?")) return [...licenses.values()].find(x => x.device_hash === values[0]) || null;
           if (sql.includes("FROM app_licenses WHERE license_code_hash = ?")) return [...licenses.values()].find(x => x.license_code_hash === values[0]) || null;
           if (sql.includes("FROM app_licenses WHERE id = ?")) {
-            const row = licenses.get(values[0]); return row ? { device_hash: row.device_hash } : null;
+            const row = licenses.get(values[0]); return row || null;
           }
           if (sql.includes("FROM app_trials WHERE device_hash = ?")) return trials.get(values[0]) || null;
           if (sql.includes("COUNT(*) AS total")) return { total: licenses.size, active: [...licenses.values()].filter(x => x.status === "active").length };
@@ -59,7 +71,7 @@ function makeDb() {
       return stmt;
     }
   };
-  return { db, trials, licenses };
+  return { db, trials, licenses, statements };
 }
 
 async function call(env, path, { method = "GET", device = "test-device-000001", admin, body } = {}) {
@@ -207,4 +219,80 @@ test("expired monthly license stays locked instead of receiving a new trial", as
     assert.equal(status.licenseStatus, "active");
     assert.equal(status.licenseId, "TEST-MONTH-01");
   } finally { globalThis.Date = originalDate; }
+});
+
+
+test("approved price catalogue is seeded without replacing owner prices", async () => {
+  const { db, statements } = makeDb();
+  const response = await call({ DB: db }, "/api/app-license/status");
+  assert.equal(response.status, 200);
+  const seed = statements.find(sql => sql.includes("INSERT OR IGNORE INTO app_plan_prices"));
+  assert.ok(seed, "price seed statement should run when the licensing tables are initialized");
+  const rows = seed.match(/\('(basic|pro|business|enterprise)','(monthly|annual|perpetual)','(SDG|USD)',\d+,'system-default'\)/g) || [];
+  assert.equal(rows.length, 24);
+  assert.match(seed, /\('basic','monthly','SDG',25000,'system-default'\)/);
+  assert.match(seed, /\('enterprise','perpetual','USD',199900,'system-default'\)/);
+});
+
+test("owner can reset a paid license device binding with approval and a reason", async () => {
+  const { db, licenses } = makeDb();
+  const env = { DB: db, LICENSE_ADMIN_KEY: "test-admin-secret" };
+  const createdResponse = await call(env, "/api/app-license/admin/create", {
+    method: "POST", device: "", admin: "test-admin-secret",
+    body: {
+      approved: true, amountMinor: 1, currency: "SDG", plan: "pro",
+      termType: "annual", customerName: "Device Transfer Test", licenseId: "TEST-RESET-01"
+    }
+  });
+  assert.equal(createdResponse.status, 201);
+  const created = await createdResponse.json();
+
+  const oldDeviceTrial = await call(env, "/api/app-license/status", { device: "old-device-id-0001" });
+  assert.equal(oldDeviceTrial.status, 200);
+  const firstActivation = await call(env, "/api/app-license/activate", {
+    method: "POST", device: "old-device-id-0001",
+    body: { activationCode: created.activationCode }
+  });
+  assert.equal(firstActivation.status, 200);
+  assert.ok(licenses.get("TEST-RESET-01").device_hash);
+
+  const missingApproval = await call(env, "/api/app-license/admin/reset-device", {
+    method: "POST", device: "", admin: "test-admin-secret",
+    body: { licenseId: "TEST-RESET-01", approved: false, reason: "Customer changed phone" }
+  });
+  assert.equal(missingApproval.status, 400);
+
+  const reset = await call(env, "/api/app-license/admin/reset-device", {
+    method: "POST", device: "", admin: "test-admin-secret",
+    body: { licenseId: "TEST-RESET-01", approved: true, reason: "Customer replaced damaged phone" }
+  });
+  assert.equal(reset.status, 200);
+  assert.equal((await reset.json()).dataPreserved, true);
+  assert.equal(licenses.get("TEST-RESET-01").device_hash, null);
+  const oldDeviceStatus = await call(env, "/api/app-license/status", { device: "old-device-id-0001" });
+  assert.equal((await oldDeviceStatus.json()).mode, "expired");
+
+  const secondActivation = await call(env, "/api/app-license/activate", {
+    method: "POST", device: "new-device-id-0002",
+    body: { activationCode: created.activationCode }
+  });
+  assert.equal(secondActivation.status, 200);
+  assert.ok(licenses.get("TEST-RESET-01").device_hash);
+});
+
+
+test("legacy accountant admin secret binding remains supported", async () => {
+  const { db } = makeDb();
+  const env = { DB: db, Admin_Api_key: "legacy-admin-secret-12345678901234567890" };
+  const legacy = await call(env, "/api/app-license/admin/list", {
+    method: "GET", device: "", admin: "legacy-admin-secret-12345678901234567890"
+  });
+  assert.equal(legacy.status, 200);
+  const canonicalPreferred = await call({
+    DB: db, LICENSE_ADMIN_KEY: "canonical-admin-secret-12345678901234567890",
+    Admin_Api_key: "legacy-admin-secret-12345678901234567890"
+  }, "/api/app-license/admin/list", {
+    method: "GET", device: "", admin: "legacy-admin-secret-12345678901234567890"
+  });
+  assert.equal(canonicalPreferred.status, 401);
 });
