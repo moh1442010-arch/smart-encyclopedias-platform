@@ -87,6 +87,21 @@ public class BakeryMathTest {
         assertEquals(37000L, BakeryMath.netMargin(200000,10000,30000,20000,100000,3000));
         assertEquals(40000L, BakeryMath.netMargin(200000,10000,30000,20000,100000));
     }
+    @Test public void approvedProfitFormulaAddsWindowAndDistributionCashBankAndDebtThenSubtractsDailyCost() {
+        long window = BakeryMath.sum(100000L, 20000L, 30000L);
+        long distribution = BakeryMath.sum(50000L, 40000L, 10000L);
+        assertEquals(250000L, BakeryMath.sum(window, distribution));
+        assertEquals(82000L, BakeryMath.salesLessOperatingCost(250000L, 168000L));
+    }
+    @Test public void dieselIsIncludedInDailyOperatingCost() {
+        long dailyCost = BakeryMath.operatingCostPerWorkUnit(2L, 60000L, 7000L, 2000L, 1000L, 3000L, 4000L, 5000L, 8000L);
+        assertEquals(180000L, dailyCost);
+        assertEquals(70000L, BakeryMath.salesLessOperatingCost(250000L, dailyCost));
+    }
+    @Test(expected=IllegalArgumentException.class) public void newProfitFormulaRejectsNegativeCollections() {
+        BakeryMath.salesLessOperatingCost(-1L,0L);
+    }
+
     @Test public void operatingCostUsesEnteredPerWorkUnitRatesTimesDailyWork() {
         assertEquals(180000L, BakeryMath.operatingCostPerWorkUnit(10, 6000, 5000, 7000));
     }
