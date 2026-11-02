@@ -26,6 +26,11 @@ function makeDb() {
             if (!trials.has(hash)) trials.set(hash, { device_hash: hash, started_at: started, expires_at: expires });
             return { meta: { changes: 1 } };
           }
+          if (sql.includes("UPDATE app_trials SET expires_at")) {
+            const [expires, hash] = values; const row = [...trials.values()].find(x => x.device_hash === hash);
+            if (row) { row.expires_at = expires; return { meta: { changes: 1 } }; }
+            return { meta: { changes: 0 } };
+          }
           if (sql.includes("INSERT INTO app_licenses")) {
             const [id, codeHash, plan, termType, customerName, customerEmail, orderId, expiresAt, approvedBy] = values;
             if ([...licenses.values()].some(x => x.license_code_hash === codeHash) || licenses.has(id)) throw new Error("duplicate");
@@ -242,6 +247,8 @@ test("owner can reset a paid license device binding with approval and a reason",
   assert.equal(createdResponse.status, 201);
   const created = await createdResponse.json();
 
+  const oldDeviceTrial = await call(env, "/api/app-license/status", { device: "old-device-id-0001" });
+  assert.equal(oldDeviceTrial.status, 200);
   const firstActivation = await call(env, "/api/app-license/activate", {
     method: "POST", device: "old-device-id-0001",
     body: { activationCode: created.activationCode }
@@ -262,6 +269,8 @@ test("owner can reset a paid license device binding with approval and a reason",
   assert.equal(reset.status, 200);
   assert.equal((await reset.json()).dataPreserved, true);
   assert.equal(licenses.get("TEST-RESET-01").device_hash, null);
+  const oldDeviceStatus = await call(env, "/api/app-license/status", { device: "old-device-id-0001" });
+  assert.equal((await oldDeviceStatus.json()).mode, "expired");
 
   const secondActivation = await call(env, "/api/app-license/activate", {
     method: "POST", device: "new-device-id-0002",
