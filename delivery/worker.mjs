@@ -288,6 +288,35 @@ async function ensureAppLicenseTables(env) {
       PRIMARY KEY (plan, term_type, currency)
     )
   `).run();
+  // Seed approved defaults only when no owner override exists for that plan/term/currency.
+  await env.DB.prepare(`
+    INSERT OR IGNORE INTO app_plan_prices (plan, term_type, currency, amount_minor, updated_by)
+    VALUES
+      ('basic','monthly','SDG',25000,'system-default'),
+      ('basic','annual','SDG',250000,'system-default'),
+      ('basic','perpetual','SDG',150000,'system-default'),
+      ('pro','monthly','SDG',45000,'system-default'),
+      ('pro','annual','SDG',450000,'system-default'),
+      ('pro','perpetual','SDG',300000,'system-default'),
+      ('business','monthly','SDG',80000,'system-default'),
+      ('business','annual','SDG',800000,'system-default'),
+      ('business','perpetual','SDG',600000,'system-default'),
+      ('enterprise','monthly','SDG',150000,'system-default'),
+      ('enterprise','annual','SDG',1500000,'system-default'),
+      ('enterprise','perpetual','SDG',1200000,'system-default'),
+      ('basic','monthly','USD',900,'system-default'),
+      ('basic','annual','USD',9000,'system-default'),
+      ('basic','perpetual','USD',24900,'system-default'),
+      ('pro','monthly','USD',1900,'system-default'),
+      ('pro','annual','USD',19000,'system-default'),
+      ('pro','perpetual','USD',49900,'system-default'),
+      ('business','monthly','USD',3900,'system-default'),
+      ('business','annual','USD',39000,'system-default'),
+      ('business','perpetual','USD',99900,'system-default'),
+      ('enterprise','monthly','USD',7900,'system-default'),
+      ('enterprise','annual','USD',79000,'system-default'),
+      ('enterprise','perpetual','USD',199900,'system-default')
+  `).run();
 }
 
 function appDeviceId(request) {
