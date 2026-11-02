@@ -58,7 +58,7 @@ jobs:
           const path = require("node:path");
           const crypto = require("node:crypto");
           const raw = String(process.env.PRIVATE_KEY_B64 || "").trim();
-          const value = raw.replace(/\\s+/g, "");
+          const value = raw.replace(/\s+/g, "");
           if (!value || !/^[A-Za-z0-9+/]+={0,2}$/.test(value) || value.length % 4 !== 0) {
             console.error("::error::GitHub secret BAKERY_LICENSE_PRIVATE_KEY_B64 is missing or is not strict Base64.");
             process.exit(1);
