@@ -200,7 +200,7 @@ async function issueToken(env, deviceId, plan) {
   const expires = plan === "lifetime" ? 0 : now + PLANS[plan].seconds;
   const appVersion = cleanText(env.APP_VERSION || "2.6.15", 32);
   // This exact payload format is consumed by MainActivity.verifyLicenseToken().
-  const payload = `app=${APP_ID};device=${deviceId};plan=${plan};max_version=${plan === "lifetime" ? appVersion : "any"};expires=${expires}`;
+  const payload = `app=${APP_ID};device=${deviceId};plan=${plan};max_version=any;expires=${expires}`;
   const bytes = encoder.encode(payload);
   const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, bytes);
   return { token: base64url(bytes) + "." + base64url(signature), expires, appVersion };
