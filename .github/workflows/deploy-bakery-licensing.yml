@@ -46,33 +46,27 @@ jobs:
           command: deploy --config wrangler.toml
 
       - name: Check public health endpoint
+        shell: bash
         run: |
-          for i in 1 2 3 4 5; do
-            if curl --fail --silent --show-error https://al-mizan-bakery-licensing.moh1442010.workers.dev/health; then
-              echo
-              break
-            fi
-            sleep 3
-          done
-          if [ "$i" -eq 5 ]; then
-            echo "::error::Deployment ran, but the health endpoint did not return success."
-            exit 1
-          fi
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 20 https://al-mizan-bakery-licensing.moh1442010.workers.dev/health)"
+          echo "$response"
+          node -e 'const x=JSON.parse(process.argv[1]); if (x.ok !== true || x.service !== "al-mizan-bakery-licensing" || x.mode !== "manual-payment-review") { console.error("::error::Worker health response is invalid."); process.exit(1); }' "$response"
 
       - name: Verify Production admin login secrets
         run: |
-          response="$(curl --fail --silent --show-error https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/admin-config)"
+          response="$(curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 20 https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/admin-config)"
           echo "$response"
           node -e 'const x=JSON.parse(process.argv[1]); if (x.adminPasswordConfigured !== true) { console.error("::error::Set ADMIN_PASSWORD (32+ random characters) as a Worker secret before deployment."); process.exit(1); }' "$response"
 
       - name: Verify Production signing key configuration
         run: |
-          response="$(curl --fail --silent --show-error https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/signing-config)"
+          response="$(curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 20 https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/signing-config)"
           echo "$response"
           node -e 'const x=JSON.parse(process.argv[1]); if (x.privateKeyConfigured !== true || x.publicKeyConfigured !== true || x.publicKeyMatchesApp !== true || !["pkcs8","pkcs1-convertible"].includes(x.privateKeyFormat)) { console.error("::error::Production signing configuration is invalid. Require a supported private-key encoding and the app-matching public key. Update Worker secrets LICENSE_PRIVATE_KEY_PKCS8_B64 and LICENSE_PUBLIC_KEY_DER_B64, then redeploy."); process.exit(1); }' "$response"
 
       - name: Verify live signing pair with a real signature
         run: |
-          response="$(curl --silent --show-error https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/signing-pair)"
+          response="$(curl --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 20 https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/signing-pair)"
           echo "$response"
           node -e 'const x=JSON.parse(process.argv[1]); if (x.signingReady !== true || x.signingPairMatches !== true) { console.error("::error::Live signing-pair test failed: " + (x.error || "UNKNOWN")); process.exit(1); }' "$response"
