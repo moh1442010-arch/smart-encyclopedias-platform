@@ -14,7 +14,7 @@ API base URL: `https://smart-encyclopedias-delivery.moh1442010.workers.dev`
 
 Static owner dashboard: `https://moh1442010-arch.github.io/smart-encyclopedias-platform/smart-company-admin.html`
 
-The page asks for `LICENSE_ADMIN_KEY` at runtime; the key is not embedded in the HTML and must never be committed or sent to customers. The protected API now includes:
+The page asks for the admin key at runtime; the Worker accepts `LICENSE_ADMIN_KEY` and temporarily supports the legacy Cloudflare secret name `Admin_Api_key`. The key is not embedded in the HTML and must never be committed or sent to customers. The protected API now includes:
 
 - `GET /api/app-license/admin/list` — lists up to 500 app licenses with limited administrative metadata and summary counts for licenses/trials. Requires `x-admin-key`.
 - `POST /api/app-license/admin/status` — changes a license to `active`, `suspended`, or `revoked`. Requires `x-admin-key`. This changes access status only; it does not delete customer data.
