@@ -863,7 +863,7 @@ public class MainActivity extends Activity {
         }catch(Exception e){android.util.Log.w("AlMizanBakery","Customer save failed",e);}
     }
     private void manageRegularCustomers(){
-        EditText list=ruledCell(regularCustomers().optString("rows",""),"الاسم | دكان أو بقالة أو مطعم",false);list.setMinLines(7);list.setGravity(Gravity.TOP|Gravity.RIGHT);
+        EditText list=ruledCell(regularCustomers().optString("rows",""),"الاسم | دكان أو بقالة أو مطعم",false);list.setSingleLine(false);list.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE);list.setMinLines(7);list.setGravity(Gravity.TOP|Gravity.RIGHT);
         new AlertDialog.Builder(this).setTitle("العملاء الثابتون").setMessage("سطر لكل عميل. مثال: دكان النيل | دكان").setView(list).setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{try{
             java.util.LinkedHashMap<String,String> unique=new java.util.LinkedHashMap<>();for(String line:normalizeRows(list.getText().toString()).split("\\r?\\n")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);String name=p[0].trim(),type=p.length>1?p[1].trim():"عميل";if(name.isEmpty())throw new IllegalArgumentException("اسم العميل مطلوب");unique.put(name,type.isEmpty()?"عميل":type);}
             StringBuilder out=new StringBuilder();for(java.util.Map.Entry<String,String> e:unique.entrySet()){if(out.length()>0)out.append("\n");out.append(e.getKey()).append(" | ").append(e.getValue());}JSONObject rec=new JSONObject();rec.put("rows",out.toString());store.put(day,"customers",rec);toast("تم حفظ "+unique.size()+" عميل ثابت.");
@@ -1311,24 +1311,29 @@ public class MainActivity extends Activity {
 
     private void showCosting() {
         try {
-            long production=productionValue(), cost=costingTotal();
-            long spoilage=spoilageCost(), labor=wages(), expenses=expenseTotal();
-            long beforeCost=Math.subtractExact(Math.subtractExact(Math.subtractExact(production,spoilage),labor),expenses);
-            long margin=BakeryMath.salesLessOperatingCost(salesRevenue(),cost);
-            String message="تاريخ التكلفة: "+day+
-                "\nقيمة القطعيات/الإنتاج: "+fmt(production)+" جنيه"+
-                "\n(-) قيمة التالف: "+fmt(spoilage)+" جنيه"+
-                "\n(-) يومية العمال: "+fmt(labor)+" جنيه"+
-                "\n(-) منصرفات المحل: "+fmt(expenses)+" جنيه"+
-                "\nالصافي قبل تكلفة التشغيل: "+fmt(beforeCost)+" جنيه"+
-                "\n(-) تكلفة التشغيل اليومية (الدقيق والخميرة والزيت والأكياس والملح والحطب والغاز والجاز): "+fmt(cost)+" جنيه"+
-                "\n\nهامش الربح الحقيقي حسب المعادلة المعتمدة: "+fmt(margin)+" جنيه"+
-                "\n\nحساب الدقيق مرتبط بعدد جوالات شغل اليوم. راجع أسعار المواد والتالف واليومية والمنصرفات، ولا تسجل المصروف نفسه مرتين.";
-            new AlertDialog.Builder(this).setTitle("🏭 حساب التشغيل والتكلفة — "+day).setMessage(message)
+            Totals dist=distribution();
+            long windowCash=val("window","cash"), windowDebt=val("window","debt");
+            long windowBank=Math.subtractExact(bankTotal(),dist.bank);
+            long total=salesRevenue(), cost=costingTotal();
+            long margin=BakeryMath.salesLessOperatingCost(total,cost);
+            String message="تقرير هامش الربح الحقيقي — "+day+
+                "\n\nتحصيل الشباك"+
+                "\nالنقدي: "+fmt(windowCash)+" جنيه"+
+                "\nبنكك: "+fmt(windowBank)+" جنيه"+
+                "\nالديون: "+fmt(windowDebt)+" جنيه"+
+                "\n\nتحصيل التوزيع"+
+                "\nالنقدي: "+fmt(dist.cash)+" جنيه"+
+                "\nبنكك: "+fmt(dist.bank)+" جنيه"+
+                "\nالديون: "+fmt(dist.debt)+" جنيه"+
+                "\n\nإجمالي البيع والتحصيل: "+fmt(total)+" جنيه"+
+                "\n(-) تكلفة تشغيل اليوم المستهلكة: "+fmt(cost)+" جنيه"+
+                "\n\nهامش الربح الحقيقي: "+fmt(margin)+" جنيه"+
+                "\n\nتشمل تكلفة التشغيل الدقيق والخميرة والزيت والأكياس والملح والحطب والغاز والجاز بحسب الكميات المستهلكة وأسعار الوحدات. لا تُكرر أي مادة في المنصرفات.";
+            new AlertDialog.Builder(this).setTitle("حساب التشغيل وهامش الربح — "+day).setMessage(message)
                 .setNegativeButton("إغلاق",null)
                 .setNeutralButton("تعديل بيانات التكلفة",(d,w)->openModule("costing"))
                 .setPositiveButton("مشاركة التقرير",(d,w)->shareReport(message)).show();
-        } catch(Exception ex) { toast("تعذر حساب التكلفة بسبب رقم كبير جدًا أو بيانات غير صحيحة. راجع الكميات والأسعار."); }
+        } catch(Exception ex) { toast("تعذر حساب هامش الربح. راجع التحصيل وكميات وأسعار مواد التشغيل."); }
     }
 
     private long cashTotal() { Totals d=distribution(); return Math.addExact(val("window","cash"),d.cash); }
