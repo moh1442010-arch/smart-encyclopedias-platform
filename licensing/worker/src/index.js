@@ -74,7 +74,7 @@ function decodeBase64Value(value) {
       (normalized.startsWith("'") && normalized.endsWith("'"))) {
     normalized = normalized.slice(1, -1).trim();
   }
-  normalized = normalized.replace(/\\r/g, "").replace(/\\n/g, "").replace(/\\s+/g, "");
+  normalized = normalized.replace(/\r/g, "").replace(/\n/g, "").replace(/\s+/g, "");
   normalized = normalized.replace(/-/g, "+").replace(/_/g, "/");
   if (!normalized || !/^[A-Za-z0-9+/]*={0,2}$/.test(normalized)) {
     throw new Error("LICENSE_BASE64_INVALID_CHARACTERS");
