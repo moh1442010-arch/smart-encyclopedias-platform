@@ -5,7 +5,6 @@ on:
   push:
     paths:
       - ".github/workflows/verify-bakery-license-key.yml"
-      - ".github/workflows/issue-bakery-license.yml"
       - "bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java"
       - "tools/bakery-license-issuer.mjs"
       - "licensing/worker/src/index.js"
@@ -35,43 +34,12 @@ jobs:
           echo "PASS: App, offline issuer, and Cloudflare Worker public keys are identical."
           echo "Private keys are intentionally not stored in GitHub Actions."
 
-      - name: Verify configured GitHub signing secret without exposing it
+      - name: Verify live Cloudflare signing pair without exposing secrets
         shell: bash
-        env:
-          PRIVATE_KEY_INPUT: ${{ secrets.BAKERY_LICENSE_PRIVATE_KEY_B64 }}
-          APP_KEY: ${{ env.APP_KEY }}
         run: |
           set -euo pipefail
-          test -n "${PRIVATE_KEY_INPUT:-}" || { echo "::error::BAKERY_LICENSE_PRIVATE_KEY_B64 is missing."; exit 1; }
-          KEY_FILE="$RUNNER_TEMP/bakery-signing-check.pem"
-          DER_FILE="$RUNNER_TEMP/bakery-signing-check.der"
-          trap 'rm -f "$KEY_FILE" "$DER_FILE"' EXIT
-          python3 - <<'PY'
-          import base64, os, re, subprocess, sys
-          raw=os.environ["PRIVATE_KEY_INPUT"].strip()
-          out=os.environ["RUNNER_TEMP"]+"/bakery-signing-check.pem"
-          if raw.startswith("-----BEGIN "):
-              data=raw.encode("ascii")
-              if b"PRIVATE KEY-----" not in data[:120]:
-                  raise SystemExit("::error::GitHub signing secret is not a private-key PEM.")
-              open(out,"wb").write(data)
-          else:
-              compact="".join(raw.split())
-              if not compact or not re.fullmatch(r"[A-Za-z0-9+/]*={0,2}",compact) or len(compact)%4==1:
-                  raise SystemExit("::error::GitHub signing secret is not clean Base64.")
-              try: data=base64.b64decode(compact+"="*((-len(compact))%4),validate=True)
-              except Exception: raise SystemExit("::error::GitHub signing secret is invalid Base64.")
-              if data.lstrip().startswith(b"-----BEGIN "):
-                  open(out,"wb").write(data)
-              else:
-                  der=os.environ["RUNNER_TEMP"]+"/bakery-signing-check.der"
-                  open(der,"wb").write(data)
-                  p=subprocess.run(["openssl","pkey","-inform","DER","-in",der,"-out",out],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-                  if p.returncode: raise SystemExit("::error::GitHub signing secret is neither supported PEM nor PKCS8 DER.")
-          PY
-          openssl pkey -in "$KEY_FILE" -check -noout >/dev/null 2>&1 || { echo "::error::GitHub signing private key is invalid."; exit 1; }
-          EXPECTED="$(grep -oE 'LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | head -1 | cut -d '"' -f2)"
-          ACTUAL="$(openssl pkey -in "$KEY_FILE" -pubout -outform DER 2>/dev/null | base64 -w0)"
-          test -n "$EXPECTED" && test "$ACTUAL" = "$EXPECTED" || { echo "::error::GitHub signing secret does not match the public key embedded in the bakery app."; exit 1; }
-          echo "PASS: GitHub Actions signing secret is valid and matches the bakery app public key. Secret value was not displayed."
-
+          response="$(curl --silent --show-error https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/signing-pair)"
+          echo "$response"
+          node -e 'const x=JSON.parse(process.argv[1]); if (x.signingReady !== true || x.signingPairMatches !== true) { console.error("::error::Cloudflare Worker signing is not ready: " + (x.error || "UNKNOWN") + ". No token was issued."); process.exit(1); }'
+          <<< "$response"
+          echo "PASS: Cloudflare signed and verified a test message against the app public key. No customer license was issued."
