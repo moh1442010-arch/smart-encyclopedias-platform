@@ -625,6 +625,10 @@ async function resetAppLicenseDevice(request, env) {
   if (!license) return json({ ok: false, error: "license_not_found" }, 404, env);
   if (license.status === "revoked") return json({ ok: false, error: "revoked_license_device_cannot_be_reset" }, 409, env);
   if (!license.device_hash) return json({ ok: false, error: "license_has_no_device_binding" }, 409, env);
+  // Expire any remaining trial for the old device so clearing the paid binding cannot revive its trial.
+  await env.DB.prepare(
+    "UPDATE app_trials SET expires_at = ? WHERE device_hash = ?"
+  ).bind(new Date().toISOString(), license.device_hash).run();
   const updated = await env.DB.prepare(
     "UPDATE app_licenses SET device_hash = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND device_hash IS NOT NULL AND status <> 'revoked'"
   ).bind(id).run();
@@ -633,7 +637,7 @@ async function resetAppLicenseDevice(request, env) {
     "INSERT INTO app_admin_events (id, event_type, license_id, customer_name, plan, term_type, details, actor) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   ).bind(
     "EVT-" + crypto.randomUUID(), "license_device_reset", id, license.customer_name,
-    license.plan, license.term_type, "Owner-approved device transfer reset. Reason: " + reason, "owner"
+    license.plan, license.term_type, "Owner-approved device transfer reset. Old device trial expired. Offline cached entitlement may remain valid for up to 72 hours after last verification. Reason: " + reason, "owner"
   ).run();
   return json({ ok: true, licenseId: id, deviceBindingReset: true, dataPreserved: true, status: license.status }, 200, env);
 }
