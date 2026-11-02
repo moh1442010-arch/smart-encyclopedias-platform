@@ -210,7 +210,21 @@ public class MainActivity extends Activity {
         }
     }
 
+    // Legacy UUID is retained so licenses issued to existing installations remain valid after upgrade.
+    private String legacyDeviceId() {
+        return getPreferences(0).getString("license_device_id", null);
+    }
+
+    // Android ID is stable across normal app reinstalls for the same Android user/device/signing key.
+    // Prefix it to keep its namespace distinct from legacy UUID identifiers.
     private String deviceId() {
+        String androidId = android.provider.Settings.Secure.getString(
+            getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
+        if (androidId != null && androidId.matches("(?i)[0-9a-f]{16}")) {
+            return "a" + androidId.toLowerCase(Locale.US);
+        }
+
+        // Fallback for devices where ANDROID_ID is unavailable or malformed.
         android.content.SharedPreferences prefs = getPreferences(0);
         String id = prefs.getString("license_device_id", null);
         if (id == null || id.trim().isEmpty()) {
@@ -246,7 +260,11 @@ public class MainActivity extends Activity {
                 fields.put(field.substring(0, at), field.substring(at + 1));
             }
             if (!"com.mohammedmustafa.almizan.bakery".equals(fields.get("app"))) return false;
-            if (!deviceId().equals(fields.get("device"))) return false;
+            String licensedDevice = fields.get("device");
+            // Accept the old locally stored UUID for already-issued licenses, while new orders use Android ID.
+            String legacyDevice = legacyDeviceId();
+            if (!deviceId().equals(licensedDevice) &&
+                (legacyDevice == null || !legacyDevice.equals(licensedDevice))) return false;
             String plan = fields.get("plan");
             if (!"monthly".equals(plan) && !"annual".equals(plan) && !"lifetime".equals(plan)) return false;
             String maxVersion = fields.get("max_version");
