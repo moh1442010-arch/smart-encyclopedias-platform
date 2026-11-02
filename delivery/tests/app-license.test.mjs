@@ -279,3 +279,20 @@ test("owner can reset a paid license device binding with approval and a reason",
   assert.equal(secondActivation.status, 200);
   assert.ok(licenses.get("TEST-RESET-01").device_hash);
 });
+
+
+test("legacy accountant admin secret binding remains supported", async () => {
+  const { db } = makeDb();
+  const env = { DB: db, Admin_Api_key: "legacy-admin-secret-12345678901234567890" };
+  const legacy = await call(env, "/api/app-license/admin/list", {
+    method: "GET", device: "", admin: "legacy-admin-secret-12345678901234567890"
+  });
+  assert.equal(legacy.status, 200);
+  const canonicalPreferred = await call({
+    DB: db, LICENSE_ADMIN_KEY: "canonical-admin-secret-12345678901234567890",
+    Admin_Api_key: "legacy-admin-secret-12345678901234567890"
+  }, "/api/app-license/admin/list", {
+    method: "GET", device: "", admin: "legacy-admin-secret-12345678901234567890"
+  });
+  assert.equal(canonicalPreferred.status, 401);
+});
