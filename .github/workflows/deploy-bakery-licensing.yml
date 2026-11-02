@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - "licensing/worker/**"
+      - "licensing/schema.sql"
       - ".github/workflows/deploy-bakery-licensing.yml"
 
 permissions:
@@ -20,7 +21,7 @@ jobs:
   deploy:
     name: Deploy al-mizan-bakery-licensing
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -28,33 +29,18 @@ jobs:
       - name: Validate Worker JavaScript syntax
         run: node --check licensing/worker/src/index.js
 
-      - name: Check deployment credentials are configured
+      - name: Check Cloudflare deployment credentials
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           if [ -z "$CF_TOKEN" ]; then
-            echo "::error::Missing GitHub Actions secret CLOUDFLARE_API_TOKEN. Add it in repository Settings > Secrets and variables > Actions."
+            echo "::error::Missing CLOUDFLARE_API_TOKEN."
             exit 1
           fi
 
-      - name: Apply idempotent D1 licensing schema
+      - name: Normalize and verify the bakery license signing key
         working-directory: licensing/worker
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: b2f59f3997ad2918941d4d261370d1b4
-        run: npx --yes wrangler@4 d1 execute al-mizan-bakery-licenses --remote --file=../schema.sql --config wrangler.toml
-      - name: Deploy only the bakery licensing Worker
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: b2f59f3997ad2918941d4d261370d1b4
-          workingDirectory: licensing/worker
-          command: deploy --config wrangler.toml
-
-      - name: Publish validated signing key to the Cloudflare Worker
-        working-directory: licensing/worker
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           PRIVATE_KEY_B64: ${{ secrets.BAKERY_LICENSE_PRIVATE_KEY_B64 }}
         shell: bash
         run: |
@@ -64,27 +50,85 @@ jobs:
           const path = require("node:path");
           const crypto = require("node:crypto");
           const raw = String(process.env.PRIVATE_KEY_B64 || "").trim();
-          const value = raw.replace(/\s+/g, "");
-          if (!value || !/^[A-Za-z0-9+/]+={0,2}$/.test(value) || value.length % 4 !== 0) {
-            console.error("::error::GitHub secret BAKERY_LICENSE_PRIVATE_KEY_B64 is missing or is not strict Base64.");
+          if (!raw) {
+            console.error("::error::Missing GitHub secret BAKERY_LICENSE_PRIVATE_KEY_B64.");
             process.exit(1);
           }
-          const der = Buffer.from(value, "base64");
-          if (der.toString("base64") !== value) {
-            console.error("::error::Signing key Base64 failed canonical validation.");
-            process.exit(1);
-          }
+          let key;
           try {
-            crypto.createPrivateKey({ key: der, format: "der", type: "pkcs8" });
+            if (/^-----BEGIN (?:RSA )?PRIVATE KEY-----/.test(raw)) {
+              key = crypto.createPrivateKey(raw);
+            } else {
+              const compact = raw.replace(/\s+/g, "");
+              if (!/^[A-Za-z0-9+/]+={0,2}$/.test(compact) || compact.length % 4 !== 0) {
+                throw new Error("Secret is not canonical Base64.");
+              }
+              const decoded = Buffer.from(compact, "base64");
+              if (decoded.toString("base64") !== compact) throw new Error("Base64 round-trip failed.");
+              if (decoded.subarray(0, 24).toString("ascii").includes("-----BEGIN")) {
+                key = crypto.createPrivateKey(decoded.toString("utf8"));
+              } else {
+                try {
+                  key = crypto.createPrivateKey({ key: decoded, format: "der", type: "pkcs8" });
+                } catch {
+                  key = crypto.createPrivateKey({ key: decoded, format: "der", type: "pkcs1" });
+                }
+              }
+            }
           } catch {
-            console.error("::error::Signing key is not a valid PKCS#8 DER private key.");
+            console.error("::error::Signing secret is not valid PEM, Base64-PEM, PKCS#8 DER, or PKCS#1 DER.");
             process.exit(1);
           }
-          fs.writeFileSync(path.join(process.env.RUNNER_TEMP, "mizan-private-key.b64"), value, { mode: 0o600 });
-          console.log("PASS: GitHub signing secret is strict Base64 containing a valid PKCS#8 key.");
+          if (key.asymmetricKeyType !== "rsa") {
+            console.error("::error::Bakery license signing key must be RSA.");
+            process.exit(1);
+          }
+          const worker = fs.readFileSync("src/index.js", "utf8");
+          const match = worker.match(/EXPECTED_APP_PUBLIC_KEY_DER_B64 = "([^"]+)"/);
+          if (!match) {
+            console.error("::error::Could not read the app's expected public key.");
+            process.exit(1);
+          }
+          const publicDer = Buffer.from(match[1], "base64");
+          const publicKey = crypto.createPublicKey({ key: publicDer, format: "der", type: "spki" });
+          const privateDer = key.export({ format: "der", type: "pkcs8" });
+          const probe = Buffer.from("Al-Mizan Bakery key-pair check");
+          const signature = crypto.sign("RSA-SHA256", probe, key);
+          if (!crypto.verify("RSA-SHA256", probe, publicKey, signature)) {
+            console.error("::error::Private key does not match the public key embedded in the bakery app.");
+            process.exit(1);
+          }
+          const temp = process.env.RUNNER_TEMP;
+          fs.writeFileSync(path.join(temp, "bakery-license-private.b64"), privateDer.toString("base64"), { mode: 0o600 });
+          fs.writeFileSync(path.join(temp, "bakery-license-public.b64"), publicDer.toString("base64"), { mode: 0o600 });
+          console.log("PASS: private key normalized to PKCS#8 and cryptographically matches the app public key.");
           NODE
-          cat "$RUNNER_TEMP/mizan-private-key.b64" | npx --yes wrangler@4 secret put LICENSE_PRIVATE_KEY_PKCS8_B64 --config wrangler.toml
-          rm -f "$RUNNER_TEMP/mizan-private-key.b64"
+
+      - name: Apply idempotent D1 licensing schema
+        working-directory: licensing/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: b2f59f3997ad2918941d4d261370d1b4
+        run: npx --yes wrangler@4 d1 execute al-mizan-bakery-licenses --remote --file=../schema.sql --config wrangler.toml
+
+      - name: Synchronize validated signing keys to Cloudflare
+        working-directory: licensing/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 secret put LICENSE_PRIVATE_KEY_PKCS8_B64 --config wrangler.toml < "$RUNNER_TEMP/bakery-license-private.b64"
+          npx --yes wrangler@4 secret put LICENSE_PUBLIC_KEY_DER_B64 --config wrangler.toml < "$RUNNER_TEMP/bakery-license-public.b64"
+          rm -f "$RUNNER_TEMP/bakery-license-private.b64" "$RUNNER_TEMP/bakery-license-public.b64"
+
+      - name: Deploy only the bakery licensing Worker
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: b2f59f3997ad2918941d4d261370d1b4
+          workingDirectory: licensing/worker
+          command: deploy --config wrangler.toml
 
       - name: Check public health endpoint
         shell: bash
@@ -92,22 +136,16 @@ jobs:
           set -euo pipefail
           response="$(curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 20 https://al-mizan-bakery-licensing.moh1442010.workers.dev/health)"
           echo "$response"
-          node -e 'const x=JSON.parse(process.argv[1]); if (x.ok !== true || x.service !== "al-mizan-bakery-licensing" || x.mode !== "manual-payment-review") { console.error("::error::Worker health response is invalid."); process.exit(1); }' "$response"
+          node -e 'const x=JSON.parse(process.argv[1]); if (x.ok !== true || x.service !== "al-mizan-bakery-licensing" || x.mode !== "manual-payment-review") process.exit(1)' "$response"
 
-      - name: Verify Production admin login secrets
+      - name: Verify production admin login configuration
         run: |
           response="$(curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 20 https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/admin-config)"
           echo "$response"
-          node -e 'const x=JSON.parse(process.argv[1]); if (x.adminPasswordConfigured !== true) { console.error("::error::Set ADMIN_PASSWORD (32+ random characters) as a Worker secret before deployment."); process.exit(1); }' "$response"
+          node -e 'const x=JSON.parse(process.argv[1]); if (x.adminPasswordConfigured !== true) { console.error("::error::Configure ADMIN_PASSWORD or the supported legacy Admin_BassworD Worker secret."); process.exit(1); }' "$response"
 
-      - name: Verify Production signing key configuration
+      - name: Verify production signing key configuration and live key pair
         run: |
-          response="$(curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 20 https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/signing-config)"
-          echo "$response"
-          node -e 'const x=JSON.parse(process.argv[1]); if (x.privateKeyConfigured !== true || x.publicKeyConfigured !== true || x.publicKeyMatchesApp !== true || !["pkcs8","pkcs1-convertible"].includes(x.privateKeyFormat)) { console.error("::error::Production signing configuration is invalid. Require a supported private-key encoding and the app-matching public key. Update Worker secrets LICENSE_PRIVATE_KEY_PKCS8_B64 and LICENSE_PUBLIC_KEY_DER_B64, then redeploy."); process.exit(1); }' "$response"
-
-      - name: Verify live signing pair with a real signature
-        run: |
-          response="$(curl --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 20 https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/signing-pair)"
+          response="$(curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 20 https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/signing-pair)"
           echo "$response"
           node -e 'const x=JSON.parse(process.argv[1]); if (x.signingReady !== true || x.signingPairMatches !== true) { console.error("::error::Live signing-pair test failed: " + (x.error || "UNKNOWN")); process.exit(1); }' "$response"
