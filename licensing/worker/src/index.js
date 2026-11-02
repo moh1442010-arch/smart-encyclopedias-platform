@@ -198,7 +198,7 @@ async function issueToken(env, deviceId, plan) {
   const key = await importPrivateKey(env);
   const now = Math.floor(Date.now() / 1000);
   const expires = plan === "lifetime" ? 0 : now + PLANS[plan].seconds;
-  const appVersion = cleanText(env.APP_VERSION || "2.6.15", 32);
+  const appVersion = cleanText(env.APP_VERSION || "2.6.16", 32);
   // This exact payload format is consumed by MainActivity.verifyLicenseToken().
   const payload = `app=${APP_ID};device=${deviceId};plan=${plan};max_version=any;expires=${expires}`;
   const bytes = encoder.encode(payload);
@@ -242,7 +242,7 @@ async function handle(request, env) {
   if (url.pathname === "/diagnostics/admin-config" && request.method === "GET") {
     return json({
       adminPasswordConfigured: Boolean(env.ADMIN_PASSWORD && env.ADMIN_PASSWORD.length >= 32),
-      appVersion: cleanText(env.APP_VERSION || "2.6.15", 32)
+      appVersion: cleanText(env.APP_VERSION || "2.6.16", 32)
     });
   }
 
@@ -250,14 +250,14 @@ async function handle(request, env) {
     return json({
       ...signingDiagnostics(env),
       privateKeyFormat: privateKeyFormat(env.LICENSE_PRIVATE_KEY_PKCS8_B64),
-      appVersion: cleanText(env.APP_VERSION || "2.6.15", 32)
+      appVersion: cleanText(env.APP_VERSION || "2.6.16", 32)
     });
   }
 
   if (url.pathname === "/diagnostics/signing-pair" && request.method === "GET") {
     try {
       await importPrivateKey(env);
-      return json({ signingPairMatches: true, signingReady: true, appVersion: cleanText(env.APP_VERSION || "2.6.15", 32) });
+      return json({ signingPairMatches: true, signingReady: true, appVersion: cleanText(env.APP_VERSION || "2.6.16", 32) });
     } catch (e) {
       const code = String(e && e.message || e);
       const allowedCodes = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH", "LICENSE_PRIVATE_KEY_INVALID", "LICENSE_PUBLIC_KEY_INVALID"];
@@ -267,7 +267,7 @@ async function handle(request, env) {
         error: allowedCodes.includes(code) ? code : "LICENSE_SIGNING_INTERNAL_ERROR",
         ...signingDiagnostics(env),
         privateKeyFormat: privateKeyFormat(env.LICENSE_PRIVATE_KEY_PKCS8_B64),
-        appVersion: cleanText(env.APP_VERSION || "2.6.15", 32)
+        appVersion: cleanText(env.APP_VERSION || "2.6.16", 32)
       }, 503);
     }
   }
@@ -287,7 +287,7 @@ async function handle(request, env) {
     if (!customer || !contact || !receiptRef || !validDevice(deviceId) || !PLANS[plan]) {
       return json({ error: "INVALID_FIELDS" }, 400);
     }
-    const appVersion = cleanText(env.APP_VERSION || "2.6.15", 32);
+    const appVersion = cleanText(env.APP_VERSION || "2.6.16", 32);
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     await env.DB.prepare(
@@ -316,7 +316,7 @@ async function handle(request, env) {
     if (!await verifyAdminSession(request,env)) return json({error:"UNAUTHORIZED"},401);
     try {
       await importPrivateKey(env);
-      return json({ ok: true, publicKeyMatchesApp: true, appVersion: cleanText(env.APP_VERSION || "2.6.15", 32) });
+      return json({ ok: true, publicKeyMatchesApp: true, appVersion: cleanText(env.APP_VERSION || "2.6.16", 32) });
     } catch (e) {
       const code = String(e && e.message || e);
       const allowedCodes = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH", "LICENSE_PRIVATE_KEY_INVALID", "LICENSE_PUBLIC_KEY_INVALID"];
