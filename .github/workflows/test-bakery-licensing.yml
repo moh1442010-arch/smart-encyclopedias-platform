@@ -27,6 +27,8 @@ jobs:
           node-version: "22"
       - name: Check Worker JavaScript syntax
         run: node --check licensing/worker/src/index.js
+      - name: Check safe local signing-key validator syntax
+        run: node --check tools/validate-bakery-license-key.mjs
       - name: Run Worker configuration regression tests
         run: node --test licensing/worker/tests/*.test.mjs
       - name: Validate SQL schema
