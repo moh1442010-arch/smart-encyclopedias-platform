@@ -65,8 +65,14 @@ function clampInt(v, min, max, fallback) {
   return Number.isInteger(n) ? Math.min(max, Math.max(min, n)) : fallback;
 }
 
+function adminLicenseKey(env) {
+  // Support the legacy Cloudflare secret name while preferring the canonical binding.
+  const primary = String(env.LICENSE_ADMIN_KEY || "").trim();
+  return primary || String(env.Admin_Api_key || "").trim();
+}
+
 function isAdmin(request, env) {
-  const expected = String(env.LICENSE_ADMIN_KEY || "").trim();
+  const expected = adminLicenseKey(env);
   const suppliedHeader = String(request.headers.get("x-admin-key") || "").trim();
   const bearer = String(request.headers.get("authorization") || "");
   const suppliedBearer = bearer.replace(/^Bearer\s+/i, "").trim();
@@ -929,7 +935,7 @@ export default {
           service: "smart-encyclopedias-delivery",
           status: "online",
           version: "kv-delivery-v9-approval-diagnostics",
-          adminConfigured: Boolean(String(env.LICENSE_ADMIN_KEY || "").trim()),
+          adminConfigured: adminLicenseKey(env).length >= 32,
           book: BOOK_KEY
         }, 200, env);
       }
