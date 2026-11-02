@@ -68,7 +68,21 @@ function signingDiagnostics(env) {
   };
 }
 function decodeBase64Value(value) {
-  return fromBase64(value.replace(/\s+/g, ""));
+  let normalized = String(value || "").trim();
+  // Accept surrounding quotes, whitespace, and base64url values pasted into Worker secrets.
+  if ((normalized.startsWith('"') && normalized.endsWith('"')) ||
+      (normalized.startsWith("'") && normalized.endsWith("'"))) {
+    normalized = normalized.slice(1, -1).trim();
+  }
+  normalized = normalized.replace(/\\r/g, "").replace(/\\n/g, "").replace(/\\s+/g, "");
+  normalized = normalized.replace(/-/g, "+").replace(/_/g, "/");
+  if (!normalized || !/^[A-Za-z0-9+/]*={0,2}$/.test(normalized)) {
+    throw new Error("LICENSE_BASE64_INVALID_CHARACTERS");
+  }
+  const unpadded = normalized.replace(/=+$/g, "");
+  if (unpadded.length % 4 === 1) throw new Error("LICENSE_BASE64_INVALID_LENGTH");
+  normalized = unpadded + "=".repeat((4 - (unpadded.length % 4)) % 4);
+  return fromBase64(normalized);
 }
 function derLength(length) {
   if (length < 128) return new Uint8Array([length]);
@@ -133,7 +147,11 @@ function privateKeyFormat(value) {
     if (der[versionEnd] === 0x30) return "pkcs8";
     if (der[versionEnd] === 0x02) return "pkcs1-convertible";
     return "der-unrecognized";
-  } catch { return "invalid-encoding"; }
+  } catch (error) {
+    const code = String(error && error.message || "");
+    if (code.startsWith("LICENSE_BASE64_")) return "invalid-base64";
+    return "invalid-encoding";
+  }
 }
 async function importPrivateKey(env) {
   const diagnostics = signingDiagnostics(env);
