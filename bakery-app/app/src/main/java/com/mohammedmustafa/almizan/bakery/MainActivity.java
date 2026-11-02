@@ -268,11 +268,8 @@ public class MainActivity extends Activity {
             String plan = fields.get("plan");
             if (!"monthly".equals(plan) && !"annual".equals(plan) && !"lifetime".equals(plan)) return false;
             String maxVersion = fields.get("max_version");
-            if ("lifetime".equals(plan)) {
-                if (!BuildConfig.VERSION_NAME.equals(maxVersion)) return false;
-            } else if (!"any".equals(maxVersion)) {
-                return false;
-            }
+            // Lifetime purchases are permanent across all future app versions.
+            if (!"any".equals(maxVersion)) return false;
             long expires = Long.parseLong(fields.get("expires"));
             if (expires == 0L) return true;
             android.content.SharedPreferences prefs = getPreferences(0);
@@ -851,7 +848,7 @@ public class MainActivity extends Activity {
         }catch(Exception e){toast("تعذر حفظ التوزيع: "+e.getMessage());}}));dlg.show();
     }
     private void addDistributionTableRow(LinearLayout table,java.util.List<EditText[]> rows,String customer,String qty,String cash,String bank,String ref,String debt,String diff){
-        LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);EditText name=ruledCell(customer,"العميل",false);name.setOnClickListener(v->chooseRegularCustomer(name));
+        LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);EditText name=ruledCell(customer,"العميل",false);name.setOnLongClickListener(v->{chooseRegularCustomer(name);return true;});
         EditText[] cells={name,ruledCell(qty,"العيش",true),ruledCell(cash,"نقدي",true),ruledCell(bank,"بنكك",true),ruledCell(ref,"رقم العملية",false),ruledCell(debt,"ديون",true),ruledCell(diff,"فرق السعر",true)};
         for(EditText e:cells){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(1,1,1,1);row.addView(e,lp);}table.addView(row);rows.add(cells);
     }
