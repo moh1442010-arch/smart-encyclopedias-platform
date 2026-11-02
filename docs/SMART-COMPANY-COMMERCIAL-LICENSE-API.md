@@ -59,6 +59,8 @@ Example request body (do not include a real secret here):
 - This is a first licensing implementation, not a complete payment platform. Payments are still manually verified and license issuance is owner-controlled.
 - Google Play Billing is not integrated. If selling app functionality through Google Play, review the current Play Billing policy and integrate its purchase verification/backend lifecycle appropriately.
 - The app uses Android ID for device binding; this is not hardware DRM and may change in some device/profile scenarios.
+- Owner-controlled device transfer reset is implemented at `POST /api/app-license/admin/reset-device`. It requires `approved: true`, a valid license ID, and a reason of at least eight characters. The action clears only the device binding, records an audit event, preserves customer data, and refuses revoked licenses.
+- The Worker seeds the approved 24-price catalogue (four plans, three terms, SDG and USD) using `INSERT OR IGNORE`. Existing owner-adjusted price rows are not overwritten.
 - The app allows a cached valid entitlement for up to 72 hours without connectivity. Test clock changes, reinstall, device replacement, expired monthly/annual terms, and concurrent activation.
 - Monthly and annual terms expire after 30 and 365 days respectively. Owner-approved renewals are supported by the admin endpoint; automated payment-provider webhooks are not implemented.
 - A perpetual license has no expiry but is tied to one device.
