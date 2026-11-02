@@ -40,6 +40,5 @@ jobs:
           set -euo pipefail
           response="$(curl --silent --show-error https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/signing-pair)"
           echo "$response"
-          node -e 'const x=JSON.parse(process.argv[1]); if (x.signingReady !== true || x.signingPairMatches !== true) { console.error("::error::Cloudflare Worker signing is not ready: " + (x.error || "UNKNOWN") + ". No token was issued."); process.exit(1); }'
-          <<< "$response"
+          node -e 'const x=JSON.parse(process.argv[1]); if (x.signingReady !== true || x.signingPairMatches !== true) { console.error("::error::Cloudflare Worker signing is not ready: " + (x.error || "UNKNOWN") + ". No token was issued."); process.exit(1); }' "$response"
           echo "PASS: Cloudflare signed and verified a test message against the app public key. No customer license was issued."
