@@ -9,8 +9,8 @@
  *   node tools/bakery-license-issuer.mjs --key /secure/path/bakery-license-private.pem --device DEVICE_ID --plan annual
  *   node tools/bakery-license-issuer.mjs --key /secure/path/bakery-license-private.pem --device DEVICE_ID --plan lifetime
  *
- * Monthly/annual tokens expire after 30/365 days. Lifetime tokens apply only to the
- * exact app version encoded below, matching the app's current verification policy.
+ * Monthly/annual tokens expire after 30/365 days. New lifetime tokens remain valid
+ * across future app versions; the app still accepts legacy 2.6.15 lifetime tokens.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -18,7 +18,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const APP_ID = "com.mohammedmustafa.almizan.bakery";
-const CURRENT_APP_VERSION = "2.6.15";
+const CURRENT_APP_VERSION = "2.6.16";
 const EXPECTED_PUBLIC_KEY_DER_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvsK66CYxt4X7R9GcVaJ0FjrheMAkFpzbirdz7/X/lj8UAuqUabNOPN3R5dGuZro90i+raIyngTz+VxRxLcNPRQru4VzWIDLsoBEwi/CrsOaMJFgVLom7jYXFjQ5P25TO5hRxzPN8ZOOG1MTo8j6ipgPOKY5be6Gmsj8R03SbulYnVO8STWC4bSkqwvV9YlEIpZwnyAJVbWHbE4JSKiCC/TMOcfrBgGG0W7qCJeEjnUKPfHAtH85ayZjBQwMIQx+z1CoTFWrqKXywSWN65G7yZbHwsnREovRprxjyVHqmTtLd45VyNQU2zXBKchzkwnpiG1zeD8kfdDeACeaAmxbsiwIDAQAB";
 
 function fail(message) {
@@ -69,7 +69,7 @@ if (actualPublicKey !== EXPECTED_PUBLIC_KEY_DER_B64) {
 }
 const now = Math.floor(Date.now() / 1000);
 const expires = plan === "monthly" ? now + 30 * 86400 : plan === "annual" ? now + 365 * 86400 : 0;
-const maxVersion = plan === "lifetime" ? CURRENT_APP_VERSION : "any";
+const maxVersion = "any";
 const payload = `app=${APP_ID};device=${device};plan=${plan};max_version=${maxVersion};expires=${expires}`;
 const payload64 = Buffer.from(payload, "utf8").toString("base64url");
 const signature64 = crypto.sign("RSA-SHA256", Buffer.from(payload, "utf8"), privateKey).toString("base64url");

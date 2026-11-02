@@ -66,6 +66,12 @@ public final class BakeryMath {
         return Math.subtractExact(Math.subtractExact(Math.subtractExact(Math.subtractExact(Math.subtractExact(salesRevenue,spoilageCost),wages),expenses),operatingCost),priceDifference);
     }
 
+    /** Approved bakery margin: total cash, bank transfers and debts less daily consumed operating cost. */
+    public static long salesLessOperatingCost(long totalSalesAndReceivables,long dailyOperatingCost) {
+        if(totalSalesAndReceivables<0 || dailyOperatingCost<0) throw new IllegalArgumentException("Negative amount");
+        return Math.subtractExact(totalSalesAndReceivables,dailyOperatingCost);
+    }
+
     /** Compatibility overload for calculations where no separate price difference is recorded. */
     public static long netMargin(long productionValue,long spoilageValue,long wages,long expenses,long operatingCost) {
         return netMargin(productionValue,spoilageValue,wages,expenses,operatingCost,0L);

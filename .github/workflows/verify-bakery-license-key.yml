@@ -3,6 +3,8 @@ name: Verify Al-Mizan Bakery Signing Configuration
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     paths:
       - ".github/workflows/verify-bakery-license-key.yml"
       - "bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java"
@@ -32,7 +34,7 @@ jobs:
           test "$APP_KEY" = "$ISSUER_KEY" || { echo "::error::App and offline issuer public keys differ."; exit 1; }
           test "$APP_KEY" = "$WORKER_KEY" || { echo "::error::App and Worker public keys differ."; exit 1; }
           echo "PASS: App, offline issuer, and Cloudflare Worker public keys are identical."
-          echo "Private keys are intentionally not stored in GitHub Actions."
+          echo "This verifier never loads private-key material. The deployment workflow uses the encrypted Actions secret only to validate and synchronize the key into the Cloudflare Worker secret store."
 
       - name: Verify live Cloudflare signing pair without exposing secrets
         shell: bash

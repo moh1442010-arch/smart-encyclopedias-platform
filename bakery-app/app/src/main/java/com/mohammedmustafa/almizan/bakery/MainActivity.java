@@ -210,7 +210,21 @@ public class MainActivity extends Activity {
         }
     }
 
+    // Legacy UUID is retained so licenses issued to existing installations remain valid after upgrade.
+    private String legacyDeviceId() {
+        return getPreferences(0).getString("license_device_id", null);
+    }
+
+    // Android ID is stable across normal app reinstalls for the same Android user/device/signing key.
+    // Prefix it to keep its namespace distinct from legacy UUID identifiers.
     private String deviceId() {
+        String androidId = android.provider.Settings.Secure.getString(
+            getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
+        if (androidId != null && androidId.matches("(?i)[0-9a-f]{16}")) {
+            return "a" + androidId.toLowerCase(Locale.US);
+        }
+
+        // Fallback for devices where ANDROID_ID is unavailable or malformed.
         android.content.SharedPreferences prefs = getPreferences(0);
         String id = prefs.getString("license_device_id", null);
         if (id == null || id.trim().isEmpty()) {
@@ -246,15 +260,17 @@ public class MainActivity extends Activity {
                 fields.put(field.substring(0, at), field.substring(at + 1));
             }
             if (!"com.mohammedmustafa.almizan.bakery".equals(fields.get("app"))) return false;
-            if (!deviceId().equals(fields.get("device"))) return false;
+            String licensedDevice = fields.get("device");
+            // Accept the old locally stored UUID for already-issued licenses, while new orders use Android ID.
+            String legacyDevice = legacyDeviceId();
+            if (!deviceId().equals(licensedDevice) &&
+                (legacyDevice == null || !legacyDevice.equals(licensedDevice))) return false;
             String plan = fields.get("plan");
             if (!"monthly".equals(plan) && !"annual".equals(plan) && !"lifetime".equals(plan)) return false;
             String maxVersion = fields.get("max_version");
-            if ("lifetime".equals(plan)) {
-                if (!BuildConfig.VERSION_NAME.equals(maxVersion)) return false;
-            } else if (!"any".equals(maxVersion)) {
-                return false;
-            }
+            // New lifetime tokens use "any". Preserve existing 2.6.15 lifetime tokens too.
+            if (!"any".equals(maxVersion) &&
+                !("lifetime".equals(plan) && "2.6.15".equals(maxVersion))) return false;
             long expires = Long.parseLong(fields.get("expires"));
             if (expires == 0L) return true;
             android.content.SharedPreferences prefs = getPreferences(0);
@@ -454,10 +470,10 @@ public class MainActivity extends Activity {
         long production = 0L, margin = 0L;
         try {
             production = productionValue();
-            margin = BakeryMath.netMargin(salesRevenue(), spoilageCost(), wages(), expenseTotal(), costingTotal(), distributionDiff());
+            margin = BakeryMath.salesLessOperatingCost(salesRevenue(), costingTotal());
         } catch (Exception ignored) { /* keep the dashboard available if a daily record needs correction */ }
         addMetricTile(second, "production", "💵 قيمة الإنتاج", fmt(production) + " ج", "بحسب سعر القطعيات");
-        addMetricTile(second, "margin", "📈 هامش الربح", fmt(margin) + " ج", "تقديري بعد التكاليف");
+        addMetricTile(second, "margin", "📈 هامش الربح", fmt(margin) + " ج", "التحصيل ناقص تكلفة تشغيل اليوم");
         content.addView(second);
     }
 
@@ -774,92 +790,85 @@ public class MainActivity extends Activity {
     }
 
     private void openWindowTable() {
-        JSONObject saved=store.get(day,"window");
-        ScrollView scroll=new ScrollView(this);
-        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(8,8,8,12); scroll.addView(box);
-        box.addView(text("جدول بيع الشباك والتحصيل — أدخل إجمالي كل طريقة تحصيل مرة واحدة فقط. لا تُعد إدخال مبيعات التوزيع هنا.",14));
-        LinearLayout table=new LinearLayout(this); table.setOrientation(LinearLayout.VERTICAL); table.setPadding(2,2,2,2); table.setBackground(rounded(Color.rgb(100,116,139),0));
-        LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL); header.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        String[] titles={"النقد","تحويل بنكك","رقم العملية","ديون"};
-        for(String title:titles) { TextView h=ruledHeading(title); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f); lp.setMargins(1,1,1,1); header.addView(h,lp); }
-        table.addView(header);
-        LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL); row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        EditText cash=ruledCell(saved.optString("cash",""),"المبلغ",true);
-        EditText bank=ruledCell(saved.optString("bank",""),"المبلغ",true);
-        EditText ref=ruledCell(saved.optString("bank_ref",""),"رقم العملية",false);
-        EditText debt=ruledCell(saved.optString("debt",""),"المبلغ",true);
-        for(EditText cell:new EditText[]{cash,bank,ref,debt}) { LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f); lp.setMargins(1,1,1,1); row.addView(cell,lp); }
-        table.addView(row); box.addView(table);
-        box.addView(text("ملاحظات بيع الشباك",14));
-        EditText notes=ruledCell(saved.optString("notes",""),"ملاحظات اختيارية",false); notes.setGravity(Gravity.TOP|Gravity.RIGHT); notes.setMinLines(2); box.addView(notes);
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("بيع الشباك والتحصيل — "+day).setView(scroll)
-            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ الجدول",null).create();
-        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
-            try {
-                long c=parseLong(cash.getText().toString()), b=parseLong(bank.getText().toString()), d=parseLong(debt.getText().toString());
-                if(c<0||b<0||d<0) throw new IllegalArgumentException("المبالغ لا تقبل القيم السالبة.");
-                JSONObject record=new JSONObject(); record.put("cash",String.valueOf(c)); record.put("bank",String.valueOf(b));
-                record.put("bank_ref",ref.getText().toString().trim()); record.put("debt",String.valueOf(d)); record.put("notes",notes.getText().toString().trim());
-                store.put(day,"window",record); updateStatus(); toast("تم حفظ جدول بيع الشباك المسطّر."); dialog.dismiss();
-            } catch(Exception ex) { toast("لم يُحفظ جدول الشباك: "+ex.getMessage()); }
-        }));
-        dialog.show();
+        JSONObject saved=store.get(day,"window"); ScrollView sc=new ScrollView(this);
+        LinearLayout box=new LinearLayout(this);box.setOrientation(1);box.setPadding(8,8,8,12);sc.addView(box);
+        box.addView(text("النقد والديون، ثم أضف كل تحويل بنكك في صف مستقل بالمبلغ ورقم العملية.",14));
+        EditText cash=ruledCell(saved.optString("cash",""),"إجمالي النقد",true),debt=ruledCell(saved.optString("debt",""),"إجمالي الديون",true);
+        box.addView(text("النقد",14));box.addView(cash);box.addView(text("الديون",14));box.addView(debt);
+        box.addView(text("تحويلات بنكك",15));LinearLayout table=new LinearLayout(this);table.setOrientation(1);
+        java.util.List<EditText[]> rows=new java.util.ArrayList<>();
+        String raw=normalizeRows(saved.optString("bank_transfers",""));
+        for(String line:raw.split("\\r?\\n"))if(!line.trim().isEmpty()){String[] p=line.split("\\|",-1);addBankTransferRow(table,rows,p[0].trim(),p.length>1?p[1].trim():"");}
+        if(rows.isEmpty()){long old=saved.optLong("bank",0);if(old>0||!saved.optString("bank_ref","").isEmpty())addBankTransferRow(table,rows,String.valueOf(old),saved.optString("bank_ref",""));else addBankTransferRow(table,rows,"","");}
+        box.addView(table);Button add=button("＋ إضافة تحويل بنكك");box.addView(add);
+        TextView total=text("إجمالي بنكك: 0",15);box.addView(total);
+        Runnable calc=()->{try{long n=0;for(EditText[] x:rows)if(!x[0].getText().toString().trim().isEmpty())n=Math.addExact(n,parseLong(x[0].getText().toString()));total.setText("إجمالي بنكك: "+fmt(n));}catch(Exception e){total.setText("راجع مبالغ بنكك");}};
+        android.text.TextWatcher watcher=new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int c,int f){}public void onTextChanged(CharSequence s,int a,int b,int c){calc.run();}public void afterTextChanged(android.text.Editable e){}};
+        for(EditText[] x:rows)x[0].addTextChangedListener(watcher);
+        add.setOnClickListener(v->{addBankTransferRow(table,rows,"","");rows.get(rows.size()-1)[0].addTextChangedListener(watcher);calc.run();});calc.run();
+        EditText notes=ruledCell(saved.optString("notes",""),"ملاحظات",false);box.addView(notes);
+        AlertDialog dlg=new AlertDialog.Builder(this).setTitle("بيع الشباك — "+day).setView(sc).setNegativeButton("إلغاء",null).setPositiveButton("حفظ",null).create();
+        dlg.setOnShowListener(x->dlg.getButton(-1).setOnClickListener(v->{try{
+            long c=parseLong(cash.getText().toString()),d=parseLong(debt.getText().toString()),b=0;if(c<0||d<0)throw new IllegalArgumentException("المبالغ لا تقبل السالب");
+            StringBuilder tx=new StringBuilder();for(EditText[] row:rows){String a=row[0].getText().toString().trim(),ref=row[1].getText().toString().trim();if(a.isEmpty()&&ref.isEmpty())continue;long n=parseLong(a);if(n<=0||ref.isEmpty())throw new IllegalArgumentException("كل تحويل يحتاج مبلغًا موجبًا ورقم عملية");b=Math.addExact(b,n);if(tx.length()>0)tx.append("\n");tx.append(n).append(" | ").append(ref.replace("|","/"));}
+            JSONObject rec=new JSONObject();rec.put("cash",String.valueOf(c));rec.put("debt",String.valueOf(d));rec.put("bank",String.valueOf(b));rec.put("bank_transfers",tx.toString());rec.put("bank_ref","");rec.put("notes",notes.getText().toString());store.put(day,"window",rec);updateStatus();dlg.dismiss();toast("تم حفظ تحويلات الشباك.");
+        }catch(Exception e){toast("تعذر الحفظ: "+e.getMessage());}}));dlg.show();
+    }
+    private void addBankTransferRow(LinearLayout table,java.util.List<EditText[]> rows,String amount,String reference){
+        LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        EditText a=ruledCell(amount,"المبلغ",true),r=ruledCell(reference,"رقم العملية",false);
+        for(EditText e:new EditText[]{a,r}){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(1,1,1,1);row.addView(e,lp);}table.addView(row);rows.add(new EditText[]{a,r});
     }
 
     private void openDistributionTable() {
-        JSONObject saved=store.get(day,"distribution");
-        ScrollView scroll=new ScrollView(this);
-        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(8,8,8,12); scroll.addView(box);
-        box.addView(text("جدول التوزيع — كل عميل في صف مستقل. أدخل عدد الأرغفة والنقد والديون وفرق السعر. التحويلات عبر بنكك تُسجّل في جدول الشباك حتى لا تتكرر الحسابات.",14));
-        LinearLayout table=new LinearLayout(this); table.setOrientation(LinearLayout.VERTICAL); table.setPadding(2,2,2,2); table.setBackground(rounded(Color.rgb(100,116,139),0));
-        LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL); header.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        String[] titles={"العميل","عدد العيش","نقدي","ديون","فرق السعر"};
-        for(String title:titles) { TextView h=ruledHeading(title); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f); lp.setMargins(1,1,1,1); header.addView(h,lp); }
-        table.addView(header);
-        java.util.List<EditText[]> rows=new java.util.ArrayList<>();
-        String raw=normalizeRows(saved.optString("rows",""));
-        for(String line:raw.split("\\r?\\n")) {
-            if(line.trim().isEmpty()) continue;
-            String[] p=line.split("\\|",-1);
-            if(p.length>=6) {
-                addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),p[3].trim(),p[5].trim());
-            } else if(p.length>=4) {
-                addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),p[3].trim(),p.length>4?p[4].trim():"0");
-            } else addDistributionTableRow(table,rows,p.length>0?p[0].trim():"","","","","");
+        JSONObject saved=store.get(day,"distribution");ScrollView sc=new ScrollView(this);
+        LinearLayout box=new LinearLayout(this);box.setOrientation(1);box.setPadding(8,8,8,12);sc.addView(box);
+        box.addView(text("كل عميل في صف مستقل. أدخل النقدي وبنكك ورقم العملية والديون وفرق السعر. العملاء الثابتون محفوظون للاستخدام المتكرر.",14));
+        Button manage=button("إدارة العملاء الثابتين");manage.setOnClickListener(v->manageRegularCustomers());box.addView(manage);
+        LinearLayout table=new LinearLayout(this);table.setOrientation(1);java.util.List<EditText[]> rows=new java.util.ArrayList<>();
+        LinearLayout head=new LinearLayout(this);head.setOrientation(0);head.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        for(String title:new String[]{"العميل","العيش","نقدي","بنكك","رقم العملية","ديون","فرق السعر"}){TextView h=ruledHeading(title);head.addView(h,new LinearLayout.LayoutParams(0,-2,1f));}table.addView(head);
+        String raw=normalizeRows(saved.optString("rows",""));for(String line:raw.split("\\r?\\n")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);
+            if(p.length>=7)addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),p[3].trim(),p[4].trim(),p[5].trim(),p[6].trim());
+            else if(p.length>=6)addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),p[4].trim(),"",p[3].trim(),p[5].trim());
+            else if(p.length>=5)addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),"","",p[3].trim(),p[4].trim());
+            else addDistributionTableRow(table,rows,p[0].trim(),"","","","","","");
         }
-        if(rows.isEmpty()) addDistributionTableRow(table,rows,"","","","","");
-        box.addView(table);
-        Button add=button("＋ إضافة عميل"); add.setOnClickListener(v->addDistributionTableRow(table,rows,"","","","","")); box.addView(add);
-        box.addView(text("ملاحظات التوزيع",14));
-        EditText notes=ruledCell(saved.optString("notes",""),"ملاحظات اختيارية",false); notes.setGravity(Gravity.TOP|Gravity.RIGHT); notes.setMinLines(2); box.addView(notes);
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("التوزيع — "+day).setView(scroll)
-            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ الجدول",null).create();
-        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
-            try {
-                StringBuilder out=new StringBuilder();
-                for(EditText[] row:rows) {
-                    String customer=row[0].getText().toString().trim();
-                    String qty=row[1].getText().toString().trim(), cash=row[2].getText().toString().trim();
-                    String debt=row[3].getText().toString().trim(), diff=row[4].getText().toString().trim();
-                    if(customer.isEmpty()&&qty.isEmpty()&&cash.isEmpty()&&debt.isEmpty()&&diff.isEmpty()) continue;
-                    if(customer.isEmpty()) throw new IllegalArgumentException("أدخل اسم العميل في كل صف مستخدم.");
-                    long q=parseLong(qty), c=parseLong(cash), d=parseLong(debt), f=parseLong(diff);
-                    if(q<0||c<0||d<0||f<0) throw new IllegalArgumentException("الكميات والمبالغ لا تقبل القيم السالبة.");
-                    if(out.length()>0) out.append("\n");
-                    out.append(customer.replace("|","/")).append(" | ").append(q).append(" | ").append(c).append(" | ").append(d).append(" | ").append(f);
-                }
-                JSONObject record=new JSONObject(); record.put("rows",out.toString()); record.put("notes",notes.getText().toString().trim());
-                store.put(day,"distribution",record); updateStatus(); toast("تم حفظ جدول التوزيع المسطّر."); dialog.dismiss();
-            } catch(Exception ex) { toast("لم يُحفظ جدول التوزيع: "+ex.getMessage()); }
-        }));
-        dialog.show();
+        if(rows.isEmpty())addDistributionTableRow(table,rows,"","","","","","","");box.addView(table);
+        Button add=button("＋ إضافة عميل");add.setOnClickListener(v->addDistributionTableRow(table,rows,"","","","","","",""));box.addView(add);
+        EditText notes=ruledCell(saved.optString("notes",""),"ملاحظات التوزيع",false);box.addView(notes);
+        AlertDialog dlg=new AlertDialog.Builder(this).setTitle("التوزيع — "+day).setView(sc).setNegativeButton("إلغاء",null).setPositiveButton("حفظ",null).create();
+        dlg.setOnShowListener(x->dlg.getButton(-1).setOnClickListener(v->{try{
+            StringBuilder out=new StringBuilder(),names=new StringBuilder();for(EditText[] row:rows){
+                String customer=row[0].getText().toString().trim(),q=row[1].getText().toString().trim(),c=row[2].getText().toString().trim(),b=row[3].getText().toString().trim(),ref=row[4].getText().toString().trim(),d=row[5].getText().toString().trim(),f=row[6].getText().toString().trim();
+                if(customer.isEmpty()&&q.isEmpty()&&c.isEmpty()&&b.isEmpty()&&ref.isEmpty()&&d.isEmpty()&&f.isEmpty())continue;if(customer.isEmpty())throw new IllegalArgumentException("اسم العميل مطلوب");
+                long nq=parseLong(q),nc=parseLong(c),nb=parseLong(b),nd=parseLong(d),nf=parseLong(f);if(nq<0||nc<0||nb<0||nd<0||nf<0)throw new IllegalArgumentException("لا تقبل القيم السالبة");if(nb>0&&ref.isEmpty())throw new IllegalArgumentException("رقم عملية بنكك مطلوب");if(nb==0&&!ref.isEmpty())throw new IllegalArgumentException("أدخل مبلغ بنكك مع رقم العملية");
+                if(out.length()>0)out.append("\n");out.append(customer.replace("|","/")).append(" | ").append(nq).append(" | ").append(nc).append(" | ").append(nb).append(" | ").append(ref.replace("|","/")).append(" | ").append(nd).append(" | ").append(nf);if(names.length()>0)names.append("\n");names.append(customer);
+            }
+            JSONObject rec=new JSONObject();rec.put("rows",out.toString());rec.put("notes",notes.getText().toString());store.put(day,"distribution",rec);mergeRegularCustomers(names.toString());updateStatus();dlg.dismiss();toast("تم حفظ بيانات التوزيع.");
+        }catch(Exception e){toast("تعذر حفظ التوزيع: "+e.getMessage());}}));dlg.show();
     }
-
-    private void addDistributionTableRow(LinearLayout table, java.util.List<EditText[]> rows, String customer, String qty, String cash, String debt, String diff) {
-        LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL); row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        EditText[] cells={ruledCell(customer,"العميل",false),ruledCell(qty,"عدد العيش",true),ruledCell(cash,"نقدي",true),ruledCell(debt,"ديون",true),ruledCell(diff,"فرق السعر",true)};
-        for(EditText cell:cells) { LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f); lp.setMargins(1,1,1,1); row.addView(cell,lp); }
-        table.addView(row,new LinearLayout.LayoutParams(-1,-2)); rows.add(cells);
+    private void addDistributionTableRow(LinearLayout table,java.util.List<EditText[]> rows,String customer,String qty,String cash,String bank,String ref,String debt,String diff){
+        LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);EditText name=ruledCell(customer,"العميل",false);name.setOnLongClickListener(v->{chooseRegularCustomer(name);return true;});
+        EditText[] cells={name,ruledCell(qty,"العيش",true),ruledCell(cash,"نقدي",true),ruledCell(bank,"بنكك",true),ruledCell(ref,"رقم العملية",false),ruledCell(debt,"ديون",true),ruledCell(diff,"فرق السعر",true)};
+        for(EditText e:cells){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(1,1,1,1);row.addView(e,lp);}table.addView(row);rows.add(cells);
+    }
+    private JSONObject regularCustomers(){return store.getLatest(day,"customers");}
+    private void chooseRegularCustomer(EditText target){
+        java.util.ArrayList<String> names=new java.util.ArrayList<>();for(String line:normalizeRows(regularCustomers().optString("rows","")).split("\\r?\\n")){String[] p=line.split("\\|",-1);if(p.length>0&&!p[0].trim().isEmpty())names.add(p[0].trim());}
+        if(names.isEmpty()){toast("أضف العملاء الثابتين أولًا");return;}String[] opts=names.toArray(new String[0]);new AlertDialog.Builder(this).setTitle("اختر العميل").setItems(opts,(d,w)->target.setText(opts[w])).setNegativeButton("إلغاء",null).show();
+    }
+    private void mergeRegularCustomers(String names){
+        try{java.util.LinkedHashMap<String,String> all=new java.util.LinkedHashMap<>();for(String line:normalizeRows(regularCustomers().optString("rows","")).split("\\r?\\n")){String[] p=line.split("\\|",-1);if(p.length>0&&!p[0].trim().isEmpty())all.put(p[0].trim(),p.length>1?p[1].trim():"عميل");}
+            for(String n:names.split("\\r?\\n"))if(!n.trim().isEmpty()&&!all.containsKey(n.trim()))all.put(n.trim(),"عميل");StringBuilder out=new StringBuilder();for(java.util.Map.Entry<String,String> e:all.entrySet()){if(out.length()>0)out.append("\n");out.append(e.getKey()).append(" | ").append(e.getValue());}JSONObject rec=new JSONObject();rec.put("rows",out.toString());store.put(day,"customers",rec);
+        }catch(Exception e){android.util.Log.w("AlMizanBakery","Customer save failed",e);}
+    }
+    private void manageRegularCustomers(){
+        EditText list=ruledCell(regularCustomers().optString("rows",""),"الاسم | دكان أو بقالة أو مطعم",false);list.setSingleLine(false);list.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE);list.setMinLines(7);list.setGravity(Gravity.TOP|Gravity.RIGHT);
+        new AlertDialog.Builder(this).setTitle("العملاء الثابتون").setMessage("سطر لكل عميل. مثال: دكان النيل | دكان").setView(list).setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{try{
+            java.util.LinkedHashMap<String,String> unique=new java.util.LinkedHashMap<>();for(String line:normalizeRows(list.getText().toString()).split("\\r?\\n")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);String name=p[0].trim(),type=p.length>1?p[1].trim():"عميل";if(name.isEmpty())throw new IllegalArgumentException("اسم العميل مطلوب");unique.put(name,type.isEmpty()?"عميل":type);}
+            StringBuilder out=new StringBuilder();for(java.util.Map.Entry<String,String> e:unique.entrySet()){if(out.length()>0)out.append("\n");out.append(e.getKey()).append(" | ").append(e.getValue());}JSONObject rec=new JSONObject();rec.put("rows",out.toString());store.put(day,"customers",rec);toast("تم حفظ "+unique.size()+" عميل ثابت.");
+        }catch(Exception e){toast("تعذر حفظ العملاء: "+e.getMessage());}}).show();
     }
 
     private void openCutsTable() {
@@ -1117,18 +1126,18 @@ public class MainActivity extends Activity {
                 } else if(module.equals("distribution")) {
                     long qty=parseLong(p[1]);
                     if(qty<0) throw new IllegalArgumentException();
-                    if(p.length>=6) {
-                        // Legacy row: customer | loaves | cash | debt | bank | price difference.
-                        long cash=parseLong(p[2]), debt=parseLong(p[3]), bank=parseLong(p[4]), diff=parseLong(p[5]);
-                        if(cash<0||debt<0||bank<0) throw new IllegalArgumentException();
-                        out.cash=Math.addExact(out.cash,cash); out.debt=Math.addExact(out.debt,debt);
-                        out.bank=Math.addExact(out.bank,bank); out.diff=Math.addExact(out.diff,diff);
+                    if(p.length>=7) {
+                        long cash=parseLong(p[2]),bank=parseLong(p[3]),debt=parseLong(p[5]),diff=parseLong(p[6]);
+                        if(cash<0||bank<0||debt<0||diff<0||(bank>0&&p[4].trim().isEmpty()))throw new IllegalArgumentException();
+                        out.cash=Math.addExact(out.cash,cash);out.bank=Math.addExact(out.bank,bank);out.debt=Math.addExact(out.debt,debt);out.diff=Math.addExact(out.diff,diff);
+                    } else if(p.length>=6) {
+                        long cash=parseLong(p[2]),debt=parseLong(p[3]),bank=parseLong(p[4]),diff=parseLong(p[5]);
+                        if(cash<0||debt<0||bank<0||diff<0)throw new IllegalArgumentException();
+                        out.cash=Math.addExact(out.cash,cash);out.debt=Math.addExact(out.debt,debt);out.bank=Math.addExact(out.bank,bank);out.diff=Math.addExact(out.diff,diff);
                     } else if(p.length>=5) {
-                        // Current ruled table: customer | loaves | cash | debt | price difference.
-                        long cash=parseLong(p[2]), debt=parseLong(p[3]), diff=parseLong(p[4]);
-                        if(cash<0||debt<0) throw new IllegalArgumentException();
-                        out.cash=Math.addExact(out.cash,cash); out.debt=Math.addExact(out.debt,debt);
-                        out.diff=Math.addExact(out.diff,diff);
+                        long cash=parseLong(p[2]),debt=parseLong(p[3]),diff=parseLong(p[4]);
+                        if(cash<0||debt<0||diff<0)throw new IllegalArgumentException();
+                        out.cash=Math.addExact(out.cash,cash);out.debt=Math.addExact(out.debt,debt);out.diff=Math.addExact(out.diff,diff);
                     } else {
                         long price=parseLong(p[2]), diff=parseLong(p[3]);
                         if(price<0||diff<0) throw new IllegalArgumentException();
@@ -1285,6 +1294,7 @@ public class MainActivity extends Activity {
     private long costingTotal() {
         long workUnits=val("cuts","work_units");
         JSONObject stock=store.get(day,"stock");
+        if(stock.length()==0) stock=store.getLatest(day,"stock");
         String raw=stock.optString("items_rows","");
         if(raw.trim().isEmpty()) raw=legacyStockRows(stock);
         long total=0L;
@@ -1302,29 +1312,39 @@ public class MainActivity extends Activity {
 
     private void showCosting() {
         try {
-            long production=productionValue(), cost=costingTotal();
-            long spoilage=spoilageCost(), labor=wages(), expenses=expenseTotal();
-            long beforeCost=Math.subtractExact(Math.subtractExact(Math.subtractExact(production,spoilage),labor),expenses);
-            long margin=BakeryMath.netMargin(salesRevenue(),spoilageCost(),labor,expenses,cost,distributionDiff());
-            String message="تاريخ التكلفة: "+day+
-                "\nقيمة القطعيات/الإنتاج: "+fmt(production)+" جنيه"+
-                "\n(-) قيمة التالف: "+fmt(spoilage)+" جنيه"+
-                "\n(-) يومية العمال: "+fmt(labor)+" جنيه"+
-                "\n(-) منصرفات المحل: "+fmt(expenses)+" جنيه"+
-                "\nالصافي قبل تكلفة التشغيل: "+fmt(beforeCost)+" جنيه"+
-                "\n(-) تكلفة الدقيق والوقود والخميرة والزيت والملح والأكياس: "+fmt(cost)+" جنيه"+
-                "\n\nهامش الربح التقديري النهائي: "+fmt(margin)+" جنيه"+
-                "\n\nحساب الدقيق مرتبط بعدد جوالات شغل اليوم. راجع أسعار المواد والتالف واليومية والمنصرفات، ولا تسجل المصروف نفسه مرتين.";
-            new AlertDialog.Builder(this).setTitle("🏭 حساب التشغيل والتكلفة — "+day).setMessage(message)
+            Totals dist=distribution();
+            long windowCash=val("window","cash"), windowDebt=val("window","debt");
+            long windowBank=Math.subtractExact(bankTotal(),dist.bank);
+            long total=salesRevenue(), cost=costingTotal();
+            long margin=BakeryMath.salesLessOperatingCost(total,cost);
+            String message="تقرير هامش الربح الحقيقي — "+day+
+                "\n\nتحصيل الشباك"+
+                "\nالنقدي: "+fmt(windowCash)+" جنيه"+
+                "\nبنكك: "+fmt(windowBank)+" جنيه"+
+                "\nالديون: "+fmt(windowDebt)+" جنيه"+
+                "\n\nتحصيل التوزيع"+
+                "\nالنقدي: "+fmt(dist.cash)+" جنيه"+
+                "\nبنكك: "+fmt(dist.bank)+" جنيه"+
+                "\nالديون: "+fmt(dist.debt)+" جنيه"+
+                "\n\nإجمالي البيع والتحصيل: "+fmt(total)+" جنيه"+
+                "\n(-) تكلفة تشغيل اليوم المستهلكة: "+fmt(cost)+" جنيه"+
+                "\n\nهامش الربح الحقيقي: "+fmt(margin)+" جنيه"+
+                "\n\nتشمل تكلفة التشغيل الدقيق والخميرة والزيت والأكياس والملح والحطب والغاز والجاز بحسب الكميات المستهلكة وأسعار الوحدات. لا تُكرر أي مادة في المنصرفات.";
+            new AlertDialog.Builder(this).setTitle("حساب التشغيل وهامش الربح — "+day).setMessage(message)
                 .setNegativeButton("إغلاق",null)
                 .setNeutralButton("تعديل بيانات التكلفة",(d,w)->openModule("costing"))
                 .setPositiveButton("مشاركة التقرير",(d,w)->shareReport(message)).show();
-        } catch(Exception ex) { toast("تعذر حساب التكلفة بسبب رقم كبير جدًا أو بيانات غير صحيحة. راجع الكميات والأسعار."); }
+        } catch(Exception ex) { toast("تعذر حساب هامش الربح. راجع التحصيل وكميات وأسعار مواد التشغيل."); }
     }
 
     private long cashTotal() { Totals d=distribution(); return Math.addExact(val("window","cash"),d.cash); }
     private long debtTotal() { Totals d=distribution(); return Math.addExact(val("window","debt"),d.debt); }
-    private long bankTotal() { Totals d=distribution(); return Math.addExact(val("window","bank"),d.bank); }
+    private long bankTotal() {
+        Totals d=distribution();JSONObject window=record("window");long windowBank=window.optLong("bank",0L);
+        String raw=normalizeRows(window.optString("bank_transfers",""));
+        if(!raw.trim().isEmpty()){windowBank=0L;for(String line:raw.split("\\r?\\n")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);if(p.length<2||p[1].trim().isEmpty())throw new IllegalArgumentException("رقم عملية بنكك غير مكتمل");long n=parseLong(p[0].trim());if(n<0)throw new IllegalArgumentException("مبلغ بنكك سالب");windowBank=Math.addExact(windowBank,n);}}
+        return Math.addExact(windowBank,d.bank);
+    }
     private long distributionDiff() { return distribution().diff; }
     private long accountedTotal() {
         return BakeryMath.accountedTotal(cashTotal(),debtTotal(),bankTotal(),distributionDiff(),wages(),expenseTotal(),spoilageValue());
@@ -1350,7 +1370,7 @@ public class MainActivity extends Activity {
                 "\nمنصرفات المحل: "+fmt(expenseTotal())+" جنيه"+
                 "\nقيمة التالف: "+fmt(spoilageValue())+" جنيه"+
                 "\nتكلفة التشغيل التقديرية (للمقارنة فقط): "+fmt(costingTotal())+" جنيه"+
-                "\nهامش الربح التقديري: "+fmt(BakeryMath.netMargin(salesRevenue(),spoilageCost(),wages(),expenseTotal(),costingTotal(),distributionDiff()))+" جنيه"+
+                "\nهامش الربح الحقيقي (التحصيل ناقص تكلفة التشغيل): "+fmt(BakeryMath.salesLessOperatingCost(salesRevenue(),costingTotal()))+" جنيه"+
                 "\n\nإجمالي البنود المسجلة: "+fmt(actual)+" جنيه"+
                 "\nفرق التسوية (المطلوب صفر): "+fmt(difference)+" جنيه"+
                 "\nالنتيجة: "+status+
@@ -1391,7 +1411,7 @@ public class MainActivity extends Activity {
         if (workMetric != null) workMetric.setText(fmt(val("cuts","work_units")) + " جوال");
         try {
             long production = productionValue();
-            long margin = BakeryMath.netMargin(salesRevenue(), spoilageCost(), wages(), expenseTotal(), costingTotal(), distributionDiff());
+            long margin = BakeryMath.salesLessOperatingCost(salesRevenue(), costingTotal());
             if (productionMetric != null) productionMetric.setText(fmt(production) + " ج");
             if (marginMetric != null) marginMetric.setText(fmt(margin) + " ج");
         } catch (Exception ex) {
@@ -1482,14 +1502,14 @@ public class MainActivity extends Activity {
             "4) القطعيات والإنتاج: أدخل عدد جوالات الدقيق المستخدمة، ثم سجل كل جوال في سطر مستقل: رقم الجوال | عدد الأرغفة، مثل 1 | 700 و2 | 800 و3 | 650. أدخل عدد الأرغفة التي تساوي 1000 جنيه حسب سعر مخبزك (3 أو 4 أو 5 أو أي رقم صحيح معتمد). قيمة الإنتاج = مجموع الأرغفة ÷ عدد الأرغفة لكل 1000 × 1000. مثال: 4000 ÷ 4 × 1000 = 1,000,000 جنيه.\n\n"+
             "5) تكلفة التشغيل: تُحسب من معدل استهلاك المادة لكل جوال × سعر وحدة المادة × عدد جوالات الشغل. مثال: استهلاك 1 باكو خميرة لكل جوال، وسعر الباكو 6000، وشغل 7 جوالات؛ تكلفة الخميرة 42,000 جنيه. سعر المخزون ليس تكلفة يومية إلا بقدر ما استُهلك بالفعل.\n\n"+
             "6) يومية العمال: سطر لكل عامل بالصيغة: الاسم | الوظيفة | عدد الشغل | أجر الوحدة. مثال: أحمد | خباز | 7 | 2000؛ أجره = 7 × 2000 = 14,000 جنيه. اجمع أجور العمال كلهم، ولا تدخل إجمالي أجرة العامل في خانة سعر الوحدة.\n\n"+
-            "7) بيع الشباك: سجل النقد المقبوض، الديون، وتحويلات بنكك/البنك كلًا في خانته. اكتب مرجع التحويل إن وجد. لا تسجل مبيعات التوزيع مرة أخرى ضمن الشباك.\n\n"+
-            "8) التوزيع: سطر لكل عميل: اسم العميل | عدد الأرغفة | نقدًا | ديون | بنكك | فرق السعر. افصل وسيلة التحصيل عن فرق السعر. مثال توضيحي: بقالة | 100 | 22000 | 0 | 0 | 3000. تأكد من أن مجموع المبالغ المسجلة يطابق البيع الفعلي المتفق عليه.\n\n"+
+            "7) بيع الشباك: سجل النقد والديون، ثم أضف كل تحويل بنكك في صف مستقل يحتوي المبلغ ورقم العملية. يجمع التطبيق التحويلات تلقائيًا. لا تسجل مبيعات التوزيع مرة أخرى ضمن الشباك.\n\n"+
+            "8) التوزيع: سطر لكل عميل: اسم العميل | عدد الأرغفة | نقدًا | مبلغ بنكك | رقم العملية | ديون | فرق السعر. احفظ أسماء الدكاكين والبقالات والمطاعم في قائمة العملاء الثابتين. مثال توضيحي: بقالة النيل | 100 | 22000 | 3000 | رقم العملية | 0 | 0. تأكد من أن مجموع المبالغ المسجلة يطابق البيع الفعلي المتفق عليه.\n\n"+
             "9) التالف: أدخل عدد الأرغفة التالفة وسبب التلف. تُحوّل الكمية إلى قيمة بحسب معيار سعر الأرغفة، وتدخل تكلفة التالف في حساب الربح وفق سعر التكلفة. لا تخصم قيمة التالف مرة أخرى كمنصرف إذا كانت محسوبة في بند التالف.\n\n"+
             "10) المنصرفات: سجل وجبات العمال والصيانة والمشتريات والمنصرفات الأخرى مع البيان والمبلغ. لا تسجل استهلاك مادة مخزنية كمنصرف نقدي مرة أخرى؛ تكلفة المادة تُحسب من المخزون ومعدل استهلاكها.\n\n"+
             "11) التسوية والمحاسب: راجع الإنتاج، مبيعات الشباك، التوزيع، النقد، بنكك، الديون، فرق السعر، الأجور، التالف والمنصرفات. فرق التسوية غير الصفري إشارة للمراجعة وليس شيئًا ينبغي إخفاؤه. ابحث عن عملية مكررة أو مبلغ ناقص أو وسيلة تحصيل مسجلة في الخانة الخطأ قبل إغلاق اليوم.\n\n"+
-            "12) معادلة هامش الربح المعتمدة: المبيعات الفعلية − تكلفة المواد المستهلكة − التالف بسعر التكلفة − أجور العمال − المنصرفات − فرق السعر. احذر التكرار: النقد والديون وبنكك هي طرق تحصيل للمبيعات وليست ثلاث مبيعات منفصلة. لا تخصم المادة نفسها كتكلفة تشغيل وكمنصرف نقدي في الوقت ذاته.\n\n"+
+            "12) معادلة هامش الربح المعتمدة: مجموع نقدي الشباك + بنكك الشباك + ديون الشباك + نقدي التوزيع + بنكك التوزيع + ديون التوزيع، ثم اطرح تكلفة تشغيل اليوم المستهلكة من الدقيق والخميرة والزيت والأكياس والملح والحطب والغاز والجاز. الناتج هو هامش الربح الحقيقي. لا تكرر التحويل أو تكلفة المادة.\n\n"+
             "13) الحفظ والنسخ الاحتياطي: البيانات تحفظ محليًا ويعمل التطبيق دون إنترنت في الوظائف الأساسية. صدّر نسخة احتياطية إلى مكان آمن، واختبر الاستعادة قبل تحديث التطبيق أو تغيير الهاتف. لا تشارك النسخة الاحتياطية مع غير المخولين لأنها قد تحتوي بيانات العملاء.\n\n"+
-            "14) الاشتراك والدعم: التجربة 7 أيام. الباقات: شهري 55,000 جنيه لمدة 30 يومًا، سنوي 550,000 جنيه لمدة 365 يومًا، وشراء مرة واحدة 1,050,000 جنيه لترخيص دائم لهذا الإصدار فقط. اختر الباقة وافتح بوابة الترخيص، وسجّل بيانات العميل ومرجع التحويل. بعد تسجيل الطلب اضغط إرسال إشعار واتساب للمالك. لن تصدر أي موافقة أو رخصة قبل أن يراجع المالك حساب بنكك ويتأكد من وصول المبلغ ثم يضغط موافقة في لوحة الإدارة. عند الموافقة يصدر الرمز تلقائيًا وفق الباقة المدفوعة، ويمكن إرساله للعميل عبر واتساب. لا ترسل الرقم السري أو رمز التحقق البنكي.\n\n"+
+            "14) الاشتراك والدعم: التجربة 7 أيام. الباقات: شهري 55,000 جنيه لمدة 30 يومًا، سنوي 550,000 جنيه لمدة 365 يومًا، وشراء مرة واحدة 1,050,000 جنيه لترخيص دائم يشمل جميع إصدارات التطبيق المستقبلية. اختر الباقة وافتح بوابة الترخيص، وسجّل بيانات العميل ومرجع التحويل. بعد تسجيل الطلب اضغط إرسال إشعار واتساب للمالك. لن تصدر أي موافقة أو رخصة قبل أن يراجع المالك حساب بنكك ويتأكد من وصول المبلغ ثم يضغط موافقة في لوحة الإدارة. عند الموافقة يصدر الرمز تلقائيًا وفق الباقة المدفوعة، ويمكن إرساله للعميل عبر واتساب. لا ترسل الرقم السري أو رمز التحقق البنكي.\n\n"+
             "15) حدود النسخة: هذه نسخة مراجعة. اختبر دورة يوم كاملة، ودقة المخزون والتسوية، والنسخ الاحتياطي والاستعادة على جهاز حقيقي قبل الاعتماد المالي أو الضريبي أو البيع التجاري.";
         ScrollView sc=new ScrollView(this);
         TextView body=text(guide,15); body.setPadding(16,12,16,12); body.setTextIsSelectable(true); sc.addView(body);
@@ -1506,7 +1526,7 @@ public class MainActivity extends Activity {
             "س: كيف أختار سعر تحويل الأرغفة؟\nج: أدخل عدد الأرغفة التي تساوي 1000 جنيه وفق سياسة مخبزك، مثل 3 أو 4 أو 5. راجع الرقم قبل حفظ القطعيات لأن تغييره يغيّر قيمة الإنتاج والتالف.\n\n"+
             "س: لماذا لا يساوي النقد قيمة الإنتاج؟\nج: لأن جزءًا من المبيعات قد يكون ديونًا أو تحويلات بنكك أو مبيعات توزيع. راجع كل وسيلة تحصيل ومبالغ العملاء، ولا تدخل مبيعات التوزيع مرة ثانية في الشباك.\n\n"+
             "س: كيف أسجل فرق السعر؟\nج: أدخله في خانة فرق السعر الخاصة بعميل التوزيع كما هو متفق عليه، وراجع أثره في التسوية والربح. لا تضف الفرق مرة ثانية إلى قيمة البيع إذا كان المبلغ الفعلي يشمله بالفعل.\n\n"+
-            "س: لماذا ظهر هامش الربح سالبًا أو أقل من المتوقع؟\nج: افحص معدل استهلاك المواد وسعر الوحدة، وعدد جوالات الشغل، والأجور، والتالف، والمنصرفات، وفرق السعر. تأكد من عدم تكرار المصروف أو المبيعات، ولا تغيّر المعادلة لإخفاء الفرق.\n\n"+
+            "س: لماذا ظهر هامش الربح سالبًا أو أقل من المتوقع؟\nج: راجع مجموع النقدي وبنكك والديون في الشباك والتوزيع، ثم راجع استهلاك الدقيق والخميرة والزيت والأكياس والملح والحطب والغاز والجاز وسعر وحدة كل مادة. تأكد من تسجيل كل تحويل مرة واحدة.\n\n"+
             "س: كيف أراجع خطأ في يوم سابق؟\nج: افتح التاريخ الصحيح وراجع القيود. إذا كانت هناك أيام لاحقة مسجلة، قد يمنع النظام تعديل المخزون السابق حفاظًا على التسلسل؛ راجع الأرصدة بالتاريخ ولا تحذف بيانات عشوائيًا.\n\n"+
             "س: هل يعمل التطبيق بدون إنترنت؟\nج: نعم، تُحفظ السجلات محليًا وتعمل الوظائف الأساسية دون اتصال. الإنترنت مطلوب للتواصل مع الدعم وتنزيل التحديثات، ولأي خدمة سحابية متاحة.\n\n"+
             "س: ماذا أفعل قبل تحديث التطبيق أو تغيير الهاتف؟\nج: صدّر نسخة احتياطية، واحفظها خارج الهاتف، ثم اختبر استعادتها. لا تحذف التطبيق قبل التأكد من أن النسخة الاحتياطية سليمة.\n\n"+
@@ -1867,7 +1887,7 @@ public class MainActivity extends Activity {
         }
         int restoreAll(JSONArray rows) throws Exception {
             java.util.ArrayList<ContentValues> prepared=new java.util.ArrayList<>();
-            java.util.HashSet<String> allowed=new java.util.HashSet<>(java.util.Arrays.asList("stock","cuts","workers","window","distribution","expenses","spoilage","costing","accounting","inventory_usage"));
+            java.util.HashSet<String> allowed=new java.util.HashSet<>(java.util.Arrays.asList("stock","cuts","workers","window","distribution","expenses","spoilage","costing","accounting","inventory_usage","customers"));
             for(int i=0;i<rows.length();i++) {
                 JSONObject row=rows.getJSONObject(i); String date=row.getString("day"), module=row.getString("module");
                 if(!BakeryDataValidation.isValidIsoDate(date) || !allowed.contains(module)) throw new IllegalArgumentException("Invalid backup record date or module");
