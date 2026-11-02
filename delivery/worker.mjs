@@ -581,6 +581,34 @@ async function changeAppLicenseStatus(request, env) {
   return json({ ok: true, licenseId: id, status, dataPreserved: true }, 200, env);
 }
 
+async function resetAppLicenseDevice(request, env) {
+  if (!isAdmin(request, env)) return json({ ok: false, error: "unauthorized" }, 401, env);
+  const body = await request.json().catch(() => null);
+  const id = String(body?.licenseId || "").trim();
+  const reason = String(body?.reason || "").trim().slice(0, 300);
+  if (!/^[A-Z0-9_-]{6,80}$/i.test(id) || body?.approved !== true || reason.length < 8) {
+    return json({ ok: false, error: "explicit_owner_approval_license_id_and_reason_required" }, 400, env);
+  }
+  await ensureAppLicenseTables(env);
+  const license = await env.DB.prepare(
+    "SELECT id, customer_name, plan, term_type, status, device_hash FROM app_licenses WHERE id = ?"
+  ).bind(id).first();
+  if (!license) return json({ ok: false, error: "license_not_found" }, 404, env);
+  if (license.status === "revoked") return json({ ok: false, error: "revoked_license_device_cannot_be_reset" }, 409, env);
+  if (!license.device_hash) return json({ ok: false, error: "license_has_no_device_binding" }, 409, env);
+  const updated = await env.DB.prepare(
+    "UPDATE app_licenses SET device_hash = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND device_hash IS NOT NULL AND status <> 'revoked'"
+  ).bind(id).run();
+  if (!updated.meta?.changes) return json({ ok: false, error: "device_binding_changed_retry" }, 409, env);
+  await env.DB.prepare(
+    "INSERT INTO app_admin_events (id, event_type, license_id, customer_name, plan, term_type, details, actor) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+  ).bind(
+    "EVT-" + crypto.randomUUID(), "license_device_reset", id, license.customer_name,
+    license.plan, license.term_type, "Owner-approved device transfer reset. Reason: " + reason, "owner"
+  ).run();
+  return json({ ok: true, licenseId: id, deviceBindingReset: true, dataPreserved: true, status: license.status }, 200, env);
+}
+
 async function info(request, env, token) {
   const row = await lookup(token, env);
 
@@ -895,6 +923,10 @@ export default {
 
       if (url.pathname === "/api/app-license/admin/status" && request.method === "POST") {
         return changeAppLicenseStatus(request, env);
+      }
+
+      if (url.pathname === "/api/app-license/admin/reset-device" && request.method === "POST") {
+        return resetAppLicenseDevice(request, env);
       }
 
       if (url.pathname === "/api/app-license/admin/renew" && request.method === "POST") {
