@@ -69,7 +69,7 @@ if (actualPublicKey !== EXPECTED_PUBLIC_KEY_DER_B64) {
 }
 const now = Math.floor(Date.now() / 1000);
 const expires = plan === "monthly" ? now + 30 * 86400 : plan === "annual" ? now + 365 * 86400 : 0;
-const maxVersion = plan === "lifetime" ? CURRENT_APP_VERSION : "any";
+const maxVersion = "any";
 const payload = `app=${APP_ID};device=${device};plan=${plan};max_version=${maxVersion};expires=${expires}`;
 const payload64 = Buffer.from(payload, "utf8").toString("base64url");
 const signature64 = crypto.sign("RSA-SHA256", Buffer.from(payload, "utf8"), privateKey).toString("base64url");
