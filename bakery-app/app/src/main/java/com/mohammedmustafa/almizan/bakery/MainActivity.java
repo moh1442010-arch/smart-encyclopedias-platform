@@ -473,7 +473,7 @@ public class MainActivity extends Activity {
             margin = BakeryMath.salesLessOperatingCost(salesRevenue(), costingTotal());
         } catch (Exception ignored) { /* keep the dashboard available if a daily record needs correction */ }
         addMetricTile(second, "production", "💵 قيمة الإنتاج", fmt(production) + " ج", "بحسب سعر القطعيات");
-        addMetricTile(second, "margin", "📈 هامش الربح", fmt(margin) + " ج", "تقديري بعد التكاليف");
+        addMetricTile(second, "margin", "📈 هامش الربح", fmt(margin) + " ج", "التحصيل ناقص تكلفة تشغيل اليوم");
         content.addView(second);
     }
 
@@ -1411,7 +1411,7 @@ public class MainActivity extends Activity {
         if (workMetric != null) workMetric.setText(fmt(val("cuts","work_units")) + " جوال");
         try {
             long production = productionValue();
-            long margin = BakeryMath.netMargin(salesRevenue(), spoilageCost(), wages(), expenseTotal(), costingTotal(), distributionDiff());
+            long margin = BakeryMath.salesLessOperatingCost(salesRevenue(), costingTotal());
             if (productionMetric != null) productionMetric.setText(fmt(production) + " ج");
             if (marginMetric != null) marginMetric.setText(fmt(margin) + " ج");
         } catch (Exception ex) {
