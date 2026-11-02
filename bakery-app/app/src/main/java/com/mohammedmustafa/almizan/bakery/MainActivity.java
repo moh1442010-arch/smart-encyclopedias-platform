@@ -1296,6 +1296,7 @@ public class MainActivity extends Activity {
     private long costingTotal() {
         long workUnits=val("cuts","work_units");
         JSONObject stock=store.get(day,"stock");
+        if(stock.length()==0) stock=store.getLatest(day,"stock");
         String raw=stock.optString("items_rows","");
         if(raw.trim().isEmpty()) raw=legacyStockRows(stock);
         long total=0L;
