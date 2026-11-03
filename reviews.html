@@ -55,7 +55,7 @@
     <header class="reviews-hero">
       <span class="badge">صفحة المجتمع والمصداقية</span>
       <h1>⭐ آراء العملاء والزوار</h1>
-      <p>شارك تجربتك مع تطبيق المحاسب الميزان أو الموسوعة الشاملة. نرحب بالنقد والملاحظات. اقرأ التعليقات العامة وشارك في النقاش المفتوح؛ أما نموذج واتساب أدناه فيرسل التقرير بشكل خاص ولا ينشره على الموقع تلقائيًا.</p>
+      <p>شارك تجربتك مع تطبيق المحاسب الميزان أو الموسوعة الشاملة. نرحب بالنقد والملاحظات. اقرأ التعليقات العامة وشارك في النقاش المفتوح؛ تُحفظ الملاحظات في قائمة مراجعة خاصة، ولا يظهر أي رأي للعامة إلا بعد موافقة الإدارة وموافقتك على النشر.</p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="downloads/">تنزيل تطبيق المحاسب الميزان</a>
         <a class="btn btn-primary" href="https://github.com/moh1442010-arch/smart-encyclopedias-platform/issues/18">💬 قراءة التعليقات العامة وإضافة ملاحظة</a>
@@ -85,13 +85,14 @@
 
     <section class="section review-form" aria-labelledby="send-review">
       <h2 id="send-review">شاركنا رأيك</h2>
-      <p class="form-help">اختر المنتج ثم اكتب تقييمك أو اقتراحك. لا تحتاج إلى إنشاء حساب في الموقع. بعد الإرسال تُجهز رسالة واتساب خاصة للمراجعة البشرية. لن يُنشر الرأي تلقائيًا؛ لنشر تعليق يراه الجميع استخدم سجل التعليقات العامة أعلاه.</p>
+      <p class="form-help">اختر المنتج ثم اكتب تقييمك أو اقتراحك. لا تحتاج إلى إنشاء حساب في الموقع. بعد الإرسال يُحفظ رأيك للمراجعة البشرية. لن يُنشر تلقائيًا؛ اختر موافقة النشر الاختيارية إذا رغبت في عرض رأيك بعد اعتماده.</p>
       <form id="review-form">
         <div class="form-grid">
           <div class="field full">
             <label for="review-product">المنتج محل التقييم</label>
             <select id="review-product" name="product" required>
               <option value="المحاسب الميزان — تطبيق Android/Windows">المحاسب الميزان — تطبيق Android/Windows</option>
+              <option value="الميزان المحاسبي للمخابز">الميزان المحاسبي للمخابز</option>
               <option value="الموسوعة الشاملة في الذكاء الاصطناعي">الموسوعة الشاملة في الذكاء الاصطناعي</option>
               <option value="المتجر والموقع">المتجر والموقع</option>
             </select>
@@ -127,6 +128,9 @@
             </select>
           </div>
           <div class="field full">
+            <label><input id="review-public-consent" type="checkbox"> أوافق على نشر اسمي المختصر ورأيي وتقييمي بعد المراجعة والموافقة.</label>
+          </div>
+          <div class="field full">
             <label for="review-text">رأيك</label>
             <textarea id="review-text" name="review" maxlength="1000" required placeholder="ما الذي أعجبك؟ وما الذي تقترح تطويره؟"></textarea>
           </div>
@@ -136,36 +140,62 @@
           <a class="btn" href="complaints.html">إرسال بلاغ أو شكوى</a>
         </div>
         <p id="review-status" class="status" role="status" aria-live="polite"></p>
-        <p class="policy">تنبيه: لا تكتب كلمة مرور، رقم حساب، بيانات بطاقة، أو أي معلومات حساسة. هذا النموذج يجهز رسالة واتساب خاصة فقط. لإضافة تعليق عام استخدم سجل المراجعة العام.</p>
+        <p class="policy">تنبيه: لا تكتب كلمة مرور، رقم حساب، بيانات بطاقة، أو أي معلومات حساسة. يُحفظ الرأي للمراجعة. لا يُنشر إلا إذا اخترت الموافقة على النشر ثم اعتمدته الإدارة. لا تضع بيانات حساسة.</p>
       </form>
     </section>
   </main>
 
   <script>
+    const REVIEW_API='https://al-mizan-bakery-licensing.moh1442010.workers.dev';
     const form=document.getElementById('review-form');
     const status=document.getElementById('review-status');
-    form.addEventListener('submit',function(e){
+    async function loadApprovedReviews(){
+      const host=document.querySelector('[aria-labelledby="published-reviews"] .review-card');
+      try{
+        const response=await fetch(REVIEW_API+'/api/reviews');
+        const data=await response.json();
+        host.replaceChildren();
+        if(!data.reviews||!data.reviews.length){
+          host.classList.add('empty-review');
+          const wrap=document.createElement('div');
+          const h=document.createElement('h3');h.textContent='لا توجد آراء منشورة بعد';
+          const p=document.createElement('p');p.textContent='ستظهر الآراء بعد موافقة أصحابها ومراجعتها من الإدارة.';
+          wrap.append(h,p);host.append(wrap);return;
+        }
+        host.classList.remove('empty-review');
+        for(const item of data.reviews){
+          const card=document.createElement('article');card.className='review-card';card.style.marginBottom='12px';
+          const title=document.createElement('h3');title.textContent=item.name+' — '+item.product;
+          const meta=document.createElement('p');meta.textContent=item.rating+' · '+item.platform+' · '+new Date(item.created_at).toLocaleDateString('ar-SD');
+          const body=document.createElement('p');body.textContent=item.review_text;
+          card.append(title,meta,body);host.append(card);
+        }
+      }catch{host.textContent='تعذر تحميل الآراء المنشورة حاليًا.';}
+    }
+    form.addEventListener('submit',async function(e){
       e.preventDefault();
-      const product=document.getElementById('review-product').value;
-      const name=document.getElementById('review-name').value.trim();
-      const role=document.getElementById('review-role').value.trim() || 'غير محدد';
-      const platform=document.getElementById('review-platform').value;
-      const version=document.getElementById('review-version').value.trim() || 'لم يذكر';
-      const device=document.getElementById('review-device').value.trim() || 'لم يذكر';
-      const os=document.getElementById('review-os').value.trim() || 'لم يذكر';
-      const test=document.getElementById('review-test').value;
-      const result=document.getElementById('review-result').value;
-      const severity=document.getElementById('review-severity').value;
-      const steps=document.getElementById('review-steps').value.trim() || 'لم يذكر';
-      const rating=document.getElementById('review-rating').value;
-      const review=document.getElementById('review-text').value.trim();
-      if(!name||!platform||!test||!result||!rating||!review){status.textContent='يرجى إكمال الحقول المطلوبة: الاسم والمنصة وما اختبرته والنتيجة والتقييم والرأي.';return;}
-      const report='تقرير تجربة من صفحة العملاء والزوار\n\nالمنتج: '+product+'\nالاسم: '+name+'\nالصفة: '+role+'\nالمنصة: '+platform+'\nإصدار التطبيق: '+version+'\nنوع الجهاز: '+device+'\nنظام التشغيل: '+os+'\nما تم اختباره: '+test+'\nالنتيجة العامة: '+result+'\nخطورة المشكلة: '+severity+'\nخطوات إعادة المشكلة/المتوقع مقابل الفعلي: '+steps+'\nالتقييم: '+rating+'\n\nالرأي والملاحظات:\n'+review+'\n\nهذا التقرير يرسل عبر واتساب بشكل خاص؛ لإتاحة الرأي للجميع، انسخه إلى سجل المراجعة العام إذا رغبت.';
-      const url='https://wa.me/249121851285?text='+encodeURIComponent(report);
-      status.textContent='تم تجهيز التقرير محلياً. اضغط زر واتساب لإرساله؛ لم يُحفظ في قاعدة بيانات الموقع، ولم يُرسل حتى تؤكد الإرسال داخل واتساب.';
-      const send=document.createElement('a');send.href=url;send.target='_blank';send.rel='noopener noreferrer';send.className='btn btn-gold';send.textContent='فتح واتساب وإرسال التقرير';
-      form.querySelector('.form-actions').appendChild(send);
+      const value=id=>document.getElementById(id).value.trim();
+      const payload={
+        product:value('review-product'),name:value('review-name'),role:value('review-role'),
+        platform:value('review-platform'),version:value('review-version'),device:value('review-device'),
+        os:value('review-os'),testArea:value('review-test'),result:value('review-result'),
+        severity:value('review-severity'),steps:value('review-steps'),rating:value('review-rating'),
+        reviewText:value('review-text'),publicConsent:document.getElementById('review-public-consent').checked
+      };
+      if(!payload.name||!payload.platform||!payload.testArea||!payload.result||!payload.rating||payload.reviewText.length<8){
+        status.textContent='يرجى إكمال الحقول المطلوبة وكتابة رأي لا يقل عن 8 أحرف.';return;
+      }
+      const send=form.querySelector('button[type="submit"]');send.disabled=true;status.textContent='جارٍ إرسال الرأي إلى قائمة المراجعة…';
+      try{
+        const response=await fetch(REVIEW_API+'/api/reviews',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(data.error||('HTTP '+response.status));
+        status.textContent='تم استلام رأيك بنجاح. رقم المتابعة: '+data.reviewId+' — لن يظهر للعامة إلا بعد المراجعة وموافقتك على النشر.';
+        form.reset();
+      }catch(error){status.textContent='تعذر إرسال الرأي: '+error.message+'. حاول لاحقًا أو تواصل عبر واتساب.';}
+      finally{send.disabled=false;}
     });
+    loadApprovedReviews();
   </script>
 </body>
 </html>
