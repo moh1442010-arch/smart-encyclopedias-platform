@@ -52,5 +52,9 @@
   ],
   "sha256": "4e3aed2bace46673d09e80ee41815cc2c4784fd23540cef10797b62fadc48d02",
   "apkSizeBytes": 78541,
-  "releaseUpdatedAt": "2026-11-03T22:06:52Z"
+  "releaseUpdatedAt": "2026-11-03T22:06:52Z",
+  "commercialStatus": "approved",
+  "commercialApprovedAt": "2026-11-03T22:20:38Z",
+  "commercialApprovalBasis": "Owner confirmed successful download, installation, and update over the previous version on a physical Android device.",
+  "releaseChannel": "commercial"
 }
