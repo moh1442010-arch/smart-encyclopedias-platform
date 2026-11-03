@@ -56,6 +56,20 @@ footer{padding:18px 0;color:var(--muted);font-size:11px;text-align:center}
    <div class="row" style="margin-top:12px"><a class="btn secondary" href="https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions" target="_blank" rel="noopener noreferrer">فتح جميع عمليات البناء والنشر</a></div>
   </div>
   <div class="panel">
+   <h3>إحصاءات المتجر — آخر 30 يومًا</h3>
+   <div id="analyticsSummary" class="coverage"><div class="empty">جارٍ تحميل الإحصاءات…</div></div>
+   <p class="muted">إحصاءات مجمعة لعدد مرات فتح صفحات المتجر فقط. لا نستخدم ملفات تعريف ارتباط ولا نخزن عناوين IP أو بصمات الأجهزة.</p>
+  </div>
+  <div class="panel">
+   <h3>مراجعات العملاء — مراجعة بشرية قبل النشر</h3>
+   <div class="toolbar">
+    <button class="btn" id="reviewsPendingBtn" type="button">بانتظار المراجعة</button>
+    <button class="btn secondary" id="reviewsApprovedBtn" type="button">المعتمدة</button>
+    <button class="btn secondary" id="reviewsRejectedBtn" type="button">المرفوضة</button>
+   </div>
+   <div id="reviewQueue"><div class="empty">جارٍ تحميل المراجعات…</div></div>
+  </div>
+  <div class="panel">
    <h3>مراجعة الخبراء وبوابة العملاء</h3>
    <div id="feedbackStatus" class="audit-item">جارٍ تحميل حالة المراجعة…</div>
    <p>استقبال آراء العملاء الحالي يتم عبر واتساب ولا تُحفظ الرسائل تلقائيًا في لوحة الإدارة. لا تعرض اللوحة عدد تقييمات غير مسجل.</p>
@@ -133,8 +147,8 @@ function renderIntegrations(data){
  const cards=[
   ["GitHub Actions",data.githubAvailable?"متصل — "+data.workflows.length+" تشغيلات حديثة":"تعذر جلب بيانات GitHub"],
   ["مراجعات الخبراء",data.expertFeedback?data.expertFeedback.state+" — "+data.expertFeedback.comments+" تعليقًا":"تعذر جلب سجل الخبراء"],
-  ["آراء العملاء","واتساب فقط — لا يوجد تخزين مركزي"],
-  ["عداد الزيارات","مزود خارجي hits.sh — غير مدمج في اللوحة"],
+  ["آراء العملاء","قيد المراجعة: "+(data.customerReviews&&data.customerReviews.counts?data.customerReviews.counts.pending:0)+" · معتمدة: "+(data.customerReviews&&data.customerReviews.counts?data.customerReviews.counts.approved:0)],
+  ["زيارات المتجر — 30 يومًا",String(data.visitorAnalytics&&data.visitorAnalytics.totalViews30Days||0)+" مشاهدة مجمعة"],
   ["صحة الخدمة",data.serviceHealth&&data.serviceHealth.healthEndpoint==="ok"?"Worker يعمل":"تعذر تأكيد صحة Worker"],
   ["مفتاح التوقيع",data.serviceHealth&&data.serviceHealth.signingReady?"جاهز ومطابق":"غير جاهز"]
  ];
@@ -160,6 +174,10 @@ function renderIntegrations(data){
   release.append(title,detail);addLink(release,"صفحة الإصدار",data.release.url);
   if(data.release.apk)addLink(release,"تنزيل APK",data.release.apk.downloadUrl);
  }else release.textContent="تعذر التحقق من الإصدار المنشور.";
+ const analytics=$("analyticsSummary");analytics.replaceChildren();
+ const total=document.createElement("div"),b=document.createElement("b"),span=document.createElement("span");
+ b.textContent="إجمالي المشاهدات";span.textContent=String(data.visitorAnalytics&&data.visitorAnalytics.totalViews30Days||0)+" خلال 30 يومًا";total.append(b,span);analytics.append(total);
+ for(const page of (data.visitorAnalytics&&data.visitorAnalytics.pages)||[]){const item=document.createElement("div"),name=document.createElement("b"),count=document.createElement("span");name.textContent=page.page_path;count.textContent=String(page.views)+" مشاهدة";item.append(name,count);analytics.append(item);}
 }
 function renderAudit(items){
  const host=$("auditList");host.replaceChildren();
@@ -180,13 +198,37 @@ async function refreshDashboard(){
   $("approvedCount").textContent=String(data.licensing.approved);
   $("rejectedCount").textContent=String(data.licensing.rejected);
   renderProducts(data.products);renderCoverage(data.coverage);renderAudit(data.recentLicenseAudit);
-  try{const integrations=await call("/admin/integrations");renderIntegrations(integrations);}
+  try{const integrations=await call("/admin/integrations");renderIntegrations(integrations);await loadReviewQueue("pending");}
   catch(integrationError){$("integrationStatus").textContent="تعذر تحميل التكاملات: "+integrationError.message;}
   $("updatedAt").textContent="آخر تحديث: "+dateLabel(data.generatedAt);
  }catch(e){
   $("updatedAt").textContent="تعذر تحديث لوحة المؤشرات";
   $("auditList").textContent="تعذر تحميل البيانات. "+e.message;
  }
+}
+async function loadReviewQueue(status="pending"){
+ const host=$("reviewQueue");host.textContent="جارٍ تحميل المراجعات…";
+ try{
+  const data=await call("/admin/reviews?status="+status);host.replaceChildren();
+  if(!data.reviews||!data.reviews.length){host.textContent="لا توجد مراجعات في هذه الحالة.";return;}
+  for(const review of data.reviews){
+   const card=document.createElement("article");card.className="audit-item";
+   const title=document.createElement("b");title.textContent=review.name+" — "+review.product+" — "+review.rating;
+   const meta=document.createElement("div");meta.textContent=review.platform+" · "+review.version+" · "+review.result+" · موافقة النشر: "+(review.public_consent?"نعم":"لا");
+   const body=document.createElement("p");body.textContent=review.review_text;
+   const detail=document.createElement("small");detail.textContent="الجهاز: "+(review.device||"غير محدد")+" · النظام: "+(review.os||"غير محدد")+" · الاختبار: "+review.test_area+" · الخطورة: "+(review.severity||"غير محددة")+" · "+dateLabel(review.created_at);
+   card.append(title,meta,body,detail);
+   if(status==="pending"){
+    const actions=document.createElement("div");actions.className="row";
+    const approve=document.createElement("button");approve.className="btn";approve.textContent=review.public_consent?"اعتماد ونشر بعد المراجعة":"اعتماد داخلي فقط";
+    approve.addEventListener("click",async()=>{approve.disabled=true;try{await call("/admin/reviews/"+encodeURIComponent(review.id)+"/approve",{method:"POST"});showMessage("تم اعتماد المراجعة.");await loadReviewQueue("pending");await refreshDashboard();}catch(e){showMessage("تعذر اعتماد المراجعة: "+e.message);approve.disabled=false;}});
+    const reject=document.createElement("button");reject.className="btn danger";reject.textContent="رفض";
+    reject.addEventListener("click",async()=>{if(!confirm("تسجيل رفض هذه المراجعة؟"))return;reject.disabled=true;try{await call("/admin/reviews/"+encodeURIComponent(review.id)+"/reject",{method:"POST"});showMessage("تم رفض المراجعة.");await loadReviewQueue("pending");await refreshDashboard();}catch(e){showMessage("تعذر رفض المراجعة: "+e.message);reject.disabled=false;}});
+    actions.append(approve,reject);card.append(actions);
+   }
+   host.append(card);
+  }
+ }catch(e){host.textContent="تعذر تحميل المراجعات: "+e.message;}
 }
 async function load(status="pending"){
  $("orders").textContent="جارٍ التحميل…";
@@ -256,6 +298,9 @@ $("refreshBtn").addEventListener("click",refreshDashboard);
 $("loadBtn").addEventListener("click",()=>load("pending"));
 $("approvedBtn").addEventListener("click",()=>load("approved"));
 $("rejectedBtn").addEventListener("click",()=>load("rejected"));
+$("reviewsPendingBtn").addEventListener("click",()=>loadReviewQueue("pending"));
+$("reviewsApprovedBtn").addEventListener("click",()=>loadReviewQueue("approved"));
+$("reviewsRejectedBtn").addEventListener("click",()=>loadReviewQueue("rejected"));
 $("signCheckBtn").addEventListener("click",async()=>{
  try{const result=await call("/admin/signing-check");showMessage("مفتاح التوقيع جاهز ومتطابق مع التطبيق. إصدار الخدمة: "+result.appVersion+". لم يصدر أي ترخيص أثناء هذا الفحص.");}
  catch(e){const d=e.response&&e.response.diagnostic;showMessage("خدمة التوقيع غير جاهزة. لم يصدر أي ترخيص. السبب: "+e.message+(d?"\nتفاصيل التشخيص الآمن: "+JSON.stringify(d,null,2):""));}
