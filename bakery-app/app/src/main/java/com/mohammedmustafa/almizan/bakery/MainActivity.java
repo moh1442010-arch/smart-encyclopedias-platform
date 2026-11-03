@@ -805,6 +805,7 @@ public class MainActivity extends Activity {
         JSONObject saved=store.get(day,"workers");
         ScrollView scroll=new ScrollView(this);
         LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(8,8,8,12); scroll.addView(box);
+        addHomeNavigation(box);
         box.addView(text("جدول يومية العمال — كل عامل في صف مستقل. الأجرة هي سعر الجوال الواحد للشغل، ويُحسب الإجمالي تلقائيًا من عدد الشغل × الأجرة.",14));
         LinearLayout table=new LinearLayout(this); table.setOrientation(LinearLayout.VERTICAL); table.setPadding(2,2,2,2); table.setBackground(rounded(Color.rgb(100,116,139),0));
         LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL); header.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
@@ -888,6 +889,7 @@ public class MainActivity extends Activity {
     private void openDistributionTable() {
         JSONObject saved=store.get(day,"distribution");ScrollView sc=new ScrollView(this);
         LinearLayout box=new LinearLayout(this);box.setOrientation(1);box.setPadding(8,8,8,12);sc.addView(box);
+        addHomeNavigation(box);
         box.addView(text("كل عميل في صف مستقل. أدخل النقدي وبنكك ورقم العملية والديون وفرق السعر. العملاء الثابتون محفوظون للاستخدام المتكرر.",14));
         Button manage=button("إدارة العملاء الثابتين");manage.setOnClickListener(v->manageRegularCustomers());box.addView(manage);
         LinearLayout table=new LinearLayout(this);table.setOrientation(1);java.util.List<EditText[]> rows=new java.util.ArrayList<>();
@@ -940,6 +942,7 @@ public class MainActivity extends Activity {
         JSONObject saved=store.get(day,"cuts");
         ScrollView scroll=new ScrollView(this);
         LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(8,8,8,12); scroll.addView(box);
+        addHomeNavigation(box);
         box.addView(text("شغل اليوم — أدخل عدد جوالات الشغل، وعدد الأرغفة التي تساوي 1,000 جنيه. سجّل كل قطعية في صف مستقل؛ الإجمالي وقيمة الإنتاج يُحسبان تلقائيًا ويُحفظان مع التاريخ.",14));
         box.addView(text("عدد شغل اليوم (جوال دقيق)",15));
         EditText work=ruledCell(saved.optString("work_units",""),"عدد الجوالات",true);
