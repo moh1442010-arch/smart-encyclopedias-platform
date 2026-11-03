@@ -72,7 +72,7 @@ footer{padding:18px 0;color:var(--muted);font-size:11px;text-align:center}
   <div class="panel">
    <h3>مراجعة الخبراء وبوابة العملاء</h3>
    <div id="feedbackStatus" class="audit-item">جارٍ تحميل حالة المراجعة…</div>
-   <p>استقبال آراء العملاء الحالي يتم عبر واتساب ولا تُحفظ الرسائل تلقائيًا في لوحة الإدارة. لا تعرض اللوحة عدد تقييمات غير مسجل.</p>
+   <p>تُحفظ الآراء في قائمة مراجعة خاصة. لا يظهر أي رأي للعامة إلا بعد موافقة الإدارة وموافقة صاحب الرأي على النشر.</p>
    <div class="row">
     <a class="btn secondary" href="https://github.com/moh1442010-arch/smart-encyclopedias-platform/issues/27" target="_blank" rel="noopener noreferrer">سجل مراجعة الخبراء</a>
     <a class="btn secondary" href="https://moh1442010-arch.github.io/smart-encyclopedias-platform/reviews.html" target="_blank" rel="noopener noreferrer">صفحة آراء العملاء</a>
@@ -130,7 +130,7 @@ function renderProducts(items){
 }
 function renderCoverage(coverage){
  const labels={githubWorkflows:"سير GitHub Actions",customerReviews:"آراء العملاء",visitorAnalytics:"إحصاءات الزوار",serviceHealth:"صحة الخدمات"};
- const values={githubWorkflows:"متصل — تشغيلات مباشرة",customerReviews:"استقبال واتساب فقط — غير محفوظ",visitorAnalytics:"عداد خارجي — غير مدمج",serviceHealth:"فحص الخدمة ومفتاح التوقيع"};
+ const values={githubWorkflows:"متصل — تشغيلات مباشرة",customerReviews:"نموذج مركزي مع مراجعة يدوية قبل النشر",visitorAnalytics:"إحصاءات مجمعة — آخر 30 يومًا",serviceHealth:"فحص الخدمة ومفتاح التوقيع"};
  const host=$("coverage");host.replaceChildren();
  for(const [key,label] of Object.entries(labels)){
   const item=document.createElement("div"),b=document.createElement("b"),span=document.createElement("span");
