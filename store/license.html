@@ -86,7 +86,7 @@ document.getElementById("requestForm").addEventListener("submit",async event=>{
  try{
   const response=await fetch("https://al-mizan-bakery-licensing.moh1442010.workers.dev/api/orders",{
    method:"POST",headers:{"content-type":"application/json"},
-   body:JSON.stringify({customerName:customer,contact,deviceId:device,plan,receiptReference:receipt})
+   body:JSON.stringify({customerName:customer,contact,deviceId:device,plan,receiptReference:receipt,appVersion:version})
   });
   const data=await response.json().catch(()=>({}));
   if(!response.ok||!data.orderId||data.status!=="pending")throw new Error(data.error||"تعذر تأكيد تسجيل الطلب");
