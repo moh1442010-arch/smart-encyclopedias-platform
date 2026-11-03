@@ -1,35 +1,56 @@
 {
   "product": "الميزان المحاسبي للمخابز",
-  "status": "expert-review-only-not-approved-for-commercial-sale",
-  "versionName": "2.5.7",
-  "versionCode": 250007,
+  "status": "review-candidate-only-not-approved-for-commercial-sale",
+  "versionName": "2.6.17",
+  "versionCode": 260017,
   "applicationId": "com.mohammedmustafa.almizan.bakery",
   "databaseName": "almizan_bakery_250.db",
-  "releaseTag": "al-mizan-bakery-2.5.7-review",
-  "apkUrl": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/al-mizan-bakery-2.5.7-review/AlMizan-Bakery-2.5.7-review.apk",
-  "checksumUrl": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/al-mizan-bakery-2.5.7-review/SHA256SUMS.txt",
+  "releaseTag": "al-mizan-bakery-2.6.17-review",
+  "apkUrl": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/al-mizan-bakery-2.6.17-review/AlMizan-Bakery-2.6.17-review.apk",
+  "checksumUrl": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/download/al-mizan-bakery-2.6.17-review/SHA256SUMS.txt",
   "signingCertificateSha256": "159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279",
   "activationWorkflow": "https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/workflows/issue-bakery-license.yml",
-  "licenseSecretName": "BAKERY_LICENSE_PRIVATE_KEY_B64",
   "licensePolicy": {
     "trialDays": 7,
-    "monthlyAndAnnual": "Device-bound signed activation valid until the issued expiry; updates allowed while subscription is active",
-    "lifetime": "Device-bound signed activation for this app version only; future updates are not included"
+    "monthly": {
+      "amountSdg": 55000,
+      "validDays": 30,
+      "updates": "included while active"
+    },
+    "annual": {
+      "amountSdg": 550000,
+      "validDays": 365,
+      "updates": "included while active"
+    },
+    "lifetime": {
+      "amountSdg": 1050000,
+      "scope": "purchased app version only",
+      "futureUpdates": false
+    },
+    "activation": "device-bound signed token after manual payment verification and explicit admin approval"
   },
   "verification": {
     "arithmeticUnitTests": "passed",
     "debugAndReleaseBuild": "passed",
     "apkSigningAndCertificateCheck": "passed",
     "packageAndVersionCheck": "passed",
-    "sha256File": "published-as-release-asset",
-    "realDeviceUpdateTest": "pending-user-device-test",
-    "activationSecretSetup": "owner-action-required"
+    "productionWorkerDeployment": "passed",
+    "productionSigningPair": "passed",
+    "realDeviceInstallUpdateTest": "pending-owner-device-test",
+    "trialExpiryAndLockTest": "pending-owner-device-test",
+    "backupRestoreTest": "pending-owner-device-test",
+    "commercialApproval": "pending-independent-review-and-owner-approval"
   },
   "notes": [
-    "Application ID com.mohammedmustafa.almizan.bakery and database almizan_bakery_250.db remain unchanged to support in-place updates from the same signed lineage.",
-    "Automated tests cover 10 flour bags minus 7 bags of daily work leaving 3, recalculation when editing usage, and net margin after spoilage, wages, expenses and operating costs.",
-    "Before accepting commercial use, test update over the installed 2.5.1/2.5.3/2.5.6 build, backup/restore, trial expiry, and valid/invalid/expired activation tokens on a real Android device.",
-    "The activation private key must never be committed to the repository or embedded in the APK."
+    "Application ID and database name remain unchanged to support in-place updates from the same signed lineage.",
+    "This is a review candidate. Build and signing checks do not prove full real-device acceptance.",
+    "Monthly and annual plans remain time-limited. They never convert to lifetime automatically.",
+    "Lifetime activation applies only to the purchased app version and does not include future version updates.",
+    "Payment must be verified manually and a manager must approve the order before a license is issued.",
+    "The private signing key remains only in protected server-side secrets and is never embedded in the APK or committed in plaintext.",
+    "Before commercial approval, test install/update, 7-day trial expiry, post-trial lock without data deletion, valid/invalid/expired activation, offline behavior and backup/restore on a real device."
   ],
-  "sha256": "d650e74be8d58545fff41e5fc655635166000f1ef52500a662c0e654c5d3a211"
+  "sha256": "3ddef2a594b1e3dd036624e0c208b71ff8fcd3f3d3a9536d31983215b0940778",
+  "apkSizeBytes": 78541,
+  "releaseUpdatedAt": "2026-11-03T22:01:22Z"
 }
