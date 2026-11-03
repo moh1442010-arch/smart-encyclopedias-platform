@@ -312,6 +312,7 @@ async function handle(request, env) {
     const ipHash = base64url(digest), now = Math.floor(Date.now() / 1000);
     const rate = await env.DB.prepare("INSERT INTO review_rate_limits(ip_hash,window_start,attempts) VALUES(?,?,1) ON CONFLICT(ip_hash) DO UPDATE SET attempts=CASE WHEN review_rate_limits.window_start<=? THEN 1 ELSE review_rate_limits.attempts+1 END,window_start=CASE WHEN review_rate_limits.window_start<=? THEN ? ELSE review_rate_limits.window_start END RETURNING attempts")
       .bind(ipHash, now, now - 3600, now - 3600, now).first();
+    await env.DB.prepare("DELETE FROM review_rate_limits WHERE window_start < ?").bind(now - 86400).run();
     if (rate && rate.attempts > 5) return json({ error: "REVIEW_RATE_LIMITED" }, 429);
     const id = crypto.randomUUID(), createdAt = new Date().toISOString();
     await env.DB.prepare("INSERT INTO review_submissions(id,created_at,product,name,role,platform,version,device,os,test_area,result,severity,steps,rating,review_text,public_consent,status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
