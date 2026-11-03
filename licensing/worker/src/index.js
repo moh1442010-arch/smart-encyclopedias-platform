@@ -283,11 +283,63 @@ async function handle(request, env) {
       coverage: {
         licensing: "live",
         products: "catalog",
-        githubWorkflows: "not_connected",
-        customerReviews: "not_connected",
-        visitorAnalytics: "not_connected",
-        serviceHealth: "health_endpoint_only"
+        githubWorkflows: "live",
+        customerReviews: "whatsapp_only",
+        visitorAnalytics: "external_counter",
+        serviceHealth: "live"
       }
+    });
+  }
+
+  if (url.pathname === "/admin/integrations" && request.method === "GET") {
+    if (!await verifyAdminSession(request, env)) return json({ error: "UNAUTHORIZED" }, 401);
+    const githubJson = async (path) => {
+      const response = await fetch("https://api.github.com/repos/moh1442010-arch/smart-encyclopedias-platform" + path, {
+        headers: { "accept": "application/vnd.github+json", "user-agent": "Al-Mizan-Admin-Command-Center", "x-github-api-version": "2022-11-28" }
+      });
+      if (!response.ok) throw new Error("GITHUB_API_" + response.status);
+      return response.json();
+    };
+    const [runsResult, expertResult, releaseResult] = await Promise.allSettled([
+      githubJson("/actions/runs?per_page=12"),
+      githubJson("/issues/27"),
+      githubJson("/releases/tags/al-mizan-bakery-2.6.17-review")
+    ]);
+    let signingReady = false;
+    try { await importPrivateKey(env); signingReady = true; } catch {}
+    const runs = runsResult.status === "fulfilled" ? (runsResult.value.workflow_runs || []).slice(0, 12).map(run => ({
+      name: cleanText(run.name || run.display_title, 140),
+      status: cleanText(run.status, 24),
+      conclusion: cleanText(run.conclusion, 24),
+      createdAt: cleanText(run.created_at, 40),
+      url: typeof run.html_url === "string" && run.html_url.startsWith("https://github.com/") ? run.html_url : ""
+    })) : [];
+    const expert = expertResult.status === "fulfilled" ? {
+      title: cleanText(expertResult.value.title, 180),
+      state: cleanText(expertResult.value.state, 20),
+      comments: Number(expertResult.value.comments) || 0,
+      updatedAt: cleanText(expertResult.value.updated_at, 40),
+      url: "https://github.com/moh1442010-arch/smart-encyclopedias-platform/issues/27"
+    } : null;
+    const release = releaseResult.status === "fulfilled" ? {
+      tag: cleanText(releaseResult.value.tag_name, 100),
+      name: cleanText(releaseResult.value.name, 180),
+      url: "https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/tag/al-mizan-bakery-2.6.17-review",
+      apk: (releaseResult.value.assets || []).filter(asset => asset.name === "AlMizan-Bakery-2.6.17-review.apk").map(asset => ({
+        name: asset.name, size: Number(asset.size) || 0,
+        sha256: cleanText(asset.digest, 100),
+        downloadUrl: typeof asset.browser_download_url === "string" && asset.browser_download_url.startsWith("https://github.com/") ? asset.browser_download_url : ""
+      }))[0] || null
+    } : null;
+    return json({
+      generatedAt: new Date().toISOString(),
+      githubAvailable: runsResult.status === "fulfilled",
+      workflows: runs,
+      expertFeedback: expert,
+      release,
+      customerReviews: { channel: "WhatsApp", persistedInDashboard: false, url: "https://moh1442010-arch.github.io/smart-encyclopedias-platform/reviews.html" },
+      visitorAnalytics: { provider: "hits.sh", integrated: false, url: "https://hits.sh/moh1442010-arch.github.io/smart-encyclopedias-platform/" },
+      serviceHealth: { healthEndpoint: "ok", signingReady, appVersion: cleanText(env.APP_VERSION || "2.6.17", 32) }
     });
   }
 
