@@ -275,6 +275,7 @@ public class MainActivity extends Activity {
                 (legacyDevice == null || !legacyDevice.equals(licensedDevice))) return false;
             String plan = fields.get("plan");
             if (!"monthly".equals(plan) && !"annual".equals(plan) && !"lifetime".equals(plan)) return false;
+            // New lifetime purchases are bound to the purchased app version; dated subscriptions remain version-flexible.
             String maxVersion = fields.get("max_version");
             // New lifetime tokens use "any". Preserve existing 2.6.15 lifetime tokens too.
             if (!"any".equals(maxVersion) &&
