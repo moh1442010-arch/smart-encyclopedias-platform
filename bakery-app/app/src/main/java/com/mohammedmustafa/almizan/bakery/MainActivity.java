@@ -296,24 +296,60 @@ public class MainActivity extends Activity {
     }
 
     private void showActivationDialog() {
+        LinearLayout activationBox = new LinearLayout(this);
+        activationBox.setOrientation(LinearLayout.VERTICAL);
+        activationBox.setPadding(24, 12, 24, 8);
+
+        TextView instructions = text(
+            "انسخ رمز التفعيل كاملًا كما وصلك من إدارة الميزان، من أول حرف إلى آخر حرف. " +
+            "يتكوّن الرمز من جزأين بينهما نقطة (.). لا تنسخ رقم الطلب أو اسم الباقة، ولا تحذف النقطة أو أي جزء من الرمز. " +
+            "الصق الرمز كاملًا في الحقل أدناه، ثم اضغط «تفعيل».", 14);
+        activationBox.addView(instructions);
+
         EditText code = new EditText(this);
-        code.setHint("ألصق رمز التفعيل الذي أرسله الدعم");
+        code.setHint("الصق رمز التفعيل كاملًا هنا");
         code.setMinLines(3);
         code.setGravity(Gravity.TOP | Gravity.START);
+        code.setTextDirection(View.TEXT_DIRECTION_LTR);
         code.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        activationBox.addView(code);
+
+        Button paste = button("لصق الرمز من الحافظة");
+        paste.setOnClickListener(v -> {
+            try {
+                android.content.ClipboardManager clipboard =
+                    (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                if (clipboard == null || !clipboard.hasPrimaryClip() ||
+                    clipboard.getPrimaryClip().getItemCount() == 0) {
+                    toast("انسخ رمز التفعيل أولًا، ثم اضغط زر اللصق.");
+                    return;
+                }
+                CharSequence copied = clipboard.getPrimaryClip().getItemAt(0).coerceToText(this);
+                if (copied == null || copied.toString().trim().isEmpty()) {
+                    toast("الحافظة لا تحتوي على رمز نصي.");
+                    return;
+                }
+                code.setText(copied.toString().trim());
+                code.setSelection(code.length());
+            } catch (Exception ex) {
+                toast("تعذر اللصق من الحافظة. اضغط مطولًا داخل الحقل واختر لصق.");
+            }
+        });
+        activationBox.addView(paste);
+
         AlertDialog dialog = new AlertDialog.Builder(this).setTitle("🔑 تفعيل الاشتراك")
-            .setMessage("بعد مراجعة التحويل، يصلك رمز موقّع مرتبط بهذا الجهاز والباقة. أدخله هنا؛ لا ترسل الرمز السري لبنكك.")
-            .setView(code).setNegativeButton("إلغاء", null)
+            .setMessage("أدخل الرمز الذي صدر بعد اعتماد طلبك. الرمز مخصص لهذا الجهاز والباقة.")
+            .setView(activationBox).setNegativeButton("إلغاء", null)
             .setPositiveButton("تفعيل", null).create();
         dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             String token = code.getText().toString().replaceAll("\\s+", "");
             if (!verifyLicenseToken(token)) {
-                code.setError("رمز التفعيل غير صحيح أو لا يخص هذا الجهاز أو انتهت صلاحيته.");
+                code.setError("الرمز غير صحيح أو غير مكتمل أو لا يخص هذا الجهاز أو انتهت صلاحيته. انسخه كاملًا دون تعديل.");
                 return;
             }
             getPreferences(0).edit().putString("license_token", token).apply();
             dialog.dismiss();
-            toast("تم التحقق من رمز التفعيل.");
+            toast("تم تفعيل الاشتراك والتحقق من الرمز.");
             buildHome();
         }));
         dialog.show();
@@ -342,6 +378,14 @@ public class MainActivity extends Activity {
         d.setColor(color);
         d.setCornerRadius(radiusDp * getResources().getDisplayMetrics().density);
         return d;
+    }
+
+    private void addHomeNavigation(LinearLayout parent) {
+        Button home = button("⌂ العودة إلى الرئيسية");
+        home.setOnClickListener(v -> buildHome());
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 0, 0, 10);
+        parent.addView(home, 0, lp);
     }
 
     private void base(String title) {
@@ -376,6 +420,15 @@ public class MainActivity extends Activity {
         head.addView(titles,new LinearLayout.LayoutParams(0,-2,1f));
         head.setElevation(5f);
         root.addView(head);
+        if (!title.startsWith("🥖 المحاسب الميزان للمخابز")) {
+            Button home = button("⌂ الرئيسية");
+            home.setTextColor(Color.WHITE);
+            home.setBackground(rounded(Color.rgb(35,68,96),10));
+            home.setOnClickListener(v -> buildHome());
+            LinearLayout.LayoutParams homeLp = new LinearLayout.LayoutParams(-2,-2);
+            homeLp.setMargins(12,6,12,0);
+            root.addView(home, homeLp);
+        }
         ScrollView scroll = new ScrollView(this);
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
@@ -684,6 +737,7 @@ public class MainActivity extends Activity {
 
         ScrollView scroll=new ScrollView(this);
         LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(8,8,8,12); scroll.addView(box);
+        addHomeNavigation(box);
         box.addView(text("أدخل رصيد كل مادة، وكمية استهلاكها مع جوال دقيق واحد، وسعر وحدة الاستهلاك. يُخصم الاستهلاك تلقائيًا عند حفظ شغل اليوم.",14));
         LinearLayout table=new LinearLayout(this); table.setOrientation(LinearLayout.VERTICAL); table.setPadding(2,2,2,2); table.setBackground(rounded(Color.rgb(222,229,237),4));
         LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL); header.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
@@ -751,6 +805,7 @@ public class MainActivity extends Activity {
         JSONObject saved=store.get(day,"workers");
         ScrollView scroll=new ScrollView(this);
         LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(8,8,8,12); scroll.addView(box);
+        addHomeNavigation(box);
         box.addView(text("جدول يومية العمال — كل عامل في صف مستقل. الأجرة هي سعر الجوال الواحد للشغل، ويُحسب الإجمالي تلقائيًا من عدد الشغل × الأجرة.",14));
         LinearLayout table=new LinearLayout(this); table.setOrientation(LinearLayout.VERTICAL); table.setPadding(2,2,2,2); table.setBackground(rounded(Color.rgb(100,116,139),0));
         LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL); header.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
@@ -802,6 +857,7 @@ public class MainActivity extends Activity {
     private void openWindowTable() {
         JSONObject saved=store.get(day,"window"); ScrollView sc=new ScrollView(this);
         LinearLayout box=new LinearLayout(this);box.setOrientation(1);box.setPadding(8,8,8,12);sc.addView(box);
+        addHomeNavigation(box);
         box.addView(text("النقد والديون، ثم أضف كل تحويل بنكك في صف مستقل بالمبلغ ورقم العملية.",14));
         EditText cash=ruledCell(saved.optString("cash",""),"إجمالي النقد",true),debt=ruledCell(saved.optString("debt",""),"إجمالي الديون",true);
         box.addView(text("النقد",14));box.addView(cash);box.addView(text("الديون",14));box.addView(debt);
@@ -833,6 +889,7 @@ public class MainActivity extends Activity {
     private void openDistributionTable() {
         JSONObject saved=store.get(day,"distribution");ScrollView sc=new ScrollView(this);
         LinearLayout box=new LinearLayout(this);box.setOrientation(1);box.setPadding(8,8,8,12);sc.addView(box);
+        addHomeNavigation(box);
         box.addView(text("كل عميل في صف مستقل. أدخل النقدي وبنكك ورقم العملية والديون وفرق السعر. العملاء الثابتون محفوظون للاستخدام المتكرر.",14));
         Button manage=button("إدارة العملاء الثابتين");manage.setOnClickListener(v->manageRegularCustomers());box.addView(manage);
         LinearLayout table=new LinearLayout(this);table.setOrientation(1);java.util.List<EditText[]> rows=new java.util.ArrayList<>();
@@ -885,6 +942,7 @@ public class MainActivity extends Activity {
         JSONObject saved=store.get(day,"cuts");
         ScrollView scroll=new ScrollView(this);
         LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(8,8,8,12); scroll.addView(box);
+        addHomeNavigation(box);
         box.addView(text("شغل اليوم — أدخل عدد جوالات الشغل، وعدد الأرغفة التي تساوي 1,000 جنيه. سجّل كل قطعية في صف مستقل؛ الإجمالي وقيمة الإنتاج يُحسبان تلقائيًا ويُحفظان مع التاريخ.",14));
         box.addView(text("عدد شغل اليوم (جوال دقيق)",15));
         EditText work=ruledCell(saved.optString("work_units",""),"عدد الجوالات",true);
@@ -1023,6 +1081,7 @@ public class MainActivity extends Activity {
         }
         ScrollView sc = new ScrollView(this); LinearLayout box = new LinearLayout(this);
         box.setPadding(14,8,14,12); box.setOrientation(LinearLayout.VERTICAL); sc.addView(box);
+        addHomeNavigation(box);
         final java.util.Map<String,EditText> inputs = new java.util.LinkedHashMap<>();
         for(Field field:fields) {
             box.addView(text(field.label,15));
@@ -1387,7 +1446,7 @@ public class MainActivity extends Activity {
                 (bad>0?"\n\n⚠ توجد "+bad+" سطور غير مكتملة أو غير رقمية. راجع صيغة السطور.":"")+
                 (val("cuts","loaves_per_1000")<=0?"\n⚠ أدخل عدد العيش المقابل لـ 1,000 جنيه في القطعيات.":"");
             AlertDialog dialog=new AlertDialog.Builder(this).setTitle("🧮 المحاسب والحساب — "+day).setMessage(message)
-                .setNegativeButton("إغلاق",null).setNeutralButton("مشاركة التقرير",(d,w)->shareReport(message))
+                .setNegativeButton("الرئيسية",(d,w)->buildHome()).setNeutralButton("مشاركة التقرير",(d,w)->shareReport(message))
                 .setPositiveButton("حفظ التقرير", null).create();
             dialog.setOnShowListener(v -> {
                 Button save=dialog.getButton(AlertDialog.BUTTON_POSITIVE);
@@ -1434,7 +1493,7 @@ public class MainActivity extends Activity {
     private void backupRestoreMenu() {
         new AlertDialog.Builder(this).setTitle("نسخ احتياطي واستعادة")
             .setMessage("أنشئ ملف JSON يحفظ سجلات الأيام والأقسام، واحتفظ به خارج الهاتف. الاستعادة تدمج السجلات وتستبدل فقط السجل الذي يطابق التاريخ والقسم.")
-            .setNegativeButton("إغلاق",null)
+            .setNegativeButton("الرئيسية",(d,w)->buildHome())
             .setNeutralButton("استعادة نسخة",(d,w)->{
                 Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("application/json");
                 try { startActivityForResult(i,REQUEST_IMPORT_BACKUP); } catch(Exception ex) { toast("تعذر فتح اختيار ملف النسخة الاحتياطية"); }
@@ -1523,7 +1582,7 @@ public class MainActivity extends Activity {
             "15) حدود النسخة: هذه نسخة مراجعة. اختبر دورة يوم كاملة، ودقة المخزون والتسوية، والنسخ الاحتياطي والاستعادة على جهاز حقيقي قبل الاعتماد المالي أو الضريبي أو البيع التجاري.";
         ScrollView sc=new ScrollView(this);
         TextView body=text(guide,15); body.setPadding(16,12,16,12); body.setTextIsSelectable(true); sc.addView(body);
-        new AlertDialog.Builder(this).setTitle("📘 الدليل الإرشادي الشامل").setView(sc).setPositiveButton("فهمت",null)
+        new AlertDialog.Builder(this).setTitle("📘 الدليل الإرشادي الشامل").setView(sc).setNegativeButton("الرئيسية",(d,w)->buildHome()).setPositiveButton("فهمت",null)
             .setNeutralButton("الأسئلة الشائعة",(d,w)->showFaq()).show();
     }
 
@@ -1545,7 +1604,7 @@ public class MainActivity extends Activity {
             "س: هل النسخة معتمدة للبيع التجاري؟\nج: هذه نسخة مراجعة حتى تكتمل الاختبارات العملية على الهاتف، بما فيها المخزون والتسوية والنسخ الاحتياطي والاستعادة.";
         ScrollView sc=new ScrollView(this);
         TextView body=text(faq,15); body.setPadding(16,12,16,12); body.setTextIsSelectable(true); sc.addView(body);
-        new AlertDialog.Builder(this).setTitle("❓ الأسئلة الشائعة").setView(sc).setPositiveButton("إغلاق",null)
+        new AlertDialog.Builder(this).setTitle("❓ الأسئلة الشائعة").setView(sc).setNegativeButton("الرئيسية",(d,w)->buildHome()).setPositiveButton("إغلاق",null)
             .setNeutralButton("فتح الدليل",(d,w)->showGuide()).show();
     }
 
