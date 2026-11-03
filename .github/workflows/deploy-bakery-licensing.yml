@@ -113,14 +113,12 @@ jobs:
       - name: Apply idempotent D1 licensing schema
         working-directory: licensing/worker
         env:
-          CLOUDFLARE_API_TOKEN: ${{ env.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: b2f59f3997ad2918941d4d261370d1b4
         run: npx --yes wrangler@4 d1 execute al-mizan-bakery-licenses --remote --file=../schema.sql --config wrangler.toml
 
       - name: Synchronize validated signing keys to Cloudflare
         working-directory: licensing/worker
         env:
-          CLOUDFLARE_API_TOKEN: ${{ env.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: b2f59f3997ad2918941d4d261370d1b4
         shell: bash
         run: |
@@ -130,12 +128,13 @@ jobs:
           rm -f "$RUNNER_TEMP/bakery-license-private.b64" "$RUNNER_TEMP/bakery-license-public.b64"
 
       - name: Deploy only the bakery licensing Worker
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ env.CLOUDFLARE_API_TOKEN }}
-          accountId: b2f59f3997ad2918941d4d261370d1b4
-          workingDirectory: licensing/worker
-          command: deploy --config wrangler.toml
+        working-directory: licensing/worker
+        shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: b2f59f3997ad2918941d4d261370d1b4
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 deploy --config wrangler.toml
 
       - name: Check public health endpoint
         shell: bash
