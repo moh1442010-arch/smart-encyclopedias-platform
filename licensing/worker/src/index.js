@@ -267,9 +267,11 @@ async function handle(request, env) {
 
   if (url.pathname === "/admin/overview" && request.method === "GET") {
     if (!await verifyAdminSession(request, env)) return json({ error: "UNAUTHORIZED" }, 401);
-    const [statusRows, auditRows] = await Promise.all([
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS admin_activity (id TEXT PRIMARY KEY, event TEXT NOT NULL, actor TEXT NOT NULL, created_at TEXT NOT NULL, detail TEXT)").run();
+    const [statusRows, auditRows, activityRows] = await Promise.all([
       env.DB.prepare("SELECT status, COUNT(*) AS total FROM license_orders GROUP BY status").all(),
-      env.DB.prepare("SELECT event, actor, created_at, detail FROM license_audit ORDER BY id DESC LIMIT 8").all()
+      env.DB.prepare("SELECT event, actor, created_at, detail FROM license_audit ORDER BY id DESC LIMIT 8").all(),
+      env.DB.prepare("SELECT event, actor, created_at, detail FROM admin_activity ORDER BY created_at DESC LIMIT 8").all()
     ]);
     const licenseCounts = { pending: 0, approved: 0, rejected: 0 };
     for (const row of (statusRows.results || [])) {
@@ -279,13 +281,13 @@ async function handle(request, env) {
       generatedAt: new Date().toISOString(),
       products: ADMIN_PRODUCT_REGISTRY,
       licensing: licenseCounts,
-      recentLicenseAudit: auditRows.results || [],
+      recentLicenseAudit: [...(auditRows.results || []), ...(activityRows.results || [])].sort((a,b) => String(b.created_at).localeCompare(String(a.created_at))).slice(0,8),
       coverage: {
         licensing: "live",
         products: "catalog",
         githubWorkflows: "live",
-        customerReviews: "whatsapp_only",
-        visitorAnalytics: "external_counter",
+        customerReviews: "live",
+        visitorAnalytics: "live",
         serviceHealth: "live"
       }
     });
@@ -314,6 +316,8 @@ async function handle(request, env) {
     const id = crypto.randomUUID(), createdAt = new Date().toISOString();
     await env.DB.prepare("INSERT INTO review_submissions(id,created_at,product,name,role,platform,version,device,os,test_area,result,severity,steps,rating,review_text,public_consent,status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
       .bind(id, createdAt, product, name, role, platform, version, device, os, testArea, result, severity, steps, rating, reviewText, body.publicConsent === true ? 1 : 0, "pending").run();
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS admin_activity (id TEXT PRIMARY KEY, event TEXT NOT NULL, actor TEXT NOT NULL, created_at TEXT NOT NULL, detail TEXT)").run();
+    await env.DB.prepare("INSERT INTO admin_activity(id,event,actor,created_at,detail) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(), "review_submitted", "customer", createdAt, "product=" + product + ";public_consent=" + (body.publicConsent === true ? "yes" : "no")).run();
     return json({ ok: true, reviewId: id, status: "pending", message: "تم استلام رأيك للمراجعة البشرية. لن يظهر للعامة قبل الموافقة." }, 201);
   }
 
@@ -340,6 +344,8 @@ async function handle(request, env) {
     const nextStatus = reviewDecision[2] === "approve" ? "approved" : "rejected";
     const result = await env.DB.prepare("UPDATE review_submissions SET status=?,reviewed_at=? WHERE id=? AND status='pending'").bind(nextStatus, new Date().toISOString(), reviewDecision[1]).run();
     if (!result.meta || result.meta.changes !== 1) return json({ error: "REVIEW_NOT_PENDING" }, 409);
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS admin_activity (id TEXT PRIMARY KEY, event TEXT NOT NULL, actor TEXT NOT NULL, created_at TEXT NOT NULL, detail TEXT)").run();
+    await env.DB.prepare("INSERT INTO admin_activity(id,event,actor,created_at,detail) VALUES(?,?,?,?,?)").bind(crypto.randomUUID(), "review_" + nextStatus, "admin", new Date().toISOString(), "review_id=" + reviewDecision[1]).run();
     return json({ ok: true, status: nextStatus, public: nextStatus === "approved" });
   }
 
