@@ -6,6 +6,14 @@ const PLANS = {
   lifetime: { amount: 1050000, seconds: 0 }
 };
 const encoder = new TextEncoder();
+const ADMIN_PRODUCT_REGISTRY = [
+  { id: "accounting-android", name: "المحاسب الميزان", platform: "Android", category: "محاسبة", scope: "التطبيق المحاسبي العام" },
+  { id: "accounting-windows", name: "المحاسب الميزان", platform: "Windows", category: "محاسبة", scope: "نسخة سطح المكتب" },
+  { id: "bakery-android", name: "الميزان للمخابز", platform: "Android", category: "المخابز", scope: "تراخيص المخابز والإصدار 2.6.17" },
+  { id: "store-website", name: "المتجر والموقع", platform: "Web", category: "منصة", scope: "صفحات المنتجات والتنزيلات والمراجعات" },
+  { id: "future-products", name: "منتجات مستقبلية", platform: "Modular", category: "قابل للتوسع", scope: "سجل مفتوح لإضافة منتجات ووحدات جديدة" }
+];
+
 
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
@@ -254,6 +262,33 @@ async function handle(request, env) {
       if(!panel.ok)return json({error:"ADMIN_PANEL_UNAVAILABLE"},502);
       return new Response(await panel.text(),{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store, private","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}});
     }catch{return json({error:"ADMIN_PANEL_UNAVAILABLE"},502);}
+  }
+
+
+  if (url.pathname === "/admin/overview" && request.method === "GET") {
+    if (!await verifyAdminSession(request, env)) return json({ error: "UNAUTHORIZED" }, 401);
+    const [statusRows, auditRows] = await Promise.all([
+      env.DB.prepare("SELECT status, COUNT(*) AS total FROM license_orders GROUP BY status").all(),
+      env.DB.prepare("SELECT event, actor, created_at, detail FROM license_audit ORDER BY id DESC LIMIT 8").all()
+    ]);
+    const licenseCounts = { pending: 0, approved: 0, rejected: 0 };
+    for (const row of (statusRows.results || [])) {
+      if (Object.prototype.hasOwnProperty.call(licenseCounts, row.status)) licenseCounts[row.status] = Number(row.total) || 0;
+    }
+    return json({
+      generatedAt: new Date().toISOString(),
+      products: ADMIN_PRODUCT_REGISTRY,
+      licensing: licenseCounts,
+      recentLicenseAudit: auditRows.results || [],
+      coverage: {
+        licensing: "live",
+        products: "catalog",
+        githubWorkflows: "not_connected",
+        customerReviews: "not_connected",
+        visitorAnalytics: "not_connected",
+        serviceHealth: "health_endpoint_only"
+      }
+    });
   }
 
   if (url.pathname === "/diagnostics/admin-config" && request.method === "GET") {
