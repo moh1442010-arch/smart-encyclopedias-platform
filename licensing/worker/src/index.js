@@ -291,6 +291,78 @@ async function handle(request, env) {
     });
   }
 
+  if (url.pathname === "/api/reviews" && request.method === "POST") {
+    let body;
+    try { body = await request.json(); } catch { return json({ error: "INVALID_JSON" }, 400); }
+    const product = cleanText(body.product, 120), name = cleanText(body.name, 60), role = cleanText(body.role, 80);
+    const platform = cleanText(body.platform, 40), version = cleanText(body.version, 60), device = cleanText(body.device, 100);
+    const os = cleanText(body.os, 80), testArea = cleanText(body.testArea, 120), result = cleanText(body.result, 80);
+    const severity = cleanText(body.severity, 100), steps = cleanText(body.steps, 1200), rating = cleanText(body.rating, 30);
+    const reviewText = cleanText(body.reviewText, 1000);
+    const allowedRatings = ["5 نجوم", "4 نجوم", "3 نجوم", "نجمتين", "نجمة واحدة"];
+    const allowedResults = ["عمل كما توقعت", "عمل جزئياً", "تعطّل أو أغلق", "لم أتمكن من الاختبار"];
+    if (name.length < 2 || !product || !platform || !testArea || !allowedResults.includes(result) || !allowedRatings.includes(rating) || reviewText.length < 8)
+      return json({ error: "INVALID_REVIEW_FIELDS" }, 400);
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS review_submissions (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, reviewed_at TEXT, product TEXT NOT NULL, name TEXT NOT NULL, role TEXT, platform TEXT NOT NULL, version TEXT, device TEXT, os TEXT, test_area TEXT NOT NULL, result TEXT NOT NULL, severity TEXT, steps TEXT, rating TEXT NOT NULL, review_text TEXT NOT NULL, public_consent INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'pending')").run();
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS review_rate_limits (ip_hash TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL)").run();
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    const digest = await crypto.subtle.digest("SHA-256", encoder.encode(ip + "|Al-Mizan-Review-Rate-v1"));
+    const ipHash = base64url(digest), now = Math.floor(Date.now() / 1000);
+    const rate = await env.DB.prepare("INSERT INTO review_rate_limits(ip_hash,window_start,attempts) VALUES(?,?,1) ON CONFLICT(ip_hash) DO UPDATE SET attempts=CASE WHEN review_rate_limits.window_start<=? THEN 1 ELSE review_rate_limits.attempts+1 END,window_start=CASE WHEN review_rate_limits.window_start<=? THEN ? ELSE review_rate_limits.window_start END RETURNING attempts")
+      .bind(ipHash, now, now - 3600, now - 3600, now).first();
+    if (rate && rate.attempts > 5) return json({ error: "REVIEW_RATE_LIMITED" }, 429);
+    const id = crypto.randomUUID(), createdAt = new Date().toISOString();
+    await env.DB.prepare("INSERT INTO review_submissions(id,created_at,product,name,role,platform,version,device,os,test_area,result,severity,steps,rating,review_text,public_consent,status) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+      .bind(id, createdAt, product, name, role, platform, version, device, os, testArea, result, severity, steps, rating, reviewText, body.publicConsent === true ? 1 : 0, "pending").run();
+    return json({ ok: true, reviewId: id, status: "pending", message: "تم استلام رأيك للمراجعة البشرية. لن يظهر للعامة قبل الموافقة." }, 201);
+  }
+
+  if (url.pathname === "/api/reviews" && request.method === "GET") {
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS review_submissions (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, reviewed_at TEXT, product TEXT NOT NULL, name TEXT NOT NULL, role TEXT, platform TEXT NOT NULL, version TEXT, device TEXT, os TEXT, test_area TEXT NOT NULL, result TEXT NOT NULL, severity TEXT, steps TEXT, rating TEXT NOT NULL, review_text TEXT NOT NULL, public_consent INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'pending')").run();
+    const rows = await env.DB.prepare("SELECT id,created_at,product,name,role,platform,rating,review_text FROM review_submissions WHERE status='approved' AND public_consent=1 ORDER BY reviewed_at DESC LIMIT 100").all();
+    return json({ reviews: rows.results || [] });
+  }
+
+  if (url.pathname === "/admin/reviews" && request.method === "GET") {
+    if (!await verifyAdminSession(request, env)) return json({ error: "UNAUTHORIZED" }, 401);
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS review_submissions (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, reviewed_at TEXT, product TEXT NOT NULL, name TEXT NOT NULL, role TEXT, platform TEXT NOT NULL, version TEXT, device TEXT, os TEXT, test_area TEXT NOT NULL, result TEXT NOT NULL, severity TEXT, steps TEXT, rating TEXT NOT NULL, review_text TEXT NOT NULL, public_consent INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'pending')").run();
+    const status = url.searchParams.get("status") || "pending";
+    if (!["pending", "approved", "rejected"].includes(status)) return json({ error: "INVALID_STATUS" }, 400);
+    const rows = await env.DB.prepare("SELECT id,created_at,product,name,role,platform,version,device,os,test_area,result,severity,steps,rating,review_text,public_consent,status FROM review_submissions WHERE status=? ORDER BY created_at DESC LIMIT 100").bind(status).all();
+    return json({ reviews: rows.results || [] });
+  }
+
+  const reviewDecision = url.pathname.match(/^\/admin\/reviews\/([0-9a-f-]{36})\/(approve|reject)$/i);
+  if (reviewDecision && request.method === "POST") {
+    if (!sameOriginPost(request, url)) return json({ error: "INVALID_ORIGIN" }, 403);
+    if (!await verifyAdminSession(request, env)) return json({ error: "UNAUTHORIZED" }, 401);
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS review_submissions (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, reviewed_at TEXT, product TEXT NOT NULL, name TEXT NOT NULL, role TEXT, platform TEXT NOT NULL, version TEXT, device TEXT, os TEXT, test_area TEXT NOT NULL, result TEXT NOT NULL, severity TEXT, steps TEXT, rating TEXT NOT NULL, review_text TEXT NOT NULL, public_consent INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'pending')").run();
+    const nextStatus = reviewDecision[2] === "approve" ? "approved" : "rejected";
+    const result = await env.DB.prepare("UPDATE review_submissions SET status=?,reviewed_at=? WHERE id=? AND status='pending'").bind(nextStatus, new Date().toISOString(), reviewDecision[1]).run();
+    if (!result.meta || result.meta.changes !== 1) return json({ error: "REVIEW_NOT_PENDING" }, 409);
+    return json({ ok: true, status: nextStatus, public: nextStatus === "approved" });
+  }
+
+  if (url.pathname === "/api/analytics/pageview" && request.method === "POST") {
+    let body;
+    try { body = await request.json(); } catch { return json({ error: "INVALID_JSON" }, 400); }
+    const pagePath = cleanText(body.path, 120).split("?")[0];
+    const allowedPaths = ["/store/", "/store/bakery.html", "/downloads/", "/reviews.html"];
+    if (!allowedPaths.includes(pagePath)) return json({ error: "INVALID_PAGE_PATH" }, 400);
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS analytics_daily (visit_date TEXT NOT NULL, page_path TEXT NOT NULL, views INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(visit_date,page_path))").run();
+    const day = new Date().toISOString().slice(0, 10);
+    await env.DB.prepare("INSERT INTO analytics_daily(visit_date,page_path,views) VALUES(?,?,1) ON CONFLICT(visit_date,page_path) DO UPDATE SET views=analytics_daily.views+1").bind(day, pagePath).run();
+    return json({ ok: true });
+  }
+
+  if (url.pathname === "/admin/analytics" && request.method === "GET") {
+    if (!await verifyAdminSession(request, env)) return json({ error: "UNAUTHORIZED" }, 401);
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS analytics_daily (visit_date TEXT NOT NULL, page_path TEXT NOT NULL, views INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(visit_date,page_path))").run();
+    const rows = await env.DB.prepare("SELECT page_path, SUM(views) AS views, MAX(visit_date) AS last_seen FROM analytics_daily WHERE visit_date >= date('now','-29 days') GROUP BY page_path ORDER BY views DESC").all();
+    const total = await env.DB.prepare("SELECT COALESCE(SUM(views),0) AS views FROM analytics_daily WHERE visit_date >= date('now','-29 days')").first();
+    return json({ days: 30, totalViews: Number(total && total.views) || 0, pages: rows.results || [], privacy: "aggregate-only-no-cookie-no-ip-storage" });
+  }
+
   if (url.pathname === "/admin/integrations" && request.method === "GET") {
     if (!await verifyAdminSession(request, env)) return json({ error: "UNAUTHORIZED" }, 401);
     const githubJson = async (path) => {
