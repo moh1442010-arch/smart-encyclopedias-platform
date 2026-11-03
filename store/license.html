@@ -123,7 +123,7 @@ form.addEventListener("submit", async (event) => {
     })});
     document.getElementById("orderId").value = data.orderId;
     const planLabels = {monthly:"شهري — 55,000 جنيه",annual:"سنوي — 550,000 جنيه",lifetime:"دائم — 1,050,000 جنيه"};
-    const adminMessage = "طلب ترخيص جديد للميزان للمخابز 2.6.15\nرقم الطلب: " + data.orderId + "\nالعميل: " + document.getElementById("customerName").value.trim() + "\nالباقة: " + planLabels[document.getElementById("plan").value] + "\nالمبلغ: " + data.amountSdg.toLocaleString("en-US") + " جنيه سوداني\nمرجع بنكك: " + document.getElementById("receiptReference").value.trim() + "\nمعرّف الجهاز: " + document.getElementById("deviceId").value.trim() + "\nيرجى مراجعة وصول المبلغ فعليًا ثم اعتماد الطلب من لوحة الإدارة: https://moh1442010-arch.github.io/smart-encyclopedias-platform/store/license-admin.html";
+    const adminMessage = "طلب ترخيص جديد للميزان للمخابز 2.6.17\nرقم الطلب: " + data.orderId + "\nالعميل: " + document.getElementById("customerName").value.trim() + "\nالباقة: " + planLabels[document.getElementById("plan").value] + "\nالمبلغ: " + data.amountSdg.toLocaleString("en-US") + " جنيه سوداني\nمرجع بنكك: " + document.getElementById("receiptReference").value.trim() + "\nمعرّف الجهاز: " + document.getElementById("deviceId").value.trim() + "\nيرجى مراجعة وصول المبلغ فعليًا ثم اعتماد الطلب من لوحة الإدارة: https://moh1442010-arch.github.io/smart-encyclopedias-platform/store/license-admin.html";
     const wa = document.createElement("a");
     wa.className = "button";
     wa.href = "https://wa.me/249121851285?text=" + encodeURIComponent(adminMessage);
