@@ -278,7 +278,8 @@ public class MainActivity extends Activity {
             String maxVersion = fields.get("max_version");
             // New lifetime tokens use "any". Preserve existing 2.6.15 lifetime tokens too.
             if (!"any".equals(maxVersion) &&
-                !("lifetime".equals(plan) && "2.6.15".equals(maxVersion))) return false;
+                !("lifetime".equals(plan) &&
+                    ("2.6.15".equals(maxVersion) || BuildConfig.VERSION_NAME.equals(maxVersion)))) return false;
             long expires = Long.parseLong(fields.get("expires"));
             if (expires == 0L) return true;
             android.content.SharedPreferences prefs = getPreferences(0);
