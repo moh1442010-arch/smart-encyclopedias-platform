@@ -9,8 +9,8 @@
  *   node tools/bakery-license-issuer.mjs --key /secure/path/bakery-license-private.pem --device DEVICE_ID --plan annual
  *   node tools/bakery-license-issuer.mjs --key /secure/path/bakery-license-private.pem --device DEVICE_ID --plan lifetime
  *
- * Monthly/annual tokens expire after 30/365 days. New lifetime tokens remain valid
- * across future app versions; the app still accepts legacy 2.6.15 lifetime tokens.
+ * Monthly/annual tokens expire after 30/365 days. New lifetime tokens are bound to
+ * the current app version; the app still accepts legacy 2.6.15 lifetime tokens.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -69,7 +69,7 @@ if (actualPublicKey !== EXPECTED_PUBLIC_KEY_DER_B64) {
 }
 const now = Math.floor(Date.now() / 1000);
 const expires = plan === "monthly" ? now + 30 * 86400 : plan === "annual" ? now + 365 * 86400 : 0;
-const maxVersion = "any";
+const maxVersion = plan === "lifetime" ? CURRENT_APP_VERSION : "any";
 const payload = `app=${APP_ID};device=${device};plan=${plan};max_version=${maxVersion};expires=${expires}`;
 const payload64 = Buffer.from(payload, "utf8").toString("base64url");
 const signature64 = crypto.sign("RSA-SHA256", Buffer.from(payload, "utf8"), privateKey).toString("base64url");
