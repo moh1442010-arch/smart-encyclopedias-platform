@@ -201,11 +201,11 @@ async function importPrivateKey(env) {
   if (!matches) throw new Error("LICENSE_KEY_PAIR_MISMATCH");
   return privateKey;
 }
-async function issueToken(env, deviceId, plan) {
+async function issueToken(env, deviceId, plan, purchasedAppVersion) {
   const key = await importPrivateKey(env);
   const now = Math.floor(Date.now() / 1000);
   const expires = plan === "lifetime" ? 0 : now + PLANS[plan].seconds;
-  const appVersion = cleanText(env.APP_VERSION || "2.6.17", 32);
+  const appVersion = cleanText(purchasedAppVersion || env.APP_VERSION || "2.6.17", 32);
   // This exact payload format is consumed by MainActivity.verifyLicenseToken().
   const maxVersion = plan === "lifetime" ? appVersion : "any";
   const payload = `app=${APP_ID};device=${deviceId};plan=${plan};max_version=${maxVersion};expires=${expires}`;
@@ -292,13 +292,15 @@ async function handle(request, env) {
     const deviceId = cleanText(body.deviceId, 100);
     const plan = cleanText(body.plan, 20);
     const receiptRef = cleanText(body.receiptReference, 100);
+    const requestedVersion = cleanText(body.appVersion, 32);
+    const appVersion = cleanText(env.APP_VERSION || "2.6.17", 32);
     if (customer.length < 2 || customer.length > 100 ||
         !/^[+0-9()\s-]{8,25}$/.test(contact) ||
-        !receiptRef || receiptRef.length < 4 || receiptRef.length > 100 ||
-        !validDevice(deviceId) || !PLANS[plan]) {
-      return json({ error: "INVALID_FIELDS" }, 400);
+        !/^[A-Za-z0-9\-_/]{4,100}$/.test(receiptRef) ||
+        !validDevice(deviceId) || !PLANS[plan] ||
+        (requestedVersion && requestedVersion !== appVersion)) {
+      return json({ error: requestedVersion && requestedVersion !== appVersion ? "APP_VERSION_UNSUPPORTED" : "INVALID_FIELDS" }, 400);
     }
-    const appVersion = cleanText(env.APP_VERSION || "2.6.17", 32);
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     await env.DB.prepare(
@@ -341,7 +343,7 @@ async function handle(request, env) {
     const status = url.searchParams.get("status") || "pending";
     if (!["pending", "approved", "rejected"].includes(status)) return json({ error: "INVALID_STATUS" }, 400);
     const rows = await env.DB.prepare(
-      "SELECT id,created_at,customer_name,contact,device_id,plan,amount_sdg,receipt_reference,status,app_version FROM license_orders WHERE status=? ORDER BY created_at DESC LIMIT 100"
+      "SELECT id,created_at,customer_name,contact,device_id,plan,amount_sdg,receipt_reference,status,reviewer_note,app_version FROM license_orders WHERE status=? ORDER BY created_at DESC LIMIT 100"
     ).bind(status).all();
     return json({ orders: rows.results || [] });
   }
@@ -370,7 +372,7 @@ async function handle(request, env) {
     }
     let issued;
     try {
-      issued = await issueToken(env, order.device_id, order.plan);
+      issued = await issueToken(env, order.device_id, order.plan, order.app_version);
     } catch (e) {
       const code = String(e && e.message || e);
       const allowedCodes = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH", "LICENSE_PRIVATE_KEY_INVALID", "LICENSE_PUBLIC_KEY_INVALID"];
@@ -383,6 +385,21 @@ async function handle(request, env) {
     if (!result.meta || result.meta.changes !== 1) return json({ error: "ORDER_ALREADY_REVIEWED" }, 409);
     await audit(env, orderId, "license_issued", "admin", `plan=${order.plan};version=${issued.appVersion}`);
     return json({ orderId, status: "approved", activationToken: issued.token, expiresAt: issued.expires, appVersion: issued.appVersion });
+  }
+
+  const tokenMatch = url.pathname.match(/^\/admin\/orders\/([0-9a-f-]{36})\/token$/i);
+  if (tokenMatch && request.method === "POST") {
+    if (!sameOriginPost(request, url)) return json({ error: "INVALID_ORIGIN" }, 403);
+    if (!await verifyAdminSession(request, env)) return json({ error: "UNAUTHORIZED" }, 401);
+    let body = {};
+    try { body = await request.json(); } catch { return json({ error: "INVALID_JSON" }, 400); }
+    const note = cleanText(body.note, 500);
+    if (note.length < 4) return json({ error: "RETRIEVAL_REASON_REQUIRED" }, 400);
+    const order = await env.DB.prepare("SELECT id,status,activation_token,token_expires,app_version FROM license_orders WHERE id=?").bind(tokenMatch[1]).first();
+    if (!order) return json({ error: "ORDER_NOT_FOUND" }, 404);
+    if (order.status !== "approved" || !order.activation_token) return json({ error: "LICENSE_NOT_ISSUED" }, 409);
+    await audit(env, order.id, "license_token_retrieved", "admin", note);
+    return json({ orderId: order.id, activationToken: order.activation_token, expiresAt: order.token_expires, appVersion: order.app_version });
   }
 
   return json({ error: "NOT_FOUND" }, 404);
