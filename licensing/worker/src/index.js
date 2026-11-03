@@ -346,7 +346,8 @@ async function handle(request, env) {
   if (url.pathname === "/api/analytics/pageview" && request.method === "POST") {
     let body;
     try { body = await request.json(); } catch { return json({ error: "INVALID_JSON" }, 400); }
-    const pagePath = cleanText(body.path, 120).split("?")[0];
+    const rawPath = cleanText(body.path, 160).split("?")[0];
+    const pagePath = rawPath.replace(/^\/smart-encyclopedias-platform(?=\/|$)/, "") || "/";
     const allowedPaths = ["/store/", "/store/bakery.html", "/downloads/", "/reviews.html"];
     if (!allowedPaths.includes(pagePath)) return json({ error: "INVALID_PAGE_PATH" }, 400);
     await env.DB.prepare("CREATE TABLE IF NOT EXISTS analytics_daily (visit_date TEXT NOT NULL, page_path TEXT NOT NULL, views INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(visit_date,page_path))").run();
