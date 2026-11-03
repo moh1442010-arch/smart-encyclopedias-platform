@@ -296,24 +296,60 @@ public class MainActivity extends Activity {
     }
 
     private void showActivationDialog() {
+        LinearLayout activationBox = new LinearLayout(this);
+        activationBox.setOrientation(LinearLayout.VERTICAL);
+        activationBox.setPadding(24, 12, 24, 8);
+
+        TextView instructions = text(
+            "انسخ رمز التفعيل كاملًا كما وصلك من إدارة الميزان، من أول حرف إلى آخر حرف. " +
+            "يتكوّن الرمز من جزأين بينهما نقطة (.). لا تنسخ رقم الطلب أو اسم الباقة، ولا تحذف النقطة أو أي جزء من الرمز. " +
+            "الصق الرمز كاملًا في الحقل أدناه، ثم اضغط «تفعيل».", 14);
+        activationBox.addView(instructions);
+
         EditText code = new EditText(this);
-        code.setHint("ألصق رمز التفعيل الذي أرسله الدعم");
+        code.setHint("الصق رمز التفعيل كاملًا هنا");
         code.setMinLines(3);
         code.setGravity(Gravity.TOP | Gravity.START);
+        code.setTextDirection(View.TEXT_DIRECTION_LTR);
         code.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        activationBox.addView(code);
+
+        Button paste = button("لصق الرمز من الحافظة");
+        paste.setOnClickListener(v -> {
+            try {
+                android.content.ClipboardManager clipboard =
+                    (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                if (clipboard == null || !clipboard.hasPrimaryClip() ||
+                    clipboard.getPrimaryClip().getItemCount() == 0) {
+                    toast("انسخ رمز التفعيل أولًا، ثم اضغط زر اللصق.");
+                    return;
+                }
+                CharSequence copied = clipboard.getPrimaryClip().getItemAt(0).coerceToText(this);
+                if (copied == null || copied.toString().trim().isEmpty()) {
+                    toast("الحافظة لا تحتوي على رمز نصي.");
+                    return;
+                }
+                code.setText(copied.toString().trim());
+                code.setSelection(code.length());
+            } catch (Exception ex) {
+                toast("تعذر اللصق من الحافظة. اضغط مطولًا داخل الحقل واختر لصق.");
+            }
+        });
+        activationBox.addView(paste);
+
         AlertDialog dialog = new AlertDialog.Builder(this).setTitle("🔑 تفعيل الاشتراك")
-            .setMessage("بعد مراجعة التحويل، يصلك رمز موقّع مرتبط بهذا الجهاز والباقة. أدخله هنا؛ لا ترسل الرمز السري لبنكك.")
-            .setView(code).setNegativeButton("إلغاء", null)
+            .setMessage("أدخل الرمز الذي صدر بعد اعتماد طلبك. الرمز مخصص لهذا الجهاز والباقة.")
+            .setView(activationBox).setNegativeButton("إلغاء", null)
             .setPositiveButton("تفعيل", null).create();
         dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             String token = code.getText().toString().replaceAll("\\s+", "");
             if (!verifyLicenseToken(token)) {
-                code.setError("رمز التفعيل غير صحيح أو لا يخص هذا الجهاز أو انتهت صلاحيته.");
+                code.setError("الرمز غير صحيح أو غير مكتمل أو لا يخص هذا الجهاز أو انتهت صلاحيته. انسخه كاملًا دون تعديل.");
                 return;
             }
             getPreferences(0).edit().putString("license_token", token).apply();
             dialog.dismiss();
-            toast("تم التحقق من رمز التفعيل.");
+            toast("تم تفعيل الاشتراك والتحقق من الرمز.");
             buildHome();
         }));
         dialog.show();
