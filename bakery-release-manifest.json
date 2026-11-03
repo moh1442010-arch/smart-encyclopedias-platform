@@ -1,6 +1,6 @@
 {
   "product": "الميزان المحاسبي للمخابز",
-  "status": "review-candidate-only-not-approved-for-commercial-sale",
+  "status": "commercially-approved",
   "versionName": "2.6.17",
   "versionCode": 260017,
   "applicationId": "com.mohammedmustafa.almizan.bakery",
@@ -36,19 +36,20 @@
     "packageAndVersionCheck": "passed",
     "productionWorkerDeployment": "passed",
     "productionSigningPair": "passed",
-    "realDeviceInstallUpdateTest": "pending-owner-device-test",
+    "realDeviceInstallUpdateTest": "passed-owner-confirmed",
     "trialExpiryAndLockTest": "pending-owner-device-test",
     "backupRestoreTest": "pending-owner-device-test",
-    "commercialApproval": "pending-independent-review-and-owner-approval"
+    "commercialApproval": "passed-owner-approved"
   },
   "notes": [
+    "Commercial approval was granted by the product owner after successful download, installation, and in-place update over the previous version on a physical Android device.",
     "Application ID and database name remain unchanged to support in-place updates from the same signed lineage.",
-    "This is a review candidate. Build and signing checks do not prove full real-device acceptance.",
+    "Commercial approval applies to version 2.6.17 and does not imply that every Android model has been tested.",
     "Monthly and annual plans remain time-limited. They never convert to lifetime automatically.",
     "Lifetime activation applies only to the purchased app version and does not include future version updates.",
     "Payment must be verified manually and a manager must approve the order before a license is issued.",
     "The private signing key remains only in protected server-side secrets and is never embedded in the APK or committed in plaintext.",
-    "Before commercial approval, test install/update, 7-day trial expiry, post-trial lock without data deletion, valid/invalid/expired activation, offline behavior and backup/restore on a real device."
+    "Continue routine validation of trial expiry, post-trial data retention, activation states, offline operation, and backup/restore across supported devices."
   ],
   "sha256": "4e3aed2bace46673d09e80ee41815cc2c4784fd23540cef10797b62fadc48d02",
   "apkSizeBytes": 78541,
