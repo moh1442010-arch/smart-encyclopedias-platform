@@ -403,14 +403,21 @@ async function handle(request, env) {
         downloadUrl: typeof asset.browser_download_url === "string" && asset.browser_download_url.startsWith("https://github.com/") ? asset.browser_download_url : ""
       }))[0] || null
     } : null;
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS review_submissions (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, reviewed_at TEXT, product TEXT NOT NULL, name TEXT NOT NULL, role TEXT, platform TEXT NOT NULL, version TEXT, device TEXT, os TEXT, test_area TEXT NOT NULL, result TEXT NOT NULL, severity TEXT, steps TEXT, rating TEXT NOT NULL, review_text TEXT NOT NULL, public_consent INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'pending')").run();
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS analytics_daily (visit_date TEXT NOT NULL, page_path TEXT NOT NULL, views INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(visit_date,page_path))").run();
+    const reviewCounts = await env.DB.prepare("SELECT status,COUNT(*) AS total FROM review_submissions GROUP BY status").all();
+    const analyticsRows = await env.DB.prepare("SELECT page_path,SUM(views) AS views,MAX(visit_date) AS last_seen FROM analytics_daily WHERE visit_date >= date('now','-29 days') GROUP BY page_path ORDER BY views DESC").all();
+    const analyticsTotal = await env.DB.prepare("SELECT COALESCE(SUM(views),0) AS views FROM analytics_daily WHERE visit_date >= date('now','-29 days')").first();
+    const reviewSummary = { pending: 0, approved: 0, rejected: 0 };
+    for (const row of (reviewCounts.results || [])) if (Object.prototype.hasOwnProperty.call(reviewSummary, row.status)) reviewSummary[row.status] = Number(row.total) || 0;
     return json({
       generatedAt: new Date().toISOString(),
       githubAvailable: runsResult.status === "fulfilled",
       workflows: runs,
       expertFeedback: expert,
       release,
-      customerReviews: { channel: "WhatsApp", persistedInDashboard: false, url: "https://moh1442010-arch.github.io/smart-encyclopedias-platform/reviews.html" },
-      visitorAnalytics: { provider: "hits.sh", integrated: false, url: "https://hits.sh/moh1442010-arch.github.io/smart-encyclopedias-platform/" },
+      customerReviews: { channel: "first_party_moderated_form", counts: reviewSummary, url: "https://moh1442010-arch.github.io/smart-encyclopedias-platform/reviews.html" },
+      visitorAnalytics: { provider: "first_party_aggregate", integrated: true, totalViews30Days: Number(analyticsTotal && analyticsTotal.views) || 0, pages: analyticsRows.results || [], privacy: "aggregate-only-no-cookie-no-ip-storage" },
       serviceHealth: { healthEndpoint: "ok", signingReady, appVersion: cleanText(env.APP_VERSION || "2.6.17", 32) }
     });
   }
