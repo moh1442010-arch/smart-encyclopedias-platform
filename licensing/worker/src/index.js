@@ -292,7 +292,10 @@ async function handle(request, env) {
     const deviceId = cleanText(body.deviceId, 100);
     const plan = cleanText(body.plan, 20);
     const receiptRef = cleanText(body.receiptReference, 100);
-    if (!customer || !contact || !receiptRef || !validDevice(deviceId) || !PLANS[plan]) {
+    if (customer.length < 2 || customer.length > 100 ||
+        !/^[+0-9()\\s-]{8,25}$/.test(contact) ||
+        !receiptRef || receiptRef.length < 4 || receiptRef.length > 100 ||
+        !validDevice(deviceId) || !PLANS[plan]) {
       return json({ error: "INVALID_FIELDS" }, 400);
     }
     const appVersion = cleanText(env.APP_VERSION || "2.6.17", 32);
@@ -308,15 +311,13 @@ async function handle(request, env) {
   const statusMatch = url.pathname.match(/^\/api\/orders\/([0-9a-f-]{36})$/i);
   if (statusMatch && request.method === "GET") {
     const row = await env.DB.prepare(
-      "SELECT id,created_at,plan,amount_sdg,status,reviewed_at,reviewer_note,activation_token,token_expires,app_version FROM license_orders WHERE id=?"
+      "SELECT id,created_at,plan,amount_sdg,status,app_version FROM license_orders WHERE id=?"
     ).bind(statusMatch[1]).first();
     if (!row) return json({ error: "ORDER_NOT_FOUND" }, 404);
-    // The activation token is only returned after explicit admin approval.
+    // Public status lookup never exposes customer details, reviewer notes, or activation tokens.
     return json({
-      orderId: row.id, createdAt: row.created_at, plan: row.plan, amountSdg: row.amount_sdg,
-      status: row.status, reviewedAt: row.reviewed_at, note: row.reviewer_note || "",
-      activationToken: row.status === "approved" ? row.activation_token : null,
-      expiresAt: row.token_expires, appVersion: row.app_version
+      orderId: row.id, createdAt: row.created_at, plan: row.plan,
+      amountSdg: row.amount_sdg, status: row.status, appVersion: row.app_version
     });
   }
 
