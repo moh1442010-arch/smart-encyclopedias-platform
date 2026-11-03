@@ -76,7 +76,9 @@ footer{padding:18px 0;color:var(--muted);font-size:11px;text-align:center}
    <div class="row">
     <a class="btn secondary" href="https://github.com/moh1442010-arch/smart-encyclopedias-platform/issues/27" target="_blank" rel="noopener noreferrer">سجل مراجعة الخبراء</a>
     <a class="btn secondary" href="https://moh1442010-arch.github.io/smart-encyclopedias-platform/reviews.html" target="_blank" rel="noopener noreferrer">صفحة آراء العملاء</a>
+    <a class="btn secondary" href="https://moh1442010-arch.github.io/smart-encyclopedias-platform/complaints.html" target="_blank" rel="noopener noreferrer">صفحة الشكاوى والبلاغات</a>
    </div>
+   <p class="muted">الشكاوى حاليًا تُرسل عبر واتساب ولا تُسجل مركزيًا في هذه اللوحة.</p>
   </div>
   <div class="panel">
    <h3>إصدار المخابز المنشور</h3>
@@ -148,6 +150,7 @@ function renderIntegrations(data){
   ["GitHub Actions",data.githubAvailable?"متصل — "+data.workflows.length+" تشغيلات حديثة":"تعذر جلب بيانات GitHub"],
   ["مراجعات الخبراء",data.expertFeedback?data.expertFeedback.state+" — "+data.expertFeedback.comments+" تعليقًا":"تعذر جلب سجل الخبراء"],
   ["آراء العملاء","قيد المراجعة: "+(data.customerReviews&&data.customerReviews.counts?data.customerReviews.counts.pending:0)+" · معتمدة: "+(data.customerReviews&&data.customerReviews.counts?data.customerReviews.counts.approved:0)],
+  ["الشكاوى والبلاغات","استقبال واتساب فقط — لا تُحفظ في اللوحة"],
   ["زيارات المتجر — 30 يومًا",String(data.visitorAnalytics&&data.visitorAnalytics.totalViews30Days||0)+" مشاهدة مجمعة"],
   ["صحة الخدمة",data.serviceHealth&&data.serviceHealth.healthEndpoint==="ok"?"Worker يعمل":"تعذر تأكيد صحة Worker"],
   ["مفتاح التوقيع",data.serviceHealth&&data.serviceHealth.signingReady?"جاهز ومطابق":"غير جاهز"]
