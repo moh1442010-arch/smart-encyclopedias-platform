@@ -25,7 +25,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          APP_KEY="$(grep -oE 'LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | head -1 | cut -d '"' -f2)"
+          APP_KEY="$(grep -oE 'private static final String LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | head -1 | cut -d '"' -f2)"
           ISSUER_KEY="$(grep -oE 'EXPECTED_PUBLIC_KEY_DER_B64 = "[^"]+"' tools/bakery-license-issuer.mjs | head -1 | cut -d '"' -f2)"
           WORKER_KEY="$(grep -oE 'EXPECTED_APP_PUBLIC_KEY_DER_B64 = "[^"]+"' licensing/worker/src/index.js | head -1 | cut -d '"' -f2)"
           test -n "$APP_KEY" || { echo "::error::App public key missing."; exit 1; }
