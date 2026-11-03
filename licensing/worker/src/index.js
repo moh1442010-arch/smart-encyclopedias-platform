@@ -1,5 +1,5 @@
 const APP_ID = "com.mohammedmustafa.almizan.bakery";
-const EXPECTED_APP_PUBLIC_KEY_DER_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvsK66CYxt4X7R9GcVaJ0FjrheMAkFpzbirdz7/X/lj8UAuqUabNOPN3R5dGuZro90i+raIyngTz+VxRxLcNPRQru4VzWIDLsoBEwi/CrsOaMJFgVLom7jYXFjQ5P25TO5hRxzPN8ZOOG1MTo8j6ipgPOKY5be6Gmsj8R03SbulYnVO8STWC4bSkqwvV9YlEIpZwnyAJVbWHbE4JSKiCC/TMOcfrBgGG0W7qCJeEjnUKPfHAtH85ayZjBQwMIQx+z1CoTFWrqKXywSWN65G7yZbHwsnREovRprxjyVHqmTtLd45VyNQU2zXBKchzkwnpiG1zeD8kfdDeACeaAmxbsiwIDAQAB";
+const EXPECTED_APP_PUBLIC_KEY_DER_B64 = "MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAnWLF2Y4nmN7MWU1q9tzTVJCCacOf7iaGiRYrA21Ej7Xp7vV2/BgMu7N3OmcB0UJyIn1A22z34fKf3YEEDTjBz4pHHEtXeB+bjH+jn7VOcwQS9mZhTUR1+/2gYJxIKUEz9233Ab1eupGcCzuziQck362qiRBdjlHEViW0koE87TmPKRkkqzKtkOm0MzIfYr7tM/DmqncZ9RKUnctvoJd05kDxg0PXdNZ539Ip7tT6y11nmakYg5lJv9XOqNWnQbPRUDjOO9jWIPFnUvaPVofYrBOENPTu8S7414Twb7/0zmhFgNuizHbZQEOYD3ZNK0GfNDYH8Tk1ZEe9H7WHE3+B0UYkCBEfJCdXkHxRIJLb1KSyxpLw7iiGxAJdCQ95SNkcYfl6KTsZFPtt4pssXRH9XvJsvQEmP7OmqtPSJy0ZFSL/KgS5T3EIeuG2DyJom5WJ8lya4zy3noU9hL8gSjpzOdzR87KqiOYSy890nwtvHIi73qxvNpPGxPghG3JIEEBFAgMBAAE=";
 const PLANS = {
   monthly: { amount: 55000, seconds: 30 * 86400 },
   annual: { amount: 550000, seconds: 365 * 86400 },
@@ -205,7 +205,7 @@ async function issueToken(env, deviceId, plan) {
   const key = await importPrivateKey(env);
   const now = Math.floor(Date.now() / 1000);
   const expires = plan === "lifetime" ? 0 : now + PLANS[plan].seconds;
-  const appVersion = cleanText(env.APP_VERSION || "2.6.16", 32);
+  const appVersion = cleanText(env.APP_VERSION || "2.6.17", 32);
   // This exact payload format is consumed by MainActivity.verifyLicenseToken().
   const payload = `app=${APP_ID};device=${deviceId};plan=${plan};max_version=any;expires=${expires}`;
   const bytes = encoder.encode(payload);
@@ -249,7 +249,7 @@ async function handle(request, env) {
   if (url.pathname === "/diagnostics/admin-config" && request.method === "GET") {
     return json({
       adminPasswordConfigured: adminPassword(env).length >= 32,
-      appVersion: cleanText(env.APP_VERSION || "2.6.16", 32)
+      appVersion: cleanText(env.APP_VERSION || "2.6.17", 32)
     });
   }
 
@@ -257,14 +257,14 @@ async function handle(request, env) {
     return json({
       ...signingDiagnostics(env),
       privateKeyFormat: privateKeyFormat(env.LICENSE_PRIVATE_KEY_PKCS8_B64),
-      appVersion: cleanText(env.APP_VERSION || "2.6.16", 32)
+      appVersion: cleanText(env.APP_VERSION || "2.6.17", 32)
     });
   }
 
   if (url.pathname === "/diagnostics/signing-pair" && request.method === "GET") {
     try {
       await importPrivateKey(env);
-      return json({ signingPairMatches: true, signingReady: true, appVersion: cleanText(env.APP_VERSION || "2.6.16", 32) });
+      return json({ signingPairMatches: true, signingReady: true, appVersion: cleanText(env.APP_VERSION || "2.6.17", 32) });
     } catch (e) {
       const code = String(e && e.message || e);
       const allowedCodes = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH", "LICENSE_PRIVATE_KEY_INVALID", "LICENSE_PUBLIC_KEY_INVALID"];
@@ -274,7 +274,7 @@ async function handle(request, env) {
         error: allowedCodes.includes(code) ? code : "LICENSE_SIGNING_INTERNAL_ERROR",
         ...signingDiagnostics(env),
         privateKeyFormat: privateKeyFormat(env.LICENSE_PRIVATE_KEY_PKCS8_B64),
-        appVersion: cleanText(env.APP_VERSION || "2.6.16", 32)
+        appVersion: cleanText(env.APP_VERSION || "2.6.17", 32)
       }, 503);
     }
   }
@@ -294,7 +294,7 @@ async function handle(request, env) {
     if (!customer || !contact || !receiptRef || !validDevice(deviceId) || !PLANS[plan]) {
       return json({ error: "INVALID_FIELDS" }, 400);
     }
-    const appVersion = cleanText(env.APP_VERSION || "2.6.16", 32);
+    const appVersion = cleanText(env.APP_VERSION || "2.6.17", 32);
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     await env.DB.prepare(
@@ -323,7 +323,7 @@ async function handle(request, env) {
     if (!await verifyAdminSession(request,env)) return json({error:"UNAUTHORIZED"},401);
     try {
       await importPrivateKey(env);
-      return json({ ok: true, publicKeyMatchesApp: true, appVersion: cleanText(env.APP_VERSION || "2.6.16", 32) });
+      return json({ ok: true, publicKeyMatchesApp: true, appVersion: cleanText(env.APP_VERSION || "2.6.17", 32) });
     } catch (e) {
       const code = String(e && e.message || e);
       const allowedCodes = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH", "LICENSE_PRIVATE_KEY_INVALID", "LICENSE_PUBLIC_KEY_INVALID"];
