@@ -46,8 +46,6 @@ jobs:
 
       - name: Verify Cloudflare API token before touching D1
         shell: bash
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ env.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
           response="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 \\
