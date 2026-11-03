@@ -1078,6 +1078,7 @@ public class MainActivity extends Activity {
         }
         ScrollView sc = new ScrollView(this); LinearLayout box = new LinearLayout(this);
         box.setPadding(14,8,14,12); box.setOrientation(LinearLayout.VERTICAL); sc.addView(box);
+        addHomeNavigation(box);
         final java.util.Map<String,EditText> inputs = new java.util.LinkedHashMap<>();
         for(Field field:fields) {
             box.addView(text(field.label,15));
@@ -1442,7 +1443,7 @@ public class MainActivity extends Activity {
                 (bad>0?"\n\n⚠ توجد "+bad+" سطور غير مكتملة أو غير رقمية. راجع صيغة السطور.":"")+
                 (val("cuts","loaves_per_1000")<=0?"\n⚠ أدخل عدد العيش المقابل لـ 1,000 جنيه في القطعيات.":"");
             AlertDialog dialog=new AlertDialog.Builder(this).setTitle("🧮 المحاسب والحساب — "+day).setMessage(message)
-                .setNegativeButton("إغلاق",null).setNeutralButton("مشاركة التقرير",(d,w)->shareReport(message))
+                .setNegativeButton("الرئيسية",(d,w)->buildHome()).setNeutralButton("مشاركة التقرير",(d,w)->shareReport(message))
                 .setPositiveButton("حفظ التقرير", null).create();
             dialog.setOnShowListener(v -> {
                 Button save=dialog.getButton(AlertDialog.BUTTON_POSITIVE);
@@ -1489,7 +1490,7 @@ public class MainActivity extends Activity {
     private void backupRestoreMenu() {
         new AlertDialog.Builder(this).setTitle("نسخ احتياطي واستعادة")
             .setMessage("أنشئ ملف JSON يحفظ سجلات الأيام والأقسام، واحتفظ به خارج الهاتف. الاستعادة تدمج السجلات وتستبدل فقط السجل الذي يطابق التاريخ والقسم.")
-            .setNegativeButton("إغلاق",null)
+            .setNegativeButton("الرئيسية",(d,w)->buildHome())
             .setNeutralButton("استعادة نسخة",(d,w)->{
                 Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("application/json");
                 try { startActivityForResult(i,REQUEST_IMPORT_BACKUP); } catch(Exception ex) { toast("تعذر فتح اختيار ملف النسخة الاحتياطية"); }
@@ -1578,7 +1579,7 @@ public class MainActivity extends Activity {
             "15) حدود النسخة: هذه نسخة مراجعة. اختبر دورة يوم كاملة، ودقة المخزون والتسوية، والنسخ الاحتياطي والاستعادة على جهاز حقيقي قبل الاعتماد المالي أو الضريبي أو البيع التجاري.";
         ScrollView sc=new ScrollView(this);
         TextView body=text(guide,15); body.setPadding(16,12,16,12); body.setTextIsSelectable(true); sc.addView(body);
-        new AlertDialog.Builder(this).setTitle("📘 الدليل الإرشادي الشامل").setView(sc).setPositiveButton("فهمت",null)
+        new AlertDialog.Builder(this).setTitle("📘 الدليل الإرشادي الشامل").setView(sc).setNegativeButton("الرئيسية",(d,w)->buildHome()).setPositiveButton("فهمت",null)
             .setNeutralButton("الأسئلة الشائعة",(d,w)->showFaq()).show();
     }
 
@@ -1600,7 +1601,7 @@ public class MainActivity extends Activity {
             "س: هل النسخة معتمدة للبيع التجاري؟\nج: هذه نسخة مراجعة حتى تكتمل الاختبارات العملية على الهاتف، بما فيها المخزون والتسوية والنسخ الاحتياطي والاستعادة.";
         ScrollView sc=new ScrollView(this);
         TextView body=text(faq,15); body.setPadding(16,12,16,12); body.setTextIsSelectable(true); sc.addView(body);
-        new AlertDialog.Builder(this).setTitle("❓ الأسئلة الشائعة").setView(sc).setPositiveButton("إغلاق",null)
+        new AlertDialog.Builder(this).setTitle("❓ الأسئلة الشائعة").setView(sc).setNegativeButton("الرئيسية",(d,w)->buildHome()).setPositiveButton("إغلاق",null)
             .setNeutralButton("فتح الدليل",(d,w)->showGuide()).show();
     }
 
