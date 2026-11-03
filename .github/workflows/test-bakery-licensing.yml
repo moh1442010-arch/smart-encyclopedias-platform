@@ -57,7 +57,7 @@ jobs:
           test -n "$APP_VERSION" && test "$APP_VERSION" = "$WORKER_VERSION"
           test "$APP_VERSION" = "2.6.17"
           grep -q "versionCode 260017" bakery-app/app/build.gradle
-          APP_KEY="$(grep -oE 'LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | cut -d '"' -f2)"
+          APP_KEY="$(grep -oE 'private static final String LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | cut -d '"' -f2)"
           WORKER_KEY="$(grep -oE 'EXPECTED_APP_PUBLIC_KEY_DER_B64 = "[^"]+"' licensing/worker/src/index.js | cut -d '"' -f2)"
           test -n "$APP_KEY" && test "$APP_KEY" = "$WORKER_KEY"
           echo "Bakery version and app/Worker public keys are consistent."
