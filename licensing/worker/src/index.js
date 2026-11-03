@@ -6,6 +6,14 @@ const PLANS = {
   lifetime: { amount: 1050000, seconds: 0 }
 };
 const encoder = new TextEncoder();
+const ADMIN_PRODUCT_REGISTRY = [
+  { id: "accounting-android", name: "المحاسب الميزان", platform: "Android", category: "محاسبة", scope: "التطبيق المحاسبي العام" },
+  { id: "accounting-windows", name: "المحاسب الميزان", platform: "Windows", category: "محاسبة", scope: "نسخة سطح المكتب" },
+  { id: "bakery-android", name: "الميزان للمخابز", platform: "Android", category: "المخابز", scope: "تراخيص المخابز والإصدار 2.6.17" },
+  { id: "store-website", name: "المتجر والموقع", platform: "Web", category: "منصة", scope: "صفحات المنتجات والتنزيلات والمراجعات" },
+  { id: "future-products", name: "منتجات مستقبلية", platform: "Modular", category: "قابل للتوسع", scope: "سجل مفتوح لإضافة منتجات ووحدات جديدة" }
+];
+
 
 function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
@@ -59,7 +67,7 @@ async function allowOrderSubmission(request,env){
   ).bind(ipHash,now,now-900,now-900,now).first();
   return Boolean(row&&row.attempts<=8);
 }
-const ADMIN_LOGIN_HTML=`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>دخول إدارة التراخيص</title><style>body{margin:0;background:#f2f5fa;color:#14243a;font-family:system-ui,Tahoma,Arial;display:grid;min-height:100vh;place-items:center}.box{background:white;width:min(420px,calc(100% - 36px));padding:25px;border-radius:16px;box-shadow:0 8px 32px #10243a18}h2{margin-top:0}label{display:block;margin:12px 0 5px}input,button{font:inherit;width:100%;padding:12px;border-radius:9px;box-sizing:border-box}input{border:1px solid #bbc7d5}button{margin-top:16px;border:0;background:#d4af37;color:#0b1f3a;font-weight:800}p{color:#66758a;font-size:14px}#msg{color:#a32121;min-height:24px}</style><main class="box"><h2>إدارة تراخيص الميزان للمخابز</h2><p>سجّل الدخول للوصول إلى طلبات العملاء وإصدار التراخيص.</p><form id="f"><label for="pw">كلمة مرور الإدارة</label><input id="pw" type="password" minlength="32" maxlength="256" autocomplete="current-password" required><button id="go">تسجيل الدخول</button></form><p id="msg" role="status"></p></main><script>const f=document.getElementById('f'),pw=document.getElementById('pw'),msg=document.getElementById('msg'),go=document.getElementById('go');f.addEventListener('submit',async e=>{e.preventDefault();go.disabled=true;msg.textContent='جارٍ التحقق…';try{const r=await fetch('/admin/login',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({password:pw.value})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error==='TOO_MANY_ATTEMPTS'?'محاولات كثيرة. انتظر 15 دقيقة ثم حاول مجدداً.':'تعذر تسجيل الدخول. تحقق من كلمة المرور أو إعداد الخدمة.');location.replace('/admin/panel')}catch(err){msg.textContent=err.message;pw.value='';pw.focus();go.disabled=false}});</script></html>`;
+const ADMIN_LOGIN_HTML=`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>دخول مركز القيادة</title><style>body{margin:0;background:#f2f5fa;color:#14243a;font-family:system-ui,Tahoma,Arial;display:grid;min-height:100vh;place-items:center}.box{background:white;width:min(420px,calc(100% - 36px));padding:25px;border-radius:16px;box-shadow:0 8px 32px #10243a18}h2{margin-top:0}label{display:block;margin:12px 0 5px}input,button{font:inherit;width:100%;padding:12px;border-radius:9px;box-sizing:border-box}input{border:1px solid #bbc7d5}button{margin-top:16px;border:0;background:#d4af37;color:#0b1f3a;font-weight:800}p{color:#66758a;font-size:14px}#msg{color:#a32121;min-height:24px}</style><main class="box"><h2>مركز قيادة المحاسب الميزان</h2><p>سجّل الدخول للوصول إلى طلبات العملاء وإصدار التراخيص.</p><form id="f"><label for="pw">كلمة مرور الإدارة</label><input id="pw" type="password" minlength="32" maxlength="256" autocomplete="current-password" required><button id="go">تسجيل الدخول</button></form><p id="msg" role="status"></p></main><script>const f=document.getElementById('f'),pw=document.getElementById('pw'),msg=document.getElementById('msg'),go=document.getElementById('go');f.addEventListener('submit',async e=>{e.preventDefault();go.disabled=true;msg.textContent='جارٍ التحقق…';try{const r=await fetch('/admin/login',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({password:pw.value})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error==='TOO_MANY_ATTEMPTS'?'محاولات كثيرة. انتظر 15 دقيقة ثم حاول مجدداً.':'تعذر تسجيل الدخول. تحقق من كلمة المرور أو إعداد الخدمة.');location.replace('/admin/panel')}catch(err){msg.textContent=err.message;pw.value='';pw.focus();go.disabled=false}});</script></html>`;
 function validDevice(v) {
   return /^[A-Za-z0-9-]{8,100}$/.test(v) && !v.includes(";") && !v.includes("=");
 }
@@ -252,8 +260,35 @@ async function handle(request, env) {
     try{
       const panel=await fetch("https://moh1442010-arch.github.io/smart-encyclopedias-platform/store/license-admin.html",{headers:{"accept":"text/html","user-agent":"Al-Mizan-Admin-Panel"}});
       if(!panel.ok)return json({error:"ADMIN_PANEL_UNAVAILABLE"},502);
-      return new Response(await panel.text(),{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store, private","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}});
+      return new Response(await panel.text(),{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store, private","x-content-type-options":"nosniff","x-frame-options":"DENY","referrer-policy":"no-referrer","permissions-policy":"camera=(), microphone=(), geolocation=()","content-security-policy":"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"}});
     }catch{return json({error:"ADMIN_PANEL_UNAVAILABLE"},502);}
+  }
+
+
+  if (url.pathname === "/admin/overview" && request.method === "GET") {
+    if (!await verifyAdminSession(request, env)) return json({ error: "UNAUTHORIZED" }, 401);
+    const [statusRows, auditRows] = await Promise.all([
+      env.DB.prepare("SELECT status, COUNT(*) AS total FROM license_orders GROUP BY status").all(),
+      env.DB.prepare("SELECT event, actor, created_at, detail FROM license_audit ORDER BY id DESC LIMIT 8").all()
+    ]);
+    const licenseCounts = { pending: 0, approved: 0, rejected: 0 };
+    for (const row of (statusRows.results || [])) {
+      if (Object.prototype.hasOwnProperty.call(licenseCounts, row.status)) licenseCounts[row.status] = Number(row.total) || 0;
+    }
+    return json({
+      generatedAt: new Date().toISOString(),
+      products: ADMIN_PRODUCT_REGISTRY,
+      licensing: licenseCounts,
+      recentLicenseAudit: auditRows.results || [],
+      coverage: {
+        licensing: "live",
+        products: "catalog",
+        githubWorkflows: "not_connected",
+        customerReviews: "not_connected",
+        visitorAnalytics: "not_connected",
+        serviceHealth: "health_endpoint_only"
+      }
+    });
   }
 
   if (url.pathname === "/diagnostics/admin-config" && request.method === "GET") {

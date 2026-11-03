@@ -1,44 +1,136 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#0b1f3a">
-<title>إدارة تراخيص المخابز | المحاسب الميزان</title>
+<title>مركز قيادة المحاسب الميزان</title>
 <style>
-:root{--n:#0b1f3a;--g:#d4af37;--ink:#172438;--muted:#627084;--line:#dce4ee;--bg:#f4f7fb}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;line-height:1.7}.wrap{width:min(1100px,calc(100% - 24px));margin:auto}header{background:var(--n);color:#fff;padding:22px 0;border-bottom:5px solid var(--g)}h1{margin:0}main{padding:20px 0}.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0}label{display:block;font-weight:800;margin:8px 0 4px}input{width:100%;font:inherit;padding:10px;border:1px solid #bdc9d8;border-radius:9px}button{font:inherit;border:0;border-radius:9px;background:var(--g);color:var(--n);font-weight:850;padding:9px 13px;margin:4px;cursor:pointer}button.danger{background:#fbe4e4;color:#8a1f1f}button:disabled{opacity:.5}.muted{color:var(--muted);font-size:13px}.result{white-space:pre-wrap;overflow-wrap:anywhere;background:#f0f4fa;padding:10px;border-radius:9px}.order{border:1px solid var(--line);border-radius:12px;padding:13px;margin:10px 0}.order h3{margin:0;color:var(--n)}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row button{flex:0 0 auto}.hidden{display:none}
-</style></head>
-<body><header><div class="wrap"><h1>🔐 إدارة تراخيص الميزان للمخابز</h1><div>مراجعة طلبات بنكك وإصدار رموز التفعيل بعد التحقق اليدوي فقط.</div></div></header>
-<main class="wrap">
-<section class="card">
-<h2>اتصال الإدارة</h2>
-<p class="muted">جلسة إدارة محمية بكلمة مرور. لا تُدخل كلمة المرور إلا في صفحة الدخول الرسمية للخدمة.</p>
-<div class="row"><button id="signCheckBtn">فحص جاهزية مفتاح التوقيع</button><button id="loadBtn">تحميل الطلبات المعلقة</button><button id="approvedBtn">عرض التراخيص المعتمدة</button><button id="rejectedBtn">عرض الطلبات المرفوضة</button><button id="logoutBtn" class="danger" type="button">تسجيل الخروج</button></div>
-<div id="globalResult" class="result hidden" role="status" aria-live="polite"></div>
-</section>
-<section class="card"><h2 id="listTitle">الطلبات</h2><div id="orders"><p class="muted">اتصل بالخدمة لعرض الطلبات.</p></div></section>
+:root{color-scheme:light;--navy:#0b1f3a;--navy2:#142d4d;--gold:#d4af37;--ink:#172438;--muted:#66758a;--line:#dfe6ef;--bg:#f3f6fa;--white:#fff;--green:#16734a;--amber:#916500;--red:#a42a2a;--shadow:0 12px 34px rgba(11,31,58,.07)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif;line-height:1.65}button,input{font:inherit}button{cursor:pointer}.shell{max-width:1240px;width:calc(100% - 28px);margin:auto}
+.topbar{background:linear-gradient(115deg,var(--navy),#17385d);color:#fff;border-bottom:4px solid var(--gold);padding:20px 0}
+.topline{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.brand{display:flex;align-items:center;gap:13px}.mark{width:48px;height:48px;border:1px solid #d4af3788;border-radius:15px;display:grid;place-items:center;color:var(--gold);font-size:27px;background:#ffffff0c}.brand h1{font-size:clamp(20px,3vw,28px);margin:0}.brand p{margin:2px 0 0;color:#c8d5e5;font-size:13px}.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.session{font-size:12px;color:#d8e3ef;border:1px solid #ffffff30;border-radius:99px;padding:5px 11px}
+.btn{border:0;border-radius:10px;padding:9px 14px;font-weight:800;background:var(--gold);color:var(--navy)}.btn:hover{filter:brightness(.97)}.btn.secondary{background:#e9eef5;color:var(--navy)}.btn.danger{background:#fce9e9;color:var(--red)}.btn.ghost{background:transparent;color:#fff;border:1px solid #ffffff50}
+main{padding:22px 0 40px}.welcome{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:17px}.welcome h2{font-size:24px;margin:0;color:var(--navy)}.welcome p{margin:4px 0 0;color:var(--muted);font-size:14px}.updated{color:var(--muted);font-size:12px}
+.nav{display:flex;gap:8px;overflow:auto;padding:4px 0 14px}.nav a{white-space:nowrap;text-decoration:none;color:var(--navy);background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 13px;font-size:13px;font-weight:750}.nav a.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.metric,.panel,.product{background:var(--white);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}.metric{padding:17px;min-height:112px}.metric .label{color:var(--muted);font-size:13px}.metric .value{font-size:30px;font-weight:900;color:var(--navy);line-height:1.3;margin-top:5px;font-variant-numeric:tabular-nums}.metric .hint{font-size:11px;color:var(--muted)}
+.section{margin-top:20px;scroll-margin-top:14px}.section-title{display:flex;align-items:end;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:11px}.section-title h2{margin:0;color:var(--navy);font-size:19px}.section-title p{margin:2px 0 0;color:var(--muted);font-size:12px}
+.panel{padding:17px}.notice{border:1px solid #eadba9;background:#fff9e8;color:#594a1e;padding:12px 14px;border-radius:12px;font-size:13px;margin:14px 0}.notice strong{color:#40330e}.products{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.product{padding:15px;box-shadow:none}.product-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.product h3{margin:0;color:var(--navy);font-size:16px}.product p{margin:7px 0;color:var(--muted);font-size:12px}.platform{font-size:11px;color:#596b80;background:#edf2f7;padding:3px 8px;border-radius:99px}.state{font-size:11px;color:var(--green);font-weight:800}.state.off{color:var(--amber)}
+.coverage{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.coverage div{background:#f7f9fc;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:12px}.coverage b{display:block;color:var(--navy);margin-bottom:2px}.muted{color:var(--muted)}.empty{padding:18px;text-align:center;color:var(--muted);background:#f8fafc;border:1px dashed var(--line);border-radius:12px;font-size:13px}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:13px}.result{display:none;white-space:pre-wrap;overflow-wrap:anywhere;background:#edf2f8;border:1px solid var(--line);padding:11px 13px;border-radius:11px;margin:12px 0;font-size:13px}.result.show{display:block}.order{border:1px solid var(--line);border-radius:13px;padding:14px;margin:10px 0;background:#fff}.order h3{margin:0;color:var(--navy);font-size:16px}.order p{white-space:pre-line;font-size:13px;margin:8px 0;color:#3d4b5d}.order input{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:9px;margin:5px 0 8px}.row{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.audit-item{padding:10px 0;border-bottom:1px solid var(--line);font-size:12px}.audit-item:last-child{border:0}.audit-item b{color:var(--navy)}.audit-item small{display:block;color:var(--muted)}
+footer{padding:18px 0;color:var(--muted);font-size:11px;text-align:center}
+@media(max-width:850px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.products{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.shell{width:calc(100% - 20px)}.grid{gap:8px}.metric{padding:12px;min-height:100px}.metric .value{font-size:25px}.products,.coverage{grid-template-columns:1fr}.brand{align-items:flex-start}.mark{width:42px;height:42px}.welcome h2{font-size:21px}.panel{padding:12px}}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="shell topline">
+ <div class="brand"><div class="mark" aria-hidden="true">⚖</div><div><h1>مركز قيادة المحاسب الميزان</h1><p>لوحة الإدارة الموحدة للمنتجات والخدمات</p></div></div>
+ <div class="top-actions"><span class="session">جلسة مشرف محمية</span><button class="btn ghost" id="refreshBtn" type="button">تحديث البيانات</button><button class="btn danger" id="logoutBtn" type="button">خروج آمن</button></div>
+</div></header>
+<main class="shell">
+ <div class="welcome"><div><h2>مرحبًا بك في مركز القيادة</h2><p>متابعة المنتجات والتراخيص والعمليات المتاحة من مكان واحد.</p></div><div class="updated" id="updatedAt">جارٍ الاتصال بالخدمة…</div></div>
+ <nav class="nav" aria-label="أقسام الإدارة"><a class="active" href="#overview">نظرة عامة</a><a href="#products">المنتجات</a><a href="#licensing">التراخيص</a><a href="#audit">سجل التدقيق</a></nav>
+ <section id="overview" class="section">
+  <div class="section-title"><div><h2>المؤشرات التشغيلية</h2><p>أرقام حية من قاعدة تراخيص المخابز فقط، وليست إحصاءات لكل المنصة.</p></div></div>
+  <div class="grid">
+   <article class="metric"><div class="label">طلبات تنتظر المراجعة</div><div class="value" id="pendingCount">—</div><div class="hint">تحتاج تحققًا يدويًا من الدفع</div></article>
+   <article class="metric"><div class="label">تراخيص معتمدة</div><div class="value" id="approvedCount">—</div><div class="hint">من قاعدة بيانات المخابز</div></article>
+   <article class="metric"><div class="label">طلبات مرفوضة</div><div class="value" id="rejectedCount">—</div><div class="hint">قرارات محفوظة في النظام</div></article>
+   <article class="metric"><div class="label">المنتجات المسجلة</div><div class="value" id="productCount">—</div><div class="hint">سجل المنتجات الأولي</div></article>
+  </div>
+  <div class="notice"><strong>حدود البيانات الحالية:</strong> التراخيص وسجلها متصلان مباشرة. حالة GitHub Actions ومراجعات العملاء وتحليلات الزيارات لم تُربط بعد، لذلك لا نعرض لها أرقامًا تقديرية أو مصطنعة.</div>
+ </section>
+ <section id="products" class="section">
+  <div class="section-title"><div><h2>محفظة المنتجات</h2><p>سجل قابل للتوسع لإضافة منتجات ووحدات جديدة دون خلطها في تطبيق واحد.</p></div></div>
+  <div class="products" id="productGrid"><div class="empty">جارٍ تحميل سجل المنتجات…</div></div>
+  <div class="coverage" id="coverage"></div>
+ </section>
+ <section id="licensing" class="section">
+  <div class="section-title"><div><h2>إدارة تراخيص المخابز</h2><p>الموافقة اليدوية على الدفع تسبق إصدار الرمز دائمًا.</p></div></div>
+  <div class="panel">
+   <div class="toolbar">
+    <button class="btn" id="loadBtn" type="button">الطلبات المعلقة</button>
+    <button class="btn secondary" id="approvedBtn" type="button">التراخيص المعتمدة</button>
+    <button class="btn secondary" id="rejectedBtn" type="button">الطلبات المرفوضة</button>
+    <button class="btn secondary" id="signCheckBtn" type="button">فحص مفتاح التوقيع</button>
+   </div>
+   <div id="globalResult" class="result" role="status" aria-live="polite"></div>
+   <h3 id="listTitle">الطلبات المعلقة</h3><div id="orders"><div class="empty">اختر حالة الطلبات لعرضها.</div></div>
+  </div>
+ </section>
+ <section id="audit" class="section">
+  <div class="section-title"><div><h2>سجل التدقيق</h2><p>آخر أحداث إدارة تراخيص المخابز. لا يتضمن هذا السجل كل عمليات الموقع بعد.</p></div></div>
+  <div class="panel" id="auditList"><div class="empty">جارٍ تحميل سجل التدقيق…</div></div>
+ </section>
+ <footer>المحاسب الميزان · صلاحيات الإدارة محمية على مستوى الخادم · لا تشارك رابط الجلسة أو رموز التفعيل.</footer>
 </main>
 <script>
 if(location.hostname==="moh1442010-arch.github.io"){location.replace("https://al-mizan-bakery-licensing.moh1442010.workers.dev/admin/login");}
 const $=id=>document.getElementById(id);
-function apiBase(){return location.origin;}
-$("logoutBtn").addEventListener("click",async()=>{try{await fetch("/admin/logout",{method:"POST",credentials:"same-origin"});}finally{location.replace("/admin/login");}});
 async function call(path,options={}){
- const base=apiBase();
- const r=await fetch(base+path,{...options,credentials:"same-origin",headers:{"content-type":"application/json",...(options.headers||{})}});
+ const r=await fetch(path,{...options,credentials:"same-origin",headers:{"content-type":"application/json",...(options.headers||{})}});
  const data=await r.json().catch(()=>({}));
- if(!r.ok) { const error=new Error(data.error||("HTTP "+r.status)); error.response=data; throw error; }
+ if(!r.ok){const error=new Error(data.error||("HTTP "+r.status));error.response=data;throw error;}
  return data;
 }
-function showMessage(message){$("globalResult").classList.remove("hidden");$("globalResult").textContent=message;}
+function showMessage(message){$("globalResult").classList.add("show");$("globalResult").textContent=message;}
+function dateLabel(value){try{return new Date(value).toLocaleString("ar-SD",{dateStyle:"medium",timeStyle:"short"});}catch{return String(value||"");}}
+function renderProducts(items){
+ const host=$("productGrid");host.replaceChildren();
+ for(const p of items||[]){
+  const card=document.createElement("article");card.className="product";
+  const top=document.createElement("div");top.className="product-top";
+  const title=document.createElement("h3");title.textContent=p.name;top.append(title);
+  const platform=document.createElement("span");platform.className="platform";platform.textContent=p.platform;top.append(platform);
+  const desc=document.createElement("p");desc.textContent=p.scope+" · "+p.category;
+  const state=document.createElement("div");state.className="state"+(p.id==="future-products"?" off":"");state.textContent=p.id==="future-products"?"جاهز لإضافة منتجات":"مدرج في سجل المنتجات";
+  card.append(top,desc,state);host.append(card);
+ }
+ $("productCount").textContent=String((items||[]).length);
+}
+function renderCoverage(coverage){
+ const labels={githubWorkflows:"سير GitHub Actions",customerReviews:"مراجعات العملاء",visitorAnalytics:"تحليلات الزيارات",serviceHealth:"صحة الخدمات"};
+ const host=$("coverage");host.replaceChildren();
+ for(const [key,label] of Object.entries(labels)){
+  const item=document.createElement("div"),b=document.createElement("b"),span=document.createElement("span");
+  b.textContent=label;span.textContent=coverage&&coverage[key]==="not_connected"?"غير مربوط بعد":coverage&&coverage[key]==="health_endpoint_only"?"فحص أساسي فقط":"غير متاح";
+  item.append(b,span);host.append(item);
+ }
+}
+function renderAudit(items){
+ const host=$("auditList");host.replaceChildren();
+ if(!items||!items.length){host.innerHTML='<div class="empty">لا توجد أحداث تدقيق مسجلة حتى الآن.</div>';return;}
+ for(const entry of items){
+  const row=document.createElement("div");row.className="audit-item";
+  const title=document.createElement("b");title.textContent=entry.event+" · "+entry.actor;
+  const detail=document.createElement("div");detail.textContent=entry.detail||"—";
+  const time=document.createElement("small");time.textContent=dateLabel(entry.created_at);
+  row.append(title,detail,time);host.append(row);
+ }
+}
+async function refreshDashboard(){
+ $("updatedAt").textContent="جارٍ تحديث البيانات…";
+ try{
+  const data=await call("/admin/overview");
+  $("pendingCount").textContent=String(data.licensing.pending);
+  $("approvedCount").textContent=String(data.licensing.approved);
+  $("rejectedCount").textContent=String(data.licensing.rejected);
+  renderProducts(data.products);renderCoverage(data.coverage);renderAudit(data.recentLicenseAudit);
+  $("updatedAt").textContent="آخر تحديث: "+dateLabel(data.generatedAt);
+ }catch(e){
+  $("updatedAt").textContent="تعذر تحديث لوحة المؤشرات";
+  $("auditList").textContent="تعذر تحميل البيانات. "+e.message;
+ }
+}
 async function load(status="pending"){
  $("orders").textContent="جارٍ التحميل…";
  $("listTitle").textContent=status==="pending"?"الطلبات المعلقة":status==="approved"?"التراخيص المعتمدة":"الطلبات المرفوضة";
  try{
   const data=await call("/admin/orders?status="+status);
   const host=$("orders");host.replaceChildren();
-  if(!data.orders||!data.orders.length){host.textContent="لا توجد طلبات في هذه الحالة.";return;}
+  if(!data.orders||!data.orders.length){host.innerHTML='<div class="empty">لا توجد طلبات في هذه الحالة.</div>';return;}
   for(const o of data.orders){
    const card=document.createElement("article");card.className="order";
    const h=document.createElement("h3");h.textContent=o.customer_name+" — "+o.plan;card.append(h);
@@ -48,27 +140,25 @@ async function load(status="pending"){
    if(status==="pending"){
     const note=document.createElement("input");note.placeholder="ملاحظة للمراجعة (اختياري)";note.maxLength=500;card.append(note);
     const row=document.createElement("div");row.className="row";
-    const approve=document.createElement("button");approve.textContent="اعتماد وإصدار الرمز";
+    const approve=document.createElement("button");approve.className="btn";approve.textContent="اعتماد وإصدار الرمز";
     approve.addEventListener("click",async()=>{
      if(!confirm("تأكدت بنفسك من وصول مبلغ "+Number(o.amount_sdg).toLocaleString("en-US")+" ج.س إلى الحساب؟ لن تعتمد الطلب إلا بعد التحقق الفعلي."))return;
      approve.disabled=true;
      try{
       const result=await call("/admin/orders/"+encodeURIComponent(o.id)+"/approve",{method:"POST",body:JSON.stringify({note:note.value.trim()})});
-      showMessage("تمت الموافقة وإصدار الترخيص وفق الباقة التي راجعتها.\\nرقم الطلب: "+result.orderId+"\\nالباقة: "+o.plan+"\\nالمبلغ: "+Number(o.amount_sdg).toLocaleString("en-US")+" جنيه سوداني\\nالإصدار: "+result.appVersion+"\\nانتهاء الصلاحية (Unix): "+result.expiresAt);
-      const phone = String(o.contact||"").replace(/[^0-9]/g,"").replace(/^0/,"249");
-      const message = "تمت الموافقة على طلب ترخيص الميزان للمخابز.\\nرقم الطلب: "+result.orderId+"\\nالباقة: "+o.plan+"\\nرمز التفعيل الخاص بجهازك: "+result.activationToken+"\\nافتح التطبيق ثم الاشتراك والتفعيل وأدخل الرمز.";
-      const send = document.createElement("a"); send.className="button"; send.target="_blank"; send.rel="noopener";
-      send.href = "https://wa.me/"+phone+"?text="+encodeURIComponent(message); send.textContent="إرسال رمز التفعيل للعميل عبر واتساب";
-      $("globalResult").appendChild(document.createElement("br")); $("globalResult").appendChild(send);
-      await load("pending");
+      showMessage("تمت الموافقة وإصدار الترخيص.\nرقم الطلب: "+result.orderId+"\nالباقة: "+o.plan+"\nالمبلغ: "+Number(o.amount_sdg).toLocaleString("en-US")+" جنيه سوداني\nالإصدار: "+result.appVersion+"\nانتهاء الصلاحية (Unix): "+result.expiresAt);
+      const phone=String(o.contact||"").replace(/[^0-9]/g,"").replace(/^0/,"249");
+      const message="تمت الموافقة على طلب ترخيص الميزان للمخابز.\nرقم الطلب: "+result.orderId+"\nالباقة: "+o.plan+"\nرمز التفعيل الخاص بجهازك: "+result.activationToken+"\nافتح التطبيق ثم الاشتراك والتفعيل وأدخل الرمز.";
+      const send=document.createElement("a");send.className="btn";send.target="_blank";send.rel="noopener noreferrer";send.href="https://wa.me/"+phone+"?text="+encodeURIComponent(message);send.textContent="إرسال رمز التفعيل عبر واتساب";
+      $("globalResult").append(document.createElement("br"),send);await load("pending");await refreshDashboard();
      }catch(e){showMessage("فشل الإصدار: "+e.message);approve.disabled=false;}
     });
-    const reject=document.createElement("button");reject.textContent="رفض الطلب";reject.className="danger";
+    const reject=document.createElement("button");reject.className="btn danger";reject.textContent="رفض الطلب";
     reject.addEventListener("click",async()=>{
      if(!note.value.trim()){showMessage("اكتب سبب الرفض قبل تسجيل القرار.");note.focus();return;}
      if(!confirm("رفض الطلب وتسجيل سبب الرفض؟"))return;
      reject.disabled=true;
-     try{await call("/admin/orders/"+encodeURIComponent(o.id)+"/reject",{method:"POST",body:JSON.stringify({note:note.value.trim()})});showMessage("تم تسجيل رفض الطلب.");await load("pending");}
+     try{await call("/admin/orders/"+encodeURIComponent(o.id)+"/reject",{method:"POST",body:JSON.stringify({note:note.value.trim()})});showMessage("تم تسجيل رفض الطلب.");await load("pending");await refreshDashboard();}
      catch(e){showMessage("تعذر رفض الطلب: "+e.message);reject.disabled=false;}
     });
     row.append(approve,reject);card.append(row);
@@ -76,17 +166,16 @@ async function load(status="pending"){
    if(status==="approved"){
     if(o.reviewer_note){const review=document.createElement("p");review.textContent="ملاحظة الإدارة: "+o.reviewer_note;card.append(review);}
     const retrievalNote=document.createElement("input");retrievalNote.placeholder="سبب استعادة الرمز (إلزامي)";retrievalNote.maxLength=500;card.append(retrievalNote);
-    const retrieve=document.createElement("button");retrieve.textContent="استعادة الرمز وإنشاء رسالة واتساب";
+    const retrieve=document.createElement("button");retrieve.className="btn secondary";retrieve.textContent="استعادة الرمز وإنشاء رسالة واتساب";
     retrieve.addEventListener("click",async()=>{
-     if(retrievalNote.value.trim().length<4){showMessage("اكتب سبباً واضحاً لاستعادة الرمز.");retrievalNote.focus();return;}
+     if(retrievalNote.value.trim().length<4){showMessage("اكتب سببًا واضحًا لاستعادة الرمز.");retrievalNote.focus();return;}
      retrieve.disabled=true;
      try{
       const issued=await call("/admin/orders/"+encodeURIComponent(o.id)+"/token",{method:"POST",body:JSON.stringify({note:retrievalNote.value.trim()})});
       const phone=String(o.contact||"").replace(/[^0-9]/g,"").replace(/^0/,"249");
       const message="ترخيص الميزان للمخابز — رمز التفعيل\nرقم الطلب: "+issued.orderId+"\nرمز التفعيل الخاص بجهازك: "+issued.activationToken+"\nالإصدار: "+issued.appVersion+"\nافتح التطبيق ثم اختر التفعيل وأدخل الرمز.";
-      const link=document.createElement("a");link.href="https://wa.me/"+phone+"?text="+encodeURIComponent(message);link.target="_blank";link.rel="noopener noreferrer";link.textContent="فتح واتساب وإرسال الرمز";link.style.display="inline-block";link.style.marginTop="8px";
-      showMessage("تم استرجاع الرمز للمدير وتسجيل العملية في سجل التدقيق. اضغط الرابط لإرساله للعميل.");
-      $("globalResult").appendChild(document.createElement("br"));$("globalResult").appendChild(link);
+      const link=document.createElement("a");link.href="https://wa.me/"+phone+"?text="+encodeURIComponent(message);link.target="_blank";link.rel="noopener noreferrer";link.textContent="فتح واتساب وإرسال الرمز";link.className="btn";link.style.display="inline-block";link.style.marginTop="8px";
+      showMessage("تم استرجاع الرمز للمدير وتسجيل العملية في سجل التدقيق. اضغط الرابط لإرساله للعميل.");$("globalResult").append(document.createElement("br"),link);await refreshDashboard();
      }catch(e){showMessage("تعذر استعادة الرمز: "+e.message);}
      finally{retrieve.disabled=false;}
     });
@@ -98,13 +187,16 @@ async function load(status="pending"){
   }
  }catch(e){$("orders").textContent="تعذر تحميل الطلبات.";showMessage(e.message);}
 }
-$("signCheckBtn").addEventListener("click",async()=>{
- try{
-  const result=await call("/admin/signing-check");
-  showMessage("مفتاح التوقيع جاهز ومتطابق مع التطبيق. إصدار الخدمة: "+result.appVersion+". لم يتم إصدار أي ترخيص أثناء هذا الفحص.");
- }catch(e){const d=e.response&&e.response.diagnostic;showMessage("خدمة التوقيع غير جاهزة. لم يصدر أي ترخيص. السبب: "+e.message+(d?"\nتفاصيل التشخيص الآمن: "+JSON.stringify(d,null,2):""));}
-});
+$("logoutBtn").addEventListener("click",async()=>{try{await call("/admin/logout",{method:"POST"});}finally{location.replace("/admin/login");}});
+$("refreshBtn").addEventListener("click",refreshDashboard);
 $("loadBtn").addEventListener("click",()=>load("pending"));
 $("approvedBtn").addEventListener("click",()=>load("approved"));
 $("rejectedBtn").addEventListener("click",()=>load("rejected"));
-</script></body></html>
+$("signCheckBtn").addEventListener("click",async()=>{
+ try{const result=await call("/admin/signing-check");showMessage("مفتاح التوقيع جاهز ومتطابق مع التطبيق. إصدار الخدمة: "+result.appVersion+". لم يصدر أي ترخيص أثناء هذا الفحص.");}
+ catch(e){const d=e.response&&e.response.diagnostic;showMessage("خدمة التوقيع غير جاهزة. لم يصدر أي ترخيص. السبب: "+e.message+(d?"\nتفاصيل التشخيص الآمن: "+JSON.stringify(d,null,2):""));}
+});
+refreshDashboard();
+</script>
+</body>
+</html>
