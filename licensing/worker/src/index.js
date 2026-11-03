@@ -293,7 +293,7 @@ async function handle(request, env) {
     const plan = cleanText(body.plan, 20);
     const receiptRef = cleanText(body.receiptReference, 100);
     if (customer.length < 2 || customer.length > 100 ||
-        !/^[+0-9()\\s-]{8,25}$/.test(contact) ||
+        !/^[+0-9()\s-]{8,25}$/.test(contact) ||
         !receiptRef || receiptRef.length < 4 || receiptRef.length > 100 ||
         !validDevice(deviceId) || !PLANS[plan]) {
       return json({ error: "INVALID_FIELDS" }, 400);
