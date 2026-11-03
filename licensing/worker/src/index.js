@@ -59,7 +59,43 @@ async function allowOrderSubmission(request,env){
   ).bind(ipHash,now,now-900,now-900,now).first();
   return Boolean(row&&row.attempts<=8);
 }
-const ADMIN_LOGIN_HTML=`<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>دخول إدارة التراخيص</title><style>body{margin:0;background:#f2f5fa;color:#14243a;font-family:system-ui,Tahoma,Arial;display:grid;min-height:100vh;place-items:center}.box{background:white;width:min(420px,calc(100% - 36px));padding:25px;border-radius:16px;box-shadow:0 8px 32px #10243a18}h2{margin-top:0}label{display:block;margin:12px 0 5px}input,button{font:inherit;width:100%;padding:12px;border-radius:9px;box-sizing:border-box}input{border:1px solid #bbc7d5}button{margin-top:16px;border:0;background:#d4af37;color:#0b1f3a;font-weight:800}p{color:#66758a;font-size:14px}#msg{color:#a32121;min-height:24px}</style><main class="box"><h2>إدارة تراخيص الميزان للمخابز</h2><p>سجّل الدخول للوصول إلى طلبات العملاء وإصدار التراخيص.</p><form id="f"><label for="pw">كلمة مرور الإدارة</label><input id="pw" type="password" minlength="32" maxlength="256" autocomplete="current-password" required><button id="go">تسجيل الدخول</button></form><p id="msg" role="status"></p></main><script>const f=document.getElementById('f'),pw=document.getElementById('pw'),msg=document.getElementById('msg'),go=document.getElementById('go');f.addEventListener('submit',async e=>{e.preventDefault();go.disabled=true;msg.textContent='جارٍ التحقق…';try{const r=await fetch('/admin/login',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({password:pw.value})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error==='TOO_MANY_ATTEMPTS'?'محاولات كثيرة. انتظر 15 دقيقة ثم حاول مجدداً.':'تعذر تسجيل الدخول. تحقق من كلمة المرور أو إعداد الخدمة.');location.replace('/admin/panel')}catch(err){msg.textContent=err.message;pw.value='';pw.focus();go.disabled=false}});</script></html>`;
+const ADMIN_LOGIN_HTML=`<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#0b1f3a">
+<title>دخول المشرف | المحاسب الميزان</title>
+<style>
+:root{color-scheme:light;--navy:#0b1f3a;--gold:#d4af37;--ink:#172438;--muted:#68778b;--line:#dce4ee;--bg:#f2f5fa}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:radial-gradient(circle at 15% 10%,#e7edf5,transparent 35%),var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif}
+.box{width:min(440px,100%);padding:28px;background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 18px 55px #0b1f3a16}
+.brand{display:flex;align-items:center;gap:13px;margin-bottom:22px}.mark{width:54px;height:54px;display:grid;place-items:center;border-radius:15px;background:var(--navy);border-bottom:4px solid var(--gold);color:var(--gold);font-size:27px}
+h1{font-size:22px;line-height:1.4;margin:0;color:var(--navy)}.sub{margin:3px 0 0;color:var(--muted);font-size:13px}
+h2{font-size:19px;margin:0 0 8px}.intro{color:var(--muted);font-size:14px;margin:0 0 20px}
+label{display:block;font-weight:800;margin:0 0 7px}input{width:100%;font:inherit;padding:14px;border:1px solid #bdc9d8;border-radius:11px;background:#fff;color:var(--ink);direction:ltr;text-align:left}
+input:focus{outline:3px solid #d4af3740;border-color:var(--gold)}button{width:100%;font:inherit;margin-top:14px;padding:13px;border:0;border-radius:11px;background:var(--gold);color:var(--navy);font-weight:900;cursor:pointer}button:disabled{opacity:.6;cursor:wait}
+.hint{margin:14px 0 0;padding:11px 12px;border-radius:10px;background:#f4f7fb;color:var(--muted);font-size:12px;line-height:1.8}
+#msg{min-height:24px;margin:12px 0 0;color:#a32121;font-size:13px}footer{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<main class="box">
+<div class="brand"><div class="mark" aria-hidden="true">⚖</div><div><h1>المحاسب الميزان</h1><p class="sub">إدارة تراخيص الميزان للمخابز</p></div></div>
+<h2>دخول المشرف</h2><p class="intro">بوابة آمنة لمراجعة طلبات العملاء وإدارة التفعيل.</p>
+<form id="f" method="post" action="/admin/login">
+<label for="pw">كلمة مرور الإدارة</label>
+<input id="pw" name="password" type="password" minlength="32" maxlength="256" autocomplete="current-password" autocapitalize="off" spellcheck="false" required>
+<button id="go" type="submit">دخول لوحة الإدارة</button>
+</form>
+<p class="hint">يمكنك حفظ كلمة المرور في مدير كلمات المرور بالمتصفح واستخدام البصمة أو قفل الهاتف للتعبئة لاحقاً. لا تحفظ كلمة المرور داخل رابط الصفحة أو اختصار الشاشة.</p>
+<p id="msg" role="status" aria-live="polite"></p>
+<footer>جلسة المشرف تنتهي تلقائياً بعد 8 ساعات أو عند تسجيل الخروج.</footer>
+</main>
+<script>
+const f=document.getElementById('f'),pw=document.getElementById('pw'),msg=document.getElementById('msg'),go=document.getElementById('go');
+f.addEventListener('submit',async e=>{e.preventDefault();if(!f.reportValidity())return;go.disabled=true;msg.textContent='جارٍ التحقق من بيانات الدخول…';try{const r=await fetch('/admin/login',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({password:pw.value})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error==='TOO_MANY_ATTEMPTS'?'تم تجاوز عدد المحاولات. انتظر 15 دقيقة ثم حاول.':'تعذر تسجيل الدخول. تحقق من كلمة المرور وإعداد الخدمة.');location.replace('/admin/panel')}catch(err){msg.textContent=err.message;pw.value='';pw.focus();go.disabled=false}});
+</script>
+</body></html>`;
 function validDevice(v) {
   return /^[A-Za-z0-9-]{8,100}$/.test(v) && !v.includes(";") && !v.includes("=");
 }
