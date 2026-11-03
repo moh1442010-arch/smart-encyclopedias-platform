@@ -42,7 +42,9 @@ public class MainActivity extends Activity {
     private static final int NAVY = Color.rgb(11,31,58), GOLD = Color.rgb(212,175,55), BG = Color.rgb(246,248,251);
     private static final String SUPPORT = "249121851285", BANKAK = "1882224";
     // Public verification key only. The matching private key remains server-side in the Cloudflare Worker secret.
-    private static final String LICENSE_PUBLIC_KEY_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvsK66CYxt4X7R9GcVaJ0FjrheMAkFpzbirdz7/X/lj8UAuqUabNOPN3R5dGuZro90i+raIyngTz+VxRxLcNPRQru4VzWIDLsoBEwi/CrsOaMJFgVLom7jYXFjQ5P25TO5hRxzPN8ZOOG1MTo8j6ipgPOKY5be6Gmsj8R03SbulYnVO8STWC4bSkqwvV9YlEIpZwnyAJVbWHbE4JSKiCC/TMOcfrBgGG0W7qCJeEjnUKPfHAtH85ayZjBQwMIQx+z1CoTFWrqKXywSWN65G7yZbHwsnREovRprxjyVHqmTtLd45VyNQU2zXBKchzkwnpiG1zeD8kfdDeACeaAmxbsiwIDAQAB";
+    private static final String LICENSE_PUBLIC_KEY_B64 = "MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAnWLF2Y4nmN7MWU1q9tzTVJCCacOf7iaGiRYrA21Ej7Xp7vV2/BgMu7N3OmcB0UJyIn1A22z34fKf3YEEDTjBz4pHHEtXeB+bjH+jn7VOcwQS9mZhTUR1+/2gYJxIKUEz9233Ab1eupGcCzuziQck362qiRBdjlHEViW0koE87TmPKRkkqzKtkOm0MzIfYr7tM/DmqncZ9RKUnctvoJd05kDxg0PXdNZ539Ip7tT6y11nmakYg5lJv9XOqNWnQbPRUDjOO9jWIPFnUvaPVofYrBOENPTu8S7414Twb7/0zmhFgNuizHbZQEOYD3ZNK0GfNDYH8Tk1ZEe9H7WHE3+B0UYkCBEfJCdXkHxRIJLb1KSyxpLw7iiGxAJdCQ95SNkcYfl6KTsZFPtt4pssXRH9XvJsvQEmP7OmqtPSJy0ZFSL/KgS5T3EIeuG2DyJom5WJ8lya4zy3noU9hL8gSjpzOdzR87KqiOYSy890nwtvHIi73qxvNpPGxPghG3JIEEBFAgMBAAE=";
+    // Retain the previous public key so any previously issued licenses remain valid.
+    private static final String LEGACY_LICENSE_PUBLIC_KEY_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvsK66CYxt4X7R9GcVaJ0FjrheMAkFpzbirdz7/X/lj8UAuqUabNOPN3R5dGuZro90i+raIyngTz+VxRxLcNPRQru4VzWIDLsoBEwi/CrsOaMJFgVLom7jYXFjQ5P25TO5hRxzPN8ZOOG1MTo8j6ipgPOKY5be6Gmsj8R03SbulYnVO8STWC4bSkqwvV9YlEIpZwnyAJVbWHbE4JSKiCC/TMOcfrBgGG0W7qCJeEjnUKPfHAtH85ayZjBQwMIQx+z1CoTFWrqKXywSWN65G7yZbHwsnREovRprxjyVHqmTtLd45VyNQU2zXBKchzkwnpiG1zeD8kfdDeACeaAmxbsiwIDAQAB";
     private static final int REQUEST_EXPORT_BACKUP = 4250, REQUEST_IMPORT_BACKUP = 4251, REQUEST_PAYMENT_RECEIPT = 4252, REQUEST_COMPANY_LOGO = 4253;
     private String pendingActivationMessage = "";
     private Store store;
@@ -247,12 +249,18 @@ public class MainActivity extends Activity {
             byte[] payloadBytes = Base64.decode(parts[0], flags);
             byte[] signatureBytes = Base64.decode(parts[1], flags);
             String payload = new String(payloadBytes, StandardCharsets.UTF_8);
-            java.security.PublicKey key = java.security.KeyFactory.getInstance("RSA").generatePublic(
-                new java.security.spec.X509EncodedKeySpec(Base64.decode(LICENSE_PUBLIC_KEY_B64, Base64.NO_WRAP)));
-            java.security.Signature verifier = java.security.Signature.getInstance("SHA256withRSA");
-            verifier.initVerify(key);
-            verifier.update(payloadBytes);
-            if (!verifier.verify(signatureBytes)) return false;
+            boolean signatureValid = false;
+            for (String publicKeyB64 : new String[]{LICENSE_PUBLIC_KEY_B64, LEGACY_LICENSE_PUBLIC_KEY_B64}) {
+                try {
+                    java.security.PublicKey key = java.security.KeyFactory.getInstance("RSA").generatePublic(
+                        new java.security.spec.X509EncodedKeySpec(Base64.decode(publicKeyB64, Base64.NO_WRAP)));
+                    java.security.Signature verifier = java.security.Signature.getInstance("SHA256withRSA");
+                    verifier.initVerify(key);
+                    verifier.update(payloadBytes);
+                    if (verifier.verify(signatureBytes)) { signatureValid = true; break; }
+                } catch (Exception ignored) { }
+            }
+            if (!signatureValid) return false;
             java.util.Map<String,String> fields = new java.util.HashMap<>();
             for (String field : payload.split(";")) {
                 int at = field.indexOf('=');
