@@ -48,9 +48,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          response="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 \\
-            https://api.cloudflare.com/client/v4/user/tokens/verify \\
-            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \\
+          response="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 20 \
+            https://api.cloudflare.com/client/v4/user/tokens/verify \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             -H "Content-Type: application/json")"
           if ! node -e 'const x=JSON.parse(process.argv[1]); if (x.success !== true || x.result?.status !== "active") process.exit(1)' "$response"; then
             echo "::error::Cloudflare rejected CLOUDFLARE_API_TOKEN or reported it inactive. Replace the GitHub secret with an active Cloudflare API Token; do not include Bearer or quotation marks."
