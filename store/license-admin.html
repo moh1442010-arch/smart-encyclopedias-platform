@@ -43,7 +43,13 @@ async function load(status="pending"){
    const card=document.createElement("article");card.className="order";
    const h=document.createElement("h3");h.textContent=o.customer_name+" — "+o.plan;card.append(h);
    const details=document.createElement("p");
-   details.textContent="رقم الطلب: "+o.id+"\nالتواصل: "+o.contact+"\nمعرّف الجهاز: "+o.device_id+"\nالمبلغ: "+Number(o.amount_sdg).toLocaleString("en-US")+" ج.س\nمرجع بنكك: "+o.receipt_reference+"\nالإصدار المسجل: "+o.app_version+"\nتاريخ الطلب: "+o.created_at;
+   details.textContent="رقم الطلب: "+o.id+"
+التواصل: "+o.contact+"
+معرّف الجهاز: "+o.device_id+"
+المبلغ: "+Number(o.amount_sdg).toLocaleString("en-US")+" ج.س
+مرجع بنكك: "+o.receipt_reference+"
+الإصدار المسجل: "+o.app_version+"
+تاريخ الطلب: "+o.created_at;
    card.append(details);
    if(status==="pending"){
     const note=document.createElement("input");note.placeholder="ملاحظة للمراجعة (اختياري)";note.maxLength=500;card.append(note);
@@ -54,9 +60,18 @@ async function load(status="pending"){
      approve.disabled=true;
      try{
       const result=await call("/admin/orders/"+encodeURIComponent(o.id)+"/approve",{method:"POST",body:JSON.stringify({note:note.value.trim()})});
-      showMessage("تمت الموافقة وإصدار الترخيص وفق الباقة التي راجعتها.\\nرقم الطلب: "+result.orderId+"\\nالباقة: "+o.plan+"\\nالمبلغ: "+Number(o.amount_sdg).toLocaleString("en-US")+" جنيه سوداني\\nالإصدار: "+result.appVersion+"\\nانتهاء الصلاحية (Unix): "+result.expiresAt);
+      showMessage("تمت الموافقة وإصدار الترخيص وفق الباقة التي راجعتها.\
+رقم الطلب: "+result.orderId+"\
+الباقة: "+o.plan+"\
+المبلغ: "+Number(o.amount_sdg).toLocaleString("en-US")+" جنيه سوداني\
+الإصدار: "+result.appVersion+"\
+انتهاء الصلاحية (Unix): "+result.expiresAt);
       const phone = String(o.contact||"").replace(/[^0-9]/g,"").replace(/^0/,"249");
-      const message = "تمت الموافقة على طلب ترخيص الميزان للمخابز.\\nرقم الطلب: "+result.orderId+"\\nالباقة: "+o.plan+"\\nرمز التفعيل الخاص بجهازك: "+result.activationToken+"\\nافتح التطبيق ثم الاشتراك والتفعيل وأدخل الرمز.";
+      const message = "تمت الموافقة على طلب ترخيص الميزان للمخابز.\
+رقم الطلب: "+result.orderId+"\
+الباقة: "+o.plan+"\
+رمز التفعيل الخاص بجهازك: "+result.activationToken+"\
+افتح التطبيق ثم الاشتراك والتفعيل وأدخل الرمز.";
       const send = document.createElement("a"); send.className="button"; send.target="_blank"; send.rel="noopener";
       send.href = "https://wa.me/"+phone+"?text="+encodeURIComponent(message); send.textContent="إرسال رمز التفعيل للعميل عبر واتساب";
       $("globalResult").appendChild(document.createElement("br")); $("globalResult").appendChild(send);
@@ -65,7 +80,8 @@ async function load(status="pending"){
     });
     const reject=document.createElement("button");reject.textContent="رفض الطلب";reject.className="danger";
     reject.addEventListener("click",async()=>{
-     if(!note.value.trim()){showMessage("اكتب سبب الرفض قبل تسجيل القرار.");note.focus();return;}\n     if(!confirm("رفض الطلب وتسجيل سبب الرفض؟"))return;
+     if(!note.value.trim()){showMessage("اكتب سبب الرفض قبل تسجيل القرار.");note.focus();return;}
+     if(!confirm("رفض الطلب وتسجيل سبب الرفض؟"))return;
      reject.disabled=true;
      try{await call("/admin/orders/"+encodeURIComponent(o.id)+"/reject",{method:"POST",body:JSON.stringify({note:note.value.trim()})});showMessage("تم تسجيل رفض الطلب.");await load("pending");}
      catch(e){showMessage("تعذر رفض الطلب: "+e.message);reject.disabled=false;}
@@ -80,9 +96,10 @@ $("signCheckBtn").addEventListener("click",async()=>{
  try{
   const result=await call("/admin/signing-check");
   showMessage("مفتاح التوقيع جاهز ومتطابق مع التطبيق. إصدار الخدمة: "+result.appVersion+". لم يتم إصدار أي ترخيص أثناء هذا الفحص.");
- }catch(e){const d=e.response&&e.response.diagnostic;showMessage("خدمة التوقيع غير جاهزة. لم يصدر أي ترخيص. السبب: "+e.message+(d?"\nتفاصيل التشخيص الآمن: "+JSON.stringify(d,null,2):""));}
+ }catch(e){const d=e.response&&e.response.diagnostic;showMessage("خدمة التوقيع غير جاهزة. لم يصدر أي ترخيص. السبب: "+e.message+(d?"
+تفاصيل التشخيص الآمن: "+JSON.stringify(d,null,2):""));}
 });
 $("loadBtn").addEventListener("click",()=>load("pending"));
 $("approvedBtn").addEventListener("click",()=>load("approved"));
-$("rejectedBtn").addEventListener("click",()=>load("rejected"));\n$("rejectedBtn").addEventListener("click",()=>load("rejected"));
+$("rejectedBtn").addEventListener("click",()=>load("rejected"));
 </script></body></html>
