@@ -35,7 +35,14 @@ jobs:
           RAW_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
-          normalized_token="$(node -e 'let s=String(process.env.RAW_CF_TOKEN || "").trim(); s=s.replace(/^Bearer\\s+/i, ""); if ((s.startsWith("\\\"") && s.endsWith("\\\"")) || (s.startsWith("\\'") && s.endsWith("\\'"))) s=s.slice(1,-1); s=s.replace(/\\s+/g, ""); process.stdout.write(s)' )"
+          normalized_token="$(node <<'NODE'
+          let s = String(process.env.RAW_CF_TOKEN || "").trim();
+          s = s.replace(/^Bearer\s+/i, "");
+          if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1);
+          s = s.replace(/\s+/g, "");
+          process.stdout.write(s);
+          NODE
+          )"
           if [ -z "$normalized_token" ]; then
             echo "::error::Missing CLOUDFLARE_API_TOKEN."
             exit 1
@@ -48,10 +55,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          http_code="$(curl --silent --show-error --connect-timeout 10 --max-time 20 \\
-            --output "$RUNNER_TEMP/cloudflare-token-verify.json" --write-out '%{http_code}' \\
-            https://api.cloudflare.com/client/v4/user/tokens/verify \\
-            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \\
+          http_code="$(curl --silent --show-error --connect-timeout 10 --max-time 20 \
+            --output "$RUNNER_TEMP/cloudflare-token-verify.json" --write-out '%{http_code}' \
+            https://api.cloudflare.com/client/v4/user/tokens/verify \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             -H "Content-Type: application/json")"
           if ! node -e 'const fs=require("node:fs"); let x={}; try{x=JSON.parse(fs.readFileSync(process.argv[1],"utf8"))}catch{}; if (process.argv[2] !== "200" || x.success !== true || x.result?.status !== "active") { for (const e of (x.errors||[])) console.error("Cloudflare verification:", e.code, e.message); process.exit(1) }' "$RUNNER_TEMP/cloudflare-token-verify.json" "$http_code"; then
             echo "::error::Cloudflare API token verification failed. Check the saved GitHub secret and token status; the token value was not logged."
