@@ -49,5 +49,8 @@
     "Payment must be verified manually and a manager must approve the order before a license is issued.",
     "The private signing key remains only in protected server-side secrets and is never embedded in the APK or committed in plaintext.",
     "Before commercial approval, test install/update, 7-day trial expiry, post-trial lock without data deletion, valid/invalid/expired activation, offline behavior and backup/restore on a real device."
-  ]
+  ],
+  "sha256": "3ddef2a594b1e3dd036624e0c208b71ff8fcd3f3d3a9536d31983215b0940778",
+  "apkSizeBytes": 78541,
+  "releaseUpdatedAt": "2026-11-03T22:01:22Z"
 }
