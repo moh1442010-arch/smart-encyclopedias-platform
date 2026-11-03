@@ -73,6 +73,27 @@ async function load(status="pending"){
     });
     row.append(approve,reject);card.append(row);
    }
+   if(status==="approved"){
+    if(o.reviewer_note){const review=document.createElement("p");review.textContent="ملاحظة الإدارة: "+o.reviewer_note;card.append(review);}
+    const retrievalNote=document.createElement("input");retrievalNote.placeholder="سبب استعادة الرمز (إلزامي)";retrievalNote.maxLength=500;card.append(retrievalNote);
+    const retrieve=document.createElement("button");retrieve.textContent="استعادة الرمز وإنشاء رسالة واتساب";
+    retrieve.addEventListener("click",async()=>{
+     if(retrievalNote.value.trim().length<4){showMessage("اكتب سبباً واضحاً لاستعادة الرمز.");retrievalNote.focus();return;}
+     retrieve.disabled=true;
+     try{
+      const issued=await call("/admin/orders/"+encodeURIComponent(o.id)+"/token",{method:"POST",body:JSON.stringify({note:retrievalNote.value.trim()})});
+      const phone=String(o.contact||"").replace(/[^0-9]/g,"").replace(/^0/,"249");
+      const message="ترخيص الميزان للمخابز — رمز التفعيل\nرقم الطلب: "+issued.orderId+"\nرمز التفعيل الخاص بجهازك: "+issued.activationToken+"\nالإصدار: "+issued.appVersion+"\nافتح التطبيق ثم اختر التفعيل وأدخل الرمز.";
+      const link=document.createElement("a");link.href="https://wa.me/"+phone+"?text="+encodeURIComponent(message);link.target="_blank";link.rel="noopener noreferrer";link.textContent="فتح واتساب وإرسال الرمز";link.style.display="inline-block";link.style.marginTop="8px";
+      showMessage("تم استرجاع الرمز للمدير وتسجيل العملية في سجل التدقيق. اضغط الرابط لإرساله للعميل.");
+      $("globalResult").appendChild(document.createElement("br"));$("globalResult").appendChild(link);
+     }catch(e){showMessage("تعذر استعادة الرمز: "+e.message);}
+     finally{retrieve.disabled=false;}
+    });
+    card.append(retrievalNote,retrieve);
+   }else if(status==="rejected"&&o.reviewer_note){
+    const review=document.createElement("p");review.textContent="سبب الرفض: "+o.reviewer_note;card.append(review);
+   }
    host.append(card);
   }
  }catch(e){$("orders").textContent="تعذر تحميل الطلبات.";showMessage(e.message);}
