@@ -65,7 +65,7 @@ async function load(status="pending"){
     });
     const reject=document.createElement("button");reject.textContent="رفض الطلب";reject.className="danger";
     reject.addEventListener("click",async()=>{
-     if(!confirm("رفض الطلب؟ تأكد من سبب الرفض قبل المتابعة."))return;
+     if(!note.value.trim()){showMessage("اكتب سبب الرفض قبل تسجيل القرار.");note.focus();return;}\n     if(!confirm("رفض الطلب وتسجيل سبب الرفض؟"))return;
      reject.disabled=true;
      try{await call("/admin/orders/"+encodeURIComponent(o.id)+"/reject",{method:"POST",body:JSON.stringify({note:note.value.trim()})});showMessage("تم تسجيل رفض الطلب.");await load("pending");}
      catch(e){showMessage("تعذر رفض الطلب: "+e.message);reject.disabled=false;}
@@ -83,5 +83,6 @@ $("signCheckBtn").addEventListener("click",async()=>{
  }catch(e){const d=e.response&&e.response.diagnostic;showMessage("خدمة التوقيع غير جاهزة. لم يصدر أي ترخيص. السبب: "+e.message+(d?"\nتفاصيل التشخيص الآمن: "+JSON.stringify(d,null,2):""));}
 });
 $("loadBtn").addEventListener("click",()=>load("pending"));
-$("approvedBtn").addEventListener("click",()=>load("approved"));\n$("rejectedBtn").addEventListener("click",()=>load("rejected"));
+$("approvedBtn").addEventListener("click",()=>load("approved"));
+$("rejectedBtn").addEventListener("click",()=>load("rejected"));\n$("rejectedBtn").addEventListener("click",()=>load("rejected"));
 </script></body></html>
