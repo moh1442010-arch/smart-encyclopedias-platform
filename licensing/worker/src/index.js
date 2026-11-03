@@ -359,6 +359,7 @@ async function handle(request, env) {
     let body = {};
     try { body = await request.json(); } catch {}
     const note = cleanText(body.note, 500);
+    if (action === "reject" && !note) return json({ error: "REJECTION_REASON_REQUIRED" }, 400);
     const now = new Date().toISOString();
     if (action === "reject") {
       const result = await env.DB.prepare("UPDATE license_orders SET status='rejected',updated_at=?,reviewed_at=?,reviewer_note=? WHERE id=? AND status='pending'")
