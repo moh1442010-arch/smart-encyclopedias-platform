@@ -380,6 +380,14 @@ public class MainActivity extends Activity {
         return d;
     }
 
+    private void addHomeNavigation(LinearLayout parent) {
+        Button home = button("⌂ العودة إلى الرئيسية");
+        home.setOnClickListener(v -> buildHome());
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.setMargins(0, 0, 0, 10);
+        parent.addView(home, 0, lp);
+    }
+
     private void base(String title) {
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -412,6 +420,15 @@ public class MainActivity extends Activity {
         head.addView(titles,new LinearLayout.LayoutParams(0,-2,1f));
         head.setElevation(5f);
         root.addView(head);
+        if (!title.startsWith("🥖 المحاسب الميزان للمخابز")) {
+            Button home = button("⌂ الرئيسية");
+            home.setTextColor(Color.WHITE);
+            home.setBackground(rounded(Color.rgb(35,68,96),10));
+            home.setOnClickListener(v -> buildHome());
+            LinearLayout.LayoutParams homeLp = new LinearLayout.LayoutParams(-2,-2);
+            homeLp.setMargins(12,6,12,0);
+            root.addView(home, homeLp);
+        }
         ScrollView scroll = new ScrollView(this);
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
@@ -720,6 +737,7 @@ public class MainActivity extends Activity {
 
         ScrollView scroll=new ScrollView(this);
         LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(8,8,8,12); scroll.addView(box);
+        addHomeNavigation(box);
         box.addView(text("أدخل رصيد كل مادة، وكمية استهلاكها مع جوال دقيق واحد، وسعر وحدة الاستهلاك. يُخصم الاستهلاك تلقائيًا عند حفظ شغل اليوم.",14));
         LinearLayout table=new LinearLayout(this); table.setOrientation(LinearLayout.VERTICAL); table.setPadding(2,2,2,2); table.setBackground(rounded(Color.rgb(222,229,237),4));
         LinearLayout header=new LinearLayout(this); header.setOrientation(LinearLayout.HORIZONTAL); header.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
@@ -838,6 +856,7 @@ public class MainActivity extends Activity {
     private void openWindowTable() {
         JSONObject saved=store.get(day,"window"); ScrollView sc=new ScrollView(this);
         LinearLayout box=new LinearLayout(this);box.setOrientation(1);box.setPadding(8,8,8,12);sc.addView(box);
+        addHomeNavigation(box);
         box.addView(text("النقد والديون، ثم أضف كل تحويل بنكك في صف مستقل بالمبلغ ورقم العملية.",14));
         EditText cash=ruledCell(saved.optString("cash",""),"إجمالي النقد",true),debt=ruledCell(saved.optString("debt",""),"إجمالي الديون",true);
         box.addView(text("النقد",14));box.addView(cash);box.addView(text("الديون",14));box.addView(debt);
