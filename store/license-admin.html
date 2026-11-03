@@ -14,7 +14,7 @@
 <section class="card">
 <h2>اتصال الإدارة</h2>
 <p class="muted">جلسة إدارة محمية بكلمة مرور. لا تُدخل كلمة المرور إلا في صفحة الدخول الرسمية للخدمة.</p>
-<div class="row"><button id="signCheckBtn">فحص جاهزية مفتاح التوقيع</button><button id="loadBtn">تحميل الطلبات المعلقة</button><button id="approvedBtn">عرض التراخيص المعتمدة</button><button id="logoutBtn" class="danger" type="button">تسجيل الخروج</button></div>
+<div class="row"><button id="signCheckBtn">فحص جاهزية مفتاح التوقيع</button><button id="loadBtn">تحميل الطلبات المعلقة</button><button id="approvedBtn">عرض التراخيص المعتمدة</button><button id="rejectedBtn">عرض الطلبات المرفوضة</button><button id="logoutBtn" class="danger" type="button">تسجيل الخروج</button></div>
 <div id="globalResult" class="result hidden" role="status" aria-live="polite"></div>
 </section>
 <section class="card"><h2 id="listTitle">الطلبات</h2><div id="orders"><p class="muted">اتصل بالخدمة لعرض الطلبات.</p></div></section>
@@ -34,7 +34,7 @@ async function call(path,options={}){
 function showMessage(message){$("globalResult").classList.remove("hidden");$("globalResult").textContent=message;}
 async function load(status="pending"){
  $("orders").textContent="جارٍ التحميل…";
- $("listTitle").textContent=status==="pending"?"الطلبات المعلقة": "التراخيص المعتمدة";
+ $("listTitle").textContent=status==="pending"?"الطلبات المعلقة":status==="approved"?"التراخيص المعتمدة":"الطلبات المرفوضة";
  try{
   const data=await call("/admin/orders?status="+status);
   const host=$("orders");host.replaceChildren();
@@ -83,5 +83,5 @@ $("signCheckBtn").addEventListener("click",async()=>{
  }catch(e){const d=e.response&&e.response.diagnostic;showMessage("خدمة التوقيع غير جاهزة. لم يصدر أي ترخيص. السبب: "+e.message+(d?"\nتفاصيل التشخيص الآمن: "+JSON.stringify(d,null,2):""));}
 });
 $("loadBtn").addEventListener("click",()=>load("pending"));
-$("approvedBtn").addEventListener("click",()=>load("approved"));
+$("approvedBtn").addEventListener("click",()=>load("approved"));\n$("rejectedBtn").addEventListener("click",()=>load("rejected"));
 </script></body></html>
