@@ -21,7 +21,7 @@
 <main class="wrap">
 <section class="card notice">
 <strong>آلية التفعيل</strong>
-<p>ترسل طلبك إلى المالك عبر واتساب. يراجع المالك وصول المبلغ بنفسه. لا يصدر رمز التفعيل إلا بعد موافقته. لا تحتاج هذه الخطوة إلى حساب Cloudflare أو تسجيل إلكتروني.</p>
+<p>يسجل النظام طلبك أولاً ويعطيك رقم متابعة. بعد نجاح التسجيل يفتح واتساب لإرسال إشعار الطلب وصورة الإيصال. يراجع المالك وصول المبلغ بنفسه، ولا يصدر رمز التفعيل إلا بعد موافقته.</p>
 </section>
 <section class="card">
 <h2>الباقات المعتمدة</h2>
@@ -44,7 +44,7 @@
 </select></div>
 <div class="field"><label for="receipt">مرجع تحويل بنكك</label><input id="receipt" maxlength="100" required placeholder="رقم العملية كما يظهر في بنكك"></div>
 <p class="muted">رقم حساب بنكك: 1882224. أرسل صورة الإيصال في محادثة واتساب بعد فتحها. لا ترسل الرقم السري أو رمز التحقق البنكي.</p>
-<button type="submit">إرسال الطلب إلى واتساب المالك</button>
+<button type="submit">تسجيل الطلب وفتح واتساب</button>
 <div id="result" class="result" hidden></div>
 </form>
 </section>
@@ -69,31 +69,46 @@ if(validPlans.includes(initialPlan))document.getElementById("plan").value=initia
 const version=params.get("appVersion")||"2.6.17";
 const amounts={monthly:55000,annual:550000,lifetime:1050000};
 const labels={monthly:"شهري — 55,000 جنيه — 30 يوماً",annual:"سنوي — 550,000 جنيه — 365 يوماً",lifetime:"شراء مرة واحدة — 1,050,000 جنيه — دائم لهذا الإصدار فقط"};
-document.getElementById("requestForm").addEventListener("submit",event=>{
+document.getElementById("requestForm").addEventListener("submit",async event=>{
  event.preventDefault();
+ const form=event.currentTarget;
  const customer=document.getElementById("customer").value.trim();
  const contact=document.getElementById("contact").value.trim();
  const device=document.getElementById("device").value.trim();
  const plan=document.getElementById("plan").value;
  const receipt=document.getElementById("receipt").value.trim();
- if(!/^[A-Za-z0-9-]{8,100}$/.test(device)){document.getElementById("device").setCustomValidity("تحقق من معرّف الجهاز المنسوخ من التطبيق.");document.getElementById("device").reportValidity();document.getElementById("device").setCustomValidity("");return;}
- const message=[
-  "طلب ترخيص جديد — الميزان المحاسبي للمخابز",
-  "الإصدار: "+version,
-  "اسم العميل/المخبز: "+customer,
-  "رقم التواصل: "+contact,
-  "معرّف الجهاز: "+device,
-  "الباقة: "+labels[plan],
-  "المبلغ: "+amounts[plan].toLocaleString("en-US")+" جنيه سوداني",
-  "مرجع تحويل بنكك: "+receipt,
-  "",
-  "أرجو مراجعة وصول المبلغ فعلياً. أفهم أن الطلب لا يُعتمد ولا يصدر رمز التفعيل إلا بعد موافقة المالك."
- ].join("\n");
- const url="https://wa.me/249121851285?text="+encodeURIComponent(message);
  const result=document.getElementById("result");
- result.hidden=false;
- result.textContent="سيتم فتح واتساب لإرسال بيانات الطلب. أرسل صورة الإيصال داخل المحادثة بعد فتحها.";
- window.location.href=url;
+ result.hidden=false;result.textContent="";
+ if(customer.length<2||customer.length>100||!/^[+0-9()\s-]{8,25}$/.test(contact)||!/^[A-Za-z0-9-]{8,100}$/.test(device)||!validPlans.includes(plan)||receipt.length<4||receipt.length>100){
+  result.textContent="راجع الاسم ورقم التواصل ومعرّف الجهاز ومرجع التحويل ثم حاول مجدداً.";return;
+ }
+ const submit=form.querySelector('button[type="submit"]');submit.disabled=true;submit.textContent="جارٍ تسجيل الطلب…";
+ try{
+  const response=await fetch("https://al-mizan-bakery-licensing.moh1442010.workers.dev/api/orders",{
+   method:"POST",headers:{"content-type":"application/json"},
+   body:JSON.stringify({customerName:customer,contact,deviceId:device,plan,receiptReference:receipt})
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.orderId||data.status!=="pending")throw new Error(data.error||"تعذر تأكيد تسجيل الطلب");
+  const message=[
+   "طلب ترخيص مسجل — الميزان المحاسبي للمخابز",
+   "رقم الطلب: "+data.orderId,
+   "الإصدار: "+version,
+   "اسم العميل/المخبز: "+customer,
+   "رقم التواصل: "+contact,
+   "معرّف الجهاز: "+device,
+   "الباقة: "+labels[plan],
+   "المبلغ: "+amounts[plan].toLocaleString("en-US")+" جنيه سوداني",
+   "مرجع تحويل بنكك: "+receipt,
+   "",
+   "تم تسجيل الطلب في النظام. أرفق صورة الإيصال هنا. لا يصدر رمز التفعيل إلا بعد تحقق المالك وموافقته."
+  ].join("\n");
+  result.textContent="تم تسجيل طلبك بنجاح. رقم الطلب: "+data.orderId+" — الحالة: قيد مراجعة الدفع. أرفق صورة الإيصال عبر واتساب.";
+  const link=document.createElement("a");link.href="https://wa.me/249121851285?text="+encodeURIComponent(message);link.target="_blank";link.rel="noopener noreferrer";link.textContent="فتح واتساب وإرسال إشعار الطلب والإيصال";link.style.display="inline-block";link.style.marginTop="10px";link.style.fontWeight="800";
+  result.appendChild(document.createElement("br"));result.appendChild(link);
+  form.reset();
+ }catch(error){result.textContent="لم يتم تأكيد تسجيل الطلب. "+error.message+" — لم يتم إرسال الطلب إلى الإدارة."; }
+ finally{submit.disabled=false;submit.textContent="تسجيل الطلب وفتح واتساب";}
 });
 </script>
 </body>
