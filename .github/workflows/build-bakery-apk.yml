@@ -186,8 +186,10 @@ jobs:
           profile: pixel_2
           script: |
             adb install -r bakery-app/release/AlMizan-Bakery-2.7.2-review.apk
+            adb logcat -c
             adb shell monkey -p com.mohammedmustafa.almizan.bakery 1
-            sleep 5
+            sleep 8
+            if adb logcat -d -t 3000 | grep -E 'FATAL EXCEPTION|Process: com.mohammedmustafa.almizan.bakery'; then echo "Application crash detected"; exit 1; fi
             adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.7.2"
 
       - name: Smoke test signed APK on modern Android API 35
@@ -199,8 +201,10 @@ jobs:
           profile: pixel_2
           script: |
             adb install -r bakery-app/release/AlMizan-Bakery-2.7.2-review.apk
+            adb logcat -c
             adb shell monkey -p com.mohammedmustafa.almizan.bakery 1
-            sleep 5
+            sleep 8
+            if adb logcat -d -t 3000 | grep -E 'FATAL EXCEPTION|Process: com.mohammedmustafa.almizan.bakery'; then echo "Application crash detected"; exit 1; fi
             adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.7.2"
 
       - name: Upload signed review APK and verification records
@@ -235,7 +239,9 @@ jobs:
             - مصروفات وتالف المنتج النهائي وسجل تدقيق للحركات الرئيسية.
             - حساب تكلفة المنتج بالتكلفة المتوسطة المرجحة، مع حفظ الكسور إلى ثلاثة منازل للكمية.
             - البيانات تحفظ محلياً؛ لا تحذف النسخة السابقة أثناء اختبار التحديث.
-            - لا تتضمن هذه المراجعة حالياً تشغيل الإنتاج الجزئي تحت التنفيذ (WIP) أو مردودات المبيعات أو عكس القيود.
+            - تتضمن دفتر مردودات المبيعات مع سقف الكمية وإعادة المخزون بالتكلفة الأصلية وتوزيع التسوية بين النقد وبنكك والآجل.
+            - تتضمن أوامر WIP لصرف الخامات وإضافة الأجور والتكاليف وتحويل تكلفة الأمر إلى مخزون الإنتاج التام؛ الإكمال الحالي للكمية المخططة كاملة، وليس إنتاجاً جزئياً متعدد المراحل.
+            - تتضمن دفتر قيود متوازناً وعكس القيود اليدوية مع حفظ القيد الأصلي وسجل التدقيق؛ قيود المستندات المرتبطة لا تُعكس يدوياً.
             - اختبر التحديث فوق 2.6.17، وسلامة بيانات المخبز، ثم راجع أرصدة المواد والمنتجات والمبيعات على جهاز حقيقي قبل الاعتماد التجاري.
           files: |
             bakery-app/release/AlMizan-Bakery-2.7.2-review.apk
