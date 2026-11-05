@@ -19,6 +19,7 @@ public class FactoryMathTest {
  @Test(expected=IllegalArgumentException.class) public void rejectsSaleOverAvailableStock(){FactoryMath.remainingStock(10,11);}
  @Test(expected=IllegalArgumentException.class) public void rejectsOverpayment(){FactoryMath.debt(100,80,30);}
  @Test(expected=ArithmeticException.class) public void rejectsMonetaryOverflow(){FactoryMath.add(Long.MAX_VALUE,1);}
+ @Test(expected=ArithmeticException.class) public void rejectsQuantityMultiplicationOverflow(){FactoryMath.multiply(Long.MAX_VALUE,2);}
  @Test public void batchMaterialConsumptionMultipliesRecipeByBatchCount(){assertEquals(6000L,FactoryMath.multiply(1500,4));}
  @Test public void rejectsNegativeMonetaryValues(){try{FactoryMath.add(-1,2);fail("negative value accepted");}catch(IllegalArgumentException expected){}}
  @Test public void allocatesWholeBatchCostToOneUnitCorrectly(){assertEquals(1250000L,FactoryMath.unitCostMilli(5000,4000));}
