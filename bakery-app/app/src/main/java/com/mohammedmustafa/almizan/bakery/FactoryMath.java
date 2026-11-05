@@ -15,6 +15,16 @@ public final class FactoryMath {
         if(totalCost<0||quantityMilli<=0)throw new IllegalArgumentException("invalid cost or quantity");
         return BigDecimal.valueOf(totalCost).multiply(BigDecimal.valueOf(1000000)).divide(BigDecimal.valueOf(quantityMilli),0,RoundingMode.HALF_UP).longValueExact();
     }
+    public static long costForStockIssue(long stockValue,long issueQty,long stockQty){
+        if(stockValue<0||issueQty<0||stockQty<=0||issueQty>stockQty)throw new IllegalArgumentException("invalid stock valuation");
+        return prorate(stockValue,issueQty,stockQty);
+    }
+    public static long weightedAverageUnitCost(long oldQty,long oldValue,long addedQty,long addedValue){
+        if(oldQty<0||oldValue<0||addedQty<0||addedValue<0)throw new IllegalArgumentException("negative inventory value");
+        long qty=add(oldQty,addedQty),value=add(oldValue,addedValue);
+        if(qty==0)return 0;
+        return unitCostMilli(value,qty);
+    }
     public static long debt(long total,long cash,long bank){
         if(total<0||cash<0||bank<0||cash>total||bank>total-cash)throw new IllegalArgumentException("invalid settlement");
         return total-cash-bank;
