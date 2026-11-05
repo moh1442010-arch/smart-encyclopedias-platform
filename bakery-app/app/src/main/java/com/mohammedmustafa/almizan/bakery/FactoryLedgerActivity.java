@@ -120,7 +120,7 @@ public class FactoryLedgerActivity extends Activity {
     }
     private void journals(){
         frame("دفتر القيود");
-        body.addView(label("القيد المتوازن يتكون من طرف مدين وطرف دائن بالقيمة نفسها. عكس القيد ينشئ حركة مقابلة ويحافظ على القيد الأصلي وسجل التدقيق.",14));
+        body.addView(label("القيد المتوازن يتكون من طرف مدين وطرف دائن بالقيمة نفسها. يسمح بعكس القيود اليدوية فقط. قيود المرتجعات وWIP مرتبطة بمستندات مخزنية ولا تعكس من هذه الشاشة حتى لا تختلف الأرصدة.",14));
         EditText ref=field("مرجع القيد الفريد",false),desc=field("شرح القيد",false),debit=field("الحساب المدين",false),credit=field("الحساب الدائن",false),value=field("المبلغ",false);
         body.addView(button("ترحيل القيد",()->{try{long a=amount(value);journal(ref.getText().toString().trim(),desc.getText().toString(),debit.getText().toString().trim(),credit.getText().toString().trim(),a);say("تم ترحيل القيد");journals();}catch(Exception x){say("تعذر ترحيل القيد: "+x.getMessage());}}));
         rows("SELECT 'قيد '||id||' — '||entry_ref||' — '||description||' — '||status FROM journal_entries ORDER BY id DESC");
@@ -140,8 +140,8 @@ public class FactoryLedgerActivity extends Activity {
     }
     private long reverse(long id){
         db.beginTransaction();try{
-            Cursor e=db.rawQuery("SELECT entry_ref,description,status FROM journal_entries WHERE id=?",new String[]{""+id});if(!e.moveToFirst()){e.close();throw new IllegalArgumentException("القيد غير موجود");}String entryRef=e.getString(0),desc=e.getString(1),status=e.getString(2);e.close();if(!"POSTED".equals(status))throw new IllegalArgumentException("القيد سبق عكسه أو غير مرحل");
-            if(entryRef.startsWith("WIP-")||entryRef.startsWith("RETURN-"))throw new IllegalArgumentException("هذا القيد مرتبط بمستند مخزني؛ لا تعكسه من دفتر اليومية حتى لا تختلف أرصدة المخزون");
+            Cursor e=db.rawQuery("SELECT entry_ref,description,status,reversal_of FROM journal_entries WHERE id=?",new String[]{""+id});if(!e.moveToFirst()){e.close();throw new IllegalArgumentException("القيد غير موجود");}String entryRef=e.getString(0),desc=e.getString(1),status=e.getString(2);boolean isReversal=!e.isNull(3);e.close();if(!"POSTED".equals(status))throw new IllegalArgumentException("القيد سبق عكسه أو غير مرحل");
+            if(isReversal||entryRef.startsWith("WIP-")||entryRef.startsWith("RETURN-")||entryRef.startsWith("REV-"))throw new IllegalArgumentException("هذا القيد مرتبط بمستند أصلي أو هو قيد عكسي؛ راجع المستند الأصلي ولا تعكسه مرة أخرى");
             String reverseRef="REV-"+id+"-"+System.currentTimeMillis();
             db.execSQL("INSERT INTO journal_entries(entry_ref,description,status,reversal_of,date) VALUES(?,?,'POSTED',?,date('now'))",new Object[]{reverseRef,"عكس "+desc,id});
             Cursor n=db.rawQuery("SELECT last_insert_rowid()",null);n.moveToFirst();long rid=n.getLong(0);n.close();
