@@ -140,7 +140,7 @@ public class FactoryActivity extends Activity {
                 Cursor f=d.rawQuery("SELECT qty,value FROM finished WHERE product_id=?",new String[]{""+pid});long oldq=0,oldv=0;if(f.moveToFirst()){oldq=f.getLong(0);oldv=f.getLong(1);}f.close();long newq=Math.addExact(oldq,output),newv=Math.addExact(oldv,total),avg=java.math.BigDecimal.valueOf(newv).multiply(java.math.BigDecimal.valueOf(1000)).divide(java.math.BigDecimal.valueOf(newq),0,java.math.RoundingMode.HALF_UP).longValueExact();
                 ContentValues fv=new ContentValues();fv.put("product_id",pid);fv.put("qty",newq);fv.put("value",newv);fv.put("unit_cost",avg);d.insertWithOnConflict("finished",null,fv,SQLiteDatabase.CONFLICT_REPLACE);
                 d.execSQL("INSERT INTO batches(product_id,batches,output,labor,overhead,cost,unit_cost,status,date) VALUES(?,?,?,?,?,?,?,'FINALIZED',?)",new Object[]{pid,batches,output,labor,overhead,total,unit,new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date())});
-                d.execSQL("INSERT INTO audit(action,detail,date) VALUES('PRODUCTION_FINALIZED',?,?,date('now'))",new Object[]{""+pid,"cost="+total});
+                d.execSQL("INSERT INTO audit(action,detail,date) VALUES('PRODUCTION_FINALIZED',?,date('now'))",new Object[]{"product="+pid+",cost="+total});
                 d.setTransactionSuccessful();
             }finally{d.endTransaction();}
         }
