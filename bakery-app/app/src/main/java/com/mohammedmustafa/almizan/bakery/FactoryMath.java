@@ -5,8 +5,8 @@ import java.math.RoundingMode;
 
 public final class FactoryMath {
     private FactoryMath() {}
-    public static long add(long a,long b){if(a<0||b<0)throw new IllegalArgumentException("negative value");return Math.addExact(a,b);}
-    public static long multiply(long a,long b){if(a<0||b<0)throw new IllegalArgumentException("negative value");return Math.multiplyExact(a,b);}
+    public static long add(long a,long b){if(a<0||b<0)throw new IllegalArgumentException("negative value");if(Long.MAX_VALUE-a<b)throw new ArithmeticException("long overflow");return a+b;}
+    public static long multiply(long a,long b){if(a<0||b<0)throw new IllegalArgumentException("negative value");if(a!=0&&b>Long.MAX_VALUE/a)throw new ArithmeticException("long overflow");return a*b;}
     public static long prorate(long total,long part,long whole){
         if(total<0||part<0||whole<=0||part>whole)throw new IllegalArgumentException("invalid allocation");
         return BigDecimal.valueOf(total).multiply(BigDecimal.valueOf(part)).divide(BigDecimal.valueOf(whole),0,RoundingMode.HALF_UP).longValueExact();
