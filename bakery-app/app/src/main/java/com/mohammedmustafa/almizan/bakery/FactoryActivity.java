@@ -69,9 +69,13 @@ public class FactoryActivity extends Activity {
     private void sales(){
         frame("التوزيع والمبيعات والتحصيل");
         body.addView(label("كل عملية بيع تسجل مرة واحدة سواء تمت من الشباك أو بالتوزيع. أدخل قيمة البيع والمتحصل نقداً وبنكك، والباقي يصبح ديناً.",14));
-        EditText customer=field("اسم العميل أو الشباك",false),product=field("اسم المنتج",false),qty=field("الكمية المباعة",true),price=field("سعر البيع الإجمالي بالجنيه",false),cash=field("المبلغ النقدي",false),bank=field("تحويل بنكك",false),ref=field("رقم عملية بنكك إن وجد",false);
-        body.addView(btn("تسجيل البيع والتحصيل",()->{long pid=db.id("products",product.getText().toString().trim()),q=num(qty),v=money(price),c=money(cash),bk=money(bank);String cust=customer.getText().toString().trim();if(pid==0||q<=0||v<=0||c<0||bk<0||c+bk>v||cust.isEmpty()){toast("بيانات البيع أو التحصيل غير صحيحة");return;}try{db.sell(pid,q,v,c,bk,cust,ref.getText().toString().trim());toast("تم تسجيل البيع والرصيد المستحق");sales();}catch(Exception ex){toast("تعذر البيع: "+ex.getMessage());}}));
-        list("SELECT customer||' | إجمالي: '||total||' | نقد: '||cash||' | بنكك: '||bank||' | دين: '||debt FROM sales ORDER BY id DESC");
+        EditText customer=field("اسم العميل أو الشباك",false),product=field("اسم المنتج",false),qty=field("الكمية المباعة",true),price=field("سعر البيع الإجمالي بالجنيه",false),cash=field("المبلغ النقدي",false),bank=field("تحويل بنكك",false),ref=field("رقم عملية بنكك (إلزامي عند التحويل)",false);
+        body.addView(btn("تسجيل البيع والتحصيل",()->{long pid=db.id("products",product.getText().toString().trim()),q=num(qty),v=money(price),c=money(cash),bk=money(bank);String cust=customer.getText().toString().trim();if(pid==0||q<=0||v<=0||c<0||bk<0||c>v-bk||cust.isEmpty()||(bk>0&&ref.getText().toString().trim().isEmpty())){toast("بيانات البيع غير صحيحة، ورقم بنكك مطلوب عند التحويل");return;}try{db.sell(pid,q,v,c,bk,cust,ref.getText().toString().trim());toast("تم تسجيل البيع والرصيد المستحق");sales();}catch(Exception ex){toast("تعذر البيع: "+ex.getMessage());}}));
+        body.addView(label("تحصيل مديونية عميل سابقة",15));
+        EditText debtor=field("اسم العميل",false),colCash=field("مبلغ نقدي مستلم",false),colBank=field("مبلغ مستلم عبر بنكك",false),colRef=field("رقم عملية بنكك عند التحويل",false);
+        body.addView(btn("تسجيل تحصيل من رصيد العميل",()->{String dn=debtor.getText().toString().trim(),br=colRef.getText().toString().trim();long cc=money(colCash),cb=money(colBank);if(dn.isEmpty()||cc<0||cb<0||cc+cb<=0||(cb>0&&br.isEmpty())){toast("أدخل العميل ومبلغ التحصيل ورقم بنكك عند التحويل");return;}try{db.collect(dn,cc,cb,br);toast("تم تسجيل التحصيل وتخفيض مديونية العميل");sales();}catch(Exception ex){toast("تعذر التحصيل: "+ex.getMessage());}}));
+        list("SELECT customer||' | إجمالي: '||total||' | نقد: '||cash||' | بنكك: '||bank||' | دين عند البيع: '||debt FROM sales ORDER BY id DESC");
+        list("SELECT customer||' | تحصيل نقدي: '||cash||' | تحصيل بنكك: '||bank FROM collections ORDER BY id DESC");
     }
     private void expenses(){
         frame("المصروفات والتالف");
