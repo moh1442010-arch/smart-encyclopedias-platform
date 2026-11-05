@@ -133,6 +133,7 @@ public class FactoryLedgerActivity extends Activity {
             journal("REV-"+id+"-"+System.currentTimeMillis(),"عكس "+desc,"حسابات عكسية","حسابات عكسية",1);
             Cursor n=db.rawQuery("SELECT last_insert_rowid()",null);n.moveToFirst();long rid=n.getLong(0);n.close();
             db.delete("journal_lines","entry_id=?",new String[]{""+rid});
+            ContentValues reversalMeta=new ContentValues();reversalMeta.put("reversal_of",id);db.update("journal_entries",reversalMeta,"id=?",new String[]{""+rid});
             Cursor lines=db.rawQuery("SELECT account,debit,credit FROM journal_lines WHERE entry_id=?",new String[]{""+id});while(lines.moveToNext())db.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,?,?,?)",new Object[]{rid,lines.getString(0),lines.getLong(2),lines.getLong(1)});lines.close();
             ContentValues v=new ContentValues();v.put("status","REVERSED");db.update("journal_entries",v,"id=?",new String[]{""+id});
             db.execSQL("INSERT INTO audit(action,detail,date) VALUES('JOURNAL_REVERSED',?,date('now'))",new Object[]{id+":"+rid});
