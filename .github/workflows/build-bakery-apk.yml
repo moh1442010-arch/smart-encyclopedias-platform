@@ -173,6 +173,32 @@ jobs:
           sha256sum release/AlMizan-Bakery-2.7.2-review.apk > release/SHA256SUMS.txt
           rm -f release/AlMizan-Bakery-2.7.2-aligned.apk signing/release.jks
 
+      - name: Smoke test signed APK on minimum Android API 23
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 23
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          script: |
+            adb install -r bakery-app/release/AlMizan-Bakery-2.7.2-review.apk
+            adb shell monkey -p com.mohammedmustafa.almizan.bakery 1
+            sleep 5
+            adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.7.2"
+
+      - name: Smoke test signed APK on modern Android API 35
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          script: |
+            adb install -r bakery-app/release/AlMizan-Bakery-2.7.2-review.apk
+            adb shell monkey -p com.mohammedmustafa.almizan.bakery 1
+            sleep 5
+            adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.7.2"
+
       - name: Upload signed review APK and verification records
         uses: actions/upload-artifact@v4
         with:
