@@ -1493,7 +1493,7 @@ public class MainActivity extends Activity {
 
     private void backupRestoreMenu() {
         new AlertDialog.Builder(this).setTitle("نسخ احتياطي واستعادة")
-            .setMessage("أنشئ ملف JSON يحفظ سجلات الأيام والأقسام، واحتفظ به خارج الهاتف. الاستعادة تدمج السجلات وتستبدل فقط السجل الذي يطابق التاريخ والقسم.")
+            .setMessage("أنشئ ملف JSON يحفظ سجلات المخبز وبيانات مصنع الخبائز والحلويات والباسطة. احتفظ به خارج الهاتف. الاستعادة تدمج السجلات وتحافظ على قاعدة المصنع المنفصلة.")
             .setNegativeButton("الرئيسية",(d,w)->buildHome())
             .setNeutralButton("استعادة نسخة",(d,w)->{
                 Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("application/json");
