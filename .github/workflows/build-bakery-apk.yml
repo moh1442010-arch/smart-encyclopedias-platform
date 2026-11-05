@@ -105,7 +105,7 @@ jobs:
 
       - name: Validate factory module schema and requested screens
         run: |
-          grep -Fq 'DB(Context c){super(c,"almizan_factory_1.db",null,4);}' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'DB(Context c){super(c,"almizan_factory_1.db",null,5);}' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'CREATE TABLE daily_usage' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'دقيق' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'مواد تغليف' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
