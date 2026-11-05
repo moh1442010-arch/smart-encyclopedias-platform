@@ -25,6 +25,9 @@ public final class FactoryMath {
         if(qty==0)return 0;
         return unitCostMilli(value,qty);
     }
+    public static void validateBankakReference(long amount,String reference){
+        if(amount<0||(amount>0&&(reference==null||reference.trim().isEmpty())))throw new IllegalArgumentException("invalid Bankak reference");
+    }
     public static long debt(long total,long cash,long bank){
         if(total<0||cash<0||bank<0||cash>total||bank>total-cash)throw new IllegalArgumentException("invalid settlement");
         return total-cash-bank;
