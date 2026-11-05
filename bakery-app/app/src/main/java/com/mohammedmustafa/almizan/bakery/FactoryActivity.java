@@ -17,11 +17,11 @@ public class FactoryActivity extends Activity {
     private static final String[][] DEFAULT_MATERIALS={{"دقيق","كجم"},{"سكر","كجم"},{"زيت","لتر"},{"سمن","كجم"},{"خميرة","كجم"},{"حليب","لتر"},{"بيض","طبق"},{"شوكولاتة","كجم"},{"مكسرات","كجم"},{"فانيليا","كجم"},{"ملح","كجم"},{"أكياس وعبوات","قطعة"},{"غاز","أسطوانة"},{"وقود","لتر"}};
     private String today(){return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());}
     @Override public void onCreate(Bundle b){super.onCreate(b); db=new DB(this); db.seedMaterials(DEFAULT_MATERIALS); home();}
-    @Override public void onBackPressed(){if(!"home".equals(screen))home();else super.onBackPressed();}
+    @Override public void onBackPressed(){if("home".equals(screen))super.onBackPressed();else home();}
     private TextView label(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(Color.rgb(30,40,50));t.setPadding(4,10,4,10);return t;}
     private Button btn(String s,Runnable r){Button b=new Button(this);b.setText(s);b.setOnClickListener(v->r.run());return b;}
     private void frame(String title){
-        screen=title; LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(14,12,14,16);root.setBackgroundColor(Color.rgb(246,248,251));
+        screen="الرئيسية".equals(title)?"home":title; LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(14,12,14,16);root.setBackgroundColor(Color.rgb(246,248,251));
         TextView head=label("🏭 مصنع الخبائز والحلويات والباسطة\n"+title,21);head.setTextColor(NAVY);head.setBackgroundColor(Color.WHITE);root.addView(head);
         root.addView(btn("⌂ العودة إلى مصنع الخبائز والحلويات والباسطة",()->home()));
         root.addView(btn("↩ العودة إلى قائمة المخبز الرئيسية",()->finish()));
@@ -33,11 +33,12 @@ public class FactoryActivity extends Activity {
         body.addView(btn("1. مخزن المواد الخام ومستلزمات المصنع",()->warehouse()));
         body.addView(btn("2. المنتجات والوصفات",()->recipes()));
         body.addView(btn("3. الإنتاج والتشغيل اليومي",()->production()));
-        body.addView(btn("4. التوزيع",()->sales()));
-        body.addView(btn("5. الكاش وبيع الشباك",()->cashWindow()));
-        body.addView(btn("5. المصروفات والتالف",()->expenses()));
-        body.addView(btn("6. حساب التشغيل والتكلفة",()->costing()));
-        body.addView(btn("7. الحسابات والأرصدة والتقارير",()->accounts()));
+        body.addView(btn("4. نقطة البيع",()->pointOfSale()));
+        body.addView(btn("5. التوزيع",()->sales()));
+        body.addView(btn("6. الكاش وبيع الشباك",()->cashWindow()));
+        body.addView(btn("7. المصروفات والتالف",()->expenses()));
+        body.addView(btn("8. حساب التشغيل والتكلفة",()->costing()));
+        body.addView(btn("9. الحسابات والأرصدة والتقارير",()->accounts()));
     }
     private EditText field(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setInputType(decimal?android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:android.text.InputType.TYPE_CLASS_TEXT);body.addView(e);return e;}
     private long num(EditText e){try{java.math.BigDecimal x=new java.math.BigDecimal(e.getText().toString().trim());return x.movePointRight(3).longValueExact();}catch(Exception ex){return 0;}}
@@ -70,16 +71,17 @@ public class FactoryActivity extends Activity {
         body.addView(btn("ترحيل دفعة الإنتاج نهائياً",()->{String pn=product.getText().toString().trim(),br=batchRef.getText().toString().trim();long pid=db.id("products",pn),b=money(batches),out=num(output),w=money(labor),oh=money(over);if(pid==0||br.isEmpty()||b<=0||out<=0||w<0||oh<0){toast("أدخل المنتج ومرجع دفعة فريداً والكميات والتكاليف");return;}try{db.finalizeProduction(pid,br,b,out,w,oh);toast("تم ترحيل الإنتاج وخصم المواد وإضافة المنتج للمخزون");production();}catch(Exception ex){toast("لم يرحل الإنتاج: "+ex.getMessage());}}));
         list("SELECT p.name||' | الكمية المنتجة: '||printf('%.3f',f.qty/1000.0)||' | تكلفة الوحدة بالجنيه: '||printf('%.2f',f.unit_cost/1000.0) FROM finished f JOIN products p ON p.id=f.product_id");
     }
+    private void pointOfSale(){sales("نقطة البيع");}
     private void sales(){sales("التوزيع");}
     private void cashWindow(){sales("الشباك");}
     private void sales(String channel){
-        frame(channel.equals("الشباك")?"الكاش وبيع الشباك":"التوزيع والمبيعات والتحصيل");
+        frame(channel.equals("الشباك")?"الكاش وبيع الشباك":channel.equals("نقطة البيع")?"نقطة البيع":"التوزيع والمبيعات والتحصيل");
         body.addView(label("قناة البيع: "+channel+". أدخل قيمة البيع والمتحصل نقداً وبنكك، والباقي يصبح ديناً. جميع القنوات تظهر في دفتر مبيعات واحد دون تكرار.",14));
         EditText customer=field("اسم العميل أو الشباك",false),product=field("اسم المنتج",false),qty=field("الكمية المباعة",true),price=field("سعر البيع الإجمالي بالجنيه",false),cash=field("المبلغ النقدي",false),bank=field("تحويل بنكك",false),ref=field("رقم عملية بنكك (إلزامي عند التحويل)",false);
         body.addView(btn("تسجيل البيع والتحصيل",()->{long pid=db.id("products",product.getText().toString().trim()),q=num(qty),v=money(price),c=money(cash),bk=money(bank);String cust=customer.getText().toString().trim();if(pid==0||q<=0||v<=0||c<0||bk<0||c>v-bk||cust.isEmpty()||(bk>0&&ref.getText().toString().trim().isEmpty())){toast("بيانات البيع غير صحيحة، ورقم بنكك مطلوب عند التحويل");return;}try{db.sell(pid,q,v,c,bk,cust,ref.getText().toString().trim(),channel);toast("تم تسجيل البيع والرصيد المستحق");sales(channel);}catch(Exception ex){toast("تعذر البيع: "+ex.getMessage());}}));
         body.addView(label("تحصيل مديونية عميل سابقة",15));
         EditText debtor=field("اسم العميل",false),colCash=field("مبلغ نقدي مستلم",false),colBank=field("مبلغ مستلم عبر بنكك",false),colRef=field("رقم عملية بنكك عند التحويل",false);
-        body.addView(btn("تسجيل تحصيل من رصيد العميل",()->{String dn=debtor.getText().toString().trim(),br=colRef.getText().toString().trim();long cc=money(colCash),cb=money(colBank);if(dn.isEmpty()||cc<0||cb<0||cc+cb<=0||(cb>0&&br.isEmpty())){toast("أدخل العميل ومبلغ التحصيل ورقم بنكك عند التحويل");return;}try{db.collect(dn,cc,cb,br);toast("تم تسجيل التحصيل وتخفيض مديونية العميل");sales();}catch(Exception ex){toast("تعذر التحصيل: "+ex.getMessage());}}));
+        body.addView(btn("تسجيل تحصيل من رصيد العميل",()->{String dn=debtor.getText().toString().trim(),br=colRef.getText().toString().trim();long cc=money(colCash),cb=money(colBank);if(dn.isEmpty()||cc<0||cb<0||cc+cb<=0||(cb>0&&br.isEmpty())){toast("أدخل العميل ومبلغ التحصيل ورقم بنكك عند التحويل");return;}try{db.collect(dn,cc,cb,br);toast("تم تسجيل التحصيل وتخفيض مديونية العميل");sales(channel);}catch(Exception ex){toast("تعذر التحصيل: "+ex.getMessage());}}));
         list("SELECT channel||' | '||customer||' | إجمالي: '||total||' | نقد: '||cash||' | بنكك: '||bank||' | دين عند البيع: '||debt FROM sales ORDER BY id DESC");
         list("SELECT customer||' | تحصيل نقدي: '||cash||' | تحصيل بنكك: '||bank FROM collections ORDER BY id DESC");
     }
@@ -114,7 +116,7 @@ public class FactoryActivity extends Activity {
         list("SELECT 'صافي نتيجة التشغيل: '||(COALESCE((SELECT SUM(total-cogs) FROM sales),0)-COALESCE((SELECT SUM(cost) FROM waste),0)-COALESCE((SELECT SUM(amount) FROM expenses),0))||' جنيه'");
         list("SELECT s.customer||' | دين متبقٍ: '||(SUM(s.debt)-COALESCE((SELECT SUM(c.cash+c.bank) FROM collections c WHERE c.customer=s.customer),0)) FROM sales s GROUP BY s.customer HAVING SUM(s.debt)>COALESCE((SELECT SUM(c.cash+c.bank) FROM collections c WHERE c.customer=s.customer),0) ORDER BY s.customer");
     }
-    private void list(String sql){Cursor c=null;try{c=db.getReadableDatabase().rawQuery(sql,null);while(c.moveToNext())body.addView(label("• "+c.getString(0),14));}catch(Exception e){body.addView(label("لا توجد سجلات بعد.",13));}finally{if(c!=null)c.close();}}
+    private void list(String sql){Cursor c=null;try{c=db.getReadableDatabase().rawQuery(sql,null);if(!c.moveToFirst()){body.addView(label("لا توجد سجلات بعد.",13));return;}do{TextView row=label("│ "+c.getString(0),14);row.setBackgroundColor(Color.WHITE);body.addView(row);View line=new View(this);line.setBackgroundColor(GOLD);body.addView(line,new LinearLayout.LayoutParams(-1,1));}while(c.moveToNext());}catch(Exception e){body.addView(label("تعذر قراءة السجلات: "+e.getMessage(),13));}finally{if(c!=null)c.close();}}
     private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
 
     private static class DB extends SQLiteOpenHelper {
