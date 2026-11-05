@@ -1,4 +1,4 @@
-name: Build Al-Mizan Bakery 2.7.1 Review APK
+name: Build Al-Mizan Bakery 2.7.2 Review APK
 
 on:
   workflow_dispatch:
@@ -68,15 +68,15 @@ jobs:
           const appKey = appMain.match(/LICENSE_PUBLIC_KEY_B64 = "([^"]+)"/)?.[1];
           const workerKey = worker.match(/EXPECTED_APP_PUBLIC_KEY_DER_B64 = "([^"]+)"/)?.[1];
           if (!appKey || appKey !== workerKey) throw new Error("Worker signing public key does not match Android app.");
-          if (!workerConfig.includes('APP_VERSION = "2.7.1"')) throw new Error("Worker APP_VERSION must be 2.7.1.");
+          if (!workerConfig.includes('APP_VERSION = "2.7.2"')) throw new Error("Worker APP_VERSION must be 2.7.2.");
           const expected = {
             applicationId: "com.mohammedmustafa.almizan.bakery",
-            versionName: "2.7.1"
+            versionName: "2.7.2"
           };
           for (const [key, value] of Object.entries(expected)) {
             if (!gradle.includes(`${key} '${value}'`)) throw new Error(`Release identity mismatch: ${key}`);
           }
-          if (!gradle.includes("versionCode 270001")) throw new Error("Release identity mismatch: versionCode");
+          if (!gradle.includes("versionCode 270002")) throw new Error("Release identity mismatch: versionCode");
           for (const price of ["55,000 جنيه سوداني", "550,000 جنيه سوداني", "1,050,000 جنيه سوداني"]) {
             if (!app.includes(price)) throw new Error(`App is missing approved price: ${price}`);
           }
@@ -103,6 +103,32 @@ jobs:
           unzip -q gradle-8.9-bin.zip
           echo "$PWD/gradle-8.9/bin" >> "$GITHUB_PATH"
 
+      - name: Validate factory module schema and requested screens
+        run: |
+          grep -Fq 'DB(Context c){super(c,"almizan_factory_1.db",null,5);}' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'CREATE TABLE daily_usage' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'دقيق' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'مواد تغليف' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'باسطة' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'بلح شام' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'FactoryMath.saleTotal(q,p)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'daily_usage' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
+          grep -Fq 'FactoryLedgerActivity' bakery-app/app/src/main/AndroidManifest.xml
+          grep -Fq 'private void returns()' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
+          grep -Fq 'private void wip()' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
+          grep -Fq 'private void journals()' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS sales_returns' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS work_orders' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS journal_entries' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
+          grep -Fq 'root.put("schema_version", 5)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
+          grep -Fq 'minSdk 23' bakery-app/app/build.gradle
+          grep -Fq 'targetSdk 35' bakery-app/app/build.gradle
+          if grep -R -E 'Math\.(addExact|subtractExact|multiplyExact)\(' bakery-app/app/src/main/java; then
+            echo "Checked arithmetic must remain compatible with Android API 23."
+            exit 1
+          fi
+          echo "Factory modules, schema v5 backup and Android API 23 compatibility declarations verified."
+
       - name: Run arithmetic unit tests
         working-directory: bakery-app
         run: gradle testDebugUnitTest
@@ -114,7 +140,7 @@ jobs:
       - name: Upload internal debug build (not for distribution)
         uses: actions/upload-artifact@v4
         with:
-          name: al-mizan-bakery-2.7.1-debug-internal
+          name: al-mizan-bakery-2.7.2-debug-internal
           path: bakery-app/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -139,41 +165,71 @@ jobs:
           apk="app/build/outputs/apk/release/app-release-unsigned.apk"
           test -s "$apk"
           build_tools="$ANDROID_HOME/build-tools/36.0.0"
-          "$build_tools/zipalign" -f -v 4 "$apk" release/AlMizan-Bakery-2.7.1-aligned.apk
-          "$build_tools/apksigner" sign --ks signing/release.jks --ks-key-alias "$alias" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEYSTORE_PASSWORD" --out release/AlMizan-Bakery-2.7.1-review.apk release/AlMizan-Bakery-2.7.1-aligned.apk
-          "$build_tools/apksigner" verify --verbose --print-certs release/AlMizan-Bakery-2.7.1-review.apk | tee release/SIGNING-CERTIFICATE.txt
+          "$build_tools/zipalign" -f -v 4 "$apk" release/AlMizan-Bakery-2.7.2-aligned.apk
+          "$build_tools/apksigner" sign --ks signing/release.jks --ks-key-alias "$alias" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEYSTORE_PASSWORD" --out release/AlMizan-Bakery-2.7.2-review.apk release/AlMizan-Bakery-2.7.2-aligned.apk
+          "$build_tools/apksigner" verify --verbose --print-certs release/AlMizan-Bakery-2.7.2-review.apk | tee release/SIGNING-CERTIFICATE.txt
           cert_sha="$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2); exit}' release/SIGNING-CERTIFICATE.txt | tr -d ':[:space:]')"
           expected="159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
           test "$cert_sha" = "$expected" || { echo "::error::Signing certificate fingerprint mismatch; do not distribute this APK"; exit 1; }
-          badging="$("$build_tools/aapt" dump badging release/AlMizan-Bakery-2.7.1-review.apk)"
-          echo "$badging" | grep -F "package: name='com.mohammedmustafa.almizan.bakery' versionCode='270001' versionName='2.7.1'"
+          badging="$("$build_tools/aapt" dump badging release/AlMizan-Bakery-2.7.2-review.apk)"
+          echo "$badging" | grep -F "package: name='com.mohammedmustafa.almizan.bakery' versionCode='270002' versionName='2.7.2'"
           echo "$badging" | grep -F "application-label:'المحاسب الميزان للمخابز'"
-          sha256sum release/AlMizan-Bakery-2.7.1-review.apk > release/SHA256SUMS.txt
-          rm -f release/AlMizan-Bakery-2.7.1-aligned.apk signing/release.jks
+          sha256sum release/AlMizan-Bakery-2.7.2-review.apk > release/SHA256SUMS.txt
+          rm -f release/AlMizan-Bakery-2.7.2-aligned.apk signing/release.jks
+
+      - name: Smoke test signed APK on minimum Android API 23
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 23
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          script: |
+            adb install -r bakery-app/release/AlMizan-Bakery-2.7.2-review.apk
+            adb logcat -c
+            adb shell monkey -p com.mohammedmustafa.almizan.bakery 1
+            sleep 8
+            if adb logcat -d -t 3000 | grep -E 'FATAL EXCEPTION|Process: com.mohammedmustafa.almizan.bakery'; then echo "Application crash detected"; exit 1; fi
+            adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.7.2"
+
+      - name: Smoke test signed APK on modern Android API 35
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          script: |
+            adb install -r bakery-app/release/AlMizan-Bakery-2.7.2-review.apk
+            adb logcat -c
+            adb shell monkey -p com.mohammedmustafa.almizan.bakery 1
+            sleep 8
+            if adb logcat -d -t 3000 | grep -E 'FATAL EXCEPTION|Process: com.mohammedmustafa.almizan.bakery'; then echo "Application crash detected"; exit 1; fi
+            adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.7.2"
 
       - name: Upload signed review APK and verification records
         uses: actions/upload-artifact@v4
         with:
-          name: al-mizan-bakery-2.7.1-signed-review
+          name: al-mizan-bakery-2.7.2-signed-review
           path: |
-            bakery-app/release/AlMizan-Bakery-2.7.1-review.apk
+            bakery-app/release/AlMizan-Bakery-2.7.2-review.apk
             bakery-app/release/SHA256SUMS.txt
             bakery-app/release/SIGNING-CERTIFICATE.txt
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish review-only GitHub Release
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/bakery-2.6.2-profit-and-entry-fixes' || github.ref == 'refs/heads/feature/factory-accounting-2.7.0'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/bakery-2.6.2-profit-and-entry-fixes' || github.ref == 'refs/heads/feature/factory-accounting-2.7.0' || github.ref == 'refs/heads/feature/factory-accounting-2.7.2-ledger'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: al-mizan-bakery-2.7.1-review
-          name: المحاسب الميزان للمخابز 2.7.1 — مراجعة
+          tag_name: al-mizan-bakery-2.7.2-review
+          name: المحاسب الميزان للمخابز 2.7.2 — مراجعة
           prerelease: true
           make_latest: false
           generate_release_notes: false
           overwrite_files: true
           body: |
-            نسخة مراجعة لنظام المصنع داخل تطبيق المحاسب الميزان للمخابز 2.7.1. ليست إصداراً تجارياً معتمداً.
+            نسخة مراجعة لنظام المصنع داخل تطبيق المحاسب الميزان للمخابز 2.7.2. ليست إصداراً تجارياً معتمداً.
             - قاعدة بيانات المصنع مستقلة عن قاعدة بيانات المخبز.
             - مخزن خامات بوحدات قابلة للتعديل، واستلام مخزني وحركة مخزون.
             - تعريف المنتجات وربطها بوصفات استهلاك المواد الخام.
@@ -183,9 +239,11 @@ jobs:
             - مصروفات وتالف المنتج النهائي وسجل تدقيق للحركات الرئيسية.
             - حساب تكلفة المنتج بالتكلفة المتوسطة المرجحة، مع حفظ الكسور إلى ثلاثة منازل للكمية.
             - البيانات تحفظ محلياً؛ لا تحذف النسخة السابقة أثناء اختبار التحديث.
-            - لا تتضمن هذه المراجعة حالياً تشغيل الإنتاج الجزئي تحت التنفيذ (WIP) أو مردودات المبيعات أو عكس القيود.
+            - تتضمن دفتر مردودات المبيعات مع سقف الكمية وإعادة المخزون بالتكلفة الأصلية وتوزيع التسوية بين النقد وبنكك والآجل.
+            - تتضمن أوامر WIP لصرف الخامات وإضافة الأجور والتكاليف وتحويل تكلفة الأمر إلى مخزون الإنتاج التام؛ الإكمال الحالي للكمية المخططة كاملة، وليس إنتاجاً جزئياً متعدد المراحل.
+            - تتضمن دفتر قيود متوازناً وعكس القيود اليدوية مع حفظ القيد الأصلي وسجل التدقيق؛ قيود المستندات المرتبطة لا تُعكس يدوياً.
             - اختبر التحديث فوق 2.6.17، وسلامة بيانات المخبز، ثم راجع أرصدة المواد والمنتجات والمبيعات على جهاز حقيقي قبل الاعتماد التجاري.
           files: |
-            bakery-app/release/AlMizan-Bakery-2.7.1-review.apk
+            bakery-app/release/AlMizan-Bakery-2.7.2-review.apk
             bakery-app/release/SHA256SUMS.txt
             bakery-app/release/SIGNING-CERTIFICATE.txt
