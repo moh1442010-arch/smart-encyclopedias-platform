@@ -26,7 +26,7 @@ public class FactoryMathTest {
 
  @Test public void proratesAllRemainingStockValueExactly(){assertEquals(987654L,FactoryMath.costForStockIssue(987654L,1250L,1250L));}
  @Test public void supportsFractionalRecipeConsumptionAcrossBatches(){assertEquals(500L,FactoryMath.multiply(250L,2L));}
- @Test public void preservesValueWhenInventoryIsPartiallyIssued(){long cost=FactoryMath.costForStockIssue(10001L,333L,1000L);assertEquals(6667L,10001L-cost);}
+ @Test public void preservesValueWhenInventoryIsPartiallyIssued(){long cost=FactoryMath.costForStockIssue(10001L,333L,1000L);assertEquals(6671L,10001L-cost);}
  @Test public void computesZeroDebtForFullySettledSale(){assertEquals(0L,FactoryMath.debt(15000L,5000L,10000L));}
  @Test public void computesDebtWhenSaleIsPartiallySettled(){assertEquals(7000L,FactoryMath.debt(15000L,5000L,3000L));}
 }
