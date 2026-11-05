@@ -103,6 +103,18 @@ jobs:
           unzip -q gradle-8.9-bin.zip
           echo "$PWD/gradle-8.9/bin" >> "$GITHUB_PATH"
 
+      - name: Validate factory module schema and requested screens
+        run: |
+          grep -Fq 'DB(Context c){super(c,"almizan_factory_1.db",null,4);}' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'CREATE TABLE daily_usage' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'دقيق' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'مواد تغليف' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'باسطة' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'بلح شام' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'FactoryMath.saleTotal(q,p)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'daily_usage' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
+          echo "Factory raw materials, production, POS and backup schema declarations verified."
+
       - name: Run arithmetic unit tests
         working-directory: bakery-app
         run: gradle testDebugUnitTest
