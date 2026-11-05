@@ -60,7 +60,7 @@ public class FactoryActivity extends Activity {
         EditText n=field("اسم المنتج: خبائز، مخبازات، فطائر، باستا، حلويات...",false);
         body.addView(btn("إضافة منتج",()->{String x=n.getText().toString().trim();if(x.isEmpty()){toast("أدخل اسم المنتج");return;}db.exec("INSERT OR IGNORE INTO products(name) VALUES(?)",new String[]{x});toast("تم حفظ المنتج");recipes();}));
         EditText product=field("اسم المنتج المطابق",false),material=field("اسم المادة المطابق",false),qty=field("كمية المادة لكل دفعة",true);
-        body.addView(btn("إضافة مكون للوصفة",()->{String pn=product.getText().toString().trim(),mn=material.getText().toString().trim();long q=num(qty);if(q<=0){toast("الكمية يجب أن تكون أكبر من صفر");return;}long pid=db.id("products",pn),mid=db.id("materials",mn);if(pid==0||mid==0){toast("تأكد من تسجيل المنتج والمادة في النظام");return;}db.exec("INSERT INTO recipe(product_id,material_id,qty) VALUES(?,?,?)",new String[]{""+pid,""+mid,""+q});toast("تم ربط المكون بالوصفة");recipes();}));
+        body.addView(btn("إضافة مكون للوصفة",()->{String pn=product.getText().toString().trim(),mn=material.getText().toString().trim();long q=num(qty);if(q<=0){toast("الكمية يجب أن تكون أكبر من صفر");return;}long pid=db.id("products",pn),mid=db.id("materials",mn);if(pid==0||mid==0){toast("تأكد من تسجيل المنتج والمادة في النظام");return;}try{db.exec("INSERT INTO recipe(product_id,material_id,qty) VALUES(?,?,?)",new String[]{""+pid,""+mid,""+q});toast("تم ربط المكون بالوصفة");recipes();}catch(Exception ex){toast("هذا المكون مسجل بالفعل أو تعذر حفظه: "+ex.getMessage());}}));
         list("SELECT name FROM products ORDER BY name");
     }
     private void production(){
