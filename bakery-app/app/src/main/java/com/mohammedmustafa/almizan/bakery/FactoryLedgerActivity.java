@@ -61,9 +61,7 @@ public class FactoryLedgerActivity extends Activity {
             FactoryMath.validateBankakReference(bank,bankRef);
             if(bank>0){Cursor x=db.rawQuery("SELECT COUNT(*) FROM cashbook WHERE account='BANKAK' AND ref=?",new String[]{bankRef});x.moveToFirst();boolean used=x.getLong(0)>0;x.close();if(used)throw new IllegalArgumentException("مرجع بنكك مستخدم سابقاً");}
             long credit=refund-cash-bank;
-            if(cash>saleCash-prevCash)throw new IllegalArgumentException("المبلغ النقدي المعاد يتجاوز النقد المحصل في هذه الفاتورة بعد المرتجعات السابقة");
-            if(bank>saleBank-prevBank)throw new IllegalArgumentException("مبلغ بنكك المعاد يتجاوز بنكك المحصل في هذه الفاتورة بعد المرتجعات السابقة");
-            if(credit>saleDebt-prevCredit)throw new IllegalArgumentException("تخفيض الآجل يتجاوز مديونية هذه الفاتورة بعد المرتجعات السابقة");
+            FactoryMath.validateReturnSettlement(saleCash,saleBank,saleDebt,prevCash,prevBank,prevCredit,cash,bank,credit);
             Cursor due=db.rawQuery("SELECT COALESCE(SUM(debt),0)-COALESCE((SELECT SUM(cash+bank) FROM collections WHERE customer=?),0)-COALESCE((SELECT SUM(r.credit_adjustment) FROM sales_returns r JOIN sales ss ON ss.id=r.sale_id WHERE ss.customer=?),0) FROM sales WHERE customer=?",new String[]{customer,customer,customer});
             due.moveToFirst();long outstanding=Math.max(0,due.getLong(0));due.close();
             if(credit>outstanding)throw new IllegalArgumentException("قيمة تخفيض الآجل أكبر من مديونية العميل المتبقية: "+outstanding);
