@@ -449,6 +449,7 @@ public class MainActivity extends Activity {
         Button choose = button("اختيار التاريخ"); choose.setOnClickListener(v -> chooseDate()); dateRow.addView(choose); content.addView(dateRow);
         statusLabel = text("",14); content.addView(statusLabel);
         addDashboardSummary();
+        addCard("🏭 مصنع الخبائز والحلويات والباسطة","نظام مستقل للمخزون والوصفات والإنتاج والتوزيع والمبيعات والتكاليف والحسابات.",()->startActivity(new Intent(MainActivity.this, FactoryActivity.class)));
         addCard("📦 1. المخزن","أرصدة الدقيق والخميرة والأكياس والزيت والملح والوقود والمعدات. يظهر رصيد اليوم السابق تلقائيًا.",()->openModule("stock"));
         addCard("🥖 2. شغل اليوم والإنتاج","عدد جوالات الدقيق المستخدمة، عدد الأرغفة لكل جوال، وقيمة الإنتاج بالجنيه. يُخصم الدقيق تلقائيًا من المخزن.",()->openModule("cuts"));
         addCard("👷 3. يومية العمال","اسم العامل، الوظيفة، عدد الشغل، عمالة الجوال، وجملة العمل",()->openModule("workers"));
