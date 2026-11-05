@@ -96,8 +96,47 @@ final class FactoryBackup {
                     String key=it.next();
                     if (!Arrays.asList(COLUMNS[i]).contains(key)) throw new IllegalArgumentException("Unknown factory field");
                 }
+                validateRow(TABLES[i], row);
             }
         }
+    }
+
+    private static void validateRow(String table, JSONObject row) throws Exception {
+        String[] numeric;
+        if ("materials".equals(table)) numeric=new String[]{"id","qty","value"};
+        else if ("products".equals(table)) numeric=new String[]{"id"};
+        else if ("recipe".equals(table)) numeric=new String[]{"id","product_id","material_id","qty"};
+        else if ("batches".equals(table)) numeric=new String[]{"id","product_id","batches","output","labor","overhead","cost","unit_cost"};
+        else if ("finished".equals(table)) numeric=new String[]{"product_id","qty","value","unit_cost"};
+        else if ("sales".equals(table)) numeric=new String[]{"id","product_id","qty","total","cash","bank","debt","cogs"};
+        else if ("expenses".equals(table)) numeric=new String[]{"id","amount"};
+        else if ("waste".equals(table)) numeric=new String[]{"id","product_id","qty","cost"};
+        else if ("movements".equals(table)) numeric=new String[]{"id","item_id","qty","value"};
+        else if ("collections".equals(table)) numeric=new String[]{"id","cash","bank"};
+        else if ("cashbook".equals(table)) numeric=new String[]{"id","amount"};
+        else numeric=new String[]{"id"};
+        for (String key : numeric) {
+            Object value=row.get(key);
+            if (!(value instanceof Number)) throw new IllegalArgumentException("Invalid numeric factory field");
+            Number number=(Number)value;
+            long exact=number.longValue();
+            if (number.doubleValue()!=((double)exact) || exact<0) throw new IllegalArgumentException("Negative or fractional factory integer");
+        }
+        if ("recipe".equals(table) && row.getLong("qty")==0) throw new IllegalArgumentException("Recipe quantity must be positive");
+        if ("batches".equals(table) && (row.getLong("batches")==0 || row.getLong("output")==0)) throw new IllegalArgumentException("Invalid production batch quantity");
+        if ("sales".equals(table)) {
+            long total=row.getLong("total"), cash=row.getLong("cash"), bank=row.getLong("bank"), debt=row.getLong("debt");
+            if (total==0 || row.getLong("qty")==0 || Math.addExact(Math.addExact(cash,bank),debt)!=total)
+                throw new IllegalArgumentException("Invalid sale settlement in backup");
+            if (bank>0 && row.optString("bank_ref").trim().isEmpty()) throw new IllegalArgumentException("Missing Bankak reference in backup");
+        }
+        if ("collections".equals(table)) {
+            if (Math.addExact(row.getLong("cash"),row.getLong("bank"))==0) throw new IllegalArgumentException("Empty customer collection");
+            if (row.getLong("bank")>0 && row.optString("bank_ref").trim().isEmpty()) throw new IllegalArgumentException("Missing collection Bankak reference");
+        }
+        if ("expenses".equals(table) && row.getLong("amount")==0) throw new IllegalArgumentException("Expense amount must be positive");
+        if ("waste".equals(table) && row.getLong("qty")==0) throw new IllegalArgumentException("Waste quantity must be positive");
+        if ("cashbook".equals(table) && row.getLong("amount")==0) throw new IllegalArgumentException("Cashbook amount must be positive");
     }
 
     static void restore(Context context, JSONObject root) throws Exception {
