@@ -52,5 +52,10 @@ public final class FactoryMath {
         if(debit<0||credit<0)throw new IllegalArgumentException("negative journal total");
         return debit==credit;
     }
+    public static long saleTotal(long quantityMilli,long unitPrice){
+        if(quantityMilli<=0||unitPrice<=0)throw new IllegalArgumentException("invalid sale quantity or unit price");
+        return BigDecimal.valueOf(quantityMilli).multiply(BigDecimal.valueOf(unitPrice))
+            .divide(BigDecimal.valueOf(1000),0,RoundingMode.HALF_UP).longValueExact();
+    }
     public static long remainingStock(long stock,long used){if(stock<0||used<0||used>stock)throw new IllegalArgumentException("insufficient stock");return stock-used;}
 }
