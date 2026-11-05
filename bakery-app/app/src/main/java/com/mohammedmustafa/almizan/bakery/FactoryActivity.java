@@ -39,6 +39,7 @@ public class FactoryActivity extends Activity {
         body.addView(btn("6. المصروفات والتالف",()->expenses()));
         body.addView(btn("7. حساب التشغيل والتكلفة",()->costing()));
         body.addView(btn("8. الحسابات والأرصدة والتقارير",()->accounts()));
+        body.addView(btn("9. مرتجعات المبيعات والأعمال تحت التشغيل وعكس القيود",()->startActivity(new Intent(this,FactoryLedgerActivity.class))));
     }
     private EditText field(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setInputType(decimal?android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:android.text.InputType.TYPE_CLASS_TEXT);body.addView(e);return e;}
     private long num(EditText e){try{java.math.BigDecimal x=new java.math.BigDecimal(e.getText().toString().trim());return x.movePointRight(3).longValueExact();}catch(Exception ex){return 0;}}
