@@ -9,6 +9,11 @@ public class FactoryMathTest {
  @Test public void keepsZeroUnitCostForEmptyFinishedStock(){assertEquals(0L,FactoryMath.weightedAverageUnitCost(0,0,0,0));}
  @Test(expected=IllegalArgumentException.class) public void rejectsIssueAboveStock(){FactoryMath.costForStockIssue(100,11,10);}
  @Test(expected=IllegalArgumentException.class) public void rejectsNegativeInventoryValuation(){FactoryMath.weightedAverageUnitCost(10,-1,2,3);}
+
+ @Test public void acceptsBankakReferenceWhenAmountIsPresent(){FactoryMath.validateBankakReference(100,"TX-001");}
+ @Test public void acceptsNoBankakReferenceForZeroBankak(){FactoryMath.validateBankakReference(0,"");}
+ @Test(expected=IllegalArgumentException.class) public void rejectsMissingBankakReference(){FactoryMath.validateBankakReference(100," ");}
+ @Test(expected=IllegalArgumentException.class) public void rejectsNegativeBankakAmount(){FactoryMath.validateBankakReference(-1,"TX-001");}
  @Test public void calculatesCustomerDebtAfterCashAndBankak(){assertEquals(3000L,FactoryMath.debt(10000,4000,3000));}
  @Test public void leavesCorrectMaterialBalance(){assertEquals(2500L,FactoryMath.remainingStock(5000,2500));}
  @Test(expected=IllegalArgumentException.class) public void rejectsSaleOverAvailableStock(){FactoryMath.remainingStock(10,11);}
