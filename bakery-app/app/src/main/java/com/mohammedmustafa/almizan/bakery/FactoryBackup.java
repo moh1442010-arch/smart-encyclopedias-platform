@@ -203,6 +203,9 @@ final class FactoryBackup {
             db.beginTransaction();
             try {
                 JSONObject tables = root.getJSONObject("tables");
+                // A restore replaces the factory snapshot; it must not merge with newer rows.
+                // Delete child tables first so old backups cannot leave stale ledger records behind.
+                for (int i=TABLES.length-1;i>=0;i--) db.delete(TABLES[i], null, null);
                 for (int i=0;i<TABLES.length;i++) {
                     JSONArray rows = tables.optJSONArray(TABLES[i]);
                     if (rows == null && root.optInt("schema_version")<5 && Arrays.asList("sales_returns","work_orders","work_order_materials","journal_entries","journal_lines").contains(TABLES[i])) continue;
