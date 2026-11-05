@@ -13,7 +13,7 @@ public final class FactoryMath {
     }
     public static long unitCostMilli(long totalCost,long quantityMilli){
         if(totalCost<0||quantityMilli<=0)throw new IllegalArgumentException("invalid cost or quantity");
-        return BigDecimal.valueOf(totalCost).multiply(BigDecimal.valueOf(1000)).divide(BigDecimal.valueOf(quantityMilli),0,RoundingMode.HALF_UP).longValueExact();
+        return BigDecimal.valueOf(totalCost).multiply(BigDecimal.valueOf(1000000)).divide(BigDecimal.valueOf(quantityMilli),0,RoundingMode.HALF_UP).longValueExact();
     }
     public static long debt(long total,long cash,long bank){
         if(total<0||cash<0||bank<0||cash>total||bank>total-cash)throw new IllegalArgumentException("invalid settlement");
