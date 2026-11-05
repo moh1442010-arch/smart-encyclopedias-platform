@@ -39,4 +39,7 @@ public class FactoryMathTest {
  @Test public void rejectsUnbalancedJournal(){assertFalse(FactoryMath.journalIsBalanced(15000L,14999L));}
  @Test(expected=IllegalArgumentException.class) public void rejectsNegativeJournalTotals(){FactoryMath.journalIsBalanced(-1L,0L);}
 
+ @Test public void calculatesPosTotalFromFractionalQuantityAndUnitPrice(){assertEquals(3750L,FactoryMath.saleTotal(2500L,1500L));}
+ @Test(expected=IllegalArgumentException.class) public void rejectsZeroSaleUnitPrice(){FactoryMath.saleTotal(1000L,0L);}
+
 }
