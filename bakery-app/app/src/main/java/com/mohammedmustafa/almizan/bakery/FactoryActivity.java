@@ -14,8 +14,9 @@ import java.util.*;
 public class FactoryActivity extends Activity {
     private static final int NAVY=Color.rgb(11,31,58), GOLD=Color.rgb(212,175,55);
     private DB db; private LinearLayout body; private String screen="home";
+    private static final String[] DEFAULT_MATERIALS={"دقيق","سكر","زيت","سمن","خميرة","حليب","بيض","شوكولاتة","مكسرات","فانيليا","ملح","أكياس وعبوات","غاز","وقود"};
     private String today(){return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());}
-    @Override public void onCreate(Bundle b){super.onCreate(b); db=new DB(this); home();}
+    @Override public void onCreate(Bundle b){super.onCreate(b); db=new DB(this); db.seedMaterials(DEFAULT_MATERIALS); home();}
     @Override public void onBackPressed(){if(!"home".equals(screen))home();else super.onBackPressed();}
     private TextView label(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(Color.rgb(30,40,50));t.setPadding(4,10,4,10);return t;}
     private Button btn(String s,Runnable r){Button b=new Button(this);b.setText(s);b.setOnClickListener(v->r.run());return b;}
@@ -23,6 +24,7 @@ public class FactoryActivity extends Activity {
         screen=title; LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(14,12,14,16);root.setBackgroundColor(Color.rgb(246,248,251));
         TextView head=label("🏭 مصنع الخبائز والحلويات والباسطة\n"+title,21);head.setTextColor(NAVY);head.setBackgroundColor(Color.WHITE);root.addView(head);
         root.addView(btn("⌂ العودة إلى مصنع الخبائز والحلويات والباسطة",()->home()));
+        root.addView(btn("↩ العودة إلى قائمة المخبز الرئيسية",()->finish()));
         ScrollView sc=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);body.setPadding(2,8,2,8);sc.addView(body);root.addView(sc,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);
     }
     private void home(){
@@ -101,21 +103,24 @@ public class FactoryActivity extends Activity {
     private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
 
     private static class DB extends SQLiteOpenHelper {
-        DB(Context c){super(c,"almizan_factory_1.db",null,1);}
+        DB(Context c){super(c,"almizan_factory_1.db",null,2);}
         public void onCreate(SQLiteDatabase d){
             d.execSQL("CREATE TABLE materials(id INTEGER PRIMARY KEY,name TEXT UNIQUE,unit TEXT,qty INTEGER NOT NULL DEFAULT 0,value INTEGER NOT NULL DEFAULT 0)");
             d.execSQL("CREATE TABLE products(id INTEGER PRIMARY KEY,name TEXT UNIQUE)");
             d.execSQL("CREATE TABLE recipe(id INTEGER PRIMARY KEY,product_id INTEGER,material_id INTEGER,qty INTEGER CHECK(qty>0),UNIQUE(product_id,material_id))");
-            d.execSQL("CREATE TABLE batches(id INTEGER PRIMARY KEY,product_id INTEGER,batches INTEGER,output INTEGER,labor INTEGER,overhead INTEGER,cost INTEGER,unit_cost INTEGER,status TEXT,date TEXT)");
+            d.execSQL("CREATE TABLE batches(id INTEGER PRIMARY KEY,batch_ref TEXT UNIQUE,product_id INTEGER,batches INTEGER,output INTEGER,labor INTEGER,overhead INTEGER,cost INTEGER,unit_cost INTEGER,status TEXT,date TEXT)");
             d.execSQL("CREATE TABLE finished(product_id INTEGER PRIMARY KEY,qty INTEGER NOT NULL DEFAULT 0,value INTEGER NOT NULL DEFAULT 0,unit_cost INTEGER NOT NULL DEFAULT 0)");
             d.execSQL("CREATE TABLE sales(id INTEGER PRIMARY KEY,product_id INTEGER,customer TEXT,qty INTEGER,total INTEGER,cash INTEGER,bank INTEGER,bank_ref TEXT,debt INTEGER,cogs INTEGER,date TEXT)");
             d.execSQL("CREATE TABLE expenses(id INTEGER PRIMARY KEY,date TEXT,category TEXT,amount INTEGER,note TEXT)");
             d.execSQL("CREATE TABLE waste(id INTEGER PRIMARY KEY,product_id INTEGER,qty INTEGER,cost INTEGER,reason TEXT,date TEXT)");
             d.execSQL("CREATE TABLE movements(id INTEGER PRIMARY KEY,kind TEXT,item_id INTEGER,qty INTEGER,value INTEGER,ref TEXT,date TEXT)");
+            d.execSQL("CREATE TABLE collections(id INTEGER PRIMARY KEY,customer TEXT,cash INTEGER NOT NULL,bank INTEGER NOT NULL,bank_ref TEXT,date TEXT)");
+            d.execSQL("CREATE TABLE cashbook(id INTEGER PRIMARY KEY,account TEXT,kind TEXT,amount INTEGER NOT NULL,ref TEXT,date TEXT)");
             d.execSQL("CREATE TABLE audit(id INTEGER PRIMARY KEY,action TEXT,detail TEXT,date TEXT)");
         }
-        public void onUpgrade(SQLiteDatabase d,int old,int now){throw new IllegalStateException("Factory database migration required");}
+        public void onUpgrade(SQLiteDatabase d,int old,int now){if(old<2){d.execSQL("CREATE TABLE IF NOT EXISTS collections(id INTEGER PRIMARY KEY,customer TEXT,cash INTEGER NOT NULL,bank INTEGER NOT NULL,bank_ref TEXT,date TEXT)");d.execSQL("CREATE TABLE IF NOT EXISTS cashbook(id INTEGER PRIMARY KEY,account TEXT,kind TEXT,amount INTEGER NOT NULL,ref TEXT,date TEXT)");}}
         SQLiteDatabase w(){return getWritableDatabase();}
+        void seedMaterials(String[] names){SQLiteDatabase d=w();d.beginTransaction();try{for(String n:names)d.execSQL("INSERT OR IGNORE INTO materials(name,unit,qty,value) VALUES(?,'كجم',0,0)",new Object[]{n});d.setTransactionSuccessful();}finally{d.endTransaction();}}
         void exec(String sql,String[] args){w().execSQL(sql,args);}
         long id(String table,String name){Cursor c=getReadableDatabase().rawQuery("SELECT id FROM "+table+" WHERE name=?",new String[]{name});try{return c.moveToFirst()?c.getLong(0):0;}finally{c.close();}}
         void receive(String name,String unit,long qty,long cost){
