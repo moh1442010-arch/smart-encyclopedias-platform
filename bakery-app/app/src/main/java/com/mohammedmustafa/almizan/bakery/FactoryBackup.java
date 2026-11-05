@@ -107,7 +107,7 @@ final class FactoryBackup {
     private static void validateRow(String table, JSONObject row) throws Exception {
         String[] numeric;
         if ("materials".equals(table)) numeric=new String[]{"id","qty","value"};
-        else if ("products".equals(table)) numeric=new String[]{"id","unit_price"};
+        else if ("products".equals(table)) numeric=new String[]{"id"};
         else if ("daily_usage".equals(table)) numeric=new String[]{"id","material_id","qty","cost"};
         else if ("recipe".equals(table)) numeric=new String[]{"id","product_id","material_id","qty"};
         else if ("batches".equals(table)) numeric=new String[]{"id","product_id","batches","output","labor","overhead","cost","unit_cost"};
@@ -120,6 +120,7 @@ final class FactoryBackup {
         else if ("cashbook".equals(table)) numeric=new String[]{"id","amount"};
         else numeric=new String[]{"id"};
         for (String key : numeric) {
+            if ("products".equals(table) && "unit_price".equals(key) && !row.has(key)) continue;
             Object value=row.get(key);
             if (!(value instanceof Number)) throw new IllegalArgumentException("Invalid numeric factory field");
             Number number=(Number)value;
@@ -153,7 +154,9 @@ final class FactoryBackup {
             try {
                 JSONObject tables = root.getJSONObject("tables");
                 for (int i=0;i<TABLES.length;i++) {
-                    JSONArray rows = tables.getJSONArray(TABLES[i]);
+                    JSONArray rows = tables.optJSONArray(TABLES[i]);
+                    if (rows == null && root.optInt("schema_version")==3 && "daily_usage".equals(TABLES[i])) continue;
+                    if (rows == null) throw new IllegalArgumentException("Missing factory table: "+TABLES[i]);
                     for (int n=0;n<rows.length();n++) {
                         JSONObject row = rows.getJSONObject(n);
                         ContentValues values = new ContentValues();
