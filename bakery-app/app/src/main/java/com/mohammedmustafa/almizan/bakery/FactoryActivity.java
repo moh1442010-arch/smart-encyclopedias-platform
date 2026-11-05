@@ -66,7 +66,7 @@ public class FactoryActivity extends Activity {
     }
     private void production(){
         frame("الإنتاج والتشغيل اليومي");
-        body.addView(label("الإنتاج لا يخصم المواد عند حفظ المسودة. الترحيل النهائي ينفذ داخل معاملة واحدة، ويمنع ترحيل الدفعة مرتين.",14));
+        body.addView(label("ترحيل الإنتاج النهائي ينفذ داخل معاملة واحدة، ويمنع خصم المواد أكثر من مرة عند إعادة المحاولة.",14));
         EditText product=field("اسم المنتج",false),batchRef=field("مرجع الدفعة (رقم فريد)",false),batches=field("عدد الدفعات",false),output=field("الكمية السليمة المنتجة",true),labor=field("أجور العمال لهذه الدفعة بالجنيه",false),over=field("تكاليف تشغيل مباشرة أخرى بالجنيه",false);
         body.addView(btn("ترحيل دفعة الإنتاج نهائياً",()->{String pn=product.getText().toString().trim(),br=batchRef.getText().toString().trim();long pid=db.id("products",pn),b=money(batches),out=num(output),w=money(labor),oh=money(over);if(pid==0||br.isEmpty()||b<=0||out<=0||w<0||oh<0){toast("أدخل المنتج ومرجع دفعة فريداً والكميات والتكاليف");return;}try{db.finalizeProduction(pid,br,b,out,w,oh);toast("تم ترحيل الإنتاج وخصم المواد وإضافة المنتج للمخزون");production();}catch(Exception ex){toast("لم يرحل الإنتاج: "+ex.getMessage());}}));
         list("SELECT p.name||' | الكمية المنتجة: '||printf('%.3f',f.qty/1000.0)||' | تكلفة الوحدة بالجنيه: '||printf('%.2f',f.unit_cost/1000.0) FROM finished f JOIN products p ON p.id=f.product_id");
