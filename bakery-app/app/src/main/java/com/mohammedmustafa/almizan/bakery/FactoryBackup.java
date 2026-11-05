@@ -29,7 +29,7 @@ final class FactoryBackup {
         {"id","customer","cash","bank","bank_ref","date"},
         {"id","account","kind","amount","ref","date"},
         {"id","action","detail","date"},
-        {"id","date","material_id","qty","cost","note"}
+        {"id","date","material_id","qty","cost","note","kind"}
     };
     private static final String[][] REQUIRED = {
         {"id","name","unit","qty","value"},
@@ -195,7 +195,8 @@ final class FactoryBackup {
         d.execSQL("CREATE TABLE IF NOT EXISTS collections(id INTEGER PRIMARY KEY,customer TEXT,cash INTEGER NOT NULL,bank INTEGER NOT NULL,bank_ref TEXT,date TEXT)");
         d.execSQL("CREATE TABLE IF NOT EXISTS cashbook(id INTEGER PRIMARY KEY,account TEXT,kind TEXT,amount INTEGER NOT NULL,ref TEXT,date TEXT)");
         d.execSQL("CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,action TEXT,detail TEXT,date TEXT)");
-        d.execSQL("CREATE TABLE IF NOT EXISTS daily_usage(id INTEGER PRIMARY KEY,date TEXT,material_id INTEGER,qty INTEGER,cost INTEGER,note TEXT)");
+        d.execSQL("CREATE TABLE IF NOT EXISTS daily_usage(id INTEGER PRIMARY KEY,date TEXT,material_id INTEGER,qty INTEGER,cost INTEGER,note TEXT,kind TEXT NOT NULL DEFAULT 'MANUAL')");
+        ensureColumn(d,"daily_usage","kind","TEXT NOT NULL DEFAULT 'MANUAL'");
         ensureColumn(d,"products","category","TEXT NOT NULL DEFAULT 'منتج إضافي'");
         ensureColumn(d,"products","unit_price","INTEGER NOT NULL DEFAULT 0");
         if (d.getVersion() < 4) d.setVersion(4);
