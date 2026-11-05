@@ -32,7 +32,7 @@ public class FactoryActivity extends Activity {
         frame("الرئيسية");
         body.addView(label("نظام مستقل عن دفاتر المخبز. كل المخزون والحركات والتكاليف هنا محفوظة في قاعدة بيانات منفصلة.",15));
         body.addView(btn("1. مخزن المواد الخام ومستلزمات المصنع",()->warehouse()));
-        body.addView(btn("2. المنتجات وأسعار الوحدة",()->products()));
+        body.addView(btn("2. الإنتاج: اسم المنتج والكمية وسعر الوحدة",()->products()));
         body.addView(btn("3. الوصفات ومكونات الإنتاج",()->recipes()));
         body.addView(btn("4. الإنتاج والتشغيل اليومي",()->production()));
         body.addView(btn("5. نقطة البيع",()->pointOfSale()));
@@ -71,7 +71,7 @@ public class FactoryActivity extends Activity {
         body.addView(row);View line=new View(this);line.setBackgroundColor(GOLD);body.addView(line,new LinearLayout.LayoutParams(-1,1));
     }
     private void products(){
-        frame("المنتجات وأسعار الوحدة");
+        frame("الإنتاج والمنتجات وأسعار الوحدة");
         body.addView(label("المنتجات الأساسية: باسطة، فطائر، خبائز، حلويات، بلح شام. يمكنك إضافة منتجات أخرى. الكمية المعروضة هي الرصيد الفعلي الناتج من الإنتاج.",14));
         tableHeader("اسم المنتج","الكمية المتاحة","سعر الوحدة","التصنيف");
         Cursor c=null;try{c=db.getReadableDatabase().rawQuery("SELECT p.name,COALESCE(f.qty,0),p.unit_price,p.category FROM products p LEFT JOIN finished f ON f.product_id=p.id ORDER BY p.id",null);while(c.moveToNext())tableRow(c.getString(0),String.format(Locale.US,"%.3f",c.getLong(1)/1000.0),""+c.getLong(2),c.getString(3));}finally{if(c!=null)c.close();}
@@ -90,8 +90,8 @@ public class FactoryActivity extends Activity {
     private void production(){
         frame("الإنتاج والتشغيل اليومي");
         body.addView(label("ترحيل الإنتاج النهائي ينفذ داخل معاملة واحدة، ويمنع خصم المواد أكثر من مرة عند إعادة المحاولة.",14));
-        EditText product=field("اسم المنتج",false),batchRef=field("مرجع الدفعة (رقم فريد)",false),batches=field("عدد الدفعات",false),output=field("الكمية السليمة المنتجة",true),labor=field("أجور العمال لهذه الدفعة بالجنيه",false),over=field("تكاليف تشغيل مباشرة أخرى بالجنيه",false);
-        body.addView(btn("ترحيل دفعة الإنتاج نهائياً",()->{String pn=product.getText().toString().trim(),br=batchRef.getText().toString().trim();long pid=db.id("products",pn),b=money(batches),out=num(output),w=money(labor),oh=money(over);if(pid==0||br.isEmpty()||b<=0||out<=0||w<0||oh<0){toast("أدخل المنتج ومرجع دفعة فريداً والكميات والتكاليف");return;}try{db.finalizeProduction(pid,br,b,out,w,oh);toast("تم ترحيل الإنتاج وخصم المواد وإضافة المنتج للمخزون");production();}catch(Exception ex){toast("لم يرحل الإنتاج: "+ex.getMessage());}}));
+        EditText product=field("اسم المنتج",false),salePrice=field("سعر بيع الوحدة بالجنيه",false),batchRef=field("مرجع الدفعة (رقم فريد)",false),batches=field("عدد الدفعات",false),output=field("الكمية السليمة المنتجة",true),labor=field("أجور العمال لهذه الدفعة بالجنيه",false),over=field("تكاليف تشغيل مباشرة أخرى بالجنيه",false);
+        body.addView(btn("ترحيل دفعة الإنتاج نهائياً",()->{String pn=product.getText().toString().trim(),br=batchRef.getText().toString().trim();long pid=db.id("products",pn),b=money(batches),out=num(output),w=money(labor),oh=money(over),sp=money(salePrice);if(pid==0||br.isEmpty()||b<=0||out<=0||w<0||oh<0||sp<=0){toast("أدخل المنتج وسعر الوحدة ومرجع الدفعة والكميات والتكاليف");return;}try{db.saveProduct(pn,"منتج المصنع",sp);db.finalizeProduction(pid,br,b,out,w,oh);toast("تم ترحيل الإنتاج وخصم المواد وإضافة المنتج للمخزون");production();}catch(Exception ex){toast("لم يرحل الإنتاج: "+ex.getMessage());}}));
         list("SELECT p.name||' | الكمية المنتجة: '||printf('%.3f',f.qty/1000.0)||' | تكلفة الوحدة بالجنيه: '||printf('%.2f',f.unit_cost/1000.0) FROM finished f JOIN products p ON p.id=f.product_id");
     }
     // All legacy sales entry points are redirected to this single accounting screen.
@@ -135,6 +135,7 @@ public class FactoryActivity extends Activity {
         list("SELECT p.name||' | رصيد المنتج: '||printf('%.3f',f.qty/1000.0)||' | تكلفة الوحدة بالجنيه: '||printf('%.2f',f.unit_cost/1000.0) FROM finished f JOIN products p ON p.id=f.product_id");
         list("SELECT m.name||' | رصيد الخام: '||printf('%.3f',m.qty/1000.0)||' '||m.unit||' | قيمة المخزون: '||m.value FROM materials m ORDER BY m.name");
         list("SELECT 'إجمالي المصروفات: '||COALESCE(SUM(amount),0)||' جنيه' FROM expenses");
+        list("SELECT 'استهلاك الخامات اليوم: '||COALESCE(SUM(cost),0)||' جنيه' FROM daily_usage WHERE date=date('now')");
     }
     private void accounts(){
         frame("الحسابات والأرصدة");
@@ -148,7 +149,8 @@ public class FactoryActivity extends Activity {
         list("SELECT 'المصروفات: '||COALESCE(SUM(amount),0)||' جنيه' FROM expenses");
         list("SELECT 'تكلفة البضاعة المباعة: '||COALESCE(SUM(cogs),0)||' جنيه' FROM sales");
         list("SELECT 'خسائر التالف: '||COALESCE(SUM(cost),0)||' جنيه' FROM waste");
-        list("SELECT 'صافي نتيجة التشغيل: '||(COALESCE((SELECT SUM(total-cogs) FROM sales),0)-COALESCE((SELECT SUM(cost) FROM waste),0)-COALESCE((SELECT SUM(amount) FROM expenses),0))||' جنيه'");
+        list("SELECT 'استهلاك الخامات المسجل: '||COALESCE(SUM(cost),0)||' جنيه' FROM daily_usage");
+        list("SELECT 'صافي نتيجة التشغيل: '||(COALESCE((SELECT SUM(total-cogs) FROM sales),0)-COALESCE((SELECT SUM(cost) FROM waste),0)-COALESCE((SELECT SUM(amount) FROM expenses),0)-COALESCE((SELECT SUM(cost) FROM daily_usage),0))||' جنيه'");
         list("SELECT s.customer||' | دين متبقٍ: '||(SUM(s.debt)-COALESCE((SELECT SUM(c.cash+c.bank) FROM collections c WHERE c.customer=s.customer),0)) FROM sales s GROUP BY s.customer HAVING SUM(s.debt)>COALESCE((SELECT SUM(c.cash+c.bank) FROM collections c WHERE c.customer=s.customer),0) ORDER BY s.customer");
     }
     private void list(String sql){Cursor c=null;try{c=db.getReadableDatabase().rawQuery(sql,null);if(!c.moveToFirst()){body.addView(label("لا توجد سجلات بعد.",13));return;}do{TextView row=label("│ "+c.getString(0),14);row.setBackgroundColor(Color.WHITE);body.addView(row);View line=new View(this);line.setBackgroundColor(GOLD);body.addView(line,new LinearLayout.LayoutParams(-1,1));}while(c.moveToNext());}catch(Exception e){body.addView(label("تعذر قراءة السجلات: "+e.getMessage(),13));}finally{if(c!=null)c.close();}}
