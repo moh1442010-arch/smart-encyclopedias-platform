@@ -29,4 +29,14 @@ public class FactoryMathTest {
  @Test public void preservesValueWhenInventoryIsPartiallyIssued(){long cost=FactoryMath.costForStockIssue(10001L,333L,1000L);assertEquals(6671L,10001L-cost);}
  @Test public void computesZeroDebtForFullySettledSale(){assertEquals(0L,FactoryMath.debt(15000L,5000L,10000L));}
  @Test public void computesDebtWhenSaleIsPartiallySettled(){assertEquals(7000L,FactoryMath.debt(15000L,5000L,3000L));}
+ @Test public void calculatesPartialSaleReturnAtOriginalSellingValue(){assertEquals(3000L,FactoryMath.proportionalReturnValue(12000L,250L,1000L));}
+ @Test public void calculatesReturnedCostAtOriginalCogs(){assertEquals(2000L,FactoryMath.proportionalReturnValue(8000L,250L,1000L));}
+ @Test public void tracksRemainingReturnableQuantity(){assertEquals(500L,FactoryMath.returnableQuantity(1000L,250L,250L));}
+ @Test(expected=IllegalArgumentException.class) public void rejectsReturnsAboveOriginalSaleQuantity(){FactoryMath.returnableQuantity(1000L,700L,301L);}
+ @Test public void accumulatesWorkInProgressCost(){assertEquals(17500L,FactoryMath.workInProgressCost(10000L,5000L,2500L));}
+ @Test public void calculatesWorkInProgressUnitCost(){assertEquals(3500000L,FactoryMath.workInProgressUnitCost(17500L,5000L));}
+ @Test public void acceptsBalancedJournal(){assertTrue(FactoryMath.journalIsBalanced(15000L,15000L));}
+ @Test public void rejectsUnbalancedJournal(){assertFalse(FactoryMath.journalIsBalanced(15000L,14999L));}
+ @Test(expected=IllegalArgumentException.class) public void rejectsNegativeJournalTotals(){FactoryMath.journalIsBalanced(-1L,0L);}
+
 }
