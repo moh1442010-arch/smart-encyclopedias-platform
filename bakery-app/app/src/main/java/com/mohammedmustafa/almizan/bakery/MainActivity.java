@@ -1556,7 +1556,7 @@ public class MainActivity extends Activity {
                             if(factoryData!=null) FactoryBackup.restore(this,factoryData);
                             updateStatus();
                             toast("اكتملت الاستعادة: "+count+" سجل للمخبز وبيانات المصنع. راجع التسوية قبل الاستخدام.");
-                        } catch(Exception ex) { toast("تعذرت الاستعادة بالكامل. راجع الملف والدعم قبل متابعة العمل."); }
+                        } catch(Exception ex) { toast("تعذرت استعادة أحد الجزأين. لا تكرر العملية قبل مراجعة البيانات والتواصل مع الدعم."); }
                     }).show();
             }
         } catch(Exception ex) { toast("تعذر التعامل مع ملف النسخة الاحتياطية. لم يتم حذف البيانات الحالية."); }
