@@ -1520,26 +1520,43 @@ public class MainActivity extends Activity {
         try {
             if(requestCode==REQUEST_EXPORT_BACKUP) {
                 JSONArray records=store.exportAll();
+                records.put(FactoryBackup.export(this));
                 try(OutputStream out=getContentResolver().openOutputStream(data.getData(),"w")) {
                     if(out==null) throw new IllegalStateException("تعذر فتح ملف النسخة");
                     out.write(records.toString(2).getBytes(StandardCharsets.UTF_8)); out.flush();
                 }
-                toast("تم تصدير "+records.length()+" سجل. احتفظ بالملف في مكان آمن.");
+                toast("تم تصدير نسخة المخبز والمصنع. احتفظ بالملف في مكان آمن.");
             } else if(requestCode==REQUEST_IMPORT_BACKUP) {
                 byte[] bytes;
                 try(InputStream in=getContentResolver().openInputStream(data.getData())) {
                     if(in==null) throw new IllegalStateException("تعذر فتح ملف النسخة");
                     java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
                     byte[] chunk=new byte[8192]; int n; long total=0;
-                    while((n=in.read(chunk))!=-1) { total+=n; if(total>10L*1024*1024) throw new IllegalArgumentException("حجم النسخة أكبر من 10 ميغابايت"); buffer.write(chunk,0,n); }
+                    while((n=in.read(chunk))!=-1) { total+=n; if(total>25L*1024*1024) throw new IllegalArgumentException("حجم النسخة أكبر من 10 ميغابايت"); buffer.write(chunk,0,n); }
                     bytes=buffer.toByteArray();
                 }
-                JSONArray records=new JSONArray(new String(bytes,StandardCharsets.UTF_8));
+                JSONArray imported=new JSONArray(new String(bytes,StandardCharsets.UTF_8));
+                JSONArray records=new JSONArray();
+                JSONObject factorySnapshot=null;
+                for(int i=0;i<imported.length();i++) {
+                    JSONObject row=imported.getJSONObject(i);
+                    if(FactoryBackup.TYPE.equals(row.optString("_type"))) {
+                        if(factorySnapshot!=null) throw new IllegalArgumentException("Duplicate factory backup section");
+                        factorySnapshot=row;
+                    } else records.put(row);
+                }
+                if(factorySnapshot!=null) FactoryBackup.validate(factorySnapshot);
+                final JSONArray bakeryRecords=records;
+                final JSONObject factoryData=factorySnapshot;
                 new AlertDialog.Builder(this).setTitle("تأكيد الاستعادة")
-                    .setMessage("سيتم دمج "+records.length()+" سجل مع السجلات الحالية. إذا تطابق التاريخ والقسم فستحل بيانات النسخة محل السجل المطابق فقط. أنشئ نسخة من الحالة الحالية قبل المتابعة.")
+                    .setMessage("سيتم دمج "+bakeryRecords.length()+" سجل للمخبز"+(factoryData!=null?" وبيانات المصنع":" (النسخة لا تحتوي على بيانات المصنع)")+" مع البيانات الحالية. أنشئ نسخة احتياطية من الحالة الحالية قبل المتابعة.")
                     .setNegativeButton("إلغاء",null).setPositiveButton("استعادة ودمج",(d,w)->{
-                        try { int count=store.restoreAll(records); updateStatus(); toast("اكتملت الاستعادة: "+count+" سجل. راجع التسوية قبل الاستخدام."); }
-                        catch(Exception ex) { toast("رفضت الاستعادة لأن الملف غير صالح؛ لم يتم اعتماد التغييرات."); }
+                        try {
+                            int count=store.restoreAll(bakeryRecords);
+                            if(factoryData!=null) FactoryBackup.restore(this,factoryData);
+                            updateStatus();
+                            toast("اكتملت الاستعادة: "+count+" سجل للمخبز وبيانات المصنع. راجع التسوية قبل الاستخدام.");
+                        } catch(Exception ex) { toast("تعذرت الاستعادة بالكامل. راجع الملف والدعم قبل متابعة العمل."); }
                     }).show();
             }
         } catch(Exception ex) { toast("تعذر التعامل مع ملف النسخة الاحتياطية. لم يتم حذف البيانات الحالية."); }
