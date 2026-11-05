@@ -32,5 +32,25 @@ public final class FactoryMath {
         if(total<0||cash<0||bank<0||cash>total||bank>total-cash)throw new IllegalArgumentException("invalid settlement");
         return total-cash-bank;
     }
+    public static long returnableQuantity(long sold,long alreadyReturned,long requested){
+        if(sold<=0||alreadyReturned<0||requested<=0||alreadyReturned>sold||requested>sold-alreadyReturned)
+            throw new IllegalArgumentException("invalid sales return quantity");
+        return sold-alreadyReturned-requested;
+    }
+    public static long proportionalReturnValue(long originalValue,long returnedQty,long soldQty){
+        if(originalValue<0||returnedQty<=0||soldQty<=0||returnedQty>soldQty)
+            throw new IllegalArgumentException("invalid return valuation");
+        return prorate(originalValue,returnedQty,soldQty);
+    }
+    public static long workInProgressCost(long materialCost,long labor,long overhead){
+        return add(add(materialCost,labor),overhead);
+    }
+    public static long workInProgressUnitCost(long totalCost,long outputQtyMilli){
+        return unitCostMilli(totalCost,outputQtyMilli);
+    }
+    public static boolean journalIsBalanced(long debit,long credit){
+        if(debit<0||credit<0)throw new IllegalArgumentException("negative journal total");
+        return debit==credit;
+    }
     public static long remainingStock(long stock,long used){if(stock<0||used<0||used>stock)throw new IllegalArgumentException("insufficient stock");return stock-used;}
 }
