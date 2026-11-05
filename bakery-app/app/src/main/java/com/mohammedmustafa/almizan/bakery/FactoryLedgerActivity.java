@@ -102,11 +102,12 @@ public class FactoryLedgerActivity extends Activity {
         db.beginTransaction();try{
             Cursor c=db.rawQuery("SELECT id,product_id,planned_qty,material_cost,status FROM work_orders WHERE work_ref=?",new String[]{ref});if(!c.moveToFirst()){c.close();throw new IllegalArgumentException("الأمر غير موجود");}
             long id=c.getLong(0),pid=c.getLong(1),planned=c.getLong(2),materials=c.getLong(3);String status=c.getString(4);c.close();
-            if(!"IN_PROGRESS".equals(status)||actual>planned)throw new IllegalArgumentException("الأمر ليس قيد التنفيذ أو الكمية أكبر من المخطط");
+            if(!"IN_PROGRESS".equals(status)||actual!=planned)throw new IllegalArgumentException("أكمل الكمية المخططة بالكامل؛ عدّل الكمية المخططة لتطابق الناتج الفعلي قبل بدء الأمر");
             long total=FactoryMath.workInProgressCost(materials,labor,overhead);
             Cursor f=db.rawQuery("SELECT qty,value FROM finished WHERE product_id=?",new String[]{""+pid});long oldQ=0,oldV=0;if(f.moveToFirst()){oldQ=f.getLong(0);oldV=f.getLong(1);}f.close();
             ContentValues v=new ContentValues();v.put("product_id",pid);v.put("qty",FactoryMath.add(oldQ,actual));v.put("value",FactoryMath.add(oldV,total));v.put("unit_cost",FactoryMath.weightedAverageUnitCost(oldQ,oldV,actual,total));db.insertWithOnConflict("finished",null,v,SQLiteDatabase.CONFLICT_REPLACE);
             ContentValues w=new ContentValues();w.put("actual_qty",actual);w.put("labor",labor);w.put("overhead",overhead);w.put("total_cost",total);w.put("status","COMPLETED");db.update("work_orders",w,"id=?",new String[]{""+id});
+            long addedCost=FactoryMath.add(labor,overhead);if(addedCost>0)journal("WIP-COST-"+id,"إضافة أجور وتكاليف أمر التشغيل "+ref,"أعمال تحت التشغيل","أجور وتكاليف مستحقة",addedCost);
             journal("WIP-COMPLETE-"+id,"تحويل أمر "+ref+" إلى إنتاج تام","مخزون الإنتاج التام","أعمال تحت التشغيل",total);
             db.setTransactionSuccessful();return total;
         }finally{db.endTransaction();}
@@ -122,10 +123,13 @@ public class FactoryLedgerActivity extends Activity {
     }
     private void journal(String ref,String desc,String debit,String credit,long value){
         if(ref==null||ref.trim().isEmpty()||debit==null||debit.trim().isEmpty()||credit==null||credit.trim().isEmpty()||value<=0)throw new IllegalArgumentException("بيانات القيد غير صحيحة");
-        db.execSQL("INSERT INTO journal_entries(entry_ref,description,status,date) VALUES(?,?,'POSTED',date('now'))",new Object[]{ref,desc});
-        Cursor c=db.rawQuery("SELECT last_insert_rowid()",null);c.moveToFirst();long id=c.getLong(0);c.close();
-        db.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,?,?,0)",new Object[]{id,debit,value});
-        db.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,?,0,?)",new Object[]{id,credit,value});
+        boolean own=!db.inTransaction();if(own)db.beginTransaction();try{
+            db.execSQL("INSERT INTO journal_entries(entry_ref,description,status,date) VALUES(?,?,'POSTED',date('now'))",new Object[]{ref,desc});
+            Cursor c=db.rawQuery("SELECT last_insert_rowid()",null);c.moveToFirst();long id=c.getLong(0);c.close();
+            db.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,?,?,0)",new Object[]{id,debit,value});
+            db.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,?,0,?)",new Object[]{id,credit,value});
+            if(own)db.setTransactionSuccessful();
+        }finally{if(own)db.endTransaction();}
     }
     private long reverse(long id){
         db.beginTransaction();try{
