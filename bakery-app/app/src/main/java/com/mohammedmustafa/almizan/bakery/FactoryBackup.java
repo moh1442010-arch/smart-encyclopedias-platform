@@ -59,6 +59,12 @@ final class FactoryBackup {
 
     private FactoryBackup() {}
 
+    // Keep backup validation compatible with the declared Android API 23 minimum.
+    private static long safeAdd(long a,long b) {
+        if (a<0 || b<0 || Long.MAX_VALUE-a<b) throw new IllegalArgumentException("Invalid or overflowing backup total");
+        return a+b;
+    }
+
     static JSONObject export(Context context) throws Exception {
         SQLiteDatabase db = open(context);
         try {
@@ -144,19 +150,19 @@ final class FactoryBackup {
             if (number.doubleValue()!=((double)exact) || exact<0) throw new IllegalArgumentException("Negative or fractional factory integer");
         }
         if ("daily_usage".equals(table) && row.getLong("qty")==0) throw new IllegalArgumentException("Daily usage quantity must be positive");
-        if ("sales_returns".equals(table) && (row.getLong("qty")==0 || row.getLong("refund_value")==0 || Math.addExact(Math.addExact(row.getLong("refund_cash"),row.getLong("refund_bank")),row.getLong("credit_adjustment"))!=row.getLong("refund_value"))) throw new IllegalArgumentException("Invalid sales return settlement");
+        if ("sales_returns".equals(table) && (row.getLong("qty")==0 || row.getLong("refund_value")==0 || safeAdd(safeAdd(row.getLong("refund_cash"),row.getLong("refund_bank")),row.getLong("credit_adjustment"))!=row.getLong("refund_value"))) throw new IllegalArgumentException("Invalid sales return settlement");
         if ("work_orders".equals(table) && (row.getLong("batches")==0 || row.getLong("planned_qty")==0)) throw new IllegalArgumentException("Invalid work order");
-        if ("journal_lines".equals(table) && Math.addExact(row.getLong("debit"),row.getLong("credit"))==0) throw new IllegalArgumentException("Empty journal line");
+        if ("journal_lines".equals(table) && safeAdd(row.getLong("debit"),row.getLong("credit"))==0) throw new IllegalArgumentException("Empty journal line");
         if ("recipe".equals(table) && row.getLong("qty")==0) throw new IllegalArgumentException("Recipe quantity must be positive");
         if ("batches".equals(table) && (row.getLong("batches")==0 || row.getLong("output")==0)) throw new IllegalArgumentException("Invalid production batch quantity");
         if ("sales".equals(table)) {
             long total=row.getLong("total"), cash=row.getLong("cash"), bank=row.getLong("bank"), debt=row.getLong("debt");
-            if (total==0 || row.getLong("qty")==0 || Math.addExact(Math.addExact(cash,bank),debt)!=total)
+            if (total==0 || row.getLong("qty")==0 || safeAdd(safeAdd(cash,bank),debt)!=total)
                 throw new IllegalArgumentException("Invalid sale settlement in backup");
             if (bank>0 && row.optString("bank_ref").trim().isEmpty()) throw new IllegalArgumentException("Missing Bankak reference in backup");
         }
         if ("collections".equals(table)) {
-            if (Math.addExact(row.getLong("cash"),row.getLong("bank"))==0) throw new IllegalArgumentException("Empty customer collection");
+            if (safeAdd(row.getLong("cash"),row.getLong("bank"))==0) throw new IllegalArgumentException("Empty customer collection");
             if (row.getLong("bank")>0 && row.optString("bank_ref").trim().isEmpty()) throw new IllegalArgumentException("Missing collection Bankak reference");
         }
         if ("expenses".equals(table) && row.getLong("amount")==0) throw new IllegalArgumentException("Expense amount must be positive");
