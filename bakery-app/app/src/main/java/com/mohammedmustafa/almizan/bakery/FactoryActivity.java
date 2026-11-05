@@ -140,19 +140,19 @@ public class FactoryActivity extends Activity {
     }
     private void accounts(){
         frame("الحسابات والأرصدة");
-        list("SELECT 'إجمالي المبيعات: '||COALESCE(SUM(total),0)-COALESCE((SELECT SUM(refund_value) FROM sales_returns),0)||' جنيه' FROM sales");
+        list("SELECT 'إجمالي المبيعات بعد المرتجعات: '||(COALESCE(SUM(total),0)-COALESCE((SELECT SUM(refund_value) FROM sales_returns),0))||' جنيه' FROM sales");
         list("SELECT 'صافي رصيد الصندوق النقدي: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('EXPENSE','SALE_RETURN')),0))||' جنيه'");
-        list("SELECT 'صافي رصيد بنكك: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind='EXPENSE'),0))||' جنيه'");
+        list("SELECT 'صافي رصيد بنكك: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('EXPENSE','SALE_RETURN')),0))||' جنيه'");
         list("SELECT 'النقد المحصل من المبيعات: '||COALESCE(SUM(cash),0)||' جنيه' FROM sales");
         list("SELECT 'تحويلات بنكك: '||COALESCE(SUM(bank),0)||' جنيه' FROM sales");
         list("SELECT 'ديون العملاء المتبقية: '||(COALESCE((SELECT SUM(debt) FROM sales),0)-COALESCE((SELECT SUM(cash+bank) FROM collections),0)-COALESCE((SELECT SUM(credit_adjustment) FROM sales_returns),0))||' جنيه'");
         list("SELECT 'تحصيلات العملاء: '||COALESCE(SUM(cash+bank),0)||' جنيه' FROM collections");
         list("SELECT 'المصروفات: '||COALESCE(SUM(amount),0)||' جنيه' FROM expenses");
-        list("SELECT 'تكلفة البضاعة المباعة: '||COALESCE(SUM(cogs),0)-COALESCE((SELECT SUM(restored_cogs) FROM sales_returns),0)||' جنيه' FROM sales");
+        list("SELECT 'تكلفة البضاعة المباعة بعد المرتجعات: '||(COALESCE(SUM(cogs),0)-COALESCE((SELECT SUM(restored_cogs) FROM sales_returns),0))||' جنيه' FROM sales");
         list("SELECT 'خسائر التالف: '||COALESCE(SUM(cost),0)||' جنيه' FROM waste");
         list("SELECT 'استهلاك الخامات المسجل: '||COALESCE(SUM(cost),0)||' جنيه' FROM daily_usage WHERE kind='MANUAL'");
         list("SELECT 'صافي نتيجة التشغيل: '||(COALESCE((SELECT SUM(total-cogs) FROM sales),0)-COALESCE((SELECT SUM(refund_value-restored_cogs) FROM sales_returns),0)-COALESCE((SELECT SUM(cost) FROM waste),0)-COALESCE((SELECT SUM(amount) FROM expenses),0)-COALESCE((SELECT SUM(cost) FROM daily_usage WHERE kind='MANUAL'),0))||' جنيه'");
-        list("SELECT s.customer||' | دين متبقٍ: '||(SUM(s.debt)-COALESCE((SELECT SUM(c.cash+c.bank) FROM collections c WHERE c.customer=s.customer),0)) FROM sales s GROUP BY s.customer HAVING SUM(s.debt)>COALESCE((SELECT SUM(c.cash+c.bank) FROM collections c WHERE c.customer=s.customer),0) ORDER BY s.customer");
+        list("SELECT s.customer||' | دين متبقٍ: '||(SUM(s.debt)-COALESCE((SELECT SUM(c.cash+c.bank) FROM collections c WHERE c.customer=s.customer),0)-COALESCE((SELECT SUM(r.credit_adjustment) FROM sales_returns r JOIN sales rs ON rs.id=r.sale_id WHERE rs.customer=s.customer),0)) FROM sales s GROUP BY s.customer HAVING SUM(s.debt)>COALESCE((SELECT SUM(c.cash+c.bank) FROM collections c WHERE c.customer=s.customer),0)+COALESCE((SELECT SUM(r.credit_adjustment) FROM sales_returns r JOIN sales rs ON rs.id=r.sale_id WHERE rs.customer=s.customer),0) ORDER BY s.customer");
     }
     private void list(String sql){Cursor c=null;try{c=db.getReadableDatabase().rawQuery(sql,null);if(!c.moveToFirst()){body.addView(label("لا توجد سجلات بعد.",13));return;}do{TextView row=label("│ "+c.getString(0),14);row.setBackgroundColor(Color.WHITE);body.addView(row);View line=new View(this);line.setBackgroundColor(GOLD);body.addView(line,new LinearLayout.LayoutParams(-1,1));}while(c.moveToNext());}catch(Exception e){body.addView(label("تعذر قراءة السجلات: "+e.getMessage(),13));}finally{if(c!=null)c.close();}}
     private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
