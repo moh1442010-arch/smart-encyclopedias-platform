@@ -62,8 +62,8 @@ public class FactoryActivity extends Activity {
     private void production(){
         frame("الإنتاج والتشغيل اليومي");
         body.addView(label("الإنتاج لا يخصم المواد عند حفظ المسودة. الترحيل النهائي ينفذ داخل معاملة واحدة، ويمنع ترحيل الدفعة مرتين.",14));
-        EditText product=field("اسم المنتج",false),batches=field("عدد الدفعات",false),output=field("الكمية السليمة المنتجة",true),labor=field("أجور العمال لهذه الدفعة بالجنيه",false),over=field("تكاليف تشغيل مباشرة أخرى بالجنيه",false);
-        body.addView(btn("ترحيل دفعة الإنتاج نهائياً",()->{String pn=product.getText().toString().trim();long pid=db.id("products",pn),b=money(batches),out=num(output),w=money(labor),oh=money(over);if(pid==0||b<=0||out<=0||w<0||oh<0){toast("راجع المنتج والكميات والتكاليف");return;}try{db.finalizeProduction(pid,b,out,w,oh);toast("تم ترحيل الإنتاج وخصم المواد وإضافة المنتج للمخزون");production();}catch(Exception ex){toast("لم يرحل الإنتاج: "+ex.getMessage());}}));
+        EditText product=field("اسم المنتج",false),batchRef=field("مرجع الدفعة (رقم فريد)",false),batches=field("عدد الدفعات",false),output=field("الكمية السليمة المنتجة",true),labor=field("أجور العمال لهذه الدفعة بالجنيه",false),over=field("تكاليف تشغيل مباشرة أخرى بالجنيه",false);
+        body.addView(btn("ترحيل دفعة الإنتاج نهائياً",()->{String pn=product.getText().toString().trim(),br=batchRef.getText().toString().trim();long pid=db.id("products",pn),b=money(batches),out=num(output),w=money(labor),oh=money(over);if(pid==0||br.isEmpty()||b<=0||out<=0||w<0||oh<0){toast("أدخل المنتج ومرجع دفعة فريداً والكميات والتكاليف");return;}try{db.finalizeProduction(pid,br,b,out,w,oh);toast("تم ترحيل الإنتاج وخصم المواد وإضافة المنتج للمخزون");production();}catch(Exception ex){toast("لم يرحل الإنتاج: "+ex.getMessage());}}));
         list("SELECT p.name||' | الكمية المنتجة: '||printf('%.3f',f.qty/1000.0)||' | تكلفة الوحدة: '||f.unit_cost FROM finished f JOIN products p ON p.id=f.product_id");
     }
     private void sales(){
@@ -134,8 +134,9 @@ public class FactoryActivity extends Activity {
                 d.setTransactionSuccessful();
             }finally{d.endTransaction();}
         }
-        void finalizeProduction(long pid,long batches,long output,long labor,long overhead){
+        void finalizeProduction(long pid,String batchRef,long batches,long output,long labor,long overhead){
             SQLiteDatabase d=w();d.beginTransaction();try{
+                Cursor duplicate=d.rawQuery("SELECT COUNT(*) FROM batches WHERE batch_ref=?",new String[]{batchRef});duplicate.moveToFirst();boolean already=duplicate.getInt(0)>0;duplicate.close();if(already)throw new IllegalArgumentException("مرجع الدفعة مستخدم من قبل؛ منعنا ترحيلها مرة أخرى");
                 Cursor exists=d.rawQuery("SELECT COUNT(*) FROM recipe WHERE product_id=?",new String[]{""+pid});exists.moveToFirst();if(exists.getInt(0)==0){exists.close();throw new IllegalArgumentException("الوصفة غير مسجلة");}exists.close();
                 Cursor r=d.rawQuery("SELECT m.id,m.qty,m.value,m.qty,rc.qty FROM recipe rc JOIN materials m ON m.id=rc.material_id WHERE rc.product_id=?",new String[]{""+pid});
                 long materialsCost=0;ArrayList<long[]> lines=new ArrayList<>();
@@ -144,7 +145,7 @@ public class FactoryActivity extends Activity {
                 for(long[] x:lines){ContentValues v=new ContentValues();v.put("qty",x[1]);v.put("value",x[2]);d.update("materials",v,"id=?",new String[]{""+x[0]});d.execSQL("INSERT INTO movements(kind,item_id,qty,value,ref,date) VALUES('RAW_OUT',?,?,?,'production',date('now'))",new Object[]{x[0],x[3],x[4]});}
                 Cursor f=d.rawQuery("SELECT qty,value FROM finished WHERE product_id=?",new String[]{""+pid});long oldq=0,oldv=0;if(f.moveToFirst()){oldq=f.getLong(0);oldv=f.getLong(1);}f.close();long newq=Math.addExact(oldq,output),newv=Math.addExact(oldv,total),avg=java.math.BigDecimal.valueOf(newv).multiply(java.math.BigDecimal.valueOf(1000)).divide(java.math.BigDecimal.valueOf(newq),0,java.math.RoundingMode.HALF_UP).longValueExact();
                 ContentValues fv=new ContentValues();fv.put("product_id",pid);fv.put("qty",newq);fv.put("value",newv);fv.put("unit_cost",avg);d.insertWithOnConflict("finished",null,fv,SQLiteDatabase.CONFLICT_REPLACE);
-                d.execSQL("INSERT INTO batches(product_id,batches,output,labor,overhead,cost,unit_cost,status,date) VALUES(?,?,?,?,?,?,?,'FINALIZED',?)",new Object[]{pid,batches,output,labor,overhead,total,unit,new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date())});
+                d.execSQL("INSERT INTO batches(batch_ref,product_id,batches,output,labor,overhead,cost,unit_cost,status,date) VALUES(?,?,?,?,?,?,?,?,'FINALIZED',?)",new Object[]{batchRef,pid,batches,output,labor,overhead,total,unit,new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date())});
                 d.execSQL("INSERT INTO audit(action,detail,date) VALUES('PRODUCTION_FINALIZED',?,date('now'))",new Object[]{"product="+pid+",cost="+total});
                 d.setTransactionSuccessful();
             }finally{d.endTransaction();}
