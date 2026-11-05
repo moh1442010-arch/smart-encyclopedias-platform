@@ -124,7 +124,7 @@ final class FactoryBackup {
         else if ("work_orders".equals(table)) numeric=new String[]{"id","product_id","batches","planned_qty","actual_qty","material_cost","labor","overhead","total_cost"};
         else if ("work_order_materials".equals(table)) numeric=new String[]{"id","work_order_id","material_id","qty","cost"};
         else if ("journal_lines".equals(table)) numeric=new String[]{"id","entry_id","debit","credit"};
-        else if ("journal_entries".equals(table)) numeric=new String[]{"id","reversal_of"};
+        else if ("journal_entries".equals(table)) numeric=new String[]{"id"};
         else if ("recipe".equals(table)) numeric=new String[]{"id","product_id","material_id","qty"};
         else if ("batches".equals(table)) numeric=new String[]{"id","product_id","batches","output","labor","overhead","cost","unit_cost"};
         else if ("finished".equals(table)) numeric=new String[]{"product_id","qty","value","unit_cost"};
