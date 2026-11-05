@@ -95,8 +95,9 @@ public class FactoryLedgerActivity extends Activity {
             do{long mid=r.getLong(0),stock=r.getLong(1),value=r.getLong(2),need=FactoryMath.multiply(r.getLong(3),batches);if(need>stock)throw new IllegalArgumentException("رصيد خام غير كافٍ");long cost=FactoryMath.costForStockIssue(value,need,stock);total=FactoryMath.add(total,cost);lines.add(new long[]{mid,stock-need,value-cost,need,cost});}while(r.moveToNext());r.close();
             db.execSQL("INSERT INTO work_orders(work_ref,product_id,batches,planned_qty,material_cost,status,date) VALUES(?,?,?,?,?,'IN_PROGRESS',?)",new Object[]{ref,pid,batches,planned,total,today()});
             Cursor wi=db.rawQuery("SELECT last_insert_rowid()",null);wi.moveToFirst();long wid=wi.getLong(0);wi.close();
-            for(long[] a:lines){ContentValues v=new ContentValues();v.put("qty",a[1]);v.put("value",a[2]);db.update("materials",v,"id=?",new String[]{""+a[0]});db.execSQL("INSERT INTO work_order_materials(work_order_id,material_id,qty,cost) VALUES(?,?,?,?)",new Object[]{wid,a[0],a[3],a[4]});}
+            for(long[] a:lines){ContentValues v=new ContentValues();v.put("qty",a[1]);v.put("value",a[2]);db.update("materials",v,"id=?",new String[]{""+a[0]});db.execSQL("INSERT INTO work_order_materials(work_order_id,material_id,qty,cost) VALUES(?,?,?,?)",new Object[]{wid,a[0],a[3],a[4]});db.execSQL("INSERT INTO movements(kind,item_id,qty,value,ref,date) VALUES('WIP_RAW_OUT',?,?,?,?,?)",new Object[]{a[0],a[3],a[4],ref,today()});}
             journal("WIP-START-"+wid,"صرف خامات لأمر "+ref,"أعمال تحت التشغيل","مخزون المواد الخام",total);
+            db.execSQL("INSERT INTO audit(action,detail,date) VALUES('WIP_STARTED',?,date('now'))",new Object[]{ref+":"+total});
             db.setTransactionSuccessful();return total;
         }finally{db.endTransaction();}
     }
@@ -112,6 +113,8 @@ public class FactoryLedgerActivity extends Activity {
             ContentValues w=new ContentValues();w.put("actual_qty",actual);w.put("labor",labor);w.put("overhead",overhead);w.put("total_cost",total);w.put("status","COMPLETED");db.update("work_orders",w,"id=?",new String[]{""+id});
             long addedCost=FactoryMath.add(labor,overhead);if(addedCost>0)journal("WIP-COST-"+id,"إضافة أجور وتكاليف أمر التشغيل "+ref,"أعمال تحت التشغيل","أجور وتكاليف مستحقة",addedCost);
             journal("WIP-COMPLETE-"+id,"تحويل أمر "+ref+" إلى إنتاج تام","مخزون الإنتاج التام","أعمال تحت التشغيل",total);
+            db.execSQL("INSERT INTO movements(kind,item_id,qty,value,ref,date) VALUES('WIP_FINISHED',?,?,?,?,?)",new Object[]{pid,actual,total,ref,today()});
+            db.execSQL("INSERT INTO audit(action,detail,date) VALUES('WIP_COMPLETED',?,date('now'))",new Object[]{ref+":"+actual+":"+total});
             db.setTransactionSuccessful();return total;
         }finally{db.endTransaction();}
     }
@@ -131,6 +134,7 @@ public class FactoryLedgerActivity extends Activity {
             Cursor c=db.rawQuery("SELECT last_insert_rowid()",null);c.moveToFirst();long id=c.getLong(0);c.close();
             db.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,?,?,0)",new Object[]{id,debit,value});
             db.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,?,0,?)",new Object[]{id,credit,value});
+            db.execSQL("INSERT INTO audit(action,detail,date) VALUES('JOURNAL_POSTED',?,date('now'))",new Object[]{ref+":"+desc+":"+value});
             if(own)db.setTransactionSuccessful();
         }finally{if(own)db.endTransaction();}
     }
