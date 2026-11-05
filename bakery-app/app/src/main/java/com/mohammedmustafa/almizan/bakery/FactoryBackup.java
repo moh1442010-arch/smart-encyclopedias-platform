@@ -119,6 +119,31 @@ final class FactoryBackup {
                 validateRow(TABLES[i], row);
             }
         }
+        validateLedgerRelations(tables,root.optInt("schema_version"));
+    }
+
+    private static void validateLedgerRelations(JSONObject tables,int version) throws Exception {
+        JSONArray sales=tables.optJSONArray("sales"), returns=tables.optJSONArray("sales_returns");
+        if(version>=5&&sales!=null&&returns!=null){
+            for(int i=0;i<sales.length();i++){
+                JSONObject sale=sales.getJSONObject(i);long returned=0;
+                for(int j=0;j<returns.length();j++){JSONObject r=returns.getJSONObject(j);if(r.getLong("sale_id")==sale.getLong("id"))returned=safeAdd(returned,r.getLong("qty"));}
+                if(returned>sale.getLong("qty"))throw new IllegalArgumentException("Returned quantity exceeds original sale");
+            }
+        }
+        JSONArray entries=tables.optJSONArray("journal_entries"),lines=tables.optJSONArray("journal_lines");
+        if(version>=5&&entries!=null&&lines!=null){
+            for(int i=0;i<entries.length();i++){
+                long id=entries.getJSONObject(i).getLong("id"),debit=0,credit=0;int count=0;
+                for(int j=0;j<lines.length();j++){JSONObject line=lines.getJSONObject(j);if(line.getLong("entry_id")==id){debit=safeAdd(debit,line.getLong("debit"));credit=safeAdd(credit,line.getLong("credit"));count++;}}
+                if(count<2||debit!=credit)throw new IllegalArgumentException("Unbalanced or incomplete journal entry in backup");
+            }
+            for(int j=0;j<lines.length();j++){
+                long id=lines.getJSONObject(j).getLong("entry_id");boolean found=false;
+                for(int i=0;i<entries.length();i++)if(entries.getJSONObject(i).getLong("id")==id){found=true;break;}
+                if(!found)throw new IllegalArgumentException("Orphan journal line in backup");
+            }
+        }
     }
 
     private static void validateRow(String table, JSONObject row) throws Exception {
