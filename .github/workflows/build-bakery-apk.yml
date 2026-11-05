@@ -103,17 +103,13 @@ jobs:
           unzip -q gradle-8.9-bin.zip
           echo "$PWD/gradle-8.9/bin" >> "$GITHUB_PATH"
 
-      - name: Generate Gradle wrapper
-        working-directory: bakery-app
-        run: gradle wrapper --gradle-version 8.9
-
       - name: Run arithmetic unit tests
         working-directory: bakery-app
-        run: ./gradlew testDebugUnitTest
+        run: gradle testDebugUnitTest
 
       - name: Build debug and release APK
         working-directory: bakery-app
-        run: ./gradlew clean assembleDebug assembleRelease
+        run: gradle clean assembleDebug assembleRelease
 
       - name: Upload internal debug build (not for distribution)
         uses: actions/upload-artifact@v4
