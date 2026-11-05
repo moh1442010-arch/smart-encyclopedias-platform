@@ -72,6 +72,7 @@ public class FactoryLedgerActivity extends Activity {
             db.execSQL("INSERT INTO movements(kind,item_id,qty,value,ref,date) VALUES('SALE_RETURN',?,?,?,?,?)",new Object[]{pid,q,restore,"sale-"+saleId,today()});
             db.execSQL("INSERT INTO audit(action,detail,date) VALUES('SALE_RETURN',?,date('now'))",new Object[]{saleId+":"+q+":"+refund});
             journal("RETURN-"+saleId+"-"+System.currentTimeMillis(),"مرتجع مبيعات "+saleId,"مرتجعات المبيعات","النقدية/بنكك/العملاء",refund);
+            if(restore>0)journal("RETURN-STOCK-"+saleId+"-"+System.currentTimeMillis(),"إعادة تكلفة مخزون المرتجع للفاتورة "+saleId,"مخزون الإنتاج التام","تكلفة البضاعة المباعة",restore);
             db.setTransactionSuccessful();return refund;
         }finally{db.endTransaction();}
     }
