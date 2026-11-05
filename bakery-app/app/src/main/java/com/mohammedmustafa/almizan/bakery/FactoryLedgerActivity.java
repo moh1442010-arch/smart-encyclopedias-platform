@@ -140,11 +140,11 @@ public class FactoryLedgerActivity extends Activity {
     }
     private long reverse(long id){
         db.beginTransaction();try{
-            Cursor e=db.rawQuery("SELECT description,status FROM journal_entries WHERE id=?",new String[]{""+id});if(!e.moveToFirst()){e.close();throw new IllegalArgumentException("القيد غير موجود");}String desc=e.getString(0),status=e.getString(1);e.close();if(!"POSTED".equals(status))throw new IllegalArgumentException("القيد سبق عكسه أو غير مرحل");
-            journal("REV-"+id+"-"+System.currentTimeMillis(),"عكس "+desc,"حسابات عكسية","حسابات عكسية",1);
+            Cursor e=db.rawQuery("SELECT entry_ref,description,status FROM journal_entries WHERE id=?",new String[]{""+id});if(!e.moveToFirst()){e.close();throw new IllegalArgumentException("القيد غير موجود");}String entryRef=e.getString(0),desc=e.getString(1),status=e.getString(2);e.close();if(!"POSTED".equals(status))throw new IllegalArgumentException("القيد سبق عكسه أو غير مرحل");
+            if(entryRef.startsWith("WIP-")||entryRef.startsWith("RETURN-"))throw new IllegalArgumentException("هذا القيد مرتبط بمستند مخزني؛ لا تعكسه من دفتر اليومية حتى لا تختلف أرصدة المخزون");
+            String reverseRef="REV-"+id+"-"+System.currentTimeMillis();
+            db.execSQL("INSERT INTO journal_entries(entry_ref,description,status,reversal_of,date) VALUES(?,?,'POSTED',?,date('now'))",new Object[]{reverseRef,"عكس "+desc,id});
             Cursor n=db.rawQuery("SELECT last_insert_rowid()",null);n.moveToFirst();long rid=n.getLong(0);n.close();
-            db.delete("journal_lines","entry_id=?",new String[]{""+rid});
-            ContentValues reversalMeta=new ContentValues();reversalMeta.put("reversal_of",id);db.update("journal_entries",reversalMeta,"id=?",new String[]{""+rid});
             Cursor lines=db.rawQuery("SELECT account,debit,credit FROM journal_lines WHERE entry_id=?",new String[]{""+id});while(lines.moveToNext())db.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,?,?,?)",new Object[]{rid,lines.getString(0),lines.getLong(2),lines.getLong(1)});lines.close();
             ContentValues v=new ContentValues();v.put("status","REVERSED");db.update("journal_entries",v,"id=?",new String[]{""+id});
             db.execSQL("INSERT INTO audit(action,detail,date) VALUES('JOURNAL_REVERSED',?,date('now'))",new Object[]{id+":"+rid});
