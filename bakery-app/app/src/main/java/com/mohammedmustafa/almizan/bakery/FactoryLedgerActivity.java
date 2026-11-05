@@ -82,6 +82,8 @@ public class FactoryLedgerActivity extends Activity {
         body.addView(button("بدء أمر التشغيل وصرف الخامات",()->{try{long cost=startWip(ref.getText().toString().trim(),product.getText().toString().trim(),amount(batches),qty(planned));say("بدأ التشغيل. تكلفة الخامات "+cost+" جنيه");wip();}catch(Exception x){say("تعذر بدء التشغيل: "+x.getMessage());}}));
         EditText finishRef=field("مرجع الأمر الجاري",false),actual=field("الكمية المنتجة فعلياً",true),labor=field("أجور الأمر",false),over=field("تكاليف صناعية غير مباشرة",false);
         body.addView(button("إكمال الأمر وتحويله إلى مخزون تام",()->{try{long cost=finishWip(finishRef.getText().toString().trim(),qty(actual),amount(labor),amount(over));say("اكتمل الأمر. إجمالي التكلفة "+cost+" جنيه");wip();}catch(Exception x){say("تعذر إكمال الأمر: "+x.getMessage());}}));
+        EditText cancelRef=field("مرجع أمر التشغيل المراد إلغاؤه",false);
+        body.addView(button("إلغاء أمر غير مكتمل وإعادة الخامات للمخزن",()->{try{long cost=cancelWip(cancelRef.getText().toString().trim());say("ألغي الأمر وأعيدت خاماته بقيمة "+cost+" جنيه");wip();}catch(Exception x){say("تعذر إلغاء الأمر: "+x.getMessage());}}));
         rows("SELECT 'أمر '||w.work_ref||' — '||p.name||' — '||w.status||' — تكلفة الخامات '||w.material_cost FROM work_orders w JOIN products p ON p.id=w.product_id ORDER BY w.id DESC");
     }
     private long startWip(String ref,String product,long batches,long planned){
@@ -116,6 +118,27 @@ public class FactoryLedgerActivity extends Activity {
             db.execSQL("INSERT INTO movements(kind,item_id,qty,value,ref,date) VALUES('WIP_FINISHED',?,?,?,?,?)",new Object[]{pid,actual,total,ref,today()});
             db.execSQL("INSERT INTO audit(action,detail,date) VALUES('WIP_COMPLETED',?,date('now'))",new Object[]{ref+":"+actual+":"+total});
             db.setTransactionSuccessful();return total;
+        }finally{db.endTransaction();}
+    }
+    private long cancelWip(String ref){
+        if(ref==null||ref.trim().isEmpty())throw new IllegalArgumentException("أدخل مرجع أمر التشغيل");
+        db.beginTransaction();try{
+            Cursor c=db.rawQuery("SELECT id,material_cost,status FROM work_orders WHERE work_ref=?",new String[]{ref});if(!c.moveToFirst()){c.close();throw new IllegalArgumentException("أمر التشغيل غير موجود");}
+            long id=c.getLong(0),cost=c.getLong(1);String status=c.getString(2);c.close();
+            if(!"IN_PROGRESS".equals(status))throw new IllegalArgumentException("يمكن إلغاء الأمر الجاري فقط");
+            Cursor lines=db.rawQuery("SELECT material_id,qty,cost FROM work_order_materials WHERE work_order_id=?",new String[]{""+id});
+            while(lines.moveToNext()){
+                long mid=lines.getLong(0),q=lines.getLong(1),v=lines.getLong(2);
+                Cursor m=db.rawQuery("SELECT qty,value FROM materials WHERE id=?",new String[]{""+mid});if(!m.moveToFirst()){m.close();throw new IllegalStateException("الخامة الأصلية غير موجودة");}
+                long nextQty=FactoryMath.add(m.getLong(0),q),nextValue=FactoryMath.add(m.getLong(1),v);m.close();
+                ContentValues mv=new ContentValues();mv.put("qty",nextQty);mv.put("value",nextValue);db.update("materials",mv,"id=?",new String[]{""+mid});
+                db.execSQL("INSERT INTO movements(kind,item_id,qty,value,ref,date) VALUES('WIP_RAW_RETURN',?,?,?,?,?)",new Object[]{mid,q,v,ref,today()});
+            }
+            lines.close();
+            ContentValues w=new ContentValues();w.put("status","CANCELLED");db.update("work_orders",w,"id=?",new String[]{""+id});
+            if(cost>0)journal("WIP-CANCEL-"+id,"إلغاء أمر التشغيل "+ref,"مخزون المواد الخام","أعمال تحت التشغيل",cost);
+            db.execSQL("INSERT INTO audit(action,detail,date) VALUES('WIP_CANCELLED',?,date('now'))",new Object[]{ref+":"+cost});
+            db.setTransactionSuccessful();return cost;
         }finally{db.endTransaction();}
     }
     private void journals(){
