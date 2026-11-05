@@ -14,7 +14,7 @@ final class FactoryBackup {
     private static final String DB_NAME = "almizan_factory_1.db";
     private static final String[] TABLES = {
         "materials","products","recipe","batches","finished","sales",
-        "expenses","waste","movements","collections","cashbook","audit","daily_usage"
+        "expenses","waste","movements","collections","cashbook","audit","daily_usage","sales_returns","work_orders","work_order_materials","journal_entries","journal_lines"
     };
     private static final String[][] COLUMNS = {
         {"id","name","unit","qty","value"},
@@ -29,7 +29,12 @@ final class FactoryBackup {
         {"id","customer","cash","bank","bank_ref","date"},
         {"id","account","kind","amount","ref","date"},
         {"id","action","detail","date"},
-        {"id","date","material_id","qty","cost","note","kind"}
+        {"id","date","material_id","qty","cost","note","kind"},
+        {"id","sale_id","product_id","qty","refund_value","refund_cash","refund_bank","credit_adjustment","restored_cogs","bank_ref","reason","date"},
+        {"id","work_ref","product_id","batches","planned_qty","actual_qty","material_cost","labor","overhead","total_cost","status","date"},
+        {"id","work_order_id","material_id","qty","cost"},
+        {"id","entry_ref","description","status","reversal_of","date"},
+        {"id","entry_id","account","debit","credit"}
     };
     private static final String[][] REQUIRED = {
         {"id","name","unit","qty","value"},
@@ -44,7 +49,12 @@ final class FactoryBackup {
         {"id","customer","cash","bank","date"},
         {"id","account","kind","amount","date"},
         {"id","action","detail","date"},
-        {"id","date","material_id","qty","cost"}
+        {"id","date","material_id","qty","cost"},
+        {"id","sale_id","product_id","qty","refund_value","refund_cash","refund_bank","credit_adjustment","restored_cogs","date"},
+        {"id","work_ref","product_id","batches","planned_qty","material_cost","status","date"},
+        {"id","work_order_id","material_id","qty","cost"},
+        {"id","entry_ref","status","date"},
+        {"id","entry_id","account","debit","credit"}
     };
 
     private FactoryBackup() {}
@@ -55,7 +65,7 @@ final class FactoryBackup {
             ensureSchema(db);
             JSONObject root = new JSONObject();
             root.put("_type", TYPE);
-            root.put("schema_version", 4);
+            root.put("schema_version", 5);
             JSONObject tables = new JSONObject();
             for (int i=0;i<TABLES.length;i++) {
                 JSONArray rows = new JSONArray();
@@ -82,12 +92,13 @@ final class FactoryBackup {
     }
 
     static void validate(JSONObject root) throws Exception {
-        if (root == null || !TYPE.equals(root.optString("_type")) || (root.optInt("schema_version") != 3 && root.optInt("schema_version") != 4))
+        if (root == null || !TYPE.equals(root.optString("_type")) || (root.optInt("schema_version") != 3 && root.optInt("schema_version") != 4 && root.optInt("schema_version") != 5))
             throw new IllegalArgumentException("Unsupported factory backup format");
         JSONObject tables = root.optJSONObject("tables");
         if (tables == null) throw new IllegalArgumentException("Factory backup tables are missing");
         for (int i=0;i<TABLES.length;i++) {
             JSONArray rows = tables.optJSONArray(TABLES[i]);
+            if (rows == null && root.optInt("schema_version")<5 && Arrays.asList("sales_returns","work_orders","work_order_materials","journal_entries","journal_lines").contains(TABLES[i])) continue;
             if (rows == null && root.optInt("schema_version")==3 && "daily_usage".equals(TABLES[i])) continue;
             if (rows == null) throw new IllegalArgumentException("Missing factory table: " + TABLES[i]);
             for (int n=0;n<rows.length();n++) {
@@ -109,6 +120,11 @@ final class FactoryBackup {
         if ("materials".equals(table)) numeric=new String[]{"id","qty","value"};
         else if ("products".equals(table)) numeric=new String[]{"id"};
         else if ("daily_usage".equals(table)) numeric=new String[]{"id","material_id","qty","cost"};
+        else if ("sales_returns".equals(table)) numeric=new String[]{"id","sale_id","product_id","qty","refund_value","refund_cash","refund_bank","credit_adjustment","restored_cogs"};
+        else if ("work_orders".equals(table)) numeric=new String[]{"id","product_id","batches","planned_qty","actual_qty","material_cost","labor","overhead","total_cost"};
+        else if ("work_order_materials".equals(table)) numeric=new String[]{"id","work_order_id","material_id","qty","cost"};
+        else if ("journal_lines".equals(table)) numeric=new String[]{"id","entry_id","debit","credit"};
+        else if ("journal_entries".equals(table)) numeric=new String[]{"id","reversal_of"};
         else if ("recipe".equals(table)) numeric=new String[]{"id","product_id","material_id","qty"};
         else if ("batches".equals(table)) numeric=new String[]{"id","product_id","batches","output","labor","overhead","cost","unit_cost"};
         else if ("finished".equals(table)) numeric=new String[]{"product_id","qty","value","unit_cost"};
@@ -128,6 +144,9 @@ final class FactoryBackup {
             if (number.doubleValue()!=((double)exact) || exact<0) throw new IllegalArgumentException("Negative or fractional factory integer");
         }
         if ("daily_usage".equals(table) && row.getLong("qty")==0) throw new IllegalArgumentException("Daily usage quantity must be positive");
+        if ("sales_returns".equals(table) && (row.getLong("qty")==0 || row.getLong("refund_value")==0 || Math.addExact(Math.addExact(row.getLong("refund_cash"),row.getLong("refund_bank")),row.getLong("credit_adjustment"))!=row.getLong("refund_value"))) throw new IllegalArgumentException("Invalid sales return settlement");
+        if ("work_orders".equals(table) && (row.getLong("batches")==0 || row.getLong("planned_qty")==0)) throw new IllegalArgumentException("Invalid work order");
+        if ("journal_lines".equals(table) && Math.addExact(row.getLong("debit"),row.getLong("credit"))==0) throw new IllegalArgumentException("Empty journal line");
         if ("recipe".equals(table) && row.getLong("qty")==0) throw new IllegalArgumentException("Recipe quantity must be positive");
         if ("batches".equals(table) && (row.getLong("batches")==0 || row.getLong("output")==0)) throw new IllegalArgumentException("Invalid production batch quantity");
         if ("sales".equals(table)) {
@@ -155,6 +174,7 @@ final class FactoryBackup {
                 JSONObject tables = root.getJSONObject("tables");
                 for (int i=0;i<TABLES.length;i++) {
                     JSONArray rows = tables.optJSONArray(TABLES[i]);
+                    if (rows == null && root.optInt("schema_version")<5 && Arrays.asList("sales_returns","work_orders","work_order_materials","journal_entries","journal_lines").contains(TABLES[i])) continue;
                     if (rows == null && root.optInt("schema_version")==3 && "daily_usage".equals(TABLES[i])) continue;
                     if (rows == null) throw new IllegalArgumentException("Missing factory table: "+TABLES[i]);
                     for (int n=0;n<rows.length();n++) {
@@ -196,6 +216,11 @@ final class FactoryBackup {
         d.execSQL("CREATE TABLE IF NOT EXISTS cashbook(id INTEGER PRIMARY KEY,account TEXT,kind TEXT,amount INTEGER NOT NULL,ref TEXT,date TEXT)");
         d.execSQL("CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,action TEXT,detail TEXT,date TEXT)");
         d.execSQL("CREATE TABLE IF NOT EXISTS daily_usage(id INTEGER PRIMARY KEY,date TEXT,material_id INTEGER,qty INTEGER,cost INTEGER,note TEXT,kind TEXT NOT NULL DEFAULT 'MANUAL')");
+        d.execSQL("CREATE TABLE IF NOT EXISTS sales_returns(id INTEGER PRIMARY KEY,sale_id INTEGER NOT NULL,product_id INTEGER NOT NULL,qty INTEGER NOT NULL,refund_value INTEGER NOT NULL,refund_cash INTEGER NOT NULL,refund_bank INTEGER NOT NULL,credit_adjustment INTEGER NOT NULL,restored_cogs INTEGER NOT NULL,bank_ref TEXT,reason TEXT,date TEXT)");
+        d.execSQL("CREATE TABLE IF NOT EXISTS work_orders(id INTEGER PRIMARY KEY,work_ref TEXT UNIQUE,product_id INTEGER NOT NULL,batches INTEGER NOT NULL,planned_qty INTEGER NOT NULL,actual_qty INTEGER NOT NULL DEFAULT 0,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL DEFAULT 0,overhead INTEGER NOT NULL DEFAULT 0,total_cost INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL,date TEXT)");
+        d.execSQL("CREATE TABLE IF NOT EXISTS work_order_materials(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,material_id INTEGER NOT NULL,qty INTEGER NOT NULL,cost INTEGER NOT NULL)");
+        d.execSQL("CREATE TABLE IF NOT EXISTS journal_entries(id INTEGER PRIMARY KEY,entry_ref TEXT UNIQUE,description TEXT,status TEXT NOT NULL,reversal_of INTEGER,date TEXT)");
+        d.execSQL("CREATE TABLE IF NOT EXISTS journal_lines(id INTEGER PRIMARY KEY,entry_id INTEGER NOT NULL,account TEXT NOT NULL,debit INTEGER NOT NULL DEFAULT 0,credit INTEGER NOT NULL DEFAULT 0)");
         ensureColumn(d,"daily_usage","kind","TEXT NOT NULL DEFAULT 'MANUAL'");
         ensureColumn(d,"products","category","TEXT NOT NULL DEFAULT 'منتج إضافي'");
         ensureColumn(d,"products","unit_price","INTEGER NOT NULL DEFAULT 0");
