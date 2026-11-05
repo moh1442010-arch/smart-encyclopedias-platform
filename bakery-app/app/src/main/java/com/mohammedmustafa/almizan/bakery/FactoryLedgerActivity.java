@@ -51,8 +51,8 @@ public class FactoryLedgerActivity extends Activity {
     private long postReturn(long saleId,long q,long cash,long bank,String bankRef,String reason){
         if(saleId<=0||q<=0||cash<0||bank<0)throw new IllegalArgumentException("بيانات المرتجع غير صحيحة");
         db.beginTransaction();try{
-            Cursor s=db.rawQuery("SELECT product_id,qty,total,cogs FROM sales WHERE id=?",new String[]{""+saleId});if(!s.moveToFirst()){s.close();throw new IllegalArgumentException("الفاتورة غير موجودة");}
-            long pid=s.getLong(0),sold=s.getLong(1),total=s.getLong(2),cogs=s.getLong(3);s.close();
+            Cursor s=db.rawQuery("SELECT product_id,qty,total,cogs,customer FROM sales WHERE id=?",new String[]{""+saleId});if(!s.moveToFirst()){s.close();throw new IllegalArgumentException("الفاتورة غير موجودة");}
+            long pid=s.getLong(0),sold=s.getLong(1),total=s.getLong(2),cogs=s.getLong(3);String customer=s.getString(4);s.close();
             Cursor p=db.rawQuery("SELECT COALESCE(SUM(qty),0),COALESCE(SUM(refund_value),0),COALESCE(SUM(restored_cogs),0) FROM sales_returns WHERE sale_id=?",new String[]{""+saleId});p.moveToFirst();long prevQty=p.getLong(0),prevValue=p.getLong(1),prevCost=p.getLong(2);p.close();
             FactoryMath.returnableQuantity(sold,prevQty,q);long cumulative=prevQty+q;
             long refund=FactoryMath.proportionalReturnValue(total,cumulative,sold)-prevValue;
@@ -61,6 +61,9 @@ public class FactoryLedgerActivity extends Activity {
             FactoryMath.validateBankakReference(bank,bankRef);
             if(bank>0){Cursor x=db.rawQuery("SELECT COUNT(*) FROM cashbook WHERE account='BANKAK' AND ref=?",new String[]{bankRef});x.moveToFirst();boolean used=x.getLong(0)>0;x.close();if(used)throw new IllegalArgumentException("مرجع بنكك مستخدم سابقاً");}
             long credit=refund-cash-bank;
+            Cursor due=db.rawQuery("SELECT COALESCE(SUM(debt),0)-COALESCE((SELECT SUM(cash+bank) FROM collections WHERE customer=?),0)-COALESCE((SELECT SUM(r.credit_adjustment) FROM sales_returns r JOIN sales ss ON ss.id=r.sale_id WHERE ss.customer=?),0) FROM sales WHERE customer=?",new String[]{customer,customer,customer});
+            due.moveToFirst();long outstanding=Math.max(0,due.getLong(0));due.close();
+            if(credit>outstanding)throw new IllegalArgumentException("قيمة تخفيض الآجل أكبر من مديونية العميل المتبقية: "+outstanding);
             Cursor f=db.rawQuery("SELECT qty,value FROM finished WHERE product_id=?",new String[]{""+pid});long stock=0,value=0;if(f.moveToFirst()){stock=f.getLong(0);value=f.getLong(1);}f.close();
             ContentValues v=new ContentValues();v.put("product_id",pid);v.put("qty",FactoryMath.add(stock,q));v.put("value",FactoryMath.add(value,restore));v.put("unit_cost",FactoryMath.weightedAverageUnitCost(stock,value,q,restore));db.insertWithOnConflict("finished",null,v,SQLiteDatabase.CONFLICT_REPLACE);
             db.execSQL("INSERT INTO sales_returns(sale_id,product_id,qty,refund_value,refund_cash,refund_bank,credit_adjustment,restored_cogs,bank_ref,reason,date) VALUES(?,?,?,?,?,?,?,?,?,?,?)",new Object[]{saleId,pid,q,refund,cash,bank,credit,restore,bankRef,reason,today()});
