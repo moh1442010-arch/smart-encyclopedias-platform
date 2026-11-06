@@ -1579,6 +1579,7 @@ public class MainActivity extends Activity {
             snapshot.put(FactoryBackup.export(this));
             byte[] plain=snapshot.toString(2).getBytes(StandardCharsets.UTF_8);
             byte[] encrypted=PortableBackupCrypto.encrypt(plain,password);
+            if(encrypted.length>25L*1024*1024)throw new IllegalArgumentException("حجم النسخة أكبر من الحد المدعوم وهو 25 ميغابايت");
             try(OutputStream out=getContentResolver().openOutputStream(uri,"w")){
                 if(out==null)throw new IllegalStateException("تعذر فتح ملف النسخة");
                 out.write(encrypted);out.flush();
