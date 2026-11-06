@@ -2,7 +2,6 @@ package com.mohammedmustafa.almizan.bakery;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import net.zetetic.database.sqlcipher.SQLiteDatabase;
@@ -20,7 +19,7 @@ public class SecureDatabaseMigrationTest {
         String name="legacy_migration_"+System.currentTimeMillis()+".db";
         File file=context.getDatabasePath(name);
         if(file.exists())assertTrue(file.delete());
-        SQLiteDatabase legacy=SQLiteDatabase.openOrCreateDatabase(file,null);
+        android.database.sqlite.SQLiteDatabase legacy=android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(file,null);
         legacy.execSQL("CREATE TABLE records(day TEXT,module TEXT,payload TEXT,updated_at INTEGER,PRIMARY KEY(day,module))");
         legacy.execSQL("INSERT INTO records(day,module,payload,updated_at) VALUES('2026-11-06','stock','SENSITIVE_LEDGER_VALUE',123)");
         legacy.close();
