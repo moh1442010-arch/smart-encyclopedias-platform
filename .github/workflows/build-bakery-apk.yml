@@ -236,8 +236,8 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish approved commercial GitHub Release
-        if: github.ref == 'refs/heads/release/bakery-2.8.0-financial-integrity'
+      - name: Publish approved commercial GitHub Release (blocked pending physical qualification)
+        if: false # P0 gate: enable only after documented 2.7.2-to-2.8.0 real-device upgrade and accounting/security acceptance.
         uses: softprops/action-gh-release@v2
         with:
           tag_name: al-mizan-bakery-2.8.0
