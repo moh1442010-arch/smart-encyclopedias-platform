@@ -125,7 +125,7 @@ jobs:
           grep -Fq 'CREATE TABLE IF NOT EXISTS work_orders' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS journal_entries' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'root.put("schema_version", 6)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
-          grep -Fq 'net.zetetic:sqlcipher-android:4.6.1@aar' bakery-app/app/build.gradle
+          grep -Fq 'net.zetetic:sqlcipher-android:4.19.1@aar' bakery-app/app/build.gradle
           grep -Fq 'System.loadLibrary("sqlcipher")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/SecureDatabase.java
           grep -Fq 'AndroidKeyStore' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/SecureDatabase.java
           grep -Fq 'migratePlaintext' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/SecureDatabase.java
