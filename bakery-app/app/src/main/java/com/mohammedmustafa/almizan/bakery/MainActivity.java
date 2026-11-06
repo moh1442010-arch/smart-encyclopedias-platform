@@ -68,6 +68,7 @@ public class MainActivity extends Activity {
     private String day;
     private TextView dateLabel, statusLabel, flourMetric, workMetric, productionMetric, marginMetric;
     private String currentScreenTitle = "";
+    private boolean pinAuthenticated = false;
 
     private static class Field {
         final String key, label, hint; final boolean numeric;
@@ -78,7 +79,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
-        if (store != null && !hasActiveLicense() && trialExpired() && !currentScreenTitle.contains("اشتراك المحاسب الميزان")) {
+        if (store != null && pinAuthenticated && !hasActiveLicense() && trialExpired() && !currentScreenTitle.contains("اشتراك المحاسب الميزان")) {
             showPaywall();
         }
     }
@@ -105,6 +106,7 @@ public class MainActivity extends Activity {
     }
 
     private void continueAfterPinAccepted() {
+        pinAuthenticated = true;
         try {
             if (!hasActiveLicense() && trialExpired()) { showPaywall(); return; }
             buildHome();
