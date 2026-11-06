@@ -25,7 +25,7 @@ public class SecureDatabaseMigrationTest {
         legacy.close();
 
         byte[] key=SecureDatabase.passphrase(context,name);
-        SQLiteDatabase encrypted=SQLiteDatabase.openDatabase(file.getAbsolutePath(),key,null,SQLiteDatabase.OPEN_READWRITE);
+        SQLiteDatabase encrypted=SQLiteDatabase.openDatabase(file.getAbsolutePath(),key,null,SQLiteDatabase.OPEN_READWRITE,null,null);
         Cursor c=encrypted.rawQuery("SELECT payload FROM records WHERE day='2026-11-06'",null);
         try { assertTrue(c.moveToFirst());assertEquals("SENSITIVE_LEDGER_VALUE",c.getString(0)); }
         finally { c.close();encrypted.close(); }
