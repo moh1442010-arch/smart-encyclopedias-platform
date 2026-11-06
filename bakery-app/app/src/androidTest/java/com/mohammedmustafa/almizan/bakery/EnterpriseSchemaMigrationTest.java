@@ -16,6 +16,9 @@ public class EnterpriseSchemaMigrationTest {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String name="enterprise_migration_"+System.currentTimeMillis()+".db";
         File file=context.getDatabasePath(name);
+        File parent=file.getParentFile();
+        assertNotNull(parent);
+        if(!parent.exists())assertTrue(parent.mkdirs());
         if(file.exists())assertTrue(file.delete());
         SQLiteDatabase db=SecureDatabase.open(context,name);
         try {
