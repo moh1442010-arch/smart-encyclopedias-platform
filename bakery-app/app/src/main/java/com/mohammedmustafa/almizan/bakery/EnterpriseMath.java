@@ -30,8 +30,8 @@ final class EnterpriseMath {
         if (basicMinor < 0 || additionsMinor < 0 || deductionsMinor < 0) {
             throw new IllegalArgumentException("Payroll values cannot be negative");
         }
-        long gross = Math.addExact(basicMinor, additionsMinor);
-        long net = Math.subtractExact(gross, deductionsMinor);
+        long gross = BigInteger.valueOf(basicMinor).add(BigInteger.valueOf(additionsMinor)).longValueExact();
+        long net = BigInteger.valueOf(gross).subtract(BigInteger.valueOf(deductionsMinor)).longValueExact();
         if (net < 0) throw new IllegalArgumentException("Deductions exceed gross pay");
         return net;
     }
@@ -56,12 +56,12 @@ final class EnterpriseMath {
         if (elapsedMonths <= 0) throw new IllegalArgumentException("Elapsed month must be positive");
         long current = cumulativeStraightLineDepreciation(costMinor, residualMinor, usefulLifeMonths, elapsedMonths);
         long previous = cumulativeStraightLineDepreciation(costMinor, residualMinor, usefulLifeMonths, elapsedMonths - 1);
-        return Math.subtractExact(current, previous);
+        return BigInteger.valueOf(current).subtract(BigInteger.valueOf(previous)).longValueExact();
     }
 
     static long remainingBookValue(long costMinor, long residualMinor, int usefulLifeMonths,
                                    int elapsedMonths) {
         long accumulated = cumulativeStraightLineDepreciation(costMinor, residualMinor, usefulLifeMonths, elapsedMonths);
-        return Math.subtractExact(costMinor, accumulated);
+        return BigInteger.valueOf(costMinor).subtract(BigInteger.valueOf(accumulated)).longValueExact();
     }
 }
