@@ -1616,11 +1616,19 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("تأكيد الاستعادة")
             .setMessage("سيتم دمج "+bakeryRecords.length()+" سجل للمخبز"+(factoryData!=null?" واستبدال بيانات المصنع بالنسخة":" (النسخة لا تحتوي على بيانات المصنع)")+". أنشئ نسخة احتياطية للحالة الحالية قبل المتابعة.")
             .setNegativeButton("إلغاء",null).setPositiveButton("استعادة",(d,w)->{
+                JSONArray previousBakery=null;JSONObject previousFactory=null;boolean bakeryRestored=false,factoryRestored=false;
                 try {
-                    int count=store.restoreAll(bakeryRecords);
-                    if(factoryData!=null)FactoryBackup.restore(this,factoryData);
+                    previousBakery=store.exportAll();previousFactory=FactoryBackup.export(this);
+                    int count=store.restoreAll(bakeryRecords);bakeryRestored=true;
+                    if(factoryData!=null){FactoryBackup.restore(this,factoryData);factoryRestored=true;}
                     updateStatus();toast("اكتملت الاستعادة: "+count+" سجل للمخبز وبيانات المصنع.");
-                } catch(Exception ex){toast("تعذرت استعادة أحد الجزأين. لا تكرر العملية قبل مراجعة الدفاتر والتواصل مع الدعم.");}
+                } catch(Exception ex){
+                    boolean rollbackOk=true;
+                    try {if(factoryRestored&&previousFactory!=null)FactoryBackup.restore(this,previousFactory);}catch(Exception rollback){rollbackOk=false;android.util.Log.e("AlMizanBakery","Factory restore rollback failed",rollback);}
+                    try {if(bakeryRestored&&previousBakery!=null)store.replaceAll(previousBakery);}catch(Exception rollback){rollbackOk=false;android.util.Log.e("AlMizanBakery","Bakery restore rollback failed",rollback);}
+                    if(rollbackOk)toast("لم تكتمل الاستعادة. أُعيدت الدفاتر إلى حالتها السابقة ولم يُعتمد الاستيراد.");
+                    else toast("تعذرت الاستعادة والتراجع الآلي الكامل. أوقف إدخال العمليات وخذ نسخة من الحالة الحالية وتواصل مع الدعم فوراً.");
+                }
             }).show();
     }
 
