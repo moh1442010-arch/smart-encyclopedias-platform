@@ -786,7 +786,7 @@ public class MainActivity extends Activity {
             addInventoryRow(table,rows,p[0],p[1],p[2],p[3]);
         }
         if(rows.isEmpty()) {
-            String[][] defaults={{"دقيق","50 جوال","1","60000"},{"ملح","25 كيلو","0","2000"},{"خميرة","45 باكو","0","6000"},{"زيت","108 رطل","0","5000"},{"أكياس","50 لفة","0","2000"},{"جاز","0 جالون","0","0"},{"غاز","0 أسطوانة","0","0"},{"حطب","0 قنطار","0","0"}};
+            String[][] defaults={{"دقيق","0 جوال","1","0"},{"ملح","0 كيلو","0","0"},{"خميرة","0 باكو","0","0"},{"زيت","0 رطل","0","0"},{"أكياس","0 لفة","0","0"},{"جاز","0 جالون","0","0"},{"غاز","0 أسطوانة","0","0"},{"حطب","0 قنطار","0","0"}};
             for(String[] item:defaults) addInventoryRow(table,rows,item[0],item[1],item[2],item[3]);
         }
         box.addView(table);
@@ -1804,10 +1804,11 @@ public class MainActivity extends Activity {
     private void toast(String s) { Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
 
     private class Store extends SQLiteOpenHelper {
-        Store(){super(MainActivity.this,"almizan_bakery_250.db",SecureDatabase.passphrase(MainActivity.this,"almizan_bakery_250.db"),null,4,0,null,null,false);}
+        Store(){super(MainActivity.this,"almizan_bakery_250.db",SecureDatabase.passphrase(MainActivity.this,"almizan_bakery_250.db"),null,5,0,null,null,false);}
         @Override public void onCreate(SQLiteDatabase db) {
             db.execSQL("CREATE TABLE records (day TEXT NOT NULL, module TEXT NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(day,module))");
             db.execSQL("CREATE TABLE inventory_usage (day TEXT PRIMARY KEY NOT NULL, flour_bags INTEGER NOT NULL DEFAULT 0, material_usage TEXT NOT NULL DEFAULT '{}')");
+            EnterpriseSchema.ensure(db);
         }
         @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion) {
             // Schema v3 keeps the existing records table intact and ensures the stock-usage ledger exists.
@@ -1817,6 +1818,9 @@ public class MainActivity extends Activity {
             }
             if (oldVersion < 4) {
                 try { db.execSQL("ALTER TABLE inventory_usage ADD COLUMN material_usage TEXT NOT NULL DEFAULT '{}'"); } catch (Exception ignored) { }
+            }
+            if (oldVersion < 5) {
+                EnterpriseSchema.ensure(db);
             }
         }
         JSONObject get(String date,String module) {
