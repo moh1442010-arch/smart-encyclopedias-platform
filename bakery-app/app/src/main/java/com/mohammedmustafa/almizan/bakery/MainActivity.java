@@ -1573,7 +1573,8 @@ public class MainActivity extends Activity {
             JSONArray records=store.exportAll();JSONArray snapshot=new JSONArray();
             JSONObject manifest=new JSONObject();manifest.put("_type","almizan_backup_manifest");manifest.put("schema_version",1);
             manifest.put("app_id","com.mohammedmustafa.almizan.bakery");manifest.put("app_version",BuildConfig.VERSION_NAME);
-            manifest.put("created_at",new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'",Locale.US).format(new Date()));
+            SimpleDateFormat backupTime=new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'",Locale.US);backupTime.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+            manifest.put("created_at",backupTime.format(new Date()));
             snapshot.put(manifest);for(int i=0;i<records.length();i++)snapshot.put(records.get(i));
             snapshot.put(FactoryBackup.export(this));
             byte[] plain=snapshot.toString(2).getBytes(StandardCharsets.UTF_8);
