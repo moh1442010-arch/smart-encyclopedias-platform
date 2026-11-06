@@ -1,4 +1,4 @@
-name: Build Al-Mizan Bakery 2.8.0 Review APK
+name: Build Al-Mizan Bakery 2.8.1 Review APK
 
 on:
   workflow_dispatch:
@@ -68,15 +68,15 @@ jobs:
           const appKey = appMain.match(/LICENSE_PUBLIC_KEY_B64 = "([^"]+)"/)?.[1];
           const workerKey = worker.match(/EXPECTED_APP_PUBLIC_KEY_DER_B64 = "([^"]+)"/)?.[1];
           if (!appKey || appKey !== workerKey) throw new Error("Worker signing public key does not match Android app.");
-          if (!workerConfig.includes('APP_VERSION = "2.8.0"')) throw new Error("Worker APP_VERSION must be 2.8.0.");
+          if (!workerConfig.includes('APP_VERSION = "2.8.1"')) throw new Error("Worker APP_VERSION must be 2.8.0.");
           const expected = {
             applicationId: "com.mohammedmustafa.almizan.bakery",
-            versionName: "2.8.0"
+            versionName: "2.8.1"
           };
           for (const [key, value] of Object.entries(expected)) {
             if (!gradle.includes(`${key} '${value}'`)) throw new Error(`Release identity mismatch: ${key}`);
           }
-          if (!gradle.includes("versionCode 280000")) throw new Error("Release identity mismatch: versionCode");
+          if (!gradle.includes("versionCode 280001")) throw new Error("Release identity mismatch: versionCode");
           for (const price of ["55,000 جنيه سوداني", "550,000 جنيه سوداني", "1,050,000 جنيه سوداني"]) {
             if (!app.includes(price)) throw new Error(`App is missing approved price: ${price}`);
           }
