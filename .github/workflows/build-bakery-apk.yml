@@ -146,6 +146,8 @@ jobs:
           grep -Fq 'convertsCurrenciesUsingRationalRatesAndMinorUnits' bakery-app/app/src/test/java/com/mohammedmustafa/almizan/bakery/EnterpriseMathTest.java
           grep -Fq 'PortableBackupCrypto.encrypt' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq 'PortableBackupCrypto.decrypt' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'almizan_backup_manifest' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq '"0 جوال"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq 'MIZANBK1' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/PortableBackupCrypto.java
           grep -Fq 'encryptsAndDecryptsPortableBackup' bakery-app/app/src/test/java/com/mohammedmustafa/almizan/bakery/PortableBackupCryptoTest.java
           grep -Fq 'سيتم دمج ' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
