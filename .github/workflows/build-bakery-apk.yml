@@ -133,6 +133,14 @@ jobs:
           grep -Fq 'SecureDatabase.passphrase(c,"almizan_factory_1.db")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'SecureDatabase.open(this,"almizan_factory_1.db")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'migratesLegacyBakeryDatabaseAndHidesPlaintext' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/SecureDatabaseMigrationTest.java
+          grep -Fq 'EnterpriseSchema.ensure(db)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'null,5,0,null,null,false' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS suppliers' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS employees' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS fixed_assets' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS exchange_rates' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'addsEnterpriseTablesWithoutChangingExistingBakeryRecords' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchemaMigrationTest.java
+          grep -Fq 'convertsCurrenciesUsingRationalRatesAndMinorUnits' bakery-app/app/src/test/java/com/mohammedmustafa/almizan/bakery/EnterpriseMathTest.java
           grep -Fq '7L * 24L * 60L * 60L * 1000L' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq '27. التجربة المجانية والاشتراك' bakery-app/app/src/main/assets/bakery-guide.html
           grep -Fq '28. حالة حماية قاعدة البيانات' bakery-app/app/src/main/assets/bakery-guide.html
