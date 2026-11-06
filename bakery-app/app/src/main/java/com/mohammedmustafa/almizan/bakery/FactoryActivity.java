@@ -39,6 +39,7 @@ public class FactoryActivity extends Activity {
         body.addView(btn("6. المصروفات والتالف",()->expenses()));
         body.addView(btn("7. حساب التشغيل والتكلفة",()->costing()));
         body.addView(btn("8. الحسابات والأرصدة والتقارير",()->accounts()));
+        body.addView(btn("10. التقارير المالية والتحليل",()->financialReports()));
         body.addView(btn("9. مرتجعات المبيعات والأعمال تحت التشغيل وعكس القيود",()->startActivity(new Intent(this,FactoryLedgerActivity.class))));
     }
     private EditText field(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setInputType(decimal?android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:android.text.InputType.TYPE_CLASS_TEXT);body.addView(e);return e;}
@@ -130,6 +131,31 @@ public class FactoryActivity extends Activity {
         EditText pn=field("اسم المنتج التالف",false),wq=field("كمية التالف",true),reason=field("سبب التلف",false);
         body.addView(btn("تسجيل التالف",()->{long pid=db.id("products",pn.getText().toString().trim()),q=num(wq);if(pid==0||q<=0){toast("حدد المنتج والكمية");return;}try{db.waste(pid,q,reason.getText().toString());toast("تم تسجيل التالف وخصمه من المخزون");expenses();}catch(Exception ex){toast("تعذر تسجيل التالف: "+ex.getMessage());}}));
         list("SELECT category||' | '||amount||' جنيه | '||note FROM expenses ORDER BY id DESC");
+    }
+    private void financialReports(){
+        frame("التقارير المالية والتحليل");
+        body.addView(label("تقارير تشغيلية مبنية على المستندات المسجلة في المصنع. الأرقام تراكمية منذ بداية قاعدة البيانات، وليست ميزان مراجعة قانونياً؛ راجع القيود والمستندات قبل اعتماد القوائم.",14));
+        body.addView(label("أولاً — قائمة الدخل التشغيلية",18));
+        list("SELECT 'إجمالي المبيعات: '||COALESCE(SUM(total),0)||' جنيه' FROM sales");
+        list("SELECT 'مرتجعات المبيعات: '||COALESCE(SUM(refund_value),0)||' جنيه' FROM sales_returns");
+        list("SELECT 'صافي المبيعات: '||(COALESCE((SELECT SUM(total) FROM sales),0)-COALESCE((SELECT SUM(refund_value) FROM sales_returns),0))||' جنيه'");
+        list("SELECT 'تكلفة المبيعات بعد المرتجعات: '||(COALESCE((SELECT SUM(cogs) FROM sales),0)-COALESCE((SELECT SUM(restored_cogs) FROM sales_returns),0))||' جنيه'");
+        list("SELECT 'مجمل الربح: '||((COALESCE((SELECT SUM(total) FROM sales),0)-COALESCE((SELECT SUM(refund_value) FROM sales_returns),0))-(COALESCE((SELECT SUM(cogs) FROM sales),0)-COALESCE((SELECT SUM(restored_cogs) FROM sales_returns),0)))||' جنيه'");
+        list("SELECT 'مصروفات التشغيل المسجلة: '||COALESCE(SUM(amount),0)||' جنيه' FROM expenses");
+        list("SELECT 'تكلفة التالف: '||COALESCE(SUM(cost),0)||' جنيه' FROM waste");
+        list("SELECT 'صافي نتيجة التشغيل قبل البنود غير المسجلة: '||((COALESCE((SELECT SUM(total) FROM sales),0)-COALESCE((SELECT SUM(refund_value) FROM sales_returns),0))-(COALESCE((SELECT SUM(cogs) FROM sales),0)-COALESCE((SELECT SUM(restored_cogs) FROM sales_returns),0))-COALESCE((SELECT SUM(amount) FROM expenses),0)-COALESCE((SELECT SUM(cost) FROM waste),0))||' جنيه'");
+        body.addView(label("ثانياً — المركز التشغيلي للأرصدة",18));
+        list("SELECT 'رصيد النقدية: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('EXPENSE','SALE_RETURN')),0))||' جنيه'");
+        list("SELECT 'رصيد بنكك: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('EXPENSE','SALE_RETURN')),0))||' جنيه'");
+        list("SELECT 'مديونيات العملاء المتبقية: '||(COALESCE((SELECT SUM(debt) FROM sales),0)-COALESCE((SELECT SUM(cash+bank) FROM collections),0)-COALESCE((SELECT SUM(credit_adjustment) FROM sales_returns),0))||' جنيه'");
+        list("SELECT 'قيمة مخزون المواد الخام: '||COALESCE(SUM(value),0)||' جنيه' FROM materials");
+        list("SELECT 'قيمة مخزون الإنتاج التام: '||COALESCE(SUM(value),0)||' جنيه' FROM finished");
+        list("SELECT 'تكلفة أوامر التشغيل الجارية: '||COALESCE(SUM(material_cost+labor+overhead),0)||' جنيه' FROM work_orders WHERE status='IN_PROGRESS'");
+        body.addView(label("ثالثاً — تفاصيل الإنتاج والمخزون",18));
+        list("SELECT 'عدد أوامر التشغيل المكتملة: '||COUNT(*) FROM work_orders WHERE status='COMPLETED'");
+        list("SELECT 'عدد أوامر التشغيل الجارية: '||COUNT(*) FROM work_orders WHERE status='IN_PROGRESS'");
+        list("SELECT 'قيمة مشتريات/وارد الخامات لا تظهر كإيراد؛ راجع حركة المخزون وسجل الوارد.'");
+        body.addView(label("ملاحظة محاسبية: هذه تقارير تشغيلية من حركات البيع والشراء والمخزون والمصروفات والتالف. لا تمثل حتى الآن قائمة مركز مالي مكتملة أو تدفقات نقدية معيارية أو ميزان مراجعة شاملاً لكل حسابات المنشأة. لا تُدخل قيوداً يدوية لتعديل هذه النتائج دون تسوية المصدر الأصلي.",13));
     }
     private void costing(){
         frame("حساب التشغيل والتكلفة");
