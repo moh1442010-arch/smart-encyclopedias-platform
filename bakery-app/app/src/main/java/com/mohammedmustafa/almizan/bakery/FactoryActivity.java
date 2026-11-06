@@ -4,7 +4,7 @@ import android.app.*;
 import android.os.Bundle;
 import android.content.*;
 import android.database.Cursor;
-import android.database.sqlite.*;
+import net.zetetic.database.sqlcipher.*;
 import android.graphics.Color;
 import android.view.*;
 import android.widget.*;
@@ -184,7 +184,7 @@ public class FactoryActivity extends Activity {
     private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
 
     private static class DB extends SQLiteOpenHelper {
-        DB(Context c){super(c,"almizan_factory_1.db",null,6);}
+        DB(Context c){super(c,"almizan_factory_1.db",SecureDatabase.passphrase(c,"almizan_factory_1.db"),null,6,0,null,null,false);}
         public void onCreate(SQLiteDatabase d){
             d.execSQL("CREATE TABLE materials(id INTEGER PRIMARY KEY,name TEXT UNIQUE,unit TEXT,qty INTEGER NOT NULL DEFAULT 0,value INTEGER NOT NULL DEFAULT 0)");
             d.execSQL("CREATE TABLE products(id INTEGER PRIMARY KEY,name TEXT UNIQUE,category TEXT NOT NULL DEFAULT 'منتج إضافي',unit_price INTEGER NOT NULL DEFAULT 0)");
