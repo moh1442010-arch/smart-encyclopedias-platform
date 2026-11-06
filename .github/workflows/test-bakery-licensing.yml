@@ -55,8 +55,8 @@ jobs:
           APP_VERSION="$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" bakery-app/app/build.gradle)"
           WORKER_VERSION="$(sed -n 's/^APP_VERSION = "\(.*\)"/\1/p' licensing/worker/wrangler.toml)"
           test -n "$APP_VERSION" && test "$APP_VERSION" = "$WORKER_VERSION"
-          test "$APP_VERSION" = "2.7.1"
-          grep -q "versionCode 270001" bakery-app/app/build.gradle
+          test "$APP_VERSION" = "2.8.0"
+          grep -q "versionCode 280000" bakery-app/app/build.gradle
           APP_KEY="$(grep -oE 'private static final String LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | cut -d '"' -f2)"
           WORKER_KEY="$(grep -oE 'EXPECTED_APP_PUBLIC_KEY_DER_B64 = "[^"]+"' licensing/worker/src/index.js | cut -d '"' -f2)"
           test -n "$APP_KEY" && test "$APP_KEY" = "$WORKER_KEY"

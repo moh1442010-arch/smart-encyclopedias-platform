@@ -29,4 +29,24 @@ public class FactoryMathTest {
  @Test public void preservesValueWhenInventoryIsPartiallyIssued(){long cost=FactoryMath.costForStockIssue(10001L,333L,1000L);assertEquals(6671L,10001L-cost);}
  @Test public void computesZeroDebtForFullySettledSale(){assertEquals(0L,FactoryMath.debt(15000L,5000L,10000L));}
  @Test public void computesDebtWhenSaleIsPartiallySettled(){assertEquals(7000L,FactoryMath.debt(15000L,5000L,3000L));}
+ @Test public void calculatesPartialSaleReturnAtOriginalSellingValue(){assertEquals(3000L,FactoryMath.proportionalReturnValue(12000L,250L,1000L));}
+ @Test public void calculatesReturnedCostAtOriginalCogs(){assertEquals(2000L,FactoryMath.proportionalReturnValue(8000L,250L,1000L));}
+ @Test public void tracksRemainingReturnableQuantity(){assertEquals(500L,FactoryMath.returnableQuantity(1000L,250L,250L));}
+ @Test(expected=IllegalArgumentException.class) public void rejectsReturnsAboveOriginalSaleQuantity(){FactoryMath.returnableQuantity(1000L,700L,301L);}
+ @Test public void allocatesPartialWipMaterialCostAcrossStagesWithoutRoundingDrift(){long first=FactoryMath.incrementalWipMaterialCost(10001L,333L,0L,1000L);long second=FactoryMath.incrementalWipMaterialCost(10001L,777L,333L,1000L);long finalStage=FactoryMath.incrementalWipMaterialCost(10001L,1000L,777L,1000L);assertEquals(10001L,first+second+finalStage);}
+ @Test public void leavesUncompletedWipMaterialCostInWorkInProgress(){long allocated=FactoryMath.incrementalWipMaterialCost(9000L,400L,0L,1000L);assertEquals(3600L,allocated);assertEquals(5400L,9000L-allocated);}
+ @Test(expected=IllegalArgumentException.class) public void rejectsPartialWipOutputAbovePlan(){FactoryMath.incrementalWipMaterialCost(1000L,1100L,0L,1000L);}
+ @Test public void accumulatesWorkInProgressCost(){assertEquals(17500L,FactoryMath.workInProgressCost(10000L,5000L,2500L));}
+ @Test public void calculatesWorkInProgressUnitCost(){assertEquals(3500000L,FactoryMath.workInProgressUnitCost(17500L,5000L));}
+ @Test public void acceptsBalancedJournal(){assertTrue(FactoryMath.journalIsBalanced(15000L,15000L));}
+ @Test public void rejectsUnbalancedJournal(){assertFalse(FactoryMath.journalIsBalanced(15000L,14999L));}
+ @Test(expected=IllegalArgumentException.class) public void rejectsNegativeJournalTotals(){FactoryMath.journalIsBalanced(-1L,0L);}
+
+ @Test public void calculatesPosTotalFromFractionalQuantityAndUnitPrice(){assertEquals(3750L,FactoryMath.saleTotal(2500L,1500L));}
+ @Test(expected=IllegalArgumentException.class) public void rejectsZeroSaleUnitPrice(){FactoryMath.saleTotal(1000L,0L);}
+ @Test public void acceptsReturnWithinOriginalInvoiceSettlement(){FactoryMath.validateReturnSettlement(2000,3000,5000,500,1000,500,500,1000,500);}
+ @Test(expected=IllegalArgumentException.class) public void rejectsCashRefundAboveOriginalCashCollected(){FactoryMath.validateReturnSettlement(2000,3000,5000,1500,0,0,600,0,0);}
+ @Test(expected=IllegalArgumentException.class) public void rejectsBankRefundAboveOriginalBankakCollected(){FactoryMath.validateReturnSettlement(2000,3000,5000,0,2500,0,0,600,0);}
+ @Test(expected=IllegalArgumentException.class) public void rejectsCreditAdjustmentAboveOriginalInvoiceDebt(){FactoryMath.validateReturnSettlement(2000,3000,5000,0,0,4500,0,0,600);}
+
 }

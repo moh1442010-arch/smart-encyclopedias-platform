@@ -6,8 +6,8 @@ import android.app.DatePickerDialog;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
+import net.zetetic.database.sqlcipher.SQLiteDatabase;
+import net.zetetic.database.sqlcipher.SQLiteOpenHelper;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
@@ -39,6 +39,22 @@ import javax.crypto.spec.PBEKeySpec;
 import android.util.Base64;
 
 public class MainActivity extends Activity {
+    // API-23-compatible checked arithmetic; avoid Math.*Exact methods introduced in API 24.
+    private static long exactAdd(long a,long b){
+        if((b>0&&a>Long.MAX_VALUE-b)||(b<0&&a<Long.MIN_VALUE-b))throw new ArithmeticException("long overflow");
+        return a+b;
+    }
+    private static long exactSubtract(long a,long b){
+        if((b<0&&a>Long.MAX_VALUE+b)||(b>0&&a<Long.MIN_VALUE+b))throw new ArithmeticException("long overflow");
+        return a-b;
+    }
+    private static long exactMultiply(long a,long b){
+        if(a==0||b==0)return 0;
+        if((a==Long.MIN_VALUE&&b==-1)||(b==Long.MIN_VALUE&&a==-1))throw new ArithmeticException("long overflow");
+        long result=a*b;
+        if(result/b!=a)throw new ArithmeticException("long overflow");
+        return result;
+    }
     private static final int NAVY = Color.rgb(11,31,58), GOLD = Color.rgb(212,175,55), BG = Color.rgb(246,248,251);
     private static final String SUPPORT = "249121851285", BANKAK = "1882224";
     // Public verification key only. The matching private key remains server-side in the Cloudflare Worker secret.
@@ -443,6 +459,21 @@ public class MainActivity extends Activity {
         base("🥖 المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + "");
         TextView intro = text("منظومة يومية متكاملة للمخبز — من رصيد الدقيق إلى الإنتاج والتحصيل وهامش الربح.",16);
         content.addView(intro);
+        if (!hasActiveLicense()) {
+            long daysLeft = trialDaysRemaining();
+            TextView trialNotice = text(
+                daysLeft > 0
+                    ? "التجربة المجانية مفعّلة — متبقٍ " + daysLeft + " يوم. بعد إكمال 7 أيام ستظهر شاشة الاشتراك، وتبقى بياناتك محفوظة دون حذف."
+                    : "انتهت التجربة المجانية. يلزم تفعيل باقة للوصول إلى الدفاتر. بياناتك المحلية لا تُحذف.",
+                15);
+            trialNotice.setTextColor(NAVY);
+            trialNotice.setPadding(12, 12, 12, 12);
+            trialNotice.setBackground(rounded(0xFFFFF3CD, 10));
+            content.addView(trialNotice);
+            Button plans = button("عرض الباقات والاشتراك");
+            plans.setOnClickListener(v -> showPaywall());
+            content.addView(plans);
+        }
         addBakeryHero();
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
         dateLabel = text("📅 التاريخ: " + day,16); dateRow.addView(dateLabel,new LinearLayout.LayoutParams(0,-2,1f));
@@ -869,7 +900,7 @@ public class MainActivity extends Activity {
         if(rows.isEmpty()){long old=saved.optLong("bank",0);if(old>0||!saved.optString("bank_ref","").isEmpty())addBankTransferRow(table,rows,String.valueOf(old),saved.optString("bank_ref",""));else addBankTransferRow(table,rows,"","");}
         box.addView(table);Button add=button("＋ إضافة تحويل بنكك");box.addView(add);
         TextView total=text("إجمالي بنكك: 0",15);box.addView(total);
-        Runnable calc=()->{try{long n=0;for(EditText[] x:rows)if(!x[0].getText().toString().trim().isEmpty())n=Math.addExact(n,parseLong(x[0].getText().toString()));total.setText("إجمالي بنكك: "+fmt(n));}catch(Exception e){total.setText("راجع مبالغ بنكك");}};
+        Runnable calc=()->{try{long n=0;for(EditText[] x:rows)if(!x[0].getText().toString().trim().isEmpty())n=exactAdd(n,parseLong(x[0].getText().toString()));total.setText("إجمالي بنكك: "+fmt(n));}catch(Exception e){total.setText("راجع مبالغ بنكك");}};
         android.text.TextWatcher watcher=new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int c,int f){}public void onTextChanged(CharSequence s,int a,int b,int c){calc.run();}public void afterTextChanged(android.text.Editable e){}};
         for(EditText[] x:rows)x[0].addTextChangedListener(watcher);
         add.setOnClickListener(v->{addBankTransferRow(table,rows,"","");rows.get(rows.size()-1)[0].addTextChangedListener(watcher);calc.run();});calc.run();
@@ -877,7 +908,7 @@ public class MainActivity extends Activity {
         AlertDialog dlg=new AlertDialog.Builder(this).setTitle("بيع الشباك — "+day).setView(sc).setNegativeButton("إلغاء",null).setPositiveButton("حفظ",null).create();
         dlg.setOnShowListener(x->dlg.getButton(-1).setOnClickListener(v->{try{
             long c=parseLong(cash.getText().toString()),d=parseLong(debt.getText().toString()),b=0;if(c<0||d<0)throw new IllegalArgumentException("المبالغ لا تقبل السالب");
-            StringBuilder tx=new StringBuilder();for(EditText[] row:rows){String a=row[0].getText().toString().trim(),ref=row[1].getText().toString().trim();if(a.isEmpty()&&ref.isEmpty())continue;long n=parseLong(a);if(n<=0||ref.isEmpty())throw new IllegalArgumentException("كل تحويل يحتاج مبلغًا موجبًا ورقم عملية");b=Math.addExact(b,n);if(tx.length()>0)tx.append("\n");tx.append(n).append(" | ").append(ref.replace("|","/"));}
+            StringBuilder tx=new StringBuilder();for(EditText[] row:rows){String a=row[0].getText().toString().trim(),ref=row[1].getText().toString().trim();if(a.isEmpty()&&ref.isEmpty())continue;long n=parseLong(a);if(n<=0||ref.isEmpty())throw new IllegalArgumentException("كل تحويل يحتاج مبلغًا موجبًا ورقم عملية");b=exactAdd(b,n);if(tx.length()>0)tx.append("\n");tx.append(n).append(" | ").append(ref.replace("|","/"));}
             JSONObject rec=new JSONObject();rec.put("cash",String.valueOf(c));rec.put("debt",String.valueOf(d));rec.put("bank",String.valueOf(b));rec.put("bank_transfers",tx.toString());rec.put("bank_ref","");rec.put("notes",notes.getText().toString());store.put(day,"window",rec);updateStatus();dlg.dismiss();toast("تم حفظ تحويلات الشباك.");
         }catch(Exception e){toast("تعذر الحفظ: "+e.getMessage());}}));dlg.show();
     }
@@ -971,7 +1002,7 @@ public class MainActivity extends Activity {
         Runnable recalc=()->{
             try {
                 long sum=0L;
-                for(EditText cell:loafCells) { String v=cell.getText().toString().trim(); if(!v.isEmpty()) sum=Math.addExact(sum,parseLong(v)); }
+                for(EditText cell:loafCells) { String v=cell.getText().toString().trim(); if(!v.isEmpty()) sum=exactAdd(sum,parseLong(v)); }
                 total.setText("إجمالي الرغيف المنتج من جميع القطعيات: "+fmt(sum)+" رغيف");
                 String price=perThousand.getText().toString().trim();
                 if(price.isEmpty()||parseLong(price)<=0) amount.setText("قيمة الإنتاج: أدخل عدد الأرغفة المقابل لـ 1,000 جنيه");
@@ -1014,7 +1045,7 @@ public class MainActivity extends Activity {
                     if(count<0) throw new IllegalArgumentException("عدد الأرغفة لا يقبل قيمة سالبة.");
                     if(rows.length()>0) rows.append("\n");
                     rows.append(++used).append(" | ").append(count);
-                    sum=Math.addExact(sum,count);
+                    sum=exactAdd(sum,count);
                 }
                 if(used==0) throw new IllegalArgumentException("أدخل عدد الأرغفة في قطعية واحدة على الأقل.");
                 JSONObject record=new JSONObject();
@@ -1070,7 +1101,7 @@ public class MainActivity extends Activity {
                     saved.put("items_rows", legacyStockRows(saved));
                 long flourQty = stockFlourQuantity(saved);
                 long appliedUsage = currentStock.length() > 0 ? store.usageForDate(day) : 0L;
-                if (appliedUsage > 0) flourQty = Math.addExact(flourQty, appliedUsage);
+                if (appliedUsage > 0) flourQty = exactAdd(flourQty, appliedUsage);
                 saved.put("flour", String.valueOf(flourQty));
                 saved.put("items_rows", setStockFlourQuantity(saved.optString("items_rows",""), flourQty));
             } catch (Exception ex) {
@@ -1192,31 +1223,31 @@ public class MainActivity extends Activity {
                 if(module.equals("workers")) {
                     long count=parseLong(p[2]), rate=parseLong(p[3]);
                     if(count<0||rate<0) throw new IllegalArgumentException();
-                    out.amount=Math.addExact(out.amount,Math.multiplyExact(count,rate));
+                    out.amount=exactAdd(out.amount,exactMultiply(count,rate));
                 } else if(module.equals("distribution")) {
                     long qty=parseLong(p[1]);
                     if(qty<0) throw new IllegalArgumentException();
                     if(p.length>=7) {
                         long cash=parseLong(p[2]),bank=parseLong(p[3]),debt=parseLong(p[5]),diff=parseLong(p[6]);
                         if(cash<0||bank<0||debt<0||diff<0||(bank>0&&p[4].trim().isEmpty()))throw new IllegalArgumentException();
-                        out.cash=Math.addExact(out.cash,cash);out.bank=Math.addExact(out.bank,bank);out.debt=Math.addExact(out.debt,debt);out.diff=Math.addExact(out.diff,diff);
+                        out.cash=exactAdd(out.cash,cash);out.bank=exactAdd(out.bank,bank);out.debt=exactAdd(out.debt,debt);out.diff=exactAdd(out.diff,diff);
                     } else if(p.length>=6) {
                         long cash=parseLong(p[2]),debt=parseLong(p[3]),bank=parseLong(p[4]),diff=parseLong(p[5]);
                         if(cash<0||debt<0||bank<0||diff<0)throw new IllegalArgumentException();
-                        out.cash=Math.addExact(out.cash,cash);out.debt=Math.addExact(out.debt,debt);out.bank=Math.addExact(out.bank,bank);out.diff=Math.addExact(out.diff,diff);
+                        out.cash=exactAdd(out.cash,cash);out.debt=exactAdd(out.debt,debt);out.bank=exactAdd(out.bank,bank);out.diff=exactAdd(out.diff,diff);
                     } else if(p.length>=5) {
                         long cash=parseLong(p[2]),debt=parseLong(p[3]),diff=parseLong(p[4]);
                         if(cash<0||debt<0||diff<0)throw new IllegalArgumentException();
-                        out.cash=Math.addExact(out.cash,cash);out.debt=Math.addExact(out.debt,debt);out.diff=Math.addExact(out.diff,diff);
+                        out.cash=exactAdd(out.cash,cash);out.debt=exactAdd(out.debt,debt);out.diff=exactAdd(out.diff,diff);
                     } else {
                         long price=parseLong(p[2]), diff=parseLong(p[3]);
                         if(price<0||diff<0) throw new IllegalArgumentException();
-                        out.debt=Math.addExact(out.debt,price); out.diff=Math.addExact(out.diff,diff);
+                        out.debt=exactAdd(out.debt,price); out.diff=exactAdd(out.diff,diff);
                     }
-                    out.qty=Math.addExact(out.qty,qty);
+                    out.qty=exactAdd(out.qty,qty);
                 } else {
                     long amount=parseLong(p[1]); if(amount<0) throw new IllegalArgumentException();
-                    out.amount=Math.addExact(out.amount,amount);
+                    out.amount=exactAdd(out.amount,amount);
                 }
             } catch(Exception ex) { out.badRows++; }
         }
@@ -1302,7 +1333,7 @@ public class MainActivity extends Activity {
                 if(p.length<2) throw new IllegalArgumentException("اكتب رقم الجوال | عدد الأرغفة");
                 long number=parseLong(p[0].trim()), loaves=parseLong(p[1].trim());
                 if(number<1 || loaves<0) throw new IllegalArgumentException("راجع رقم الجوال وعدد الأرغفة");
-                total=Math.addExact(total,loaves);
+                total=exactAdd(total,loaves);
             }
             return total;
         }
@@ -1320,7 +1351,7 @@ public class MainActivity extends Activity {
     }
     private long wages() { return rowTotals("workers","rows",4).amount; }
     private long otherExpenses() { return rowTotals("expenses","rows",2).amount; }
-    private long expenseTotal() { return Math.addExact(Math.addExact(val("expenses","meals"),val("expenses","maintenance")),Math.addExact(val("expenses","purchases"),otherExpenses())); }
+    private long expenseTotal() { return exactAdd(exactAdd(val("expenses","meals"),val("expenses","maintenance")),exactAdd(val("expenses","purchases"),otherExpenses())); }
     private long spoilageValue() { return valueForLoaves(val("spoilage","loaves")); }
     private Totals distribution() { return rowTotals("distribution","rows",4); }
     private long productionValue() { return valueForLoaves(productionLoaves()); }
@@ -1328,7 +1359,7 @@ public class MainActivity extends Activity {
     // Profit uses actual recorded sales collections/receivables, not theoretical production value.
     // Stock purchase prices are stored separately from consumption costs to avoid mixing units.
     private long salesRevenue() {
-        return Math.addExact(Math.addExact(cashTotal(), debtTotal()), bankTotal());
+        return exactAdd(exactAdd(cashTotal(), debtTotal()), bankTotal());
     }
 
     // Spoilage is valued at estimated production cost per loaf, never at selling price.
@@ -1356,7 +1387,7 @@ public class MainActivity extends Activity {
             if(p.length<3) throw new IllegalArgumentException("راجع جدول المخزن: الصنف | الكمية والوحدة | سعر الوحدة");
             long price=parseLong(p[2].trim());
             if(price<0) throw new IllegalArgumentException("سعر الوحدة لا يمكن أن يكون سالبًا");
-            total=Math.addExact(total,price);
+            total=exactAdd(total,price);
         }
         return total;
     }
@@ -1375,7 +1406,7 @@ public class MainActivity extends Activity {
             if(p.length<4) continue;
             long consumption=parseLong(p[2].trim());
             long unitPrice=parseLong(p[3].trim());
-            total=Math.addExact(total,Math.multiplyExact(Math.multiplyExact(consumption,unitPrice),workUnits));
+            total=exactAdd(total,exactMultiply(exactMultiply(consumption,unitPrice),workUnits));
         }
         return total;
     }
@@ -1384,7 +1415,7 @@ public class MainActivity extends Activity {
         try {
             Totals dist=distribution();
             long windowCash=val("window","cash"), windowDebt=val("window","debt");
-            long windowBank=Math.subtractExact(bankTotal(),dist.bank);
+            long windowBank=exactSubtract(bankTotal(),dist.bank);
             long total=salesRevenue(), cost=costingTotal();
             long margin=BakeryMath.salesLessOperatingCost(total,cost);
             String message="تقرير هامش الربح الحقيقي — "+day+
@@ -1407,13 +1438,13 @@ public class MainActivity extends Activity {
         } catch(Exception ex) { toast("تعذر حساب هامش الربح. راجع التحصيل وكميات وأسعار مواد التشغيل."); }
     }
 
-    private long cashTotal() { Totals d=distribution(); return Math.addExact(val("window","cash"),d.cash); }
-    private long debtTotal() { Totals d=distribution(); return Math.addExact(val("window","debt"),d.debt); }
+    private long cashTotal() { Totals d=distribution(); return exactAdd(val("window","cash"),d.cash); }
+    private long debtTotal() { Totals d=distribution(); return exactAdd(val("window","debt"),d.debt); }
     private long bankTotal() {
         Totals d=distribution();JSONObject window=record("window");long windowBank=window.optLong("bank",0L);
         String raw=normalizeRows(window.optString("bank_transfers",""));
-        if(!raw.trim().isEmpty()){windowBank=0L;for(String line:raw.split("\\r?\\n")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);if(p.length<2||p[1].trim().isEmpty())throw new IllegalArgumentException("رقم عملية بنكك غير مكتمل");long n=parseLong(p[0].trim());if(n<0)throw new IllegalArgumentException("مبلغ بنكك سالب");windowBank=Math.addExact(windowBank,n);}}
-        return Math.addExact(windowBank,d.bank);
+        if(!raw.trim().isEmpty()){windowBank=0L;for(String line:raw.split("\\r?\\n")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);if(p.length<2||p[1].trim().isEmpty())throw new IllegalArgumentException("رقم عملية بنكك غير مكتمل");long n=parseLong(p[0].trim());if(n<0)throw new IllegalArgumentException("مبلغ بنكك سالب");windowBank=exactAdd(windowBank,n);}}
+        return exactAdd(windowBank,d.bank);
     }
     private long distributionDiff() { return distribution().diff; }
     private long accountedTotal() {
@@ -1423,7 +1454,7 @@ public class MainActivity extends Activity {
 
     private void showAccounts() {
         try {
-            long loaves=productionLoaves(), expected=productionValue(), actual=accountedTotal(), difference=Math.subtractExact(expected,actual);
+            long loaves=productionLoaves(), expected=productionValue(), actual=accountedTotal(), difference=exactSubtract(expected,actual);
             Totals dist=distribution(); int bad=rowTotals("workers","rows",4).badRows+dist.badRows+rowTotals("expenses","rows",2).badRows;
             boolean priceConfigured=val("cuts","loaves_per_1000")>0;
             boolean reconciliationValid=BakeryMath.isReconciliationValid(difference,bad,priceConfigured);
@@ -1493,7 +1524,7 @@ public class MainActivity extends Activity {
 
     private void backupRestoreMenu() {
         new AlertDialog.Builder(this).setTitle("نسخ احتياطي واستعادة")
-            .setMessage("أنشئ ملف JSON يحفظ سجلات المخبز وبيانات مصنع الخبائز والحلويات والباسطة. احتفظ به خارج الهاتف. الاستعادة تدمج السجلات وتحافظ على قاعدة المصنع المنفصلة.")
+            .setMessage("أنشئ ملف JSON يحفظ سجلات المخبز وبيانات المصنع. تنبيه: ملف النسخة الحالي غير مشفر؛ لا ترسله عبر قنوات عامة واحفظه في مكان آمن. الاستعادة تستبدل بيانات المصنع وتدمج سجلات المخبز.")
             .setNegativeButton("الرئيسية",(d,w)->buildHome())
             .setNeutralButton("استعادة نسخة",(d,w)->{
                 Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("application/json");
@@ -1532,7 +1563,7 @@ public class MainActivity extends Activity {
                     if(in==null) throw new IllegalStateException("تعذر فتح ملف النسخة");
                     java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
                     byte[] chunk=new byte[8192]; int n; long total=0;
-                    while((n=in.read(chunk))!=-1) { total+=n; if(total>25L*1024*1024) throw new IllegalArgumentException("حجم النسخة أكبر من 10 ميغابايت"); buffer.write(chunk,0,n); }
+                    while((n=in.read(chunk))!=-1) { total+=n; if(total>25L*1024*1024) throw new IllegalArgumentException("حجم النسخة أكبر من 25 ميغابايت"); buffer.write(chunk,0,n); }
                     bytes=buffer.toByteArray();
                 }
                 JSONArray imported=new JSONArray(new String(bytes,StandardCharsets.UTF_8));
@@ -1570,7 +1601,7 @@ public class MainActivity extends Activity {
             .setNegativeButton("إلغاء", null)
             .setPositiveButton("فتح صفحة التحديث", (dialog, which) -> {
                 try {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/tag/al-mizan-bakery-2.6.2-review"));
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases"));
                     startActivity(intent);
                 } catch (Exception ex) {
                     toast("تعذر فتح صفحة التحديث. تحقق من اتصال الإنترنت ثم أعد المحاولة.");
@@ -1773,7 +1804,7 @@ public class MainActivity extends Activity {
     private void toast(String s) { Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
 
     private class Store extends SQLiteOpenHelper {
-        Store(){super(MainActivity.this,"almizan_bakery_250.db",null,4);}
+        Store(){super(MainActivity.this,"almizan_bakery_250.db",SecureDatabase.passphrase(MainActivity.this,"almizan_bakery_250.db"),null,4,0,null,null,false);}
         @Override public void onCreate(SQLiteDatabase db) {
             db.execSQL("CREATE TABLE records (day TEXT NOT NULL, module TEXT NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(day,module))");
             db.execSQL("CREATE TABLE inventory_usage (day TEXT PRIMARY KEY NOT NULL, flour_bags INTEGER NOT NULL DEFAULT 0, material_usage TEXT NOT NULL DEFAULT '{}')");
@@ -1813,7 +1844,7 @@ public class MainActivity extends Activity {
                 String[] p=line.split("\\|",-1);
                 if(p.length==3) p=new String[]{p[0],p[1],(p[0].trim().contains("دقيق")?"1":"0"),p[2]};
                 if(p.length<4) throw new IllegalArgumentException("راجع أعمدة المخزون الأربعة");
-                long amount=Math.multiplyExact(parseLong(p[2].trim()),workUnits);
+                long amount=exactMultiply(parseLong(p[2].trim()),workUnits);
                 if(amount>0) usage.put(p[0].trim(),amount);
             }
             return usage;
@@ -1829,7 +1860,7 @@ public class MainActivity extends Activity {
                 String[] qp=p[1].trim().split("\\s+",2);
                 long qty=parseLong(qp[0]); String unit=qp.length>1?qp[1]:"وحدة";
                 long used=usage.optLong(name,0L);
-                long next=restore?Math.addExact(qty,used):Math.subtractExact(qty,used);
+                long next=restore?exactAdd(qty,used):exactSubtract(qty,used);
                 if(next<0) throw new IllegalStateException("الرصيد لا يكفي من الصنف: "+name+"؛ المطلوب "+used+" والمتاح "+qty);
                 if(out.length()>0) out.append("\n");
                 out.append(name).append(" | ").append(next).append(" ").append(unit).append(" | ").append(p[2].trim()).append(" | ").append(p[3].trim());
