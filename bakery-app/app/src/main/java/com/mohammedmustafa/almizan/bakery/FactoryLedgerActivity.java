@@ -84,9 +84,9 @@ public class FactoryLedgerActivity extends Activity {
         EditText ref=field("مرجع أمر التشغيل الفريد",false),product=field("اسم المنتج",false),batches=field("عدد الدفعات",false),planned=field("الكمية المخططة",true);
         body.addView(button("بدء أمر التشغيل وصرف الخامات",()->{try{long cost=startWip(ref.getText().toString().trim(),product.getText().toString().trim(),amount(batches),qty(planned));say("بدأ التشغيل. تكلفة الخامات "+cost+" جنيه");wip();}catch(Exception x){say("تعذر بدء التشغيل: "+x.getMessage());}}));
         EditText finishRef=field("مرجع الأمر الجاري",false),actual=field("الكمية المنتجة فعلياً",true),labor=field("أجور الأمر",false),over=field("تكاليف صناعية غير مباشرة",false);
-        body.addView(button("ترحيل مرحلة الإنتاج إلى مخزون المنتج التام",()->{try{long cost=finishWip(finishRef.getText().toString().trim(),qty(actual),amount(labor),amount(over));say("اكتمل الأمر. إجمالي التكلفة "+cost+" جنيه");wip();}catch(Exception x){say("تعذر إكمال الأمر: "+x.getMessage());}}));
+        body.addView(button("ترحيل مرحلة الإنتاج إلى مخزون المنتج التام",()->{try{long cost=finishWip(finishRef.getText().toString().trim(),qty(actual),amount(labor),amount(over));say("تم ترحيل مرحلة الإنتاج. تكلفة المرحلة "+cost+" جنيه");wip();}catch(Exception x){say("تعذر إكمال الأمر: "+x.getMessage());}}));
         EditText cancelRef=field("مرجع أمر التشغيل المراد إلغاؤه",false);
-        body.addView(button("إلغاء أمر غير مكتمل وإعادة الخامات للمخزن",()->{try{long cost=cancelWip(cancelRef.getText().toString().trim());say("ألغي الأمر وأعيدت خاماته بقيمة "+cost+" جنيه");wip();}catch(Exception x){say("تعذر إلغاء الأمر: "+x.getMessage());}}));
+        body.addView(button("إلغاء أمر لم تُرحّل منه أي مرحلة وإعادة الخامات للمخزن",()->{try{long cost=cancelWip(cancelRef.getText().toString().trim());say("ألغي الأمر وأعيدت خاماته بقيمة "+cost+" جنيه");wip();}catch(Exception x){say("تعذر إلغاء الأمر: "+x.getMessage());}}));
         rows("SELECT 'أمر '||w.work_ref||' — '||p.name||' — '||w.status||' — المنجز '||printf('%.3f',w.actual_qty/1000.0)||' من '||printf('%.3f',w.planned_qty/1000.0)||' — التكلفة المرحلة '||w.total_cost FROM work_orders w JOIN products p ON p.id=w.product_id ORDER BY w.id DESC");
     }
     private long startWip(String ref,String product,long batches,long planned){
