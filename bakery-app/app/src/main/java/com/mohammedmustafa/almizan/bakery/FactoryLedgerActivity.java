@@ -23,6 +23,7 @@ public class FactoryLedgerActivity extends Activity {
         db.execSQL("CREATE TABLE IF NOT EXISTS sales_returns(id INTEGER PRIMARY KEY,sale_id INTEGER NOT NULL,product_id INTEGER NOT NULL,qty INTEGER NOT NULL,refund_value INTEGER NOT NULL,refund_cash INTEGER NOT NULL,refund_bank INTEGER NOT NULL,credit_adjustment INTEGER NOT NULL,restored_cogs INTEGER NOT NULL,bank_ref TEXT,reason TEXT,date TEXT)");
         db.execSQL("CREATE TABLE IF NOT EXISTS work_orders(id INTEGER PRIMARY KEY,work_ref TEXT UNIQUE,product_id INTEGER NOT NULL,batches INTEGER NOT NULL,planned_qty INTEGER NOT NULL,actual_qty INTEGER NOT NULL DEFAULT 0,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL DEFAULT 0,overhead INTEGER NOT NULL DEFAULT 0,total_cost INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL,date TEXT)");
         db.execSQL("CREATE TABLE IF NOT EXISTS work_order_materials(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,material_id INTEGER NOT NULL,qty INTEGER NOT NULL,cost INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS work_order_stages(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,stage_no INTEGER NOT NULL,output_qty INTEGER NOT NULL,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL,overhead INTEGER NOT NULL,total_cost INTEGER NOT NULL,date TEXT,UNIQUE(work_order_id,stage_no))");
         db.execSQL("CREATE TABLE IF NOT EXISTS journal_entries(id INTEGER PRIMARY KEY,entry_ref TEXT UNIQUE,description TEXT,status TEXT NOT NULL,reversal_of INTEGER,date TEXT)");
         db.execSQL("CREATE TABLE IF NOT EXISTS journal_lines(id INTEGER PRIMARY KEY,entry_id INTEGER NOT NULL,account TEXT NOT NULL,debit INTEGER NOT NULL DEFAULT 0,credit INTEGER NOT NULL DEFAULT 0)");
     }
@@ -79,14 +80,14 @@ public class FactoryLedgerActivity extends Activity {
     }
     private void wip(){
         frame("الأعمال تحت التشغيل");
-        body.addView(label("يحوّل أمر التشغيل الخامات المصروفة إلى أصل تحت التشغيل. عند الإكمال تضاف تكلفة العمالة والتكاليف الصناعية، ثم يحول إجمالي التكلفة إلى مخزون الإنتاج التام.",14));
+        body.addView(label("يحوّل أمر التشغيل الخامات المصروفة إلى أعمال تحت التشغيل. يمكنك إكمال الإنتاج على مراحل؛ كل مرحلة تضيف الكمية والأجور والتكاليف وتحول تكلفتها إلى مخزون الإنتاج التام، ويظل رصيد الأمر المتبقي تحت التشغيل.",14));
         EditText ref=field("مرجع أمر التشغيل الفريد",false),product=field("اسم المنتج",false),batches=field("عدد الدفعات",false),planned=field("الكمية المخططة",true);
         body.addView(button("بدء أمر التشغيل وصرف الخامات",()->{try{long cost=startWip(ref.getText().toString().trim(),product.getText().toString().trim(),amount(batches),qty(planned));say("بدأ التشغيل. تكلفة الخامات "+cost+" جنيه");wip();}catch(Exception x){say("تعذر بدء التشغيل: "+x.getMessage());}}));
         EditText finishRef=field("مرجع الأمر الجاري",false),actual=field("الكمية المنتجة فعلياً",true),labor=field("أجور الأمر",false),over=field("تكاليف صناعية غير مباشرة",false);
-        body.addView(button("إكمال الأمر وتحويله إلى مخزون تام",()->{try{long cost=finishWip(finishRef.getText().toString().trim(),qty(actual),amount(labor),amount(over));say("اكتمل الأمر. إجمالي التكلفة "+cost+" جنيه");wip();}catch(Exception x){say("تعذر إكمال الأمر: "+x.getMessage());}}));
+        body.addView(button("ترحيل مرحلة الإنتاج إلى مخزون المنتج التام",()->{try{long cost=finishWip(finishRef.getText().toString().trim(),qty(actual),amount(labor),amount(over));say("اكتمل الأمر. إجمالي التكلفة "+cost+" جنيه");wip();}catch(Exception x){say("تعذر إكمال الأمر: "+x.getMessage());}}));
         EditText cancelRef=field("مرجع أمر التشغيل المراد إلغاؤه",false);
         body.addView(button("إلغاء أمر غير مكتمل وإعادة الخامات للمخزن",()->{try{long cost=cancelWip(cancelRef.getText().toString().trim());say("ألغي الأمر وأعيدت خاماته بقيمة "+cost+" جنيه");wip();}catch(Exception x){say("تعذر إلغاء الأمر: "+x.getMessage());}}));
-        rows("SELECT 'أمر '||w.work_ref||' — '||p.name||' — '||w.status||' — تكلفة الخامات '||w.material_cost FROM work_orders w JOIN products p ON p.id=w.product_id ORDER BY w.id DESC");
+        rows("SELECT 'أمر '||w.work_ref||' — '||p.name||' — '||w.status||' — المنجز '||printf('%.3f',w.actual_qty/1000.0)||' من '||printf('%.3f',w.planned_qty/1000.0)||' — التكلفة المرحلة '||w.total_cost FROM work_orders w JOIN products p ON p.id=w.product_id ORDER BY w.id DESC");
     }
     private long startWip(String ref,String product,long batches,long planned){
         if(ref.isEmpty()||batches<=0||planned<=0)throw new IllegalArgumentException("أكمل بيانات الأمر");
@@ -106,20 +107,32 @@ public class FactoryLedgerActivity extends Activity {
         }finally{db.endTransaction();}
     }
     private long finishWip(String ref,long actual,long labor,long overhead){
-        if(ref.isEmpty()||actual<=0||labor<0||overhead<0)throw new IllegalArgumentException("بيانات الإكمال غير صحيحة");
+        if(ref.isEmpty()||actual<=0||labor<0||overhead<0)throw new IllegalArgumentException("بيانات المرحلة غير صحيحة");
         db.beginTransaction();try{
-            Cursor c=db.rawQuery("SELECT id,product_id,planned_qty,material_cost,status FROM work_orders WHERE work_ref=?",new String[]{ref});if(!c.moveToFirst()){c.close();throw new IllegalArgumentException("الأمر غير موجود");}
-            long id=c.getLong(0),pid=c.getLong(1),planned=c.getLong(2),materials=c.getLong(3);String status=c.getString(4);c.close();
-            if(!"IN_PROGRESS".equals(status)||actual!=planned)throw new IllegalArgumentException("أكمل الكمية المخططة بالكامل؛ عدّل الكمية المخططة لتطابق الناتج الفعلي قبل بدء الأمر");
-            long total=FactoryMath.workInProgressCost(materials,labor,overhead);
+            Cursor c=db.rawQuery("SELECT id,product_id,planned_qty,material_cost,status,actual_qty,labor,overhead,total_cost FROM work_orders WHERE work_ref=?",new String[]{ref});
+            if(!c.moveToFirst()){c.close();throw new IllegalArgumentException("الأمر غير موجود");}
+            long id=c.getLong(0),pid=c.getLong(1),planned=c.getLong(2),materials=c.getLong(3),previousQty=c.getLong(5),previousLabor=c.getLong(6),previousOverhead=c.getLong(7),previousCost=c.getLong(8);
+            String status=c.getString(4);c.close();
+            if(!"IN_PROGRESS".equals(status)&&!"PARTIAL".equals(status))throw new IllegalArgumentException("الأمر ليس قيد التشغيل");
+            if(actual>planned-previousQty)throw new IllegalArgumentException("كمية المرحلة تتجاوز الكمية المتبقية في الأمر");
+            long cumulativeQty=FactoryMath.add(previousQty,actual);
+            long cumulativeMaterialCost=FactoryMath.proportionalReturnValue(materials,cumulativeQty,planned);
+            long previousMaterialCost=previousQty==0?0:FactoryMath.proportionalReturnValue(materials,previousQty,planned);
+            long stageMaterialCost=cumulativeMaterialCost-previousMaterialCost;
+            long stageCost=FactoryMath.workInProgressCost(stageMaterialCost,labor,overhead);
+            long cumulativeCost=FactoryMath.add(previousCost,stageCost);
             Cursor f=db.rawQuery("SELECT qty,value FROM finished WHERE product_id=?",new String[]{""+pid});long oldQ=0,oldV=0;if(f.moveToFirst()){oldQ=f.getLong(0);oldV=f.getLong(1);}f.close();
-            ContentValues v=new ContentValues();v.put("product_id",pid);v.put("qty",FactoryMath.add(oldQ,actual));v.put("value",FactoryMath.add(oldV,total));v.put("unit_cost",FactoryMath.weightedAverageUnitCost(oldQ,oldV,actual,total));db.insertWithOnConflict("finished",null,v,SQLiteDatabase.CONFLICT_REPLACE);
-            ContentValues w=new ContentValues();w.put("actual_qty",actual);w.put("labor",labor);w.put("overhead",overhead);w.put("total_cost",total);w.put("status","COMPLETED");db.update("work_orders",w,"id=?",new String[]{""+id});
-            long addedCost=FactoryMath.add(labor,overhead);if(addedCost>0)journal("WIP-COST-"+id,"إضافة أجور وتكاليف أمر التشغيل "+ref,"أعمال تحت التشغيل","أجور وتكاليف مستحقة",addedCost);
-            journal("WIP-COMPLETE-"+id,"تحويل أمر "+ref+" إلى إنتاج تام","مخزون الإنتاج التام","أعمال تحت التشغيل",total);
-            db.execSQL("INSERT INTO movements(kind,item_id,qty,value,ref,date) VALUES('WIP_FINISHED',?,?,?,?,?)",new Object[]{pid,actual,total,ref,today()});
-            db.execSQL("INSERT INTO audit(action,detail,date) VALUES('WIP_COMPLETED',?,date('now'))",new Object[]{ref+":"+actual+":"+total});
-            db.setTransactionSuccessful();return total;
+            ContentValues v=new ContentValues();v.put("product_id",pid);v.put("qty",FactoryMath.add(oldQ,actual));v.put("value",FactoryMath.add(oldV,stageCost));v.put("unit_cost",FactoryMath.weightedAverageUnitCost(oldQ,oldV,actual,stageCost));db.insertWithOnConflict("finished",null,v,SQLiteDatabase.CONFLICT_REPLACE);
+            long stageNo;Cursor sn=db.rawQuery("SELECT COALESCE(MAX(stage_no),0)+1 FROM work_order_stages WHERE work_order_id=?",new String[]{""+id});sn.moveToFirst();stageNo=sn.getLong(0);sn.close();
+            db.execSQL("INSERT INTO work_order_stages(work_order_id,stage_no,output_qty,material_cost,labor,overhead,total_cost,date) VALUES(?,?,?,?,?,?,?,?)",new Object[]{id,stageNo,actual,stageMaterialCost,labor,overhead,stageCost,today()});
+            String nextStatus=cumulativeQty==planned?"COMPLETED":"PARTIAL";
+            ContentValues w=new ContentValues();w.put("actual_qty",cumulativeQty);w.put("labor",FactoryMath.add(previousLabor,labor));w.put("overhead",FactoryMath.add(previousOverhead,overhead));w.put("total_cost",cumulativeCost);w.put("status",nextStatus);db.update("work_orders",w,"id=?",new String[]{""+id});
+            if(labor>0)journal("WIP-STAGE-LABOR-"+id+"-"+stageNo,"أجور مرحلة أمر التشغيل "+ref,"أعمال تحت التشغيل","أجور مستحقة",labor);
+            if(overhead>0)journal("WIP-STAGE-OVERHEAD-"+id+"-"+stageNo,"تكاليف مرحلة أمر التشغيل "+ref,"أعمال تحت التشغيل","تكاليف صناعية مستحقة",overhead);
+            journal("WIP-STAGE-TRANSFER-"+id+"-"+stageNo,"تحويل إنتاج المرحلة "+stageNo+" من أمر "+ref,"مخزون الإنتاج التام","أعمال تحت التشغيل",stageCost);
+            db.execSQL("INSERT INTO movements(kind,item_id,qty,value,ref,date) VALUES('WIP_STAGE_FINISHED',?,?,?,?,?)",new Object[]{pid,actual,stageCost,ref+"#"+stageNo,today()});
+            db.execSQL("INSERT INTO audit(action,detail,date) VALUES('WIP_STAGE_COMPLETED',?,date('now'))",new Object[]{ref+":"+stageNo+":"+actual+":"+stageCost+":"+nextStatus});
+            db.setTransactionSuccessful();return stageCost;
         }finally{db.endTransaction();}
     }
     private long cancelWip(String ref){
