@@ -25,7 +25,7 @@ public class EnterpriseSchemaMigrationTest {
             Cursor old=db.rawQuery("SELECT payload FROM records WHERE day='2026-11-06' AND module='stock'",null);
             try { assertTrue(old.moveToFirst()); assertEquals("KEEP_EXISTING_STOCK",old.getString(0)); }
             finally { old.close(); }
-            String[] required={"company_settings","countries","currencies","exchange_rates","branches","users","roles","permissions","suppliers","purchase_invoices","purchase_lines","supplier_payments","employees","payroll_periods","payroll_items","fixed_assets","depreciation_entries","sync_outbox"};
+            String[] required={"company_settings","countries","currencies","exchange_rates","branches","users","roles","permissions","suppliers","purchase_invoices","purchase_lines","supplier_payments","employees","payroll_periods","payroll_items","fixed_assets","depreciation_entries","sync_outbox","tax_rules","financial_periods","chart_of_accounts","gl_journal_entries","gl_journal_lines","idempotency_keys"};
             for(String table:required) {
                 Cursor exists=db.rawQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",new String[]{table});
                 try { assertTrue("Missing table "+table,exists.moveToFirst()&&exists.getInt(0)==1); }
