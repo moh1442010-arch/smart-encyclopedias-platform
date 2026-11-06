@@ -122,7 +122,7 @@ final class SecureDatabase {
     }
 
     private static void copyTable(android.database.sqlite.SQLiteDatabase source,SQLiteDatabase target,String table){
-        String q="\""+table.replace("\"","\\"")+"\"";
+        String q="["+table.replace("]","]]")+"]";
         Cursor info=source.rawQuery("PRAGMA table_info("+q+")",null);ArrayList<String> cols=new ArrayList<>();
         try{while(info.moveToNext())cols.add(info.getString(1));}finally{info.close();}
         Cursor rows=source.rawQuery("SELECT * FROM "+q,null);
@@ -136,11 +136,11 @@ final class SecureDatabase {
     }
 
     private static long count(android.database.sqlite.SQLiteDatabase db,String table){
-        Cursor c=db.rawQuery("SELECT COUNT(*) FROM \""+table.replace("\"","\\"")+"\"",null);
+        Cursor c=db.rawQuery("SELECT COUNT(*) FROM ["+table.replace("]","]]")+"]",null);
         try{return c.moveToFirst()?c.getLong(0):-1;}finally{c.close();}
     }
     private static long count(SQLiteDatabase db,String table){
-        Cursor c=db.rawQuery("SELECT COUNT(*) FROM \""+table.replace("\"","\\"")+"\"",null);
+        Cursor c=db.rawQuery("SELECT COUNT(*) FROM ["+table.replace("]","]]")+"]",null);
         try{return c.moveToFirst()?c.getLong(0):-1;}finally{c.close();}
     }
 }
