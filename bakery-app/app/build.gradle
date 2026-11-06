@@ -16,8 +16,8 @@ android {
     testOptions { unitTests.includeAndroidResources = true }
 }
 dependencies {
-    implementation 'net.zetetic:sqlcipher-android:4.6.1@aar'
-    implementation 'androidx.sqlite:sqlite:2.2.0'
+    implementation 'net.zetetic:sqlcipher-android:4.19.1@aar'
+    implementation 'androidx.sqlite:sqlite:2.7.0'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test:runner:1.6.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
