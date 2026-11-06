@@ -38,14 +38,13 @@ final class SecureDatabase {
                 SharedPreferences prefs=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE);
                 String stored=prefs.getString(WRAPPED_KEY,null);
                 byte[] key;
-                if(stored==null){key=new byte[32];new SecureRandom().nextBytes(key);}
-                else key=unwrap(context,Base64.decode(stored,Base64.NO_WRAP));
-                File dbFile=context.getDatabasePath(name);
-                if(dbFile.exists()&&dbFile.length()>0&&!isEncrypted(dbFile,key))migratePlaintext(dbFile,key);
                 if(stored==null){
+                    key=new byte[32];new SecureRandom().nextBytes(key);
                     String blob=Base64.encodeToString(wrap(context,key),Base64.NO_WRAP);
                     if(!prefs.edit().putString(WRAPPED_KEY,blob).commit())throw new IllegalStateException("Cannot persist wrapped SQLCipher key");
-                }
+                } else key=unwrap(context,Base64.decode(stored,Base64.NO_WRAP));
+                File dbFile=context.getDatabasePath(name);
+                if(dbFile.exists()&&dbFile.length()>0&&!isEncrypted(dbFile,key))migratePlaintext(dbFile,key);
                 return key.clone();
             }catch(Exception e){
                 throw new IllegalStateException("تعذر فتح قاعدة البيانات المشفرة أو ترحيل القاعدة القديمة بأمان. لم يتم حذف الأصل.",e);
@@ -100,7 +99,7 @@ final class SecureDatabase {
         List<String> objects=new ArrayList<>(),tables=new ArrayList<>();
         try{
             source=android.database.sqlite.SQLiteDatabase.openDatabase(original.getAbsolutePath(),null,android.database.sqlite.SQLiteDatabase.OPEN_READWRITE);
-            source.execSQL("PRAGMA wal_checkpoint(FULL)");
+            Cursor checkpoint=source.rawQuery("PRAGMA wal_checkpoint(FULL)",null);checkpoint.close();
             Cursor schema=source.rawQuery("SELECT type,name,sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'index' THEN 1 WHEN 'trigger' THEN 2 ELSE 3 END",null);
             try{while(schema.moveToNext()){String type=schema.getString(0),sql=schema.getString(2);if("table".equals(type))tables.add(schema.getString(1));objects.add(type+"\n"+sql);}}finally{schema.close();}
             target=SQLiteDatabase.openOrCreateDatabase(temp,key,null,null);
