@@ -4,7 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.content.ContentValues;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
+import net.zetetic.database.sqlcipher.SQLiteDatabase;
 import android.graphics.Color;
 import android.view.Gravity;
 import android.view.View;
@@ -17,7 +17,7 @@ public class FactoryLedgerActivity extends Activity {
     private LinearLayout body;
     private static final int GOLD=Color.rgb(212,175,55);
     private String today(){return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());}
-    @Override public void onCreate(Bundle b){super.onCreate(b);db=openOrCreateDatabase("almizan_factory_1.db",MODE_PRIVATE,null);schema();home();}
+    @Override public void onCreate(Bundle b){super.onCreate(b);db=SecureDatabase.open(this,"almizan_factory_1.db");schema();home();}
     @Override protected void onDestroy(){if(db!=null&&db.isOpen())db.close();super.onDestroy();}
     private void schema(){
         db.execSQL("CREATE TABLE IF NOT EXISTS sales_returns(id INTEGER PRIMARY KEY,sale_id INTEGER NOT NULL,product_id INTEGER NOT NULL,qty INTEGER NOT NULL,refund_value INTEGER NOT NULL,refund_cash INTEGER NOT NULL,refund_bank INTEGER NOT NULL,credit_adjustment INTEGER NOT NULL,restored_cogs INTEGER NOT NULL,bank_ref TEXT,reason TEXT,date TEXT)");
