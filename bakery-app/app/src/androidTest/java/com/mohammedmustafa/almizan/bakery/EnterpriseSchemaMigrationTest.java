@@ -34,6 +34,12 @@ public class EnterpriseSchemaMigrationTest {
             Cursor currency=db.rawQuery("SELECT base_currency,country_code FROM company_settings WHERE id=1",null);
             try { assertTrue(currency.moveToFirst());assertEquals("SDG",currency.getString(0));assertEquals("SD",currency.getString(1)); }
             finally { currency.close(); }
+            Cursor fk=db.rawQuery("PRAGMA foreign_keys",null);
+            try { assertTrue(fk.moveToFirst());assertEquals(1,fk.getInt(0)); } finally { fk.close(); }
+            boolean orphanRejected=false;
+            try { db.execSQL("INSERT INTO supplier_payments(supplier_id,payment_date,amount_minor,currency_code,method,branch_id,journal_ref,created_at) VALUES(999,'2026-11-06',100,'SDG','CASH',1,'TEST-ORPHAN',1)"); }
+            catch(RuntimeException expected) { orphanRejected=true; }
+            assertTrue("Foreign key must reject orphan supplier payment",orphanRejected);
         } finally {
             db.close();
             context.deleteDatabase(name);
