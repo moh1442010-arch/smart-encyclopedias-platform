@@ -150,7 +150,7 @@ public class FactoryActivity extends Activity {
         list("SELECT 'مديونيات العملاء المتبقية: '||(COALESCE((SELECT SUM(debt) FROM sales),0)-COALESCE((SELECT SUM(cash+bank) FROM collections),0)-COALESCE((SELECT SUM(credit_adjustment) FROM sales_returns),0))||' جنيه'");
         list("SELECT 'قيمة مخزون المواد الخام: '||COALESCE(SUM(value),0)||' جنيه' FROM materials");
         list("SELECT 'قيمة مخزون الإنتاج التام: '||COALESCE(SUM(value),0)||' جنيه' FROM finished");
-        list("SELECT 'قيمة المواد المتبقية تحت التشغيل: '||COALESCE(SUM(material_cost-ROUND(material_cost*actual_qty*1.0/planned_qty)),0)||' جنيه' FROM work_orders WHERE status IN ('IN_PROGRESS','PARTIAL')");
+        list("SELECT 'قيمة الأعمال المتبقية تحت التشغيل (خامات وأجور وتكاليف صناعية): '||COALESCE(SUM(material_cost+labor+overhead-total_cost),0)||' جنيه' FROM work_orders WHERE status IN ('IN_PROGRESS','PARTIAL')");
         body.addView(label("ثالثاً — تفاصيل الإنتاج والمخزون",18));
         list("SELECT 'عدد أوامر التشغيل المكتملة: '||COUNT(*) FROM work_orders WHERE status='COMPLETED'");
         list("SELECT 'عدد أوامر التشغيل الجارية: '||COUNT(*) FROM work_orders WHERE status='IN_PROGRESS'");
