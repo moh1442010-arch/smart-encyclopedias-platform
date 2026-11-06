@@ -265,6 +265,15 @@ public class MainActivity extends Activity {
         return token != null && verifyLicenseToken(token);
     }
 
+    private boolean isCompatibleLifetimeVersion(String licensedVersion) {
+        if ("2.6.15".equals(licensedVersion)) return true;
+        String[] oldParts=licensedVersion.split("\\.");
+        String[] currentParts=BuildConfig.VERSION_NAME.split("\\.");
+        return oldParts.length==3 && currentParts.length==3 &&
+            oldParts[0].equals(currentParts[0]) && oldParts[1].equals(currentParts[1]) &&
+            oldParts[2].matches("[0-9]+");
+    }
+
     private boolean verifyLicenseToken(String token) {
         try {
             String[] parts = token.trim().split("\\.", -1);
