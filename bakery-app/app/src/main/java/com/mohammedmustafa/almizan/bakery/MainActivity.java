@@ -1819,9 +1819,7 @@ public class MainActivity extends Activity {
             if (oldVersion < 4) {
                 try { db.execSQL("ALTER TABLE inventory_usage ADD COLUMN material_usage TEXT NOT NULL DEFAULT '{}'"); } catch (Exception ignored) { }
             }
-            if (oldVersion < 5) {
-                EnterpriseSchema.ensure(db);
-            }
+            EnterpriseSchema.ensure(db);
         }
         JSONObject get(String date,String module) {
             SQLiteDatabase db=getReadableDatabase(); Cursor c=db.rawQuery("SELECT payload FROM records WHERE day=? AND module=?",new String[]{date,module});
