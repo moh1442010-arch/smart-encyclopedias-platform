@@ -20,7 +20,7 @@ public final class LicenseAccessGate {
         "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvsK66CYxt4X7R9GcVaJ0FjrheMAkFpzbirdz7/X/lj8UAuqUabNOPN3R5dGuZro90i+raIyngTz+VxRxLcNPRQru4VzWIDLsoBEwi/CrsOaMJFgVLom7jYXFjQ5P25TO5hRxzPN8ZOOG1MTo8j6ipgPOKY5be6Gmsj8R03SbulYnVO8STWC4bSkqwvV9YlEIpZwnyAJVbWHbE4JSKiCC/TMOcfrBgGG0W7qCJeEjnUKPfHAtH85ayZjBQwMIQx+z1CoTFWrqKXywSWN65G7yZbHwsnREovRprxjyVHqmTtLd45VyNQU2zXBKchzkwnpiG1zeD8kfdDeACeaAmxbsiwIDAQAB"
     };
     private static SharedPreferences prefs(Context c) {
-        return c.getSharedPreferences("MainActivity_preferences", Context.MODE_PRIVATE);
+        return c.getSharedPreferences("MainActivity", Context.MODE_PRIVATE);
     }
     private static boolean compatibleLifetimeVersion(String licensedVersion) {
         if ("2.6.15".equals(licensedVersion)) return true;
