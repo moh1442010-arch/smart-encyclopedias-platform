@@ -18,6 +18,9 @@ public class SecureDatabaseMigrationTest {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String name="legacy_migration_"+System.currentTimeMillis()+".db";
         File file=context.getDatabasePath(name);
+        File parent=file.getParentFile();
+        assertNotNull(parent);
+        if(!parent.exists())assertTrue(parent.mkdirs());
         if(file.exists())assertTrue(file.delete());
         android.database.sqlite.SQLiteDatabase legacy=android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(file,null);
         legacy.execSQL("CREATE TABLE records(day TEXT,module TEXT,payload TEXT,updated_at INTEGER,PRIMARY KEY(day,module))");
