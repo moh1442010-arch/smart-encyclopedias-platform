@@ -33,6 +33,9 @@ public class FactoryMathTest {
  @Test public void calculatesReturnedCostAtOriginalCogs(){assertEquals(2000L,FactoryMath.proportionalReturnValue(8000L,250L,1000L));}
  @Test public void tracksRemainingReturnableQuantity(){assertEquals(500L,FactoryMath.returnableQuantity(1000L,250L,250L));}
  @Test(expected=IllegalArgumentException.class) public void rejectsReturnsAboveOriginalSaleQuantity(){FactoryMath.returnableQuantity(1000L,700L,301L);}
+ @Test public void allocatesPartialWipMaterialCostAcrossStagesWithoutRoundingDrift(){long first=FactoryMath.incrementalWipMaterialCost(10001L,333L,0L,1000L);long second=FactoryMath.incrementalWipMaterialCost(10001L,777L,333L,1000L);long finalStage=FactoryMath.incrementalWipMaterialCost(10001L,1000L,777L,1000L);assertEquals(10001L,first+second+finalStage);}
+ @Test public void leavesUncompletedWipMaterialCostInWorkInProgress(){long allocated=FactoryMath.incrementalWipMaterialCost(9000L,400L,0L,1000L);assertEquals(3600L,allocated);assertEquals(5400L,9000L-allocated);}
+ @Test(expected=IllegalArgumentException.class) public void rejectsPartialWipOutputAbovePlan(){FactoryMath.incrementalWipMaterialCost(1000L,1100L,0L,1000L);}
  @Test public void accumulatesWorkInProgressCost(){assertEquals(17500L,FactoryMath.workInProgressCost(10000L,5000L,2500L));}
  @Test public void calculatesWorkInProgressUnitCost(){assertEquals(3500000L,FactoryMath.workInProgressUnitCost(17500L,5000L));}
  @Test public void acceptsBalancedJournal(){assertTrue(FactoryMath.journalIsBalanced(15000L,15000L));}
