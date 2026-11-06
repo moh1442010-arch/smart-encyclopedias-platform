@@ -1524,7 +1524,7 @@ public class MainActivity extends Activity {
 
     private void backupRestoreMenu() {
         new AlertDialog.Builder(this).setTitle("نسخ احتياطي واستعادة")
-            .setMessage("أنشئ ملف JSON يحفظ سجلات المخبز وبيانات مصنع الخبائز والحلويات والباسطة. احتفظ به خارج الهاتف. الاستعادة تدمج السجلات وتحافظ على قاعدة المصنع المنفصلة.")
+            .setMessage("أنشئ ملف JSON يحفظ سجلات المخبز وبيانات المصنع. تنبيه: ملف النسخة الحالي غير مشفر؛ لا ترسله عبر قنوات عامة واحفظه في مكان آمن. الاستعادة تستبدل بيانات المصنع وتدمج سجلات المخبز.")
             .setNegativeButton("الرئيسية",(d,w)->buildHome())
             .setNeutralButton("استعادة نسخة",(d,w)->{
                 Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("application/json");
@@ -1563,7 +1563,7 @@ public class MainActivity extends Activity {
                     if(in==null) throw new IllegalStateException("تعذر فتح ملف النسخة");
                     java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
                     byte[] chunk=new byte[8192]; int n; long total=0;
-                    while((n=in.read(chunk))!=-1) { total+=n; if(total>25L*1024*1024) throw new IllegalArgumentException("حجم النسخة أكبر من 10 ميغابايت"); buffer.write(chunk,0,n); }
+                    while((n=in.read(chunk))!=-1) { total+=n; if(total>25L*1024*1024) throw new IllegalArgumentException("حجم النسخة أكبر من 25 ميغابايت"); buffer.write(chunk,0,n); }
                     bytes=buffer.toByteArray();
                 }
                 JSONArray imported=new JSONArray(new String(bytes,StandardCharsets.UTF_8));
@@ -1601,7 +1601,7 @@ public class MainActivity extends Activity {
             .setNegativeButton("إلغاء", null)
             .setPositiveButton("فتح صفحة التحديث", (dialog, which) -> {
                 try {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/tag/al-mizan-bakery-2.6.2-review"));
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases"));
                     startActivity(intent);
                 } catch (Exception ex) {
                     toast("تعذر فتح صفحة التحديث. تحقق من اتصال الإنترنت ثم أعد المحاولة.");
