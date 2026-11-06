@@ -17,7 +17,9 @@ public class FactoryActivity extends Activity {
     private static final String[][] DEFAULT_MATERIALS={{"دقيق","كجم"},{"سكر","كجم"},{"زيت","لتر"},{"خميرة","كجم"},{"سمن","كجم"},{"بيض","طبق"},{"لبن","لتر"},{"مواد تغليف","قطعة"},{"غاز","أسطوانة"},{"وقود","لتر"}};
     private static final String[][] DEFAULT_PRODUCTS={{"باسطة","باسطة"},{"فطائر","فطائر"},{"خبائز","خبائز"},{"حلويات","حلويات"},{"بلح شام","بلح شام"}};
     private String today(){return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());}
-    @Override public void onCreate(Bundle b){super.onCreate(b); db=new DB(this); db.seedMaterials(DEFAULT_MATERIALS); db.seedProducts(DEFAULT_PRODUCTS); home();}
+    private boolean enforceEntitlement(){if(LicenseAccessGate.isAccessAllowed(this))return true; Toast.makeText(this,"انتهت التجربة أو لا يوجد ترخيص ساري. بياناتك محفوظة؛ يرجى التفعيل للمتابعة.",Toast.LENGTH_LONG).show(); finish(); startActivity(new Intent(this,MainActivity.class)); return false;}
+    @Override public void onCreate(Bundle b){super.onCreate(b); if(!enforceEntitlement())return; db=new DB(this); db.seedMaterials(DEFAULT_MATERIALS); db.seedProducts(DEFAULT_PRODUCTS); home();}
+    @Override protected void onResume(){super.onResume(); if(db!=null&&!enforceEntitlement())return;}
     @Override public void onBackPressed(){if("home".equals(screen))super.onBackPressed();else home();}
     private TextView label(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(Color.rgb(30,40,50));t.setPadding(4,10,4,10);return t;}
     private Button btn(String s,Runnable r){Button b=new Button(this);b.setText(s);b.setOnClickListener(v->r.run());return b;}
