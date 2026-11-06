@@ -623,6 +623,12 @@ public class MainActivity extends Activity {
         row.addView(tile,lp);
     }
 
+    private boolean requireActiveEntitlement() {
+        if (hasActiveLicense() || !trialExpired()) return true;
+        showPaywall();
+        return false;
+    }
+
     private void addCard(String title, String description, Runnable action) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
@@ -637,7 +643,7 @@ public class MainActivity extends Activity {
         desc.setTextColor(Color.rgb(78,89,105));
         card.addView(desc);
         Button open = button("فتح القسم  ←");
-        open.setOnClickListener(v->action.run());
+        open.setOnClickListener(v->{ if(requireActiveEntitlement()) action.run(); });
         card.addView(open);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1,-2);
         lp.setMargins(0,7,0,7);
@@ -1108,7 +1114,7 @@ public class MainActivity extends Activity {
     }
 
     private void openModule(String module) {
-        if (!hasActiveLicense() && trialExpired()) { showPaywall(); return; }
+        if (!requireActiveEntitlement()) return;
         if (module.equals("cuts")) { openCutsTable(); return; }
         if (module.equals("distribution")) { openDistributionTable(); return; }
         if (module.equals("workers")) { openWorkersTable(); return; }
@@ -1438,6 +1444,7 @@ public class MainActivity extends Activity {
     }
 
     private void showCosting() {
+        if (!requireActiveEntitlement()) return;
         try {
             Totals dist=distribution();
             long windowCash=val("window","cash"), windowDebt=val("window","debt");
@@ -1479,6 +1486,7 @@ public class MainActivity extends Activity {
     private String fmt(long n) { return String.format(Locale.US,"%,d",n); }
 
     private void showAccounts() {
+        if (!requireActiveEntitlement()) return;
         try {
             long loaves=productionLoaves(), expected=productionValue(), actual=accountedTotal(), difference=exactSubtract(expected,actual);
             Totals dist=distribution(); int bad=rowTotals("workers","rows",4).badRows+dist.badRows+rowTotals("expenses","rows",2).badRows;
