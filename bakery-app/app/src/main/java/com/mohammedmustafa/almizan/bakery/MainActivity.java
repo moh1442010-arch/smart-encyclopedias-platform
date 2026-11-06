@@ -2054,35 +2054,36 @@ public class MainActivity extends Activity {
             } finally { u.close(); }
             return result;
         }
-        int restoreAll(JSONArray rows) throws Exception {
+        int restoreAll(JSONArray rows) throws Exception { return applyBackupRows(rows,false); }
+        int replaceAll(JSONArray rows) throws Exception { return applyBackupRows(rows,true); }
+
+        private int applyBackupRows(JSONArray rows,boolean replace) throws Exception {
             java.util.ArrayList<ContentValues> prepared=new java.util.ArrayList<>();
             java.util.HashSet<String> allowed=new java.util.HashSet<>(java.util.Arrays.asList("stock","cuts","workers","window","distribution","expenses","spoilage","costing","accounting","inventory_usage","customers"));
             for(int i=0;i<rows.length();i++) {
-                JSONObject row=rows.getJSONObject(i); String date=row.getString("day"), module=row.getString("module");
-                if(!BakeryDataValidation.isValidIsoDate(date) || !allowed.contains(module)) throw new IllegalArgumentException("Invalid backup record date or module");
+                JSONObject row=rows.getJSONObject(i);String date=row.getString("day"),module=row.getString("module");
+                if(!BakeryDataValidation.isValidIsoDate(date)||!allowed.contains(module))throw new IllegalArgumentException("Invalid backup record date or module");
                 JSONObject payload=row.getJSONObject("payload");
-                if ("inventory_usage".equals(module)) {
-                    if (!payload.has("flour_bags")) throw new IllegalArgumentException("Backup inventory usage is missing flour_bags");
-                    BakeryDataValidation.requireNonNegative(payload.getLong("flour_bags"), "inventory_usage.flour_bags");
+                if("inventory_usage".equals(module)){
+                    if(!payload.has("flour_bags"))throw new IllegalArgumentException("Backup inventory usage is missing flour_bags");
+                    BakeryDataValidation.requireNonNegative(payload.getLong("flour_bags"),"inventory_usage.flour_bags");
                 }
-                ContentValues cv=new ContentValues(); cv.put("day",date); cv.put("module",module); cv.put("payload",payload.toString());
-                cv.put("updated_at",row.optLong("updated_at",System.currentTimeMillis())); prepared.add(cv);
+                ContentValues cv=new ContentValues();cv.put("day",date);cv.put("module",module);cv.put("payload",payload.toString());
+                cv.put("updated_at",row.optLong("updated_at",System.currentTimeMillis()));prepared.add(cv);
             }
-            SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
+            SQLiteDatabase db=getWritableDatabase();db.beginTransaction();
             try {
-                for(ContentValues cv:prepared) {
-                    if ("inventory_usage".equals(cv.getAsString("module"))) {
+                if(replace){db.delete("records",null,null);db.delete("inventory_usage",null,null);}
+                for(ContentValues cv:prepared){
+                    if("inventory_usage".equals(cv.getAsString("module"))){
                         JSONObject payload=new JSONObject(cv.getAsString("payload"));
-                        ContentValues uv=new ContentValues(); uv.put("day",cv.getAsString("day")); uv.put("flour_bags",payload.getLong("flour_bags"));
+                        ContentValues uv=new ContentValues();uv.put("day",cv.getAsString("day"));uv.put("flour_bags",payload.getLong("flour_bags"));
                         uv.put("material_usage",payload.optJSONObject("material_usage")!=null?payload.optJSONObject("material_usage").toString():"{}");
                         db.insertWithOnConflict("inventory_usage",null,uv,SQLiteDatabase.CONFLICT_REPLACE);
-                    } else {
-                        db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
-                    }
+                    }else db.insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
                 }
                 db.setTransactionSuccessful();
-            }
-            finally { db.endTransaction(); }
+            }finally{db.endTransaction();}
             return prepared.size();
         }
 
