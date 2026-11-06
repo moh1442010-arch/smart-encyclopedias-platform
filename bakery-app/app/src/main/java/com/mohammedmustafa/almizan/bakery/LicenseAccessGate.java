@@ -54,7 +54,7 @@ public final class LicenseAccessGate {
             String plan=fields.get("plan");
             if(!"monthly".equals(plan)&&!"annual".equals(plan)&&!"lifetime".equals(plan))return false;
             String max=fields.get("max_version");
-            if(!"any".equals(max)&&!("lifetime".equals(plan)&&("2.6.15".equals(max)||BuildConfig.VERSION_NAME.equals(max))))return false;
+            if(!"any".equals(max)&&!("lifetime".equals(plan)&&compatibleLifetimeVersion(max)))return false;
             long expires=Long.parseLong(fields.get("expires"));
             if(expires==0L)return true;
             long now=System.currentTimeMillis()/1000L;
