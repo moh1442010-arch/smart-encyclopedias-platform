@@ -1579,7 +1579,7 @@ public class MainActivity extends Activity {
             }
             toast("تم إنشاء نسخة مشفرة للمخبز والمصنع. احفظ كلمة المرور في مكان آمن.");
         } catch(Exception ex) { toast("تعذر إنشاء النسخة المشفرة: "+ex.getMessage()); }
-        finally { java.util.Arrays.fill(password,'\\0'); }
+        finally { java.util.Arrays.fill(password,'\0'); }
     }
 
     private void importBackupFile(Uri uri) {
@@ -1589,7 +1589,7 @@ public class MainActivity extends Activity {
                 requestBackupPassword(false,password->{
                     try { importBackupPayload(PortableBackupCrypto.decrypt(bytes,password)); }
                     catch(Exception ex){toast("تعذر فتح النسخة: "+ex.getMessage());}
-                    finally {java.util.Arrays.fill(password,'\\0');}
+                    finally {java.util.Arrays.fill(password,'\0');}
                 });
             } else {
                 new AlertDialog.Builder(this).setTitle("نسخة قديمة غير مشفرة")
