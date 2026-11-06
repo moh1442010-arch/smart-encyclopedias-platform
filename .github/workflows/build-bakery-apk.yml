@@ -134,6 +134,7 @@ jobs:
           grep -Fq 'SecureDatabase.open(this,"almizan_factory_1.db")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'migratesLegacyBakeryDatabaseAndHidesPlaintext' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/SecureDatabaseMigrationTest.java
           grep -Fq '7L * 24L * 60L * 60L * 1000L' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'requireActiveEntitlement()' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq 'LicenseAccessGate.isAccessAllowed(this)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'LicenseAccessGate.isAccessAllowed(this)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'isCompatibleLifetimeVersion(maxVersion)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
