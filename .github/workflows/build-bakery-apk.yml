@@ -131,7 +131,8 @@ jobs:
             echo "Checked arithmetic must remain compatible with Android API 23."
             exit 1
           fi
-          echo "Factory modules, schema v5 backup and Android API 23 compatibility declarations verified."
+          grep -Fq 'root.optInt("schema_version")<6 && "work_order_stages".equals(TABLES[i])' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
+          echo "Factory modules, schema v6 backup compatibility and Android API 23 declarations verified."
 
       - name: Run arithmetic unit tests
         working-directory: bakery-app
@@ -244,7 +245,7 @@ jobs:
             - حساب تكلفة المنتج بالتكلفة المتوسطة المرجحة، مع حفظ الكسور إلى ثلاثة منازل للكمية.
             - البيانات تحفظ محلياً؛ لا تحذف النسخة السابقة أثناء اختبار التحديث.
             - تتضمن دفتر مردودات المبيعات مع سقف الكمية وإعادة المخزون بالتكلفة الأصلية وتوزيع التسوية بين النقد وبنكك والآجل.
-            - تتضمن أوامر WIP لصرف الخامات وإضافة الأجور والتكاليف وتحويل تكلفة الأمر إلى مخزون الإنتاج التام؛ الإكمال الحالي للكمية المخططة كاملة، وليس إنتاجاً جزئياً متعدد المراحل.
+            - تتضمن أوامر WIP وترحيل الإنتاج على مراحل؛ تُوزّع تكلفة الخامات تراكمياً على الكميات المرحّلة، وتُسجل تكلفة كل مرحلة في مخزون المنتج التام مع بقاء الجزء غير المنفذ تحت التشغيل.
             - تتضمن دفتر قيود متوازناً وعكس القيود اليدوية مع حفظ القيد الأصلي وسجل التدقيق؛ قيود المستندات المرتبطة لا تُعكس يدوياً.
             - اختبر التحديث فوق 2.6.17، وسلامة بيانات المخبز، ثم راجع أرصدة المواد والمنتجات والمبيعات على جهاز حقيقي قبل الاعتماد التجاري.
           files: |
