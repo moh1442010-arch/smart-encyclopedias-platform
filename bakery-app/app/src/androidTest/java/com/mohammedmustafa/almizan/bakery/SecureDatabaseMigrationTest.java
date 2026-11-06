@@ -33,7 +33,7 @@ public class SecureDatabaseMigrationTest {
         byte[] header=new byte[16];
         FileInputStream input=new FileInputStream(file);
         try { assertEquals(16,input.read(header)); } finally { input.close(); }
-        assertNotEquals("SQLite format 3\u0000",new String(header,StandardCharsets.US_ASCII));
+        assertFalse(new String(header,StandardCharsets.US_ASCII).startsWith("SQLite format 3"));
         assertFalse(new File(file.getAbsolutePath()+".plaintext-migration").exists());
         assertFalse(new File(file.getAbsolutePath()+".cipher-new").exists());
         file.delete();
