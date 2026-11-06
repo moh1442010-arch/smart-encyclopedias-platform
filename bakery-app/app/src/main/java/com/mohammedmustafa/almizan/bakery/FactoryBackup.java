@@ -3,7 +3,7 @@ package com.mohammedmustafa.almizan.bakery;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
+import net.zetetic.database.sqlcipher.SQLiteDatabase;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.Arrays;
@@ -238,7 +238,7 @@ final class FactoryBackup {
     private static void ensureColumn(SQLiteDatabase d,String table,String column,String definition){Cursor c=d.rawQuery("PRAGMA table_info("+table+")",null);boolean found=false;try{while(c.moveToNext())if(column.equals(c.getString(1)))found=true;}finally{c.close();}if(!found)d.execSQL("ALTER TABLE "+table+" ADD COLUMN "+column+" "+definition);}
 
     private static SQLiteDatabase open(Context context) {
-        return context.openOrCreateDatabase(DB_NAME, Context.MODE_PRIVATE, null);
+        return SecureDatabase.open(context, DB_NAME);
     }
 
     private static void ensureSchema(SQLiteDatabase d) {
