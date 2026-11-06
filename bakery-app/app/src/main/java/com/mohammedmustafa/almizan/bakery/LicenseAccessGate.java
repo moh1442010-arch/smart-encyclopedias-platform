@@ -24,7 +24,7 @@ public final class LicenseAccessGate {
     }
     private static boolean validToken(Context c, String token) {
         try {
-            String[] parts=token.trim().split("\\\\.",-1);
+            String[] parts=token.trim().split("\\.",-1);
             if(parts.length!=2)return false;
             int flags=Base64.URL_SAFE|Base64.NO_WRAP|Base64.NO_PADDING;
             byte[] payloadBytes=Base64.decode(parts[0],flags);
