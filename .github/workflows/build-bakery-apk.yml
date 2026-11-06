@@ -237,7 +237,7 @@ jobs:
           retention-days: 30
 
       - name: Publish approved commercial GitHub Release
-        if: github.ref == 'refs/heads/release/bakery-2.8.0-financial-integrity'
+        if: github.ref == 'refs/heads/release/bakery-2.8.0-commercial'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: al-mizan-bakery-2.8.0
