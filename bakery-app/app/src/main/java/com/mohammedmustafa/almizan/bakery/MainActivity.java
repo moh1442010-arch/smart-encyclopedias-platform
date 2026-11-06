@@ -459,6 +459,21 @@ public class MainActivity extends Activity {
         base("🥖 المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + "");
         TextView intro = text("منظومة يومية متكاملة للمخبز — من رصيد الدقيق إلى الإنتاج والتحصيل وهامش الربح.",16);
         content.addView(intro);
+        if (!hasActiveLicense()) {
+            long daysLeft = trialDaysRemaining();
+            TextView trialNotice = text(
+                daysLeft > 0
+                    ? "التجربة المجانية مفعّلة — متبقٍ " + daysLeft + " يوم. بعد إكمال 7 أيام ستظهر شاشة الاشتراك، وتبقى بياناتك محفوظة دون حذف."
+                    : "انتهت التجربة المجانية. يلزم تفعيل باقة للوصول إلى الدفاتر. بياناتك المحلية لا تُحذف.",
+                15);
+            trialNotice.setTextColor(NAVY);
+            trialNotice.setPadding(12, 12, 12, 12);
+            trialNotice.setBackground(rounded(0xFFFFF3CD, 10));
+            content.addView(trialNotice);
+            Button plans = button("عرض الباقات والاشتراك");
+            plans.setOnClickListener(v -> showPaywall());
+            content.addView(plans);
+        }
         addBakeryHero();
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
         dateLabel = text("📅 التاريخ: " + day,16); dateRow.addView(dateLabel,new LinearLayout.LayoutParams(0,-2,1f));
