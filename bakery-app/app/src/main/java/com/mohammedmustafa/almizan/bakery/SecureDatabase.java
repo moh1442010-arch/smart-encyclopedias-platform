@@ -85,7 +85,7 @@ final class SecureDatabase {
     private static boolean isEncrypted(File file,byte[] key){
         SQLiteDatabase db=null;
         try{
-            db=SQLiteDatabase.openDatabase(file.getAbsolutePath(),key,null,SQLiteDatabase.OPEN_READWRITE);
+            db=SQLiteDatabase.openDatabase(file.getAbsolutePath(),key,null,SQLiteDatabase.OPEN_READWRITE,null,null);
             Cursor c=db.rawQuery("PRAGMA schema_version",null);try{return c.moveToFirst();}finally{c.close();}
         }catch(Exception ignored){return false;}finally{if(db!=null)db.close();}
     }
