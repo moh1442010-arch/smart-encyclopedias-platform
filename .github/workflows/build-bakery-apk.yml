@@ -193,7 +193,7 @@ jobs:
           expected="159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
           test "$cert_sha" = "$expected" || { echo "::error::Signing certificate fingerprint mismatch; do not distribute this APK"; exit 1; }
           badging="$("$build_tools/aapt" dump badging release/AlMizan-Bakery-2.8.1-review.apk)"
-          echo "$badging" | grep -F "package: name='com.mohammedmustafa.almizan.bakery' versionCode='280000' versionName='2.8.1'"
+          echo "$badging" | grep -F "package: name='com.mohammedmustafa.almizan.bakery' versionCode='280001' versionName='2.8.1'"
           echo "$badging" | grep -F "application-label:'المحاسب الميزان للمخابز'"
           sha256sum release/AlMizan-Bakery-2.8.1-review.apk > release/SHA256SUMS.txt
           rm -f release/AlMizan-Bakery-2.8.1-aligned.apk signing/release.jks
@@ -255,7 +255,7 @@ jobs:
             الإصدار التجاري المعتمد 2.8.1 من المحاسب الميزان للمخابز والمصنع.
             اعتمد مالك المنتج هذا الإصدار بعد اختباره على جهاز فعلي، وإتمام التحديث فوق النسخة السابقة، وإجراء عمليات تشغيل يومية للمخبز والمصنع ومراجعة النتائج.
             - معرّف الحزمة: com.mohammedmustafa.almizan.bakery
-            - versionCode: 280000
+            - versionCode: 280001
             - Android minimum API: 23
             - يحافظ التحديث على معرّف الحزمة وقاعدة بيانات المخبز؛ لا تحذف الإصدار السابق عند التحديث.
             - يحتوي على حسابات المخبز اليومية ووحدة المصنع ودفاتر المواد والإنتاج والمبيعات والمردودات والتشغيل تحت التنفيذ والقيود وسجل التدقيق.
