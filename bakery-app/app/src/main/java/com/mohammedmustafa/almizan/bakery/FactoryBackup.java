@@ -14,7 +14,7 @@ final class FactoryBackup {
     private static final String DB_NAME = "almizan_factory_1.db";
     private static final String[] TABLES = {
         "materials","products","recipe","batches","finished","sales",
-        "expenses","waste","movements","collections","cashbook","audit","daily_usage","sales_returns","work_orders","work_order_materials","journal_entries","journal_lines"
+        "expenses","waste","movements","collections","cashbook","audit","daily_usage","sales_returns","work_orders","work_order_materials","journal_entries","journal_lines","work_order_stages"
     };
     private static final String[][] COLUMNS = {
         {"id","name","unit","qty","value"},
@@ -34,7 +34,8 @@ final class FactoryBackup {
         {"id","work_ref","product_id","batches","planned_qty","actual_qty","material_cost","labor","overhead","total_cost","status","date"},
         {"id","work_order_id","material_id","qty","cost"},
         {"id","entry_ref","description","status","reversal_of","date"},
-        {"id","entry_id","account","debit","credit"}
+        {"id","entry_id","account","debit","credit"},
+        {"id","work_order_id","stage_no","output_qty","material_cost","labor","overhead","total_cost","date"}
     };
     private static final String[][] REQUIRED = {
         {"id","name","unit","qty","value"},
@@ -71,7 +72,7 @@ final class FactoryBackup {
             ensureSchema(db);
             JSONObject root = new JSONObject();
             root.put("_type", TYPE);
-            root.put("schema_version", 5);
+            root.put("schema_version", 6);
             JSONObject tables = new JSONObject();
             for (int i=0;i<TABLES.length;i++) {
                 JSONArray rows = new JSONArray();
@@ -98,7 +99,7 @@ final class FactoryBackup {
     }
 
     static void validate(JSONObject root) throws Exception {
-        if (root == null || !TYPE.equals(root.optString("_type")) || (root.optInt("schema_version") != 3 && root.optInt("schema_version") != 4 && root.optInt("schema_version") != 5))
+        if (root == null || !TYPE.equals(root.optString("_type")) || (root.optInt("schema_version") != 3 && root.optInt("schema_version") != 4 && root.optInt("schema_version") != 5 && root.optInt("schema_version") != 6))
             throw new IllegalArgumentException("Unsupported factory backup format");
         JSONObject tables = root.optJSONObject("tables");
         if (tables == null) throw new IllegalArgumentException("Factory backup tables are missing");
@@ -156,6 +157,7 @@ final class FactoryBackup {
         else if ("work_order_materials".equals(table)) numeric=new String[]{"id","work_order_id","material_id","qty","cost"};
         else if ("journal_lines".equals(table)) numeric=new String[]{"id","entry_id","debit","credit"};
         else if ("journal_entries".equals(table)) numeric=new String[]{"id"};
+        else if ("work_order_stages".equals(table)) numeric=new String[]{"id","work_order_id","stage_no","output_qty","material_cost","labor","overhead","total_cost"};
         else if ("recipe".equals(table)) numeric=new String[]{"id","product_id","material_id","qty"};
         else if ("batches".equals(table)) numeric=new String[]{"id","product_id","batches","output","labor","overhead","cost","unit_cost"};
         else if ("finished".equals(table)) numeric=new String[]{"product_id","qty","value","unit_cost"};
@@ -253,11 +255,12 @@ final class FactoryBackup {
         d.execSQL("CREATE TABLE IF NOT EXISTS sales_returns(id INTEGER PRIMARY KEY,sale_id INTEGER NOT NULL,product_id INTEGER NOT NULL,qty INTEGER NOT NULL,refund_value INTEGER NOT NULL,refund_cash INTEGER NOT NULL,refund_bank INTEGER NOT NULL,credit_adjustment INTEGER NOT NULL,restored_cogs INTEGER NOT NULL,bank_ref TEXT,reason TEXT,date TEXT)");
         d.execSQL("CREATE TABLE IF NOT EXISTS work_orders(id INTEGER PRIMARY KEY,work_ref TEXT UNIQUE,product_id INTEGER NOT NULL,batches INTEGER NOT NULL,planned_qty INTEGER NOT NULL,actual_qty INTEGER NOT NULL DEFAULT 0,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL DEFAULT 0,overhead INTEGER NOT NULL DEFAULT 0,total_cost INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL,date TEXT)");
         d.execSQL("CREATE TABLE IF NOT EXISTS work_order_materials(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,material_id INTEGER NOT NULL,qty INTEGER NOT NULL,cost INTEGER NOT NULL)");
+        d.execSQL("CREATE TABLE IF NOT EXISTS work_order_stages(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,stage_no INTEGER NOT NULL,output_qty INTEGER NOT NULL,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL,overhead INTEGER NOT NULL,total_cost INTEGER NOT NULL,date TEXT,UNIQUE(work_order_id,stage_no))");
         d.execSQL("CREATE TABLE IF NOT EXISTS journal_entries(id INTEGER PRIMARY KEY,entry_ref TEXT UNIQUE,description TEXT,status TEXT NOT NULL,reversal_of INTEGER,date TEXT)");
         d.execSQL("CREATE TABLE IF NOT EXISTS journal_lines(id INTEGER PRIMARY KEY,entry_id INTEGER NOT NULL,account TEXT NOT NULL,debit INTEGER NOT NULL DEFAULT 0,credit INTEGER NOT NULL DEFAULT 0)");
         ensureColumn(d,"daily_usage","kind","TEXT NOT NULL DEFAULT 'MANUAL'");
         ensureColumn(d,"products","category","TEXT NOT NULL DEFAULT 'منتج إضافي'");
         ensureColumn(d,"products","unit_price","INTEGER NOT NULL DEFAULT 0");
-        if (d.getVersion() < 4) d.setVersion(4);
+        if (d.getVersion() < 6) d.setVersion(6);
     }
 }
