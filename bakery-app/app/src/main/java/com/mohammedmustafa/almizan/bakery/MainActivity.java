@@ -67,6 +67,7 @@ public class MainActivity extends Activity {
     private LinearLayout root, content;
     private String day;
     private TextView dateLabel, statusLabel, flourMetric, workMetric, productionMetric, marginMetric;
+    private String currentScreenTitle = "";
 
     private static class Field {
         final String key, label, hint; final boolean numeric;
@@ -74,6 +75,13 @@ public class MainActivity extends Activity {
     }
     private static Field f(String k, String l) { return new Field(k,l,"",true); }
     private static Field t(String k, String l, String hint) { return new Field(k,l,hint,false); }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (store != null && !hasActiveLicense() && trialExpired() && !currentScreenTitle.contains("اشتراك المحاسب الميزان")) {
+            showPaywall();
+        }
+    }
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -405,6 +413,7 @@ public class MainActivity extends Activity {
     }
 
     private void base(String title) {
+        currentScreenTitle = title == null ? "" : title;
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
@@ -1092,6 +1101,7 @@ public class MainActivity extends Activity {
     }
 
     private void openModule(String module) {
+        if (!hasActiveLicense() && trialExpired()) { showPaywall(); return; }
         if (module.equals("cuts")) { openCutsTable(); return; }
         if (module.equals("distribution")) { openDistributionTable(); return; }
         if (module.equals("workers")) { openWorkersTable(); return; }
