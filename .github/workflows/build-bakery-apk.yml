@@ -139,6 +139,9 @@ jobs:
           grep -Fq 'CREATE TABLE IF NOT EXISTS employees' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS fixed_assets' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS exchange_rates' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS tax_rules' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS gl_journal_entries' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS gl_journal_lines' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
           grep -Fq 'addsEnterpriseTablesWithoutChangingExistingBakeryRecords' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchemaMigrationTest.java
           grep -Fq 'convertsCurrenciesUsingRationalRatesAndMinorUnits' bakery-app/app/src/test/java/com/mohammedmustafa/almizan/bakery/EnterpriseMathTest.java
           grep -Fq '7L * 24L * 60L * 60L * 1000L' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
