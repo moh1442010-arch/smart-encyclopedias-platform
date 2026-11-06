@@ -436,7 +436,10 @@ public class MainActivity extends Activity {
         head.addView(titles,new LinearLayout.LayoutParams(0,-2,1f));
         head.setElevation(5f);
         root.addView(head);
-        if (!title.startsWith("🥖 المحاسب الميزان للمخابز")) {
+        // Never render a route back to the ledger while the local trial has expired.
+        // buildHome() also enforces this centrally; this only removes the misleading escape button.
+        boolean ledgerAccessAllowed = hasActiveLicense() || !trialExpired();
+        if (!title.startsWith("🥖 المحاسب الميزان للمخابز") && ledgerAccessAllowed) {
             Button home = button("⌂ الرئيسية");
             home.setTextColor(Color.WHITE);
             home.setBackground(rounded(Color.rgb(35,68,96),10));
@@ -456,6 +459,12 @@ public class MainActivity extends Activity {
     }
 
     private void buildHome() {
+        // Central authorization gate: every existing "الرئيسية" callback routes here.
+        // Do not rely on hiding one button; deny ledger entry from every navigation path.
+        if (!hasActiveLicense() && trialExpired()) {
+            showPaywall();
+            return;
+        }
         base("🥖 المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + "");
         TextView intro = text("منظومة يومية متكاملة للمخبز — من رصيد الدقيق إلى الإنتاج والتحصيل وهامش الربح.",16);
         content.addView(intro);
