@@ -1570,8 +1570,13 @@ public class MainActivity extends Activity {
 
     private void exportEncryptedBackup(Uri uri,char[] password) {
         try {
-            JSONArray records=store.exportAll();records.put(FactoryBackup.export(this));
-            byte[] plain=records.toString(2).getBytes(StandardCharsets.UTF_8);
+            JSONArray records=store.exportAll();JSONArray snapshot=new JSONArray();
+            JSONObject manifest=new JSONObject();manifest.put("_type","almizan_backup_manifest");manifest.put("schema_version",1);
+            manifest.put("app_id","com.mohammedmustafa.almizan.bakery");manifest.put("app_version",BuildConfig.VERSION_NAME);
+            manifest.put("created_at",new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'",Locale.US).format(new Date()));
+            snapshot.put(manifest);for(int i=0;i<records.length();i++)snapshot.put(records.get(i));
+            snapshot.put(FactoryBackup.export(this));
+            byte[] plain=snapshot.toString(2).getBytes(StandardCharsets.UTF_8);
             byte[] encrypted=PortableBackupCrypto.encrypt(plain,password);
             try(OutputStream out=getContentResolver().openOutputStream(uri,"w")){
                 if(out==null)throw new IllegalStateException("تعذر فتح ملف النسخة");
@@ -1603,14 +1608,22 @@ public class MainActivity extends Activity {
 
     private void importBackupPayload(byte[] bytes) throws Exception {
         JSONArray imported=new JSONArray(new String(bytes,StandardCharsets.UTF_8));
-        JSONArray records=new JSONArray();JSONObject factorySnapshot=null;
+        JSONArray records=new JSONArray();JSONObject factorySnapshot=null,manifest=null;
         for(int i=0;i<imported.length();i++){
-            JSONObject row=imported.getJSONObject(i);
-            if(FactoryBackup.TYPE.equals(row.optString("_type"))){
+            JSONObject row=imported.getJSONObject(i);String type=row.optString("_type","");
+            if("almizan_backup_manifest".equals(type)){
+                if(manifest!=null)throw new IllegalArgumentException("Duplicate backup manifest");
+                manifest=row;
+            } else if(FactoryBackup.TYPE.equals(type)){
                 if(factorySnapshot!=null)throw new IllegalArgumentException("Duplicate factory backup section");
                 factorySnapshot=row;
-            } else records.put(row);
+            } else {
+                if(!type.isEmpty())throw new IllegalArgumentException("Unknown backup section type");
+                records.put(row);
+            }
         }
+        if(manifest!=null&&(!"com.mohammedmustafa.almizan.bakery".equals(manifest.optString("app_id"))||manifest.optInt("schema_version")!=1))
+            throw new IllegalArgumentException("Unsupported backup app identity or schema version");
         if(factorySnapshot!=null)FactoryBackup.validate(factorySnapshot);
         final JSONArray bakeryRecords=records;final JSONObject factoryData=factorySnapshot;
         new AlertDialog.Builder(this).setTitle("تأكيد الاستعادة")
