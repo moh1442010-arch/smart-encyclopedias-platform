@@ -49,6 +49,10 @@ public final class FactoryMath {
             ||returnCash>saleCash-previousCash||returnBank>saleBank-previousBank||returnCredit>saleDebt-previousCredit)
             throw new IllegalArgumentException("return settlement exceeds original invoice balances");
     }
+    public static long incrementalWipMaterialCost(long totalMaterialCost,long cumulativeOutput,long previousOutput,long plannedOutput){
+        if(totalMaterialCost<0||previousOutput<0||cumulativeOutput<=previousOutput||plannedOutput<=0||cumulativeOutput>plannedOutput)throw new IllegalArgumentException("invalid staged WIP allocation");
+        return prorate(totalMaterialCost,cumulativeOutput,plannedOutput)-prorate(totalMaterialCost,previousOutput,plannedOutput);
+    }
     public static long workInProgressCost(long materialCost,long labor,long overhead){
         return add(add(materialCost,labor),overhead);
     }
