@@ -125,6 +125,17 @@ jobs:
           grep -Fq 'CREATE TABLE IF NOT EXISTS work_orders' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS journal_entries' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'root.put("schema_version", 6)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
+          grep -Fq 'net.zetetic:sqlcipher-android:4.6.1@aar' bakery-app/app/build.gradle
+          grep -Fq 'System.loadLibrary("sqlcipher")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/SecureDatabase.java
+          grep -Fq 'AndroidKeyStore' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/SecureDatabase.java
+          grep -Fq 'migratePlaintext' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/SecureDatabase.java
+          grep -Fq 'SecureDatabase.passphrase(MainActivity.this,"almizan_bakery_250.db")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'SecureDatabase.passphrase(c,"almizan_factory_1.db")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'SecureDatabase.open(this,"almizan_factory_1.db")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
+          grep -Fq 'migratesLegacyBakeryDatabaseAndHidesPlaintext' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/SecureDatabaseMigrationTest.java
+          grep -Fq '7L * 24L * 60L * 60L * 1000L' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq '27. التجربة المجانية والاشتراك' bakery-app/app/src/main/assets/bakery-guide.html
+          grep -Fq '28. حالة حماية قاعدة البيانات' bakery-app/app/src/main/assets/bakery-guide.html
           grep -Fq 'minSdk 23' bakery-app/app/build.gradle
           grep -Fq 'targetSdk 35' bakery-app/app/build.gradle
           if grep -R -E 'Math\.(addExact|subtractExact|multiplyExact)\(' bakery-app/app/src/main/java; then
@@ -190,6 +201,8 @@ jobs:
           arch: x86_64
           profile: pixel_2
           script: |
+            (cd bakery-app && gradle connectedDebugAndroidTest)
+            adb uninstall com.mohammedmustafa.almizan.bakery || true
             adb install -r bakery-app/release/AlMizan-Bakery-2.8.0-review.apk
             adb logcat -c
             adb shell monkey -p com.mohammedmustafa.almizan.bakery 1
