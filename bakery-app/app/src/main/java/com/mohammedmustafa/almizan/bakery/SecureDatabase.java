@@ -112,6 +112,8 @@ final class SecureDatabase {
             }finally{target.endTransaction();}
             for(String table:tables)if(count(source,table)!=count(target,table))throw new IllegalStateException("Row count mismatch: "+table);
             target.close();target=null;source.close();source=null;
+            new File(original.getAbsolutePath()+"-wal").delete();
+            new File(original.getAbsolutePath()+"-shm").delete();
             if(!original.renameTo(legacy))throw new IllegalStateException("Cannot preserve original database");
             if(!temp.renameTo(original)){legacy.renameTo(original);throw new IllegalStateException("Cannot replace database with encrypted copy");}
             if(!isEncrypted(original,key)){original.delete();legacy.renameTo(original);throw new IllegalStateException("Encrypted copy verification failed; original restored");}
