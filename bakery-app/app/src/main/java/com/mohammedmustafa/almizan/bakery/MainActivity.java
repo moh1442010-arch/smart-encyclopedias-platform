@@ -301,10 +301,8 @@ public class MainActivity extends Activity {
             if (!"monthly".equals(plan) && !"annual".equals(plan) && !"lifetime".equals(plan)) return false;
             // New lifetime purchases are bound to the purchased app version; dated subscriptions remain version-flexible.
             String maxVersion = fields.get("max_version");
-            // New lifetime tokens use "any". Preserve existing 2.6.15 lifetime tokens too.
-            if (!"any".equals(maxVersion) &&
-                !("lifetime".equals(plan) &&
-                    ("2.6.15".equals(maxVersion) || BuildConfig.VERSION_NAME.equals(maxVersion)))) return false;
+            // Preserve lifetime licenses issued for earlier patch releases in the same minor line.
+            if (!"any".equals(maxVersion) && !("lifetime".equals(plan) && isCompatibleLifetimeVersion(maxVersion))) return false;
             long expires = Long.parseLong(fields.get("expires"));
             if (expires == 0L) return true;
             android.content.SharedPreferences prefs = getPreferences(0);
