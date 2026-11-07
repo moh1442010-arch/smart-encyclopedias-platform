@@ -139,11 +139,12 @@ jobs:
           grep -Fq 'LicenseAccessGate.isAccessAllowed(this)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'LicenseAccessGate.isAccessAllowed(this)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'MainActivity_preferences' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java
-          grep -Fq 'Migrate the earlier gate-only store' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java
+          grep -Fq 'earliest trial start and latest seen time win' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java
           grep -Fq 'if (!LicenseAccessGate.isAccessAllowed(this))' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq 'if (!expired || licensed)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq 'expiredSevenDayTrialDeniesApplicationAccess' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGateTest.java
           grep -Fq 'migratesExpiredLegacyGateStateWithoutRestartingTrial' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGateTest.java
+          grep -Fq 'choosesEarliestTrialStartAcrossHistoricalStores' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGateTest.java
           grep -Fq 'AES/GCM/NoPadding' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/PortableBackupCrypto.java
           grep -Fq 'PortableBackupCrypto.encrypt(plain,password)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq 'PortableBackupCrypto.decrypt(bytes,password)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
