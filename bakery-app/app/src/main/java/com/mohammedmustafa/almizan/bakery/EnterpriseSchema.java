@@ -31,6 +31,13 @@ final class EnterpriseSchema {
         db.execSQL("CREATE TABLE IF NOT EXISTS role_permissions (role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE, permission_code TEXT NOT NULL REFERENCES permissions(permission_code), PRIMARY KEY(role_id,permission_code))");
         db.execSQL("INSERT OR IGNORE INTO roles(role_code,name_ar,name_en) VALUES('OWNER','مالك المنشأة','Owner'),('MANAGER','مدير','Manager'),('ACCOUNTANT','محاسب','Accountant'),('STOREKEEPER','أمين مخزن','Storekeeper'),('CASHIER','كاشير','Cashier'),('AUDITOR','مراجع','Auditor')");
         db.execSQL("INSERT OR IGNORE INTO permissions(permission_code,description) VALUES('DASHBOARD_READ','Read dashboard'),('SALES_CREATE','Create sales'),('SALES_VOID','Void sales'),('INVENTORY_READ','Read inventory'),('INVENTORY_WRITE','Change inventory'),('PURCHASE_CREATE','Create purchases'),('PURCHASE_APPROVE','Approve purchases'),('PAYROLL_READ','Read payroll'),('PAYROLL_POST','Post payroll'),('ASSET_READ','Read assets'),('ASSET_WRITE','Manage assets'),('JOURNAL_POST','Post journals'),('USERS_MANAGE','Manage users'),('BRANCHES_MANAGE','Manage branches'),('BACKUP_EXPORT','Export backups'),('BACKUP_RESTORE','Restore backups')");
+        // Explicit least-privilege defaults. Role assignment is branch-scoped and checked by PermissionService.
+        seedRolePermissions(db,"OWNER",new String[]{"DASHBOARD_READ","SALES_CREATE","SALES_VOID","INVENTORY_READ","INVENTORY_WRITE","PURCHASE_CREATE","PURCHASE_APPROVE","PAYROLL_READ","PAYROLL_POST","ASSET_READ","ASSET_WRITE","JOURNAL_POST","USERS_MANAGE","BRANCHES_MANAGE","BACKUP_EXPORT","BACKUP_RESTORE"});
+        seedRolePermissions(db,"MANAGER",new String[]{"DASHBOARD_READ","SALES_CREATE","SALES_VOID","INVENTORY_READ","INVENTORY_WRITE","PURCHASE_CREATE","PURCHASE_APPROVE","PAYROLL_READ","PAYROLL_POST","ASSET_READ","ASSET_WRITE","JOURNAL_POST","BRANCHES_MANAGE","BACKUP_EXPORT"});
+        seedRolePermissions(db,"ACCOUNTANT",new String[]{"DASHBOARD_READ","SALES_CREATE","INVENTORY_READ","PURCHASE_CREATE","PAYROLL_READ","PAYROLL_POST","ASSET_READ","ASSET_WRITE","JOURNAL_POST","BACKUP_EXPORT"});
+        seedRolePermissions(db,"STOREKEEPER",new String[]{"DASHBOARD_READ","INVENTORY_READ","INVENTORY_WRITE"});
+        seedRolePermissions(db,"CASHIER",new String[]{"DASHBOARD_READ","SALES_CREATE","INVENTORY_READ"});
+        seedRolePermissions(db,"AUDITOR",new String[]{"DASHBOARD_READ","INVENTORY_READ","PAYROLL_READ","ASSET_READ","BACKUP_EXPORT"});
         db.execSQL("CREATE TABLE IF NOT EXISTS tax_rules (id INTEGER PRIMARY KEY AUTOINCREMENT, country_code TEXT NOT NULL REFERENCES countries(code), tax_code TEXT NOT NULL, name TEXT NOT NULL, rate_num INTEGER NOT NULL CHECK(rate_num>=0), rate_den INTEGER NOT NULL CHECK(rate_den>0), inclusive INTEGER NOT NULL DEFAULT 0 CHECK(inclusive IN (0,1)), exempt_category TEXT NOT NULL DEFAULT '', effective_from TEXT NOT NULL, effective_to TEXT, active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)), UNIQUE(country_code,tax_code,effective_from))");
         db.execSQL("CREATE TABLE IF NOT EXISTS financial_periods (id INTEGER PRIMARY KEY AUTOINCREMENT, period_code TEXT NOT NULL UNIQUE, start_date TEXT NOT NULL, end_date TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('OPEN','CLOSING','CLOSED')), closed_at INTEGER, CHECK(start_date<=end_date))");
         db.execSQL("CREATE TABLE IF NOT EXISTS chart_of_accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, account_code TEXT NOT NULL UNIQUE, name_ar TEXT NOT NULL, name_en TEXT NOT NULL, account_type TEXT NOT NULL CHECK(account_type IN ('ASSET','LIABILITY','EQUITY','REVENUE','EXPENSE')), normal_side TEXT NOT NULL CHECK(normal_side IN ('DEBIT','CREDIT')), parent_id INTEGER REFERENCES chart_of_accounts(id), active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)))");
@@ -118,5 +125,12 @@ final class EnterpriseSchema {
         db.execSQL("CREATE TABLE IF NOT EXISTS sync_outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, event_uuid TEXT NOT NULL UNIQUE, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, operation TEXT NOT NULL CHECK(operation IN ('UPSERT','DELETE')), payload TEXT NOT NULL, created_at INTEGER NOT NULL, attempt_count INTEGER NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT '', synced_at INTEGER)");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_sync_outbox_pending ON sync_outbox(synced_at,created_at)");
         db.execSQL("INSERT OR REPLACE INTO enterprise_meta(key,value) VALUES('schema_version','" + VERSION + "')");
+    }
+
+    private static void seedRolePermissions(SQLiteDatabase db,String roleCode,String[] permissionCodes) {
+        for(String permissionCode:permissionCodes) {
+            db.execSQL("INSERT OR IGNORE INTO role_permissions(role_id,permission_code) "+
+                "SELECT id,? FROM roles WHERE role_code=?",new Object[]{permissionCode,roleCode});
+        }
     }
 }
