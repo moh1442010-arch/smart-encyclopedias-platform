@@ -31,6 +31,7 @@ final class PartyDirectory {
 
     static final class Db extends SQLiteOpenHelper {
         Db(Context c){super(c,"almizan_bakery_250.db",SecureDatabase.passphrase(c,"almizan_bakery_250.db"),null,7,0,null,null,false);}
+        @Override public void onConfigure(SQLiteDatabase db){super.onConfigure(db);db.execSQL("PRAGMA foreign_keys=ON");}
         @Override public void onCreate(SQLiteDatabase db){
             db.execSQL("CREATE TABLE IF NOT EXISTS records (day TEXT NOT NULL,module TEXT NOT NULL,payload TEXT NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(day,module))");
             db.execSQL("CREATE TABLE IF NOT EXISTS inventory_usage (day TEXT PRIMARY KEY NOT NULL,flour_bags INTEGER NOT NULL DEFAULT 0,material_usage TEXT NOT NULL DEFAULT '{}')");
