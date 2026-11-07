@@ -440,6 +440,13 @@ public class MainActivity extends Activity {
                 return;
             }
             getPreferences(0).edit().putString("license_token", token).apply();
+            if (!LicenseAccessGate.isAccessAllowed(MainActivity.this)) {
+                code.setError("تعذر التحقق من الترخيص على هذا الجهاز. تواصل مع الدعم دون حذف بياناتك.");
+                return;
+            }
+            if (store == null) store = new Store();
+            pinAuthenticated = true;
+            paywallLocked = false;
             dialog.dismiss();
             toast("تم تفعيل الاشتراك والتحقق من الرمز.");
             buildHome();
