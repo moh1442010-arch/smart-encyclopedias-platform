@@ -8,6 +8,7 @@
         android:supportsRtl="true"
         android:usesCleartextTraffic="false"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <activity android:name=".PartyDirectoryActivity" android:exported="false"/>
         <activity android:name=".FactoryActivity" android:exported="false"/>
         <activity android:name=".FactoryLedgerActivity" android:exported="false"/>
         <activity android:name=".MainActivity" android:exported="true">
