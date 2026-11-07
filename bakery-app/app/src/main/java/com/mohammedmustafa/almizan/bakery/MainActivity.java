@@ -510,31 +510,8 @@ public class MainActivity extends Activity {
         else report.append("لا توجد بيانات مسجلة لشغل اليوم.\\n");
         printText("شغل اليوم - "+businessName(),report.toString());
     }
-    private void printText(String jobName,String text){
-        try{
-            PrintManager manager=(PrintManager)getSystemService(PRINT_SERVICE);
-            if(manager==null){toast("خدمة الطباعة غير متاحة على هذا الجهاز");return;}
-            manager.print(jobName,new PrintDocumentAdapter(){
-                @Override public void onLayout(PrintAttributes oldA,PrintAttributes newA,CancellationSignal signal,LayoutResultCallback callback,android.os.Bundle extras){
-                    if(signal.isCanceled()){callback.onLayoutCancelled();return;}
-                    PrintDocumentInfo info=new PrintDocumentInfo.Builder(jobName+".pdf").setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT).setPageCount(1).build();
-                    callback.onLayoutFinished(info,true);
-                }
-                @Override public void onWrite(PageRange[] pages,ParcelFileDescriptor destination,CancellationSignal signal,WriteResultCallback callback){
-                    PdfDocument pdf=null;
-                    try{
-                        PrintAttributes attrs=new PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4).setResolution(new PrintAttributes.Resolution("almizan","AlMizan",300,300)).setMinMargins(PrintAttributes.Margins.NO_MARGINS).build();
-                        pdf=new PdfDocument();PdfDocument.PageInfo info=new PdfDocument.PageInfo.Builder(595,842,1).create();PdfDocument.Page page=pdf.startPage(info);
-                        Paint paint=new Paint();paint.setTextSize(12);paint.setColor(Color.BLACK);
-                        String[] lines=(businessName()+"\\n"+jobName+"\\n\\n"+text).split("\\n",-1);int y=48;
-                        for(String line:lines){if(signal.isCanceled())throw new IOException("تم إلغاء الطباعة");page.getCanvas().drawText(line,36,y,paint);y+=22;if(y>810)break;}
-                        pdf.finishPage(page);pdf.writeTo(new FileOutputStream(destination.getFileDescriptor()));callback.onWriteFinished(new PageRange[]{PageRange.ALL_PAGES});
-                    }catch(Exception ex){callback.onWriteFailed(ex.getMessage());}
-                    finally{if(pdf!=null)pdf.close();try{destination.close();}catch(Exception ignored){}}
-                }
-            },new PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4).setResolution(new PrintAttributes.Resolution("almizan","AlMizan",300,300)).setMinMargins(PrintAttributes.Margins.NO_MARGINS).build());
-        }catch(Exception ex){toast("تعذر فتح الطباعة: "+ex.getMessage());}
-    }
+    private void printText(String jobName,String text){try{PrinterService.print(this,businessName(),jobName,text);}catch(Exception ex){toast("تعذر فتح الطباعة: "+ex.getMessage());}}
+
     private void buildHome() {
         base("🥖 المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + "");
         TextView intro = text("منظومة يومية متكاملة للمخبز — من رصيد الدقيق إلى الإنتاج والتحصيل وهامش الربح.",16);
