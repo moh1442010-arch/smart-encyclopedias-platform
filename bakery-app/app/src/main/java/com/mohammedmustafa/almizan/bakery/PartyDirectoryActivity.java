@@ -35,6 +35,7 @@ public class PartyDirectoryActivity extends Activity {
         Button back=button("↩ رجوع إلى الشاشة السابقة");back.setOnClickListener(v->finish());root.addView(back);
         Button home=button("⌂ الرئيسية");home.setOnClickListener(v->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();});root.addView(home);
         ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        root.addView(button("🖨️ طباعة سجل العملاء والموردين والحسابات",()->printDirectory()));
         setContentView(root);
         customersSection();suppliersSection();bankAccountsSection();exchangeRatesSection();
     }
@@ -104,6 +105,17 @@ public class PartyDirectoryActivity extends Activity {
         list("SELECT '1 '||base_code||' = '||rate_num||'/'||rate_den||' '||quote_code||' | ساري من: '||effective_at||' | المصدر: '||source FROM exchange_rates ORDER BY effective_at DESC,id DESC");
     }
 
+    private void printDirectory(){
+        String business=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","المخبز");
+        StringBuilder out=new StringBuilder("المنشأة: ").append(business).append("\\nسجل العملاء والموردين والحسابات البنكية\\nالتاريخ: ").append(today()).append("\\n\\n");
+        appendPrintable(body,out);
+        try{PrinterService.print(this,business,"سجل العملاء والموردين",out.toString());}catch(Exception e){toast("تعذر فتح الطباعة: "+e.getMessage());}
+    }
+    private void appendPrintable(View view,StringBuilder out){
+        if(view instanceof EditText){String value=((EditText)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");return;}
+        if(view instanceof TextView){String value=((TextView)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");}
+        if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++)appendPrintable(group.getChildAt(i),out);}
+    }
     private void refreshLists(){render();}
     private void heading(String s){TextView t=note(s);t.setTextColor(NAVY);t.setTextSize(18);t.setTypeface(null,1);body.addView(t);}
     private TextView note(String s){TextView t=new TextView(this);t.setText(s);t.setTextSize(13);t.setTextColor(0xFF334155);t.setPadding(5,7,5,7);return t;}
