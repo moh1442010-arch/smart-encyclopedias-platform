@@ -1570,6 +1570,7 @@ public class MainActivity extends Activity {
             SimpleDateFormat backupTime=new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'",Locale.US);backupTime.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
             manifest.put("created_at",backupTime.format(new Date()));
             snapshot.put(manifest);for(int i=0;i<records.length();i++)snapshot.put(records.get(i));
+            snapshot.put(PartyDirectoryBackup.export(store.getReadableDatabase()));
             snapshot.put(FactoryBackup.export(this));
             byte[] plain=snapshot.toString(2).getBytes(StandardCharsets.UTF_8);
             byte[] encrypted=PortableBackupCrypto.encrypt(plain,password);
@@ -1604,12 +1605,15 @@ public class MainActivity extends Activity {
 
     private void importBackupPayload(byte[] bytes) throws Exception {
         JSONArray imported=new JSONArray(new String(bytes,StandardCharsets.UTF_8));
-        JSONArray records=new JSONArray();JSONObject factorySnapshot=null,manifest=null;
+        JSONArray records=new JSONArray();JSONObject factorySnapshot=null,partySnapshot=null,manifest=null;
         for(int i=0;i<imported.length();i++){
             JSONObject row=imported.getJSONObject(i);String type=row.optString("_type","");
             if("almizan_backup_manifest".equals(type)){
                 if(manifest!=null)throw new IllegalArgumentException("Duplicate backup manifest");
                 manifest=row;
+            } else if(PartyDirectoryBackup.TYPE.equals(type)){
+                if(partySnapshot!=null)throw new IllegalArgumentException("Duplicate party directory backup section");
+                partySnapshot=row;
             } else if(FactoryBackup.TYPE.equals(type)){
                 if(factorySnapshot!=null)throw new IllegalArgumentException("Duplicate factory backup section");
                 factorySnapshot=row;
@@ -1621,19 +1625,22 @@ public class MainActivity extends Activity {
         if(manifest!=null&&(!"com.mohammedmustafa.almizan.bakery".equals(manifest.optString("app_id"))||manifest.optInt("schema_version")!=1))
             throw new IllegalArgumentException("Unsupported backup app identity or schema version");
         if(factorySnapshot!=null)FactoryBackup.validate(factorySnapshot);
-        final JSONArray bakeryRecords=records;final JSONObject factoryData=factorySnapshot;
+        if(partySnapshot!=null)PartyDirectoryBackup.validate(partySnapshot);
+        final JSONArray bakeryRecords=records;final JSONObject factoryData=factorySnapshot;final JSONObject partyData=partySnapshot;
         new AlertDialog.Builder(this).setTitle("تأكيد الاستعادة")
             .setMessage("سيتم دمج "+bakeryRecords.length()+" سجل للمخبز"+(factoryData!=null?" واستبدال بيانات المصنع بالنسخة":" (النسخة لا تحتوي على بيانات المصنع)")+". أنشئ نسخة احتياطية للحالة الحالية قبل المتابعة.")
             .setNegativeButton("إلغاء",null).setPositiveButton("استعادة",(d,w)->{
-                JSONArray previousBakery=null;JSONObject previousFactory=null;boolean bakeryRestored=false,factoryRestored=false;
+                JSONArray previousBakery=null;JSONObject previousFactory=null,previousParties=null;boolean bakeryRestored=false,factoryRestored=false,partiesRestored=false;
                 try {
-                    previousBakery=store.exportAll();previousFactory=FactoryBackup.export(this);
+                    previousBakery=store.exportAll();previousParties=PartyDirectoryBackup.export(store.getReadableDatabase());previousFactory=FactoryBackup.export(this);
                     int count=store.restoreAll(bakeryRecords);bakeryRestored=true;
+                    if(partyData!=null){PartyDirectoryBackup.restore(store.getWritableDatabase(),partyData);partiesRestored=true;}
                     if(factoryData!=null){FactoryBackup.restore(this,factoryData);factoryRestored=true;}
-                    updateStatus();toast("اكتملت الاستعادة: "+count+" سجل للمخبز وبيانات المصنع.");
+                    updateStatus();toast("اكتملت الاستعادة: "+count+" سجل للمخبز وسجل العملاء والموردين والحسابات وبيانات المصنع.");
                 } catch(Exception ex){
                     boolean rollbackOk=true;
                     try {if(factoryRestored&&previousFactory!=null)FactoryBackup.restore(this,previousFactory);}catch(Exception rollback){rollbackOk=false;android.util.Log.e("AlMizanBakery","Factory restore rollback failed",rollback);}
+                    try {if(partiesRestored&&previousParties!=null)PartyDirectoryBackup.restore(store.getWritableDatabase(),previousParties);}catch(Exception rollback){rollbackOk=false;android.util.Log.e("AlMizanBakery","Party directory restore rollback failed",rollback);}
                     try {if(bakeryRestored&&previousBakery!=null)store.replaceAll(previousBakery);}catch(Exception rollback){rollbackOk=false;android.util.Log.e("AlMizanBakery","Bakery restore rollback failed",rollback);}
                     if(rollbackOk)toast("لم تكتمل الاستعادة. أُعيدت الدفاتر إلى حالتها السابقة ولم يُعتمد الاستيراد.");
                     else toast("تعذرت الاستعادة والتراجع الآلي الكامل. أوقف إدخال العمليات وخذ نسخة من الحالة الحالية وتواصل مع الدعم فوراً.");
