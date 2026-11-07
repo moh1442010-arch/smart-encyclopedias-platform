@@ -17,7 +17,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: al-mizan-bakery-release-${{ github.event.pull_request.head.ref || github.ref_name }}
+  # Push and pull_request events for the same PR must not cancel each other's verification.
+  group: al-mizan-bakery-release-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
@@ -105,7 +106,7 @@ jobs:
 
       - name: Validate factory module schema and requested screens
         run: |
-          grep -Fq 'DB(Context c){super(c,"almizan_factory_1.db",SecureDatabase.passphrase(c,"almizan_factory_1.db"),null,6,0,null,null,false);}' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'DB(Context c){super(c,"almizan_factory_1.db",SecureDatabase.passphrase(c,"almizan_factory_1.db"),null,9,0,null,null,false);}' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'CREATE TABLE daily_usage' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'دقيق' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'مواد تغليف' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
@@ -124,7 +125,7 @@ jobs:
           grep -Fq 'CREATE TABLE IF NOT EXISTS sales_returns' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS work_orders' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS journal_entries' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'root.put("schema_version", 6)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
+          grep -Fq 'root.put("schema_version", 7)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
           grep -Fq 'net.zetetic:sqlcipher-android:4.19.1@aar' bakery-app/app/build.gradle
           grep -Fq 'System.loadLibrary("sqlcipher")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/SecureDatabase.java
           grep -Fq 'AndroidKeyStore' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/SecureDatabase.java
@@ -133,6 +134,37 @@ jobs:
           grep -Fq 'SecureDatabase.passphrase(c,"almizan_factory_1.db")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'SecureDatabase.open(this,"almizan_factory_1.db")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'migratesLegacyBakeryDatabaseAndHidesPlaintext' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/SecureDatabaseMigrationTest.java
+          grep -Fq 'EnterpriseSchema.ensure(db)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'onConfigure(SQLiteDatabase db)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'null,7,0,null,null,false' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS suppliers' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS employees' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS fixed_assets' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS exchange_rates' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS tax_rules' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS gl_journal_entries' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS gl_journal_lines' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS customers' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'CREATE TABLE IF NOT EXISTS company_bank_accounts' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq "('EUR','اليورو','Euro'" bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
+          grep -Fq 'PartyDirectory.showCustomerPicker' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'PartyDirectory.showSupplierPicker' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'supplier_purchase_records' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'PartyDirectoryBackup.export' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'PartyDirectoryBackup.restore' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'exchangeRatesSection' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/PartyDirectoryActivity.java
+          grep -Fq 'exchange_rates' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/PartyDirectoryBackup.java
+          grep -Fq 'supplier_payment_records' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
+          grep -Fq '.PartyDirectoryActivity' bakery-app/app/src/main/AndroidManifest.xml
+          grep -Fq 'addsEnterpriseTablesWithoutChangingExistingBakeryRecords' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchemaMigrationTest.java
+          grep -Fq 'convertsCurrenciesUsingRationalRatesAndMinorUnits' bakery-app/app/src/test/java/com/mohammedmustafa/almizan/bakery/EnterpriseMathTest.java
+          grep -Fq 'PortableBackupCrypto.encrypt' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'PortableBackupCrypto.decrypt' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'almizan_backup_manifest' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq '"0 جوال"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'MIZANBK1' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/PortableBackupCrypto.java
+          grep -Fq 'encryptsAndDecryptsPortableBackup' bakery-app/app/src/test/java/com/mohammedmustafa/almizan/bakery/PortableBackupCryptoTest.java
+          grep -Fq 'سيتم دمج ' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq '7L * 24L * 60L * 60L * 1000L' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq '27. التجربة المجانية والاشتراك' bakery-app/app/src/main/assets/bakery-guide.html
           grep -Fq '28. حالة حماية قاعدة البيانات' bakery-app/app/src/main/assets/bakery-guide.html
@@ -143,7 +175,7 @@ jobs:
             exit 1
           fi
           grep -Fq 'root.optInt("schema_version")<6 && "work_order_stages".equals(TABLES[i])' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
-          echo "Factory modules, schema v6 backup compatibility and Android API 23 declarations verified."
+          echo "Factory modules, schema v7 backup compatibility and Android API 23 declarations verified."
 
       - name: Run arithmetic unit tests
         working-directory: bakery-app

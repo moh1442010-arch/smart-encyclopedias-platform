@@ -53,8 +53,13 @@ final class SecureDatabase {
     }
 
     static SQLiteDatabase open(Context context,String name){
+        File file=context.getDatabasePath(name);
+        File parent=file.getParentFile();
+        if(parent==null)throw new IllegalStateException("Database directory is unavailable");
+        if(!parent.exists()&&!parent.mkdirs()&&!parent.isDirectory())
+            throw new IllegalStateException("Cannot create database directory");
         byte[] key=passphrase(context,name);
-        return SQLiteDatabase.openOrCreateDatabase(context.getDatabasePath(name),key,null,null);
+        return SQLiteDatabase.openOrCreateDatabase(file,key,null,null);
     }
 
     private static SecretKey wrappingKey(Context context)throws Exception{

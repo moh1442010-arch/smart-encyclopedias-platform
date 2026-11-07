@@ -14,23 +14,71 @@ import java.util.*;
 public class FactoryActivity extends Activity {
     private static final int NAVY=Color.rgb(11,31,58), GOLD=Color.rgb(212,175,55);
     private DB db; private LinearLayout body; private String screen="home";
+    private final android.os.Handler entitlementHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable entitlementWatchdog = new Runnable() {
+        @Override public void run() {
+            if (!LicenseAccessGate.isAccessAllowed(FactoryActivity.this)) enforceEntitlement();
+            else entitlementHandler.postDelayed(this,30000L);
+        }
+    };
+    private boolean enforceEntitlement() {
+        if (LicenseAccessGate.isAccessAllowed(this)) return true;
+        entitlementHandler.removeCallbacks(entitlementWatchdog);
+        if (db != null) { db.close(); db=null; }
+        Toast.makeText(this,"انتهت التجربة أو لا يوجد ترخيص ساري. بياناتك محفوظة؛ يرجى التفعيل للمتابعة.",Toast.LENGTH_LONG).show();
+        finish();
+        startActivity(new Intent(this,MainActivity.class));
+        return false;
+    }
     private static final String[][] DEFAULT_MATERIALS={{"دقيق","كجم"},{"سكر","كجم"},{"زيت","لتر"},{"خميرة","كجم"},{"سمن","كجم"},{"بيض","طبق"},{"لبن","لتر"},{"مواد تغليف","قطعة"},{"غاز","أسطوانة"},{"وقود","لتر"}};
     private static final String[][] DEFAULT_PRODUCTS={{"باسطة","باسطة"},{"فطائر","فطائر"},{"خبائز","خبائز"},{"حلويات","حلويات"},{"بلح شام","بلح شام"}};
     private String today(){return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());}
-    @Override public void onCreate(Bundle b){super.onCreate(b); db=new DB(this); db.seedMaterials(DEFAULT_MATERIALS); db.seedProducts(DEFAULT_PRODUCTS); home();}
-    @Override public void onBackPressed(){if("home".equals(screen))super.onBackPressed();else home();}
+    private String businessName(){String n=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","");return n==null||n.trim().isEmpty()?"المخبز":n.trim();}
+    private void printVisibleScreen(String title){
+        StringBuilder out=new StringBuilder("المنشأة: ").append(businessName()).append("\\nالمصنع: مصنع الخبائز والحلويات والباسطة\\nالشاشة: ").append(title).append("\\nالتاريخ: ").append(today()).append("\\n\\n");
+        appendPrintable(body,out);if(out.length()<100){toast("لا توجد بيانات ظاهرة للطباعة.");return;}
+        try{PrinterService.print(this,businessName(),title+" - "+businessName(),out.toString());}catch(Exception e){toast("تعذر فتح الطباعة: "+e.getMessage());}
+    }
+    private void appendPrintable(View view,StringBuilder out){
+        if(view instanceof EditText){String value=((EditText)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");return;}
+        if(view instanceof TextView){String value=((TextView)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");}
+        if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++)appendPrintable(group.getChildAt(i),out);}
+    }
+    private void printFactoryDaily(){
+        StringBuilder out=new StringBuilder("التاريخ: ").append(today()).append("\\n");
+        Cursor c=null;
+        try{
+            out.append("المواد الخام\\n");
+            c=db.getReadableDatabase().rawQuery("SELECT name,qty,unit,value FROM materials ORDER BY name",null);
+            while(c.moveToNext())out.append(c.getString(0)).append(" | ").append(c.getLong(1)/1000.0).append(" ").append(c.getString(2)).append(" | القيمة ").append(c.getLong(3)).append("\\n");
+            c.close();c=null;
+            out.append("\\nالمنتجات الجاهزة\\n");
+            c=db.getReadableDatabase().rawQuery("SELECT p.name,f.qty,f.value FROM finished f JOIN products p ON p.id=f.product_id ORDER BY p.name",null);
+            while(c.moveToNext())out.append(c.getString(0)).append(" | الكمية ").append(c.getLong(1)/1000.0).append(" | القيمة ").append(c.getLong(2)).append("\\n");
+            PrinterService.print(this,businessName(),"تقرير المصنع اليومي",out.toString());
+        }catch(Exception e){toast("تعذر تجهيز التقرير للطباعة: "+e.getMessage());}
+        finally{if(c!=null)c.close();}
+    }
+    @Override public void onCreate(Bundle b){super.onCreate(b);if(!enforceEntitlement())return;db=new DB(this);db.seedMaterials(DEFAULT_MATERIALS);db.seedProducts(DEFAULT_PRODUCTS);home();}
+    @Override protected void onResume(){super.onResume();if(db!=null&&!enforceEntitlement())return;entitlementHandler.removeCallbacks(entitlementWatchdog);entitlementHandler.post(entitlementWatchdog);}
+    @Override protected void onPause(){entitlementHandler.removeCallbacks(entitlementWatchdog);super.onPause();}
+    @Override protected void onDestroy(){entitlementHandler.removeCallbacks(entitlementWatchdog);if(db!=null){db.close();db=null;}super.onDestroy();}
+    @Override public void onBackPressed(){if(!enforceEntitlement())return;if("home".equals(screen))super.onBackPressed();else home();}
     private TextView label(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(Color.rgb(30,40,50));t.setPadding(4,10,4,10);return t;}
     private Button btn(String s,Runnable r){Button b=new Button(this);b.setText(s);b.setOnClickListener(v->r.run());return b;}
     private void frame(String title){
         screen="الرئيسية".equals(title)?"home":title; LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(14,12,14,16);root.setBackgroundColor(Color.rgb(246,248,251));
-        TextView head=label("🏭 مصنع الخبائز والحلويات والباسطة\n"+title,21);head.setTextColor(NAVY);head.setBackgroundColor(Color.WHITE);root.addView(head);
+        TextView head=label(businessName()+"\n🏭 مصنع الخبائز والحلويات والباسطة — "+title,21);head.setTextColor(NAVY);head.setBackgroundColor(Color.WHITE);head.setGravity(Gravity.CENTER);root.addView(head);
         root.addView(btn("⌂ العودة إلى مصنع الخبائز والحلويات والباسطة",()->home()));
         root.addView(btn("↩ العودة إلى قائمة المخبز الرئيسية",()->finish()));
-        ScrollView sc=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);body.setPadding(2,8,2,8);sc.addView(body);root.addView(sc,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);
+        root.addView(btn("⌂ الرئيسية",()->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();}));
+        ScrollView sc=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);body.setPadding(2,8,2,8);sc.addView(body);root.addView(sc,new LinearLayout.LayoutParams(-1,0,1));root.addView(btn("🖨️ طباعة الشاشة الحالية",()->printVisibleScreen(title)));setContentView(root);
     }
     private void home(){
         frame("الرئيسية");
-        body.addView(label("نظام مستقل عن دفاتر المخبز. كل المخزون والحركات والتكاليف هنا محفوظة في قاعدة بيانات منفصلة.",15));
+        body.addView(label("المنشأة: "+businessName()+"\\nنظام مستقل عن دفاتر المخبز. كل المخزون والحركات والتكاليف هنا محفوظة في قاعدة بيانات منفصلة.",15));
+        body.addView(btn("🖨️ إعداد الطابعة / طباعة تقرير المصنع",()->{new AlertDialog.Builder(this).setTitle("الطباعة").setMessage("ستظهر طابعات Android المتاحة. يمكن استخدام طابعة Bluetooth أو Wi-Fi أو USB إذا كان نظام الجهاز يوفر خدمتها.").setNegativeButton("إغلاق",null).setPositiveButton("طباعة تقرير المصنع",(d,w)->printFactoryDaily()).show();}));
+        body.addView(btn("سجل العملاء والموردين وحسابات IBAN",()->startActivity(new Intent(this,PartyDirectoryActivity.class))));
         body.addView(btn("1. مخزن المواد الخام ومستلزمات المصنع",()->warehouse()));
         body.addView(btn("2. الإنتاج: اسم المنتج والكمية وسعر الوحدة",()->products()));
         body.addView(btn("3. الوصفات ومكونات الإنتاج",()->recipes()));
@@ -43,6 +91,8 @@ public class FactoryActivity extends Activity {
         body.addView(btn("9. مرتجعات المبيعات والأعمال تحت التشغيل وعكس القيود",()->startActivity(new Intent(this,FactoryLedgerActivity.class))));
     }
     private EditText field(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setInputType(decimal?android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:android.text.InputType.TYPE_CLASS_TEXT);body.addView(e);return e;}
+    private EditText cell(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setTextSize(14);e.setInputType(decimal?android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:android.text.InputType.TYPE_CLASS_TEXT);return e;}
+    private void horizontalFields(View... views){HorizontalScrollView h=new HorizontalScrollView(this);h.setHorizontalScrollBarEnabled(true);LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);for(View v:views){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams((int)(155*getResources().getDisplayMetrics().density+0.5f),(int)(58*getResources().getDisplayMetrics().density+0.5f));p.setMargins(3,2,3,2);row.addView(v,p);}h.addView(row);body.addView(h,new LinearLayout.LayoutParams(-1,-2));}
     private long num(EditText e){try{java.math.BigDecimal x=new java.math.BigDecimal(e.getText().toString().trim());return x.movePointRight(3).longValueExact();}catch(Exception ex){return 0;}}
     private long money(EditText e){try{return new java.math.BigDecimal(e.getText().toString().trim()).longValueExact();}catch(Exception ex){return 0;}}
     private void warehouse(){
@@ -55,8 +105,23 @@ public class FactoryActivity extends Activity {
             while(rows.moveToNext()) tableRow(rows.getString(0),String.format(Locale.US,"%.3f %s",rows.getLong(1)/1000.0,rows.getString(2)),String.format(Locale.US,"%.2f",rows.getLong(3)/1000.0),String.format(Locale.US,"%.3f",rows.getLong(4)/1000.0));
         }catch(Exception ex){body.addView(label("تعذر عرض المخزن: "+ex.getMessage(),13));}finally{if(rows!=null)rows.close();}
         body.addView(label("إضافة وارد مخزني",16));
-        EditText n=field("اسم الصنف",false),u=field("وحدة القياس: كجم، لتر، طبق، قطعة",false),q=field("الكمية الواردة",true),unitPrice=field("سعر الوحدة بالجنيه",false);
-        body.addView(btn("حفظ الوارد وحساب إجمالي التكلفة",()->{String name=n.getText().toString().trim(),unit=u.getText().toString().trim();long qty=num(q),price=money(unitPrice);if(name.isEmpty()||unit.isEmpty()||qty<=0||price<0){toast("أدخل الصنف والوحدة والكمية وسعر الوحدة");return;}try{long total=java.math.BigDecimal.valueOf(qty).multiply(java.math.BigDecimal.valueOf(price)).divide(java.math.BigDecimal.valueOf(1000),0,java.math.RoundingMode.HALF_UP).longValueExact();db.receive(name,unit,qty,total);toast("تم حفظ الوارد وإعادة حساب متوسط سعر الوحدة");warehouse();}catch(Exception ex){toast("تعذر تسجيل الوارد: "+ex.getMessage());}}));
+        EditText supplier=cell("المورد المختار",false);supplier.setFocusable(false);final long[] supplierId={0};
+        horizontalFields(supplier);
+        body.addView(btn("بحث واختيار المورد",()->PartyDirectory.showSupplierPicker(this,(id,name)->{supplierId[0]=id;supplier.setText(name);} )));
+        EditText n=cell("اسم الصنف",false),u=cell("وحدة القياس",false),q=cell("الكمية",true),unitPrice=cell("سعر الوحدة SDG",false),paidCash=cell("سداد نقدي",false),paidBank=cell("سداد بنكك",false),bankRef=cell("رقم العملية",false);
+        horizontalFields(n,u,q,unitPrice,paidCash,paidBank,bankRef);
+        body.addView(btn("حفظ فاتورة المورد وتحديث المخزون",()->{String name=n.getText().toString().trim(),unit=u.getText().toString().trim(),ref=bankRef.getText().toString().trim();long qty=num(q),price=money(unitPrice),cashPaid=money(paidCash),bankPaid=money(paidBank);if(supplierId[0]<=0||name.isEmpty()||unit.isEmpty()||qty<=0||price<0||cashPaid<0||bankPaid<0){toast("اختر مورداً مسجلاً وأدخل الصنف والكمية والسعر والسداد");return;}try{long total=java.math.BigDecimal.valueOf(qty).multiply(java.math.BigDecimal.valueOf(price)).divide(java.math.BigDecimal.valueOf(1000),0,java.math.RoundingMode.HALF_UP).longValueExact();if(cashPaid>total||bankPaid>total-cashPaid||(bankPaid>0&&ref.isEmpty()))throw new IllegalArgumentException("راجع السداد ورقم العملية؛ لا يمكن أن يتجاوز المدفوع قيمة الفاتورة.");db.receive(name,unit,qty,total,supplierId[0],supplier.getText().toString(),cashPaid,bankPaid,ref);
+                String invoice="التاريخ: "+today()+"\\nالمورد: "+supplier.getText()+"\\nالصنف: "+name+"\\nالوحدة: "+unit+"\\nالكمية: "+(qty/1000.0)+"\\nقيمة الفاتورة: "+total+" جنيه\\nسداد نقدي: "+cashPaid+" جنيه\\nسداد بنكك: "+bankPaid+" جنيه\\nرقم العملية: "+ref+"\\nالمديونية: "+(total-cashPaid-bankPaid)+" جنيه";
+                new AlertDialog.Builder(this).setTitle("تم حفظ فاتورة المورد").setMessage("تم تحديث المخزون. هل تريد طباعة الفاتورة؟").setNegativeButton("لاحقاً",(d,w)->warehouse()).setPositiveButton("🖨️ طباعة الفاتورة",(d,w)->{try{PrinterService.print(this,businessName(),"فاتورة مشتريات",invoice);}catch(Exception ex){toast("تعذر الطباعة: "+ex.getMessage());}warehouse();}).show();}catch(Exception ex){toast("تعذر تسجيل فاتورة المورد: "+ex.getMessage());}}));
+        body.addView(label("سداد مديونية مورد",16));
+        EditText paySupplier=cell("المورد المختار للسداد",false);paySupplier.setFocusable(false);final long[] paySupplierId={0};
+        horizontalFields(paySupplier);
+        body.addView(btn("بحث واختيار المورد",()->PartyDirectory.showSupplierPicker(this,(id,name)->{paySupplierId[0]=id;paySupplier.setText(name);} )));
+        EditText supplierCash=cell("سداد نقدي",false),supplierBank=cell("سداد بنكك",false),supplierRef=cell("رقم العملية",false);
+        horizontalFields(supplierCash,supplierBank,supplierRef);
+        body.addView(btn("حفظ سداد المورد",()->{long cash=money(supplierCash),bank=money(supplierBank);String ref=supplierRef.getText().toString().trim();if(paySupplierId[0]<=0||cash<0||bank<0||cash+bank<=0||(bank>0&&ref.isEmpty())){toast("اختر المورد وأدخل مبلغ السداد ورقم العملية للتحويل");return;}try{db.paySupplier(paySupplierId[0],paySupplier.getText().toString(),cash,bank,ref);toast("تم حفظ سداد المورد");warehouse();}catch(Exception ex){toast("تعذر سداد المورد: "+ex.getMessage());}}));
+        body.addView(label("أرصدة الموردين المدينة",15));
+        Cursor supplierBalances=null;try{supplierBalances=db.getReadableDatabase().rawQuery("SELECT supplier_name||' | المتبقي: '||(SUM(debt)-COALESCE((SELECT SUM(p.cash+p.bank) FROM supplier_payment_records p WHERE p.supplier_master_id=supplier_purchase_records.supplier_master_id),0)) FROM supplier_purchase_records GROUP BY supplier_master_id,supplier_name HAVING SUM(debt)>COALESCE((SELECT SUM(p.cash+p.bank) FROM supplier_payment_records p WHERE p.supplier_master_id=supplier_purchase_records.supplier_master_id),0) ORDER BY supplier_name",null);while(supplierBalances.moveToNext())body.addView(label(supplierBalances.getString(0),13));}finally{if(supplierBalances!=null)supplierBalances.close();}
         body.addView(label("تسجيل استهلاك خامة خلال اليوم",16));
         EditText useName=field("اسم الصنف",false),useQty=field("كمية الاستهلاك اليومي",true),useNote=field("بيان الاستهلاك",false);
         body.addView(btn("تسجيل الاستهلاك وخصمه من رصيد المخزن",()->{String name=useName.getText().toString().trim();long qty=num(useQty);if(name.isEmpty()||qty<=0){toast("حدد الصنف وكمية الاستهلاك");return;}try{db.consumeRaw(name,qty,useNote.getText().toString());toast("تم تسجيل الاستهلاك وخصمه من المخزون");warehouse();}catch(Exception ex){toast("تعذر تسجيل الاستهلاك: "+ex.getMessage());}}));
@@ -103,21 +168,25 @@ public class FactoryActivity extends Activity {
     private void sales(String channel){
         frame("نقطة البيع");
         body.addView(label("شاشة بيع موحدة لمنتجات المصنع. تختار المنتج وتحدد الكمية وسعر الوحدة، ويحسب النظام الإجمالي ثم يوزع التحصيل إلى نقد وبنكك وآجل.",14));
-        EditText customer=field("اسم العميل أو اسم الشباك",false),product=field("اسم المنتج",false),qty=field("الكمية المباعة",true),unitPrice=field("سعر بيع الوحدة بالجنيه",false),cash=field("المبلغ النقدي المستلم",false),bank=field("المبلغ المحول عبر بنكك",false),ref=field("رقم عملية بنكك عند التحويل",false);
+        EditText customer=field("العميل المختار من السجل",false);customer.setFocusable(false);final long[] customerId={0};
+        body.addView(btn("بحث واختيار العميل",()->PartyDirectory.showCustomerPicker(this,(id,name)->{customerId[0]=id;customer.setText(name);} )));
+        EditText product=field("اسم المنتج",false),qty=field("الكمية المباعة",true),unitPrice=field("سعر بيع الوحدة بالجنيه",false),cash=field("المبلغ النقدي المستلم",false),bank=field("المبلغ المحول عبر بنكك",false),ref=field("رقم عملية بنكك عند التحويل",false);
         body.addView(btn("عرض سعر الوحدة المسجل",()->{long pid=db.id("products",product.getText().toString().trim());if(pid==0){toast("المنتج غير مسجل");return;}long p=db.productPrice(pid);unitPrice.setText(""+p);}));
         body.addView(btn("تسجيل البيع وترحيل الحسابات",()->{
             long pid=db.id("products",product.getText().toString().trim()),q=num(qty),p=money(unitPrice),c=money(cash),bk=money(bank);String cust=customer.getText().toString().trim(),br=ref.getText().toString().trim();
-            if(pid==0||q<=0||p<=0||cust.isEmpty()||c<0||bk<0){toast("أدخل المنتج والعميل والكمية والسعر والتحصيل بصورة صحيحة");return;}
+            if(pid==0||customerId[0]<=0||q<=0||p<=0||cust.isEmpty()||c<0||bk<0){toast("اختر عميلاً مسجلاً وأدخل المنتج والكمية والسعر والتحصيل بصورة صحيحة");return;}
             try{
                 long total=FactoryMath.saleTotal(q,p);
                 if(total<=0||c>total||bk>total-c||(bk>0&&br.isEmpty())){toast("راجع الإجمالي والتحصيل ورقم بنكك");return;}
-                db.sell(pid,q,total,c,bk,cust,br,"نقطة البيع");
-                toast("تم البيع. الإجمالي "+total+" جنيه، والآجل "+(total-c-bk)+" جنيه");pointOfSale();
+                db.sell(pid,customerId[0],q,total,c,bk,cust,br,"نقطة البيع");
+                String invoice="رقم المستند: POS-"+System.currentTimeMillis()+"\\nالتاريخ: "+today()+"\\nالعميل: "+cust+"\\nالمنتج: "+product.getText()+"\\nالكمية: "+(q/1000.0)+"\\nسعر الوحدة: "+p+" جنيه\\nالإجمالي: "+total+" جنيه\\nنقدي: "+c+" جنيه\\nبنكك: "+bk+" جنيه\\nرقم العملية: "+br+"\\nالآجل: "+(total-c-bk)+" جنيه";
+                new AlertDialog.Builder(this).setTitle("تم حفظ فاتورة البيع").setMessage("الإجمالي "+total+" جنيه. هل تريد طباعة الفاتورة الآن؟").setNegativeButton("لاحقاً",(d,w)->pointOfSale()).setPositiveButton("🖨️ طباعة الفاتورة",(d,w)->{try{PrinterService.print(this,businessName(),"فاتورة بيع",invoice);}catch(Exception ex){toast("تعذر الطباعة: "+ex.getMessage());}pointOfSale();}).show();
             }catch(Exception ex){toast("لم يتم البيع: "+ex.getMessage());}
         }));
         body.addView(label("تحصيل مديونية سابقة",15));
-        EditText debtor=field("اسم العميل",false),colCash=field("مبلغ نقدي",false),colBank=field("مبلغ بنكك",false),colRef=field("رقم عملية بنكك",false);
-        body.addView(btn("تسجيل التحصيل",()->{String dn=debtor.getText().toString().trim(),br=colRef.getText().toString().trim();long cc=money(colCash),cb=money(colBank);if(dn.isEmpty()||cc<0||cb<0||cc+cb<=0||(cb>0&&br.isEmpty())){toast("بيانات التحصيل غير صحيحة");return;}try{db.collect(dn,cc,cb,br);toast("تم التحصيل وتخفيض مديونية العميل");pointOfSale();}catch(Exception ex){toast("تعذر التحصيل: "+ex.getMessage());}}));
+        EditText debtor=field("العميل المختار",false);debtor.setFocusable(false);final long[] debtorId={0};body.addView(btn("بحث واختيار العميل للتحصيل",()->PartyDirectory.showCustomerPicker(this,(id,name)->{debtorId[0]=id;debtor.setText(name);} )));
+        EditText colCash=field("مبلغ نقدي",false),colBank=field("مبلغ بنكك",false),colRef=field("رقم عملية بنكك",false);
+        body.addView(btn("تسجيل التحصيل",()->{String dn=debtor.getText().toString().trim(),br=colRef.getText().toString().trim();long cc=money(colCash),cb=money(colBank);if(debtorId[0]<=0||dn.isEmpty()||cc<0||cb<0||cc+cb<=0||(cb>0&&br.isEmpty())){toast("اختر عميلاً مسجلاً وأدخل بيانات التحصيل بصورة صحيحة");return;}try{db.collect(debtorId[0],dn,cc,cb,br);toast("تم التحصيل وتخفيض مديونية العميل");pointOfSale();}catch(Exception ex){toast("تعذر التحصيل: "+ex.getMessage());}}));
         tableHeader("المنتج والعميل","الكمية","الإجمالي","الآجل");
         Cursor c=null;try{c=db.getReadableDatabase().rawQuery("SELECT p.name||' / '||s.customer,s.qty,s.total,s.debt FROM sales s JOIN products p ON p.id=s.product_id ORDER BY s.id DESC LIMIT 100",null);while(c.moveToNext())tableRow(c.getString(0),String.format(Locale.US,"%.3f",c.getLong(1)/1000.0),""+c.getLong(2),""+c.getLong(3));}finally{if(c!=null)c.close();}
         list("SELECT customer||' | تحصيل نقدي: '||cash||' | تحصيل بنكك: '||bank FROM collections ORDER BY id DESC");
@@ -145,8 +214,8 @@ public class FactoryActivity extends Activity {
         list("SELECT 'تكلفة التالف: '||COALESCE(SUM(cost),0)||' جنيه' FROM waste");
         list("SELECT 'صافي نتيجة التشغيل قبل البنود غير المسجلة: '||((COALESCE((SELECT SUM(total) FROM sales),0)-COALESCE((SELECT SUM(refund_value) FROM sales_returns),0))-(COALESCE((SELECT SUM(cogs) FROM sales),0)-COALESCE((SELECT SUM(restored_cogs) FROM sales_returns),0))-COALESCE((SELECT SUM(amount) FROM expenses),0)-COALESCE((SELECT SUM(cost) FROM waste),0))||' جنيه'");
         body.addView(label("ثانياً — المركز التشغيلي للأرصدة",18));
-        list("SELECT 'رصيد النقدية: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('EXPENSE','SALE_RETURN')),0))||' جنيه'");
-        list("SELECT 'رصيد بنكك: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('EXPENSE','SALE_RETURN')),0))||' جنيه'");
+        list("SELECT 'رصيد النقدية: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('EXPENSE','SALE_RETURN','PURCHASE')),0))||' جنيه'");
+        list("SELECT 'رصيد بنكك: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('EXPENSE','SALE_RETURN','PURCHASE')),0))||' جنيه'");
         list("SELECT 'مديونيات العملاء المتبقية: '||(COALESCE((SELECT SUM(debt) FROM sales),0)-COALESCE((SELECT SUM(cash+bank) FROM collections),0)-COALESCE((SELECT SUM(credit_adjustment) FROM sales_returns),0))||' جنيه'");
         list("SELECT 'قيمة مخزون المواد الخام: '||COALESCE(SUM(value),0)||' جنيه' FROM materials");
         list("SELECT 'قيمة مخزون الإنتاج التام: '||COALESCE(SUM(value),0)||' جنيه' FROM finished");
@@ -167,8 +236,8 @@ public class FactoryActivity extends Activity {
     private void accounts(){
         frame("الحسابات والأرصدة");
         list("SELECT 'إجمالي المبيعات بعد المرتجعات: '||(COALESCE(SUM(total),0)-COALESCE((SELECT SUM(refund_value) FROM sales_returns),0))||' جنيه' FROM sales");
-        list("SELECT 'صافي رصيد الصندوق النقدي: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('EXPENSE','SALE_RETURN')),0))||' جنيه'");
-        list("SELECT 'صافي رصيد بنكك: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('EXPENSE','SALE_RETURN')),0))||' جنيه'");
+        list("SELECT 'صافي رصيد الصندوق النقدي: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('EXPENSE','SALE_RETURN','PURCHASE')),0))||' جنيه'");
+        list("SELECT 'صافي رصيد بنكك: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('EXPENSE','SALE_RETURN','PURCHASE')),0))||' جنيه'");
         list("SELECT 'النقد المحصل من المبيعات: '||COALESCE(SUM(cash),0)||' جنيه' FROM sales");
         list("SELECT 'تحويلات بنكك: '||COALESCE(SUM(bank),0)||' جنيه' FROM sales");
         list("SELECT 'ديون العملاء المتبقية: '||(COALESCE((SELECT SUM(debt) FROM sales),0)-COALESCE((SELECT SUM(cash+bank) FROM collections),0)-COALESCE((SELECT SUM(credit_adjustment) FROM sales_returns),0))||' جنيه'");
@@ -184,18 +253,20 @@ public class FactoryActivity extends Activity {
     private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
 
     private static class DB extends SQLiteOpenHelper {
-        DB(Context c){super(c,"almizan_factory_1.db",SecureDatabase.passphrase(c,"almizan_factory_1.db"),null,6,0,null,null,false);}
+        DB(Context c){super(c,"almizan_factory_1.db",SecureDatabase.passphrase(c,"almizan_factory_1.db"),null,9,0,null,null,false);}
         public void onCreate(SQLiteDatabase d){
             d.execSQL("CREATE TABLE materials(id INTEGER PRIMARY KEY,name TEXT UNIQUE,unit TEXT,qty INTEGER NOT NULL DEFAULT 0,value INTEGER NOT NULL DEFAULT 0)");
             d.execSQL("CREATE TABLE products(id INTEGER PRIMARY KEY,name TEXT UNIQUE,category TEXT NOT NULL DEFAULT 'منتج إضافي',unit_price INTEGER NOT NULL DEFAULT 0)");
             d.execSQL("CREATE TABLE recipe(id INTEGER PRIMARY KEY,product_id INTEGER,material_id INTEGER,qty INTEGER CHECK(qty>0),UNIQUE(product_id,material_id))");
             d.execSQL("CREATE TABLE batches(id INTEGER PRIMARY KEY,batch_ref TEXT UNIQUE,product_id INTEGER,batches INTEGER,output INTEGER,labor INTEGER,overhead INTEGER,cost INTEGER,unit_cost INTEGER,status TEXT,date TEXT)");
             d.execSQL("CREATE TABLE finished(product_id INTEGER PRIMARY KEY,qty INTEGER NOT NULL DEFAULT 0,value INTEGER NOT NULL DEFAULT 0,unit_cost INTEGER NOT NULL DEFAULT 0)");
-            d.execSQL("CREATE TABLE sales(id INTEGER PRIMARY KEY,product_id INTEGER,customer TEXT,channel TEXT,qty INTEGER,total INTEGER,cash INTEGER,bank INTEGER,bank_ref TEXT,debt INTEGER,cogs INTEGER,date TEXT)");
+            d.execSQL("CREATE TABLE sales(id INTEGER PRIMARY KEY,product_id INTEGER,customer TEXT,customer_master_id INTEGER NOT NULL DEFAULT 0,channel TEXT,qty INTEGER,total INTEGER,cash INTEGER,bank INTEGER,bank_ref TEXT,debt INTEGER,cogs INTEGER,date TEXT)");
             d.execSQL("CREATE TABLE expenses(id INTEGER PRIMARY KEY,date TEXT,category TEXT,amount INTEGER,note TEXT)");
             d.execSQL("CREATE TABLE waste(id INTEGER PRIMARY KEY,product_id INTEGER,qty INTEGER,cost INTEGER,reason TEXT,date TEXT)");
-            d.execSQL("CREATE TABLE movements(id INTEGER PRIMARY KEY,kind TEXT,item_id INTEGER,qty INTEGER,value INTEGER,ref TEXT,date TEXT)");
-            d.execSQL("CREATE TABLE collections(id INTEGER PRIMARY KEY,customer TEXT,cash INTEGER NOT NULL,bank INTEGER NOT NULL,bank_ref TEXT,date TEXT)");
+            d.execSQL("CREATE TABLE movements(id INTEGER PRIMARY KEY,kind TEXT,item_id INTEGER,qty INTEGER,value INTEGER,ref TEXT,date TEXT,supplier_master_id INTEGER NOT NULL DEFAULT 0)");
+            d.execSQL("CREATE TABLE collections(id INTEGER PRIMARY KEY,customer TEXT,customer_master_id INTEGER NOT NULL DEFAULT 0,cash INTEGER NOT NULL,bank INTEGER NOT NULL,bank_ref TEXT,date TEXT)");
+            d.execSQL("CREATE TABLE supplier_purchase_records(id INTEGER PRIMARY KEY,supplier_master_id INTEGER NOT NULL,supplier_name TEXT NOT NULL,item_name TEXT NOT NULL,quantity_milli INTEGER NOT NULL,invoice_total INTEGER NOT NULL,paid_cash INTEGER NOT NULL,paid_bank INTEGER NOT NULL,bank_ref TEXT NOT NULL DEFAULT '',debt INTEGER NOT NULL,currency_code TEXT NOT NULL DEFAULT 'SDG',date TEXT NOT NULL)");
+            d.execSQL("CREATE TABLE supplier_payment_records(id INTEGER PRIMARY KEY,supplier_master_id INTEGER NOT NULL,supplier_name TEXT NOT NULL,cash INTEGER NOT NULL,bank INTEGER NOT NULL,bank_ref TEXT NOT NULL DEFAULT '',date TEXT NOT NULL)");
             d.execSQL("CREATE TABLE cashbook(id INTEGER PRIMARY KEY,account TEXT,kind TEXT,amount INTEGER NOT NULL,ref TEXT,date TEXT)");
             d.execSQL("CREATE TABLE audit(id INTEGER PRIMARY KEY,action TEXT,detail TEXT,date TEXT)");
             d.execSQL("CREATE TABLE daily_usage(id INTEGER PRIMARY KEY,date TEXT,material_id INTEGER,qty INTEGER,cost INTEGER,note TEXT,kind TEXT NOT NULL DEFAULT 'MANUAL')");
@@ -207,7 +278,7 @@ public class FactoryActivity extends Activity {
             d.execSQL("CREATE TABLE work_order_stages(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,stage_no INTEGER NOT NULL,output_qty INTEGER NOT NULL,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL,overhead INTEGER NOT NULL,total_cost INTEGER NOT NULL,date TEXT,UNIQUE(work_order_id,stage_no))");
             d.setVersion(6);
         }
-        public void onUpgrade(SQLiteDatabase d,int old,int now){if(old<2){d.execSQL("ALTER TABLE batches ADD COLUMN batch_ref TEXT");d.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_factory_batch_ref ON batches(batch_ref)");d.execSQL("CREATE TABLE IF NOT EXISTS collections(id INTEGER PRIMARY KEY,customer TEXT,cash INTEGER NOT NULL,bank INTEGER NOT NULL,bank_ref TEXT,date TEXT)");d.execSQL("CREATE TABLE IF NOT EXISTS cashbook(id INTEGER PRIMARY KEY,account TEXT,kind TEXT,amount INTEGER NOT NULL,ref TEXT,date TEXT)");}if(old<3)d.execSQL("ALTER TABLE sales ADD COLUMN channel TEXT NOT NULL DEFAULT 'التوزيع'");if(old<4){d.execSQL("ALTER TABLE products ADD COLUMN category TEXT NOT NULL DEFAULT 'منتج إضافي'");d.execSQL("ALTER TABLE products ADD COLUMN unit_price INTEGER NOT NULL DEFAULT 0");d.execSQL("CREATE TABLE IF NOT EXISTS daily_usage(id INTEGER PRIMARY KEY,date TEXT,material_id INTEGER,qty INTEGER,cost INTEGER,note TEXT,kind TEXT NOT NULL DEFAULT 'MANUAL')");}if(old<5){d.execSQL("CREATE TABLE IF NOT EXISTS sales_returns(id INTEGER PRIMARY KEY,sale_id INTEGER NOT NULL,product_id INTEGER NOT NULL,qty INTEGER NOT NULL,refund_value INTEGER NOT NULL,refund_cash INTEGER NOT NULL,refund_bank INTEGER NOT NULL,credit_adjustment INTEGER NOT NULL,restored_cogs INTEGER NOT NULL,bank_ref TEXT,reason TEXT,date TEXT)");d.execSQL("CREATE TABLE IF NOT EXISTS work_orders(id INTEGER PRIMARY KEY,work_ref TEXT UNIQUE,product_id INTEGER NOT NULL,batches INTEGER NOT NULL,planned_qty INTEGER NOT NULL,actual_qty INTEGER NOT NULL DEFAULT 0,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL DEFAULT 0,overhead INTEGER NOT NULL DEFAULT 0,total_cost INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL,date TEXT)");d.execSQL("CREATE TABLE IF NOT EXISTS work_order_materials(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,material_id INTEGER NOT NULL,qty INTEGER NOT NULL,cost INTEGER NOT NULL)");d.execSQL("CREATE TABLE IF NOT EXISTS journal_entries(id INTEGER PRIMARY KEY,entry_ref TEXT UNIQUE,description TEXT,status TEXT NOT NULL,reversal_of INTEGER,date TEXT)");d.execSQL("CREATE TABLE IF NOT EXISTS journal_lines(id INTEGER PRIMARY KEY,entry_id INTEGER NOT NULL,account TEXT NOT NULL,debit INTEGER NOT NULL DEFAULT 0,credit INTEGER NOT NULL DEFAULT 0)");}if(old<6)d.execSQL("CREATE TABLE IF NOT EXISTS work_order_stages(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,stage_no INTEGER NOT NULL,output_qty INTEGER NOT NULL,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL,overhead INTEGER NOT NULL,total_cost INTEGER NOT NULL,date TEXT,UNIQUE(work_order_id,stage_no))");d.setVersion(6);}
+        public void onUpgrade(SQLiteDatabase d,int old,int now){if(old<2){d.execSQL("ALTER TABLE batches ADD COLUMN batch_ref TEXT");d.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_factory_batch_ref ON batches(batch_ref)");d.execSQL("CREATE TABLE IF NOT EXISTS collections(id INTEGER PRIMARY KEY,customer TEXT,cash INTEGER NOT NULL,bank INTEGER NOT NULL,bank_ref TEXT,date TEXT)");d.execSQL("CREATE TABLE IF NOT EXISTS cashbook(id INTEGER PRIMARY KEY,account TEXT,kind TEXT,amount INTEGER NOT NULL,ref TEXT,date TEXT)");}if(old<3)d.execSQL("ALTER TABLE sales ADD COLUMN channel TEXT NOT NULL DEFAULT 'التوزيع'");if(old<4){d.execSQL("ALTER TABLE products ADD COLUMN category TEXT NOT NULL DEFAULT 'منتج إضافي'");d.execSQL("ALTER TABLE products ADD COLUMN unit_price INTEGER NOT NULL DEFAULT 0");d.execSQL("CREATE TABLE IF NOT EXISTS daily_usage(id INTEGER PRIMARY KEY,date TEXT,material_id INTEGER,qty INTEGER,cost INTEGER,note TEXT,kind TEXT NOT NULL DEFAULT 'MANUAL')");}if(old<5){d.execSQL("CREATE TABLE IF NOT EXISTS sales_returns(id INTEGER PRIMARY KEY,sale_id INTEGER NOT NULL,product_id INTEGER NOT NULL,qty INTEGER NOT NULL,refund_value INTEGER NOT NULL,refund_cash INTEGER NOT NULL,refund_bank INTEGER NOT NULL,credit_adjustment INTEGER NOT NULL,restored_cogs INTEGER NOT NULL,bank_ref TEXT,reason TEXT,date TEXT)");d.execSQL("CREATE TABLE IF NOT EXISTS work_orders(id INTEGER PRIMARY KEY,work_ref TEXT UNIQUE,product_id INTEGER NOT NULL,batches INTEGER NOT NULL,planned_qty INTEGER NOT NULL,actual_qty INTEGER NOT NULL DEFAULT 0,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL DEFAULT 0,overhead INTEGER NOT NULL DEFAULT 0,total_cost INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL,date TEXT)");d.execSQL("CREATE TABLE IF NOT EXISTS work_order_materials(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,material_id INTEGER NOT NULL,qty INTEGER NOT NULL,cost INTEGER NOT NULL)");d.execSQL("CREATE TABLE IF NOT EXISTS journal_entries(id INTEGER PRIMARY KEY,entry_ref TEXT UNIQUE,description TEXT,status TEXT NOT NULL,reversal_of INTEGER,date TEXT)");d.execSQL("CREATE TABLE IF NOT EXISTS journal_lines(id INTEGER PRIMARY KEY,entry_id INTEGER NOT NULL,account TEXT NOT NULL,debit INTEGER NOT NULL DEFAULT 0,credit INTEGER NOT NULL DEFAULT 0)");}if(old<6)d.execSQL("CREATE TABLE IF NOT EXISTS work_order_stages(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,stage_no INTEGER NOT NULL,output_qty INTEGER NOT NULL,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL,overhead INTEGER NOT NULL,total_cost INTEGER NOT NULL,date TEXT,UNIQUE(work_order_id,stage_no))");if(old<7){try{d.execSQL("ALTER TABLE sales ADD COLUMN customer_master_id INTEGER NOT NULL DEFAULT 0");}catch(Exception ignored){}try{d.execSQL("ALTER TABLE collections ADD COLUMN customer_master_id INTEGER NOT NULL DEFAULT 0");}catch(Exception ignored){}}if(old<8){try{d.execSQL("ALTER TABLE movements ADD COLUMN supplier_master_id INTEGER NOT NULL DEFAULT 0");}catch(Exception ignored){}d.execSQL("CREATE TABLE IF NOT EXISTS supplier_purchase_records(id INTEGER PRIMARY KEY,supplier_master_id INTEGER NOT NULL,supplier_name TEXT NOT NULL,item_name TEXT NOT NULL,quantity_milli INTEGER NOT NULL,invoice_total INTEGER NOT NULL,paid_cash INTEGER NOT NULL,paid_bank INTEGER NOT NULL,bank_ref TEXT NOT NULL DEFAULT '',debt INTEGER NOT NULL,currency_code TEXT NOT NULL DEFAULT 'SDG',date TEXT NOT NULL)");}if(old<9)d.execSQL("CREATE TABLE IF NOT EXISTS supplier_payment_records(id INTEGER PRIMARY KEY,supplier_master_id INTEGER NOT NULL,supplier_name TEXT NOT NULL,cash INTEGER NOT NULL,bank INTEGER NOT NULL,bank_ref TEXT NOT NULL DEFAULT '',date TEXT NOT NULL)");d.setVersion(9);}
         void seedProducts(String[][] items){SQLiteDatabase d=w();d.beginTransaction();try{for(String[] item:items)d.execSQL("INSERT OR IGNORE INTO products(name,category,unit_price) VALUES(?,?,0)",new Object[]{item[0],item[1]});d.setTransactionSuccessful();}finally{d.endTransaction();}}
         void saveProduct(String name,String category,long price){if(name==null||name.trim().isEmpty()||price<0)throw new IllegalArgumentException("بيانات المنتج غير صحيحة");SQLiteDatabase d=w();d.beginTransaction();try{Cursor c=d.rawQuery("SELECT id FROM products WHERE name=?",new String[]{name.trim()});long id=c.moveToFirst()?c.getLong(0):0;c.close();ContentValues v=new ContentValues();v.put("category",category);v.put("unit_price",price);if(id==0){v.put("name",name.trim());d.insertOrThrow("products",null,v);}else d.update("products",v,"id=?",new String[]{""+id});d.execSQL("INSERT INTO audit(action,detail,date) VALUES('PRODUCT_SAVED',?,date('now'))",new Object[]{name+":"+price});d.setTransactionSuccessful();}finally{d.endTransaction();}}
         long productPrice(long pid){Cursor c=getReadableDatabase().rawQuery("SELECT unit_price FROM products WHERE id=?",new String[]{""+pid});try{return c.moveToFirst()?c.getLong(0):0;}finally{c.close();}}
@@ -228,8 +299,8 @@ public class FactoryActivity extends Activity {
                 d.setTransactionSuccessful();
             }finally{d.endTransaction();}
         }
-        void receive(String name,String unit,long qty,long cost){
-            if(qty<=0||cost<0)throw new IllegalArgumentException("كمية أو تكلفة الوارد غير صحيحة");
+        void receive(String name,String unit,long qty,long cost,long supplierId,String supplierName,long paidCash,long paidBank,String bankRef){
+            if(qty<=0||cost<0||supplierId<=0||supplierName==null||supplierName.trim().isEmpty()||paidCash<0||paidBank<0||paidCash>cost||paidBank>cost-paidCash||(paidBank>0&&(bankRef==null||bankRef.trim().isEmpty())))throw new IllegalArgumentException("بيانات فاتورة المورد أو الوارد غير صحيحة");
             SQLiteDatabase d=w();d.beginTransaction();try{
                 Cursor c=d.rawQuery("SELECT id,qty,value,unit FROM materials WHERE name=?",new String[]{name});
                 long id=0,oldq=0,oldv=0;String oldunit=null;if(c.moveToFirst()){id=c.getLong(0);oldq=c.getLong(1);oldv=c.getLong(2);oldunit=c.getString(3);}c.close();
@@ -237,7 +308,7 @@ public class FactoryActivity extends Activity {
                 long nq=FactoryMath.add(oldq,qty),nv=FactoryMath.add(oldv,cost);
                 if(id==0){ContentValues v=new ContentValues();v.put("name",name);v.put("unit",unit);v.put("qty",nq);v.put("value",nv);d.insertOrThrow("materials",null,v);}else{ContentValues v=new ContentValues();v.put("qty",nq);v.put("value",nv);d.update("materials",v,"id=?",new String[]{""+id});}
                 long materialId=id==0?this.id("materials",name):id;
-                d.execSQL("INSERT INTO movements(kind,item_id,qty,value,ref,date) VALUES('RAW_IN',?,?,?,'purchase',?)",new Object[]{materialId,qty,cost,new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date())});
+                String date=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());d.execSQL("INSERT INTO movements(kind,item_id,qty,value,ref,date,supplier_master_id) VALUES('RAW_IN',?,?,?,?,?,?)",new Object[]{materialId,qty,cost,supplierName+":"+supplierId,date,supplierId});d.execSQL("INSERT INTO supplier_purchase_records(supplier_master_id,supplier_name,item_name,quantity_milli,invoice_total,paid_cash,paid_bank,bank_ref,debt,currency_code,date) VALUES(?,?,?,?,?,?,?,?,?,'SDG',?)",new Object[]{supplierId,supplierName,name,qty,cost,paidCash,paidBank,bankRef,cost-paidCash-paidBank,date});if(paidBank>0)ensureUniqueBankakRef(d,bankRef);if(paidCash>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('CASH','PURCHASE',?,?,?)",new Object[]{paidCash,supplierName,date});if(paidBank>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('BANKAK','PURCHASE',?,?,?)",new Object[]{paidBank,bankRef,date});
                 d.execSQL("INSERT INTO audit(action,detail,date) VALUES('RAW_RECEIVED',?,date('now'))",new Object[]{name+":"+qty+":"+cost});
                 d.setTransactionSuccessful();
             }finally{d.endTransaction();}
@@ -263,15 +334,31 @@ public class FactoryActivity extends Activity {
             Cursor c=d.rawQuery("SELECT COUNT(*) FROM cashbook WHERE account='BANKAK' AND ref=?",new String[]{ref.trim()});
             try{c.moveToFirst();if(c.getLong(0)>0)throw new IllegalArgumentException("رقم عملية بنكك مسجل مسبقاً؛ راجع دفتر الحركات");}finally{c.close();}
         }
-        void sell(long pid,long qty,long total,long cash,long bank,String customer,String ref,String channel){
+        void sell(long pid,long customerMasterId,long qty,long total,long cash,long bank,String customer,String ref,String channel){
             SQLiteDatabase d=w();d.beginTransaction();try{
             if(customer==null||customer.trim().isEmpty()||qty<=0||total<=0||cash<0||bank<0||cash>total||bank>total-cash)throw new IllegalArgumentException("بيانات البيع أو التحصيل غير صحيحة");
             FactoryMath.validateBankakReference(bank,ref);
             if(bank>0)ensureUniqueBankakRef(d,ref);
-            Cursor c=d.rawQuery("SELECT qty,value,unit_cost FROM finished WHERE product_id=?",new String[]{""+pid});if(!c.moveToFirst()){c.close();throw new IllegalArgumentException("لا يوجد مخزون منتج");}long stock=c.getLong(0),value=c.getLong(1),unit=c.getLong(2);c.close();if(stock<qty)throw new IllegalArgumentException("الكمية المتاحة أقل من المطلوب");if(qty<=0||total<=0||cash<0||bank<0||cash>total||bank>total-cash)throw new IllegalArgumentException("قيمة البيع أو التحصيل غير صحيحة");long cogs=FactoryMath.costForStockIssue(value,qty,stock);ContentValues f=new ContentValues();f.put("qty",stock-qty);f.put("value",value-cogs);f.put("unit_cost",stock==qty?0:java.math.BigDecimal.valueOf(value-cogs).multiply(java.math.BigDecimal.valueOf(1000000)).divide(java.math.BigDecimal.valueOf(stock-qty),0,java.math.RoundingMode.HALF_UP).longValueExact());d.update("finished",f,"product_id=?",new String[]{""+pid});d.execSQL("INSERT INTO sales(product_id,customer,channel,qty,total,cash,bank,bank_ref,debt,cogs,date) VALUES(?,?,?,?,?,?,?,?,?,?,?)",new Object[]{pid,customer,channel,qty,total,cash,bank,ref,total-cash-bank,cogs,new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date())});
+            Cursor c=d.rawQuery("SELECT qty,value,unit_cost FROM finished WHERE product_id=?",new String[]{""+pid});if(!c.moveToFirst()){c.close();throw new IllegalArgumentException("لا يوجد مخزون منتج");}long stock=c.getLong(0),value=c.getLong(1),unit=c.getLong(2);c.close();if(stock<qty)throw new IllegalArgumentException("الكمية المتاحة أقل من المطلوب");if(qty<=0||total<=0||cash<0||bank<0||cash>total||bank>total-cash)throw new IllegalArgumentException("قيمة البيع أو التحصيل غير صحيحة");long cogs=FactoryMath.costForStockIssue(value,qty,stock);ContentValues f=new ContentValues();f.put("qty",stock-qty);f.put("value",value-cogs);f.put("unit_cost",stock==qty?0:java.math.BigDecimal.valueOf(value-cogs).multiply(java.math.BigDecimal.valueOf(1000000)).divide(java.math.BigDecimal.valueOf(stock-qty),0,java.math.RoundingMode.HALF_UP).longValueExact());d.update("finished",f,"product_id=?",new String[]{""+pid});d.execSQL("INSERT INTO sales(product_id,customer,customer_master_id,channel,qty,total,cash,bank,bank_ref,debt,cogs,date) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",new Object[]{pid,customer,customerMasterId,channel,qty,total,cash,bank,ref,total-cash-bank,cogs,new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date())});
             String date=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());if(cash>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('CASH','SALE',?,?,?)",new Object[]{cash,"sale",date});if(bank>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('BANKAK','SALE',?,?,?)",new Object[]{bank,ref,date});d.execSQL("INSERT INTO movements(kind,item_id,qty,value,ref,date) VALUES('SALE',?,?,?,'sale',date('now'))",new Object[]{pid,qty,cogs});d.execSQL("INSERT INTO audit(action,detail,date) VALUES('SALE_POSTED',?,date('now'))",new Object[]{customer+":"+pid+":"+qty+":"+total});d.setTransactionSuccessful();}finally{d.endTransaction();}
         }
-        void collect(String customer,long cash,long bank,String ref){if(customer==null||customer.trim().isEmpty()||cash<0||bank<0||FactoryMath.add(cash,bank)<=0||(bank>0&&(ref==null||ref.trim().isEmpty())))throw new IllegalArgumentException("بيانات التحصيل غير صحيحة");SQLiteDatabase d=w();d.beginTransaction();try{FactoryMath.validateBankakReference(bank,ref);if(bank>0)ensureUniqueBankakRef(d,ref);Cursor c=d.rawQuery("SELECT COALESCE(SUM(debt),0) FROM sales WHERE customer=?",new String[]{customer});c.moveToFirst();long debt=c.getLong(0);c.close();Cursor p=d.rawQuery("SELECT COALESCE(SUM(cash+bank),0) FROM collections WHERE customer=?",new String[]{customer});p.moveToFirst();long previous=p.getLong(0);p.close();Cursor cr=d.rawQuery("SELECT COALESCE(SUM(r.credit_adjustment),0) FROM sales_returns r JOIN sales s ON s.id=r.sale_id WHERE s.customer=?",new String[]{customer});cr.moveToFirst();long credits=cr.getLong(0);cr.close();long remaining=Math.max(0,debt-previous-credits);if(FactoryMath.add(cash,bank)>remaining)throw new IllegalArgumentException("التحصيل أكبر من المديونية المتبقية: "+remaining);String date=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());d.execSQL("INSERT INTO collections(customer,cash,bank,bank_ref,date) VALUES(?,?,?,?,?)",new Object[]{customer,cash,bank,ref,date});if(cash>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('CASH','COLLECTION',?,?,?)",new Object[]{cash,customer,date});if(bank>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('BANKAK','COLLECTION',?,?,?)",new Object[]{bank,ref,date});d.execSQL("INSERT INTO audit(action,detail,date) VALUES('CUSTOMER_COLLECTION',?,date('now'))",new Object[]{customer+":"+cash+":"+bank});d.setTransactionSuccessful();}finally{d.endTransaction();}}
+        void collect(long customerMasterId,String customer,long cash,long bank,String ref){if(customer==null||customer.trim().isEmpty()||cash<0||bank<0||FactoryMath.add(cash,bank)<=0||(bank>0&&(ref==null||ref.trim().isEmpty())))throw new IllegalArgumentException("بيانات التحصيل غير صحيحة");SQLiteDatabase d=w();d.beginTransaction();try{FactoryMath.validateBankakReference(bank,ref);if(bank>0)ensureUniqueBankakRef(d,ref);Cursor c=d.rawQuery("SELECT COALESCE(SUM(debt),0) FROM sales WHERE customer=?",new String[]{customer});c.moveToFirst();long debt=c.getLong(0);c.close();Cursor p=d.rawQuery("SELECT COALESCE(SUM(cash+bank),0) FROM collections WHERE customer=?",new String[]{customer});p.moveToFirst();long previous=p.getLong(0);p.close();Cursor cr=d.rawQuery("SELECT COALESCE(SUM(r.credit_adjustment),0) FROM sales_returns r JOIN sales s ON s.id=r.sale_id WHERE s.customer=?",new String[]{customer});cr.moveToFirst();long credits=cr.getLong(0);cr.close();long remaining=Math.max(0,debt-previous-credits);if(FactoryMath.add(cash,bank)>remaining)throw new IllegalArgumentException("التحصيل أكبر من المديونية المتبقية: "+remaining);String date=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());d.execSQL("INSERT INTO collections(customer,customer_master_id,cash,bank,bank_ref,date) VALUES(?,?,?,?,?,?)",new Object[]{customer,customerMasterId,cash,bank,ref,date});if(cash>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('CASH','COLLECTION',?,?,?)",new Object[]{cash,customer,date});if(bank>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('BANKAK','COLLECTION',?,?,?)",new Object[]{bank,ref,date});d.execSQL("INSERT INTO audit(action,detail,date) VALUES('CUSTOMER_COLLECTION',?,date('now'))",new Object[]{customer+":"+cash+":"+bank});d.setTransactionSuccessful();}finally{d.endTransaction();}}
+        void paySupplier(long supplierId,String supplierName,long cash,long bank,String ref){
+            if(supplierId<=0||supplierName==null||supplierName.trim().isEmpty()||cash<0||bank<0||FactoryMath.add(cash,bank)<=0||(bank>0&&(ref==null||ref.trim().isEmpty())))throw new IllegalArgumentException("بيانات سداد المورد غير صحيحة");
+            SQLiteDatabase d=w();d.beginTransaction();try{
+                Cursor a=d.rawQuery("SELECT COALESCE(SUM(debt),0) FROM supplier_purchase_records WHERE supplier_master_id=?",new String[]{""+supplierId});a.moveToFirst();long invoiceDebt=a.getLong(0);a.close();
+                Cursor b=d.rawQuery("SELECT COALESCE(SUM(cash+bank),0) FROM supplier_payment_records WHERE supplier_master_id=?",new String[]{""+supplierId});b.moveToFirst();long previous=b.getLong(0);b.close();
+                long remaining=Math.max(0,invoiceDebt-previous);long payment=FactoryMath.add(cash,bank);
+                if(payment>remaining)throw new IllegalArgumentException("السداد أكبر من مديونية المورد المتبقية: "+remaining);
+                if(bank>0)ensureUniqueBankakRef(d,ref);
+                String date=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
+                d.execSQL("INSERT INTO supplier_payment_records(supplier_master_id,supplier_name,cash,bank,bank_ref,date) VALUES(?,?,?,?,?,?)",new Object[]{supplierId,supplierName,cash,bank,ref,date});
+                if(cash>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('CASH','PURCHASE',?,?,?)",new Object[]{cash,supplierName,date});
+                if(bank>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('BANKAK','PURCHASE',?,?,?)",new Object[]{bank,ref,date});
+                d.execSQL("INSERT INTO audit(action,detail,date) VALUES('SUPPLIER_PAYMENT',?,date('now'))",new Object[]{supplierName+":"+cash+":"+bank});
+                d.setTransactionSuccessful();
+            }finally{d.endTransaction();}
+        }
         void addExpense(String category,long amount,String note,boolean bank,String ref){if(category==null||category.trim().isEmpty()||amount<=0||(bank&&(ref==null||ref.trim().isEmpty())))throw new IllegalArgumentException("بيانات المصروف غير صحيحة");SQLiteDatabase d=w();d.beginTransaction();try{FactoryMath.validateBankakReference(bank?amount:0,ref);if(bank)ensureUniqueBankakRef(d,ref);String date=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());d.execSQL("INSERT INTO expenses(date,category,amount,note) VALUES(?,?,?,?)",new Object[]{date,category,amount,note});d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES(?,'EXPENSE',?,?,?)",new Object[]{bank?"BANKAK":"CASH",amount,bank?ref:category,date});d.execSQL("INSERT INTO audit(action,detail,date) VALUES('EXPENSE',?,date('now'))",new Object[]{category+":"+amount});d.setTransactionSuccessful();}finally{d.endTransaction();}}
         void waste(long pid,long qty,String reason){
             if(qty<=0)throw new IllegalArgumentException("كمية التالف يجب أن تكون موجبة");
