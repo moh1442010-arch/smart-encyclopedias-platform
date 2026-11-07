@@ -10,6 +10,11 @@ public class EnterpriseMathTest {
         assertEquals(12345L, EnterpriseMath.convertMinorUnits(12345L, 1L, 1L, 2, 2));
     }
 
+    @Test public void wholePoundSdgConvertsWithoutInventingTwoDecimalPlaces() {
+        assertEquals(55000L, EnterpriseMath.convertMinorUnits(55000L, 1L, 1L, 0, 0));
+        assertEquals(5500000L, EnterpriseMath.convertMinorUnits(55000L, 1L, 1L, 0, 2));
+    }
+
     @Test public void roundsHalfUpWhenConverting() {
         assertEquals(2L, EnterpriseMath.convertMinorUnits(1L, 3L, 2L, 0, 0));
         assertEquals(1L, EnterpriseMath.convertMinorUnits(1L, 1L, 2L, 0, 0));
