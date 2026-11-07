@@ -8,7 +8,7 @@ import net.zetetic.database.sqlcipher.SQLiteDatabase;
  * UI workflows and posting services must be added before these tables are presented as complete features.
  */
 final class EnterpriseSchema {
-    static final int VERSION = 2;
+    static final int VERSION = 3;
     private EnterpriseSchema() {}
 
     static void ensure(SQLiteDatabase db) {
@@ -36,6 +36,25 @@ final class EnterpriseSchema {
         db.execSQL("CREATE TABLE IF NOT EXISTS gl_journal_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, entry_ref TEXT NOT NULL UNIQUE, description TEXT NOT NULL, transaction_date TEXT NOT NULL, period_id INTEGER REFERENCES financial_periods(id), source_type TEXT NOT NULL, source_id TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('DRAFT','POSTED','REVERSED')), reversal_of INTEGER REFERENCES gl_journal_entries(id), created_at INTEGER NOT NULL, UNIQUE(source_type,source_id))");
         db.execSQL("CREATE TABLE IF NOT EXISTS gl_journal_lines (id INTEGER PRIMARY KEY AUTOINCREMENT, entry_id INTEGER NOT NULL REFERENCES gl_journal_entries(id) ON DELETE CASCADE, account_id INTEGER NOT NULL REFERENCES chart_of_accounts(id), branch_id INTEGER NOT NULL REFERENCES branches(id), base_currency_code TEXT NOT NULL REFERENCES currencies(code), base_debit_minor INTEGER NOT NULL DEFAULT 0 CHECK(base_debit_minor>=0), base_credit_minor INTEGER NOT NULL DEFAULT 0 CHECK(base_credit_minor>=0), transaction_currency_code TEXT NOT NULL REFERENCES currencies(code), transaction_debit_minor INTEGER NOT NULL DEFAULT 0 CHECK(transaction_debit_minor>=0), transaction_credit_minor INTEGER NOT NULL DEFAULT 0 CHECK(transaction_credit_minor>=0), fx_rate_num INTEGER NOT NULL DEFAULT 1 CHECK(fx_rate_num>0), fx_rate_den INTEGER NOT NULL DEFAULT 1 CHECK(fx_rate_den>0), CHECK((base_debit_minor>0 AND base_credit_minor=0) OR (base_credit_minor>0 AND base_debit_minor=0)), CHECK((transaction_debit_minor>0 AND transaction_credit_minor=0) OR (transaction_credit_minor>0 AND transaction_debit_minor=0)))");
         db.execSQL("CREATE TABLE IF NOT EXISTS idempotency_keys (key TEXT PRIMARY KEY NOT NULL, operation TEXT NOT NULL, result_ref TEXT NOT NULL, created_at INTEGER NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS enterprise_audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, actor TEXT NOT NULL, action TEXT NOT NULL, entity_type TEXT NOT NULL, entity_ref TEXT NOT NULL, details TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL)");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_enterprise_audit_entity ON enterprise_audit_log(entity_type,entity_ref,created_at)");
+        db.execSQL("INSERT OR IGNORE INTO chart_of_accounts(account_code,name_ar,name_en,account_type,normal_side) VALUES" +
+            "('1000','الصندوق','Cash','ASSET','DEBIT')," +
+            "('1010','البنك','Bank','ASSET','DEBIT')," +
+            "('1100','العملاء','Accounts Receivable','ASSET','DEBIT')," +
+            "('1200','مخزون المواد','Inventory','ASSET','DEBIT')," +
+            "('1500','الأصول الثابتة','Fixed Assets','ASSET','DEBIT')," +
+            "('1590','مجمع الإهلاك','Accumulated Depreciation','ASSET','CREDIT')," +
+            "('2000','الموردون','Accounts Payable','LIABILITY','CREDIT')," +
+            "('2100','ضرائب مستحقة','Tax Payable','LIABILITY','CREDIT')," +
+            "('3000','رأس المال','Owner Equity','EQUITY','CREDIT')," +
+            "('3100','الأرباح المحتجزة','Retained Earnings','EQUITY','CREDIT')," +
+            "('4000','إيرادات المبيعات','Sales Revenue','REVENUE','CREDIT')," +
+            "('4100','إيرادات أخرى','Other Income','REVENUE','CREDIT')," +
+            "('5000','تكلفة المواد المباعة','Cost of Goods Sold','EXPENSE','DEBIT')," +
+            "('5100','أجور العمال','Wages Expense','EXPENSE','DEBIT')," +
+            "('5200','مصروفات تشغيلية','Operating Expenses','EXPENSE','DEBIT')," +
+            "('5300','مصروف الإهلاك','Depreciation Expense','EXPENSE','DEBIT')");
         db.execSQL("CREATE TABLE IF NOT EXISTS user_roles (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, role_id INTEGER NOT NULL REFERENCES roles(id), branch_id INTEGER NOT NULL REFERENCES branches(id), PRIMARY KEY(user_id,role_id,branch_id))");
         db.execSQL("CREATE TABLE IF NOT EXISTS suppliers (id INTEGER PRIMARY KEY AUTOINCREMENT, supplier_code TEXT NOT NULL UNIQUE, name TEXT NOT NULL, phone TEXT NOT NULL DEFAULT '', address TEXT NOT NULL DEFAULT '', opening_balance_minor INTEGER NOT NULL DEFAULT 0, currency_code TEXT NOT NULL DEFAULT 'SDG' REFERENCES currencies(code), active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)), notes TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS purchase_invoices (id INTEGER PRIMARY KEY AUTOINCREMENT, invoice_no TEXT NOT NULL, supplier_id INTEGER NOT NULL REFERENCES suppliers(id), branch_id INTEGER NOT NULL REFERENCES branches(id), invoice_date TEXT NOT NULL, due_date TEXT, currency_code TEXT NOT NULL REFERENCES currencies(code), fx_rate_num INTEGER NOT NULL DEFAULT 1 CHECK(fx_rate_num>0), fx_rate_den INTEGER NOT NULL DEFAULT 1 CHECK(fx_rate_den>0), subtotal_minor INTEGER NOT NULL CHECK(subtotal_minor>=0), tax_minor INTEGER NOT NULL DEFAULT 0 CHECK(tax_minor>=0), total_minor INTEGER NOT NULL CHECK(total_minor>=0), paid_minor INTEGER NOT NULL DEFAULT 0 CHECK(paid_minor>=0 AND paid_minor<=total_minor), status TEXT NOT NULL CHECK(status IN ('DRAFT','POSTED','PART_PAID','PAID','VOID')), notes TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL, UNIQUE(supplier_id,invoice_no))");
