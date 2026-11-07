@@ -70,6 +70,17 @@ public class MainActivity extends Activity {
     private TextView dateLabel, statusLabel, flourMetric, workMetric, productionMetric, marginMetric;
     private String currentScreenTitle = "";
     private boolean pinAuthenticated = false;
+    private final android.os.Handler entitlementHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable entitlementWatchdog = new Runnable() {
+        @Override public void run() {
+            if (pinAuthenticated && !LicenseAccessGate.isAccessAllowed(MainActivity.this) &&
+                !currentScreenTitle.startsWith("🔐 اشتراك المحاسب الميزان")) {
+                if (store != null) { store.close(); store = null; }
+                showPaywall();
+            }
+            entitlementHandler.postDelayed(this, 30000L);
+        }
+    };
 
     private static class Field {
         final String key, label, hint; final boolean numeric;
@@ -80,11 +91,13 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
-        // Re-check the same canonical entitlement store whenever the app returns to foreground.
-        if (pinAuthenticated && !LicenseAccessGate.isAccessAllowed(this) &&
-            !currentScreenTitle.startsWith("🔐 اشتراك المحاسب الميزان")) {
-            showPaywall();
-        }
+        entitlementHandler.removeCallbacks(entitlementWatchdog);
+        entitlementHandler.post(entitlementWatchdog);
+    }
+
+    @Override protected void onPause() {
+        entitlementHandler.removeCallbacks(entitlementWatchdog);
+        super.onPause();
     }
 
     @Override public void onCreate(Bundle state) {
@@ -106,7 +119,10 @@ public class MainActivity extends Activity {
     private void continueAfterPinAccepted() {
         pinAuthenticated = true;
         try {
-            if (!LicenseAccessGate.isAccessAllowed(this)) { showPaywall(); return; }
+            if (!LicenseAccessGate.isAccessAllowed(this)) {
+                if (store != null) { store.close(); store = null; }
+                showPaywall(); return;
+            }
             buildHome();
         } catch (RuntimeException ex) {
             android.util.Log.e("AlMizanBakery", "Failed to open home after login", ex);
@@ -465,6 +481,7 @@ public class MainActivity extends Activity {
         // Central authorization gate: every existing "الرئيسية" callback routes here.
         // Do not rely on hiding one button; deny ledger entry from every navigation path.
         if (!LicenseAccessGate.isAccessAllowed(this)) {
+            if (store != null) { store.close(); store = null; }
             showPaywall();
             return;
         }
