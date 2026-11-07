@@ -31,7 +31,7 @@ public class PartyDirectoryActivity extends Activity {
 
     private void render(){
         LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(12,10,12,12);root.setBackgroundColor(0xFFF6F8FB);
-        TextView title=new TextView(this);title.setText("سجل العملاء والموردين والحسابات البنكية");title.setTextSize(20);title.setTextColor(NAVY);title.setGravity(Gravity.CENTER);root.addView(title);
+        TextView title=new TextView(this);title.setText(getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","المخبز")+"\\nسجل العملاء والموردين والحسابات البنكية");title.setTextSize(20);title.setTextColor(NAVY);title.setGravity(Gravity.CENTER);root.addView(title);
         Button back=button("↩ رجوع إلى الشاشة السابقة");back.setOnClickListener(v->finish());root.addView(back);
         Button home=button("⌂ الرئيسية");home.setOnClickListener(v->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();});root.addView(home);
         ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
