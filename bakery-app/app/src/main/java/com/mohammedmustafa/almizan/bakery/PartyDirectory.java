@@ -80,24 +80,62 @@ final class PartyDirectory {
     }
 
     static long saveCustomer(SQLiteDatabase db,String name,String phone,long openingBalance,String currency) {
+        return saveCustomer(db,name,phone,openingBalance,0,0,"",currency);
+    }
+
+    static long saveCustomer(SQLiteDatabase db,String name,String phone,long openingBalance,long cash,long bank,String bankRef,String currency) {
         requireParty(name,openingBalance,currency);
+        if(cash<0||bank<0||cash>openingBalance||bank>openingBalance-cash||(bank>0&&blank(bankRef))||(bank==0&&!blank(bankRef)))
+            throw new IllegalArgumentException("راجع المديونية والمبالغ النقدية والتحويل ورقم العملية.");
         Cursor c=db.rawQuery("SELECT id FROM customers WHERE name=? COLLATE NOCASE AND phone=? LIMIT 1",new String[]{name.trim(),safe(phone)});
         try {if(c.moveToFirst())throw new IllegalArgumentException("هذا العميل مسجل بالفعل؛ استخدم البحث لاختياره.");}
         finally {c.close();}
-        ContentValues v=new ContentValues();v.put("customer_code","CUS-"+UUID.randomUUID().toString().substring(0,8).toUpperCase(Locale.US));
-        v.put("name",name.trim());v.put("phone",safe(phone));v.put("opening_balance_minor",openingBalance);v.put("currency_code",currency);v.put("created_at",System.currentTimeMillis());
-        return db.insertOrThrow("customers",null,v);
+        db.beginTransaction();
+        try {
+            ContentValues v=new ContentValues();v.put("customer_code","CUS-"+UUID.randomUUID().toString().substring(0,8).toUpperCase(Locale.US));
+            v.put("name",name.trim());v.put("phone",safe(phone));v.put("opening_balance_minor",openingBalance-cash-bank);v.put("currency_code",currency);v.put("created_at",System.currentTimeMillis());
+            long id=db.insertOrThrow("customers",null,v);
+            if(cash>0)insertOpeningPayment(db,"CUSTOMER",id,cash,"CASH",currency,"");
+            if(bank>0)insertOpeningPayment(db,"CUSTOMER",id,bank,"BANKAK",currency,bankRef.trim());
+            db.setTransactionSuccessful();return id;
+        } finally {db.endTransaction();}
     }
 
     static long saveSupplier(SQLiteDatabase db,String name,String phone,String item,String unit,long openingBalance,String currency) {
-        requireParty(name,openingBalance,currency);
+        return saveSupplier(db,name,phone,item,unit,0,openingBalance,0,0,"",currency);
+    }
+
+    static long saveSupplier(SQLiteDatabase db,String name,String phone,String item,String unit,long quantityMilli,long invoiceTotal,long paidCash,long paidBank,String bankRef,String currency) {
+        requireParty(name,invoiceTotal,currency);
+        if(quantityMilli<0||paidCash<0||paidBank<0||paidCash>invoiceTotal||paidBank>invoiceTotal-paidCash||
+           (paidBank>0&&blank(bankRef))||(paidBank==0&&!blank(bankRef))||((quantityMilli>0)!=(invoiceTotal>0)))
+            throw new IllegalArgumentException("راجع الصنف والكمية وقيمة الفاتورة والسداد ورقم التحويل.");
+        long debt=invoiceTotal-paidCash-paidBank;
         Cursor c=db.rawQuery("SELECT id FROM suppliers WHERE name=? COLLATE NOCASE AND phone=? LIMIT 1",new String[]{name.trim(),safe(phone)});
         try {if(c.moveToFirst())throw new IllegalArgumentException("هذا المورد مسجل بالفعل؛ استخدم البحث لاختياره.");}
         finally {c.close();}
-        ContentValues v=new ContentValues();v.put("supplier_code","SUP-"+UUID.randomUUID().toString().substring(0,8).toUpperCase(Locale.US));
-        v.put("name",name.trim());v.put("phone",safe(phone));v.put("default_item",safe(item));v.put("default_unit",safe(unit));
-        v.put("opening_balance_minor",openingBalance);v.put("currency_code",currency);v.put("created_at",System.currentTimeMillis());
-        return db.insertOrThrow("suppliers",null,v);
+        db.beginTransaction();
+        try {
+            ContentValues v=new ContentValues();v.put("supplier_code","SUP-"+UUID.randomUUID().toString().substring(0,8).toUpperCase(Locale.US));
+            v.put("name",name.trim());v.put("phone",safe(phone));v.put("default_item",safe(item));v.put("default_unit",safe(unit));
+            v.put("opening_balance_minor",debt);v.put("currency_code",currency);v.put("created_at",System.currentTimeMillis());
+            long id=db.insertOrThrow("suppliers",null,v);
+            if(quantityMilli>0) {
+                ContentValues invoice=new ContentValues();invoice.put("supplier_id",id);invoice.put("item_name",item.trim());
+                invoice.put("quantity_milli",quantityMilli);invoice.put("invoice_total_minor",invoiceTotal);
+                invoice.put("paid_cash_minor",paidCash);invoice.put("paid_bank_minor",paidBank);
+                invoice.put("bank_reference",safe(bankRef));invoice.put("debt_minor",debt);
+                invoice.put("currency_code",currency);invoice.put("invoice_date",new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new java.util.Date()));
+                invoice.put("created_at",System.currentTimeMillis());db.insertOrThrow("supplier_quick_invoices",null,invoice);
+            }
+            db.setTransactionSuccessful();return id;
+        } finally {db.endTransaction();}
+    }
+
+    private static void insertOpeningPayment(SQLiteDatabase db,String type,long id,long amount,String method,String currency,String reference) {
+        ContentValues v=new ContentValues();v.put("party_type",type);v.put("party_id",id);v.put("payment_date",new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new java.util.Date()));
+        v.put("amount_minor",amount);v.put("method",method);v.put("currency_code",currency);v.put("reference",reference);v.put("created_at",System.currentTimeMillis());
+        db.insertOrThrow("party_opening_payments",null,v);
     }
 
     static void saveBankAccount(SQLiteDatabase db,String accountName,String bankName,String currency,String iban,String swift,String accountNumber) {
