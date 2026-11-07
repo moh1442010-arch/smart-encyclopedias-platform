@@ -50,22 +50,26 @@ jobs:
           ! grep -q 'LICENSE_PRIVATE_KEY_PKCS8_B64\|ADMIN_PASSWORD\|API_BASE' store/license.html
           echo "No private/admin secrets embedded; storefront uses the owner-approved WhatsApp flow without a Cloudflare dependency."
 
-      - name: Check deployed bakery release and signing-key consistency
+      - name: Check deployed release, main offline issuer, and signing keys
         run: |
           set -euo pipefail
           git fetch origin develop/bakery-2.9-enterprise-completion --depth=1
-          APP_VERSION="$(git show FETCH_HEAD:bakery-app/app/build.gradle | sed -n "s/.*versionName '\\([^']*\\)'.*/\\1/p")"
-          APP_VERSION_CODE="$(git show FETCH_HEAD:bakery-app/app/build.gradle | sed -n 's/.*versionCode \\([0-9]*\\).*/\\1/p')"
-          WORKER_VERSION="$(sed -n 's/^APP_VERSION = "\\(.*\\)"/\\1/p' licensing/worker/wrangler.toml)"
+          RELEASE_VERSION="$(git show FETCH_HEAD:bakery-app/app/build.gradle | sed -n "s/.*versionName '\\([^']*\\)'.*/\\1/p")"
+          RELEASE_VERSION_CODE="$(git show FETCH_HEAD:bakery-app/app/build.gradle | sed -n 's/.*versionCode \\([0-9]*\\).*/\\1/p')"
+          MAIN_APP_VERSION="$(sed -n "s/.*versionName '\\([^']*\\)'.*/\\1/p" bakery-app/app/build.gradle)"
           ISSUER_VERSION="$(sed -n 's/^const CURRENT_APP_VERSION = "\\(.*\\)";/\\1/p' tools/bakery-license-issuer.mjs)"
-          test "$APP_VERSION" = "2.8.0"
-          test "$APP_VERSION_CODE" = "280000"
-          test "$APP_VERSION" = "$WORKER_VERSION"
-          test "$APP_VERSION" = "$ISSUER_VERSION"
-          APP_KEY="$(git show FETCH_HEAD:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | grep -oE 'private static final String LICENSE_PUBLIC_KEY_B64 = "[^"]+"' | cut -d '"' -f2)"
+          WORKER_VERSION="$(sed -n 's/^APP_VERSION = "\\(.*\\)"/\\1/p' licensing/worker/wrangler.toml)"
+          test "$RELEASE_VERSION" = "2.8.0"
+          test "$RELEASE_VERSION_CODE" = "280000"
+          test "$RELEASE_VERSION" = "$WORKER_VERSION"
+          test "$MAIN_APP_VERSION" = "$ISSUER_VERSION"
+          RELEASE_KEY="$(git show FETCH_HEAD:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | grep -oE 'private static final String LICENSE_PUBLIC_KEY_B64 = "[^"]+"' | cut -d '"' -f2)"
           WORKER_KEY="$(grep -oE 'EXPECTED_APP_PUBLIC_KEY_DER_B64 = "[^"]+"' licensing/worker/src/index.js | cut -d '"' -f2)"
-          test -n "$APP_KEY" && test "$APP_KEY" = "$WORKER_KEY"
-          echo "Bakery release branch, Worker, issuer version, and public keys are consistent."
+          ISSUER_KEY="$(grep -oE 'EXPECTED_PUBLIC_KEY_DER_B64 = "[^"]+"' tools/bakery-license-issuer.mjs | cut -d '"' -f2)"
+          test -n "$RELEASE_KEY" && test "$RELEASE_KEY" = "$WORKER_KEY"
+          test "$MAIN_APP_VERSION" = "2.6.17"
+          test "$ISSUER_KEY" = "$WORKER_KEY"
+          echo "Current 2.8.0 release matches Worker; main-branch offline issuer remains consistent with its own 2.6.17 source; signing keys match."
       - name: Syntax-check storefront and admin browser scripts
         run: |
           python3 - <<'PY'
