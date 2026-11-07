@@ -56,6 +56,12 @@ final class FinancialPeriodService {
                 long debit=totals.getLong(0),credit=totals.getLong(1),lines=totals.getLong(2);
                 if(lines>0)GeneralLedger.validateBalancedTotals(debit,credit,2);
             } finally {totals.close();}
+            Cursor invalid=db.rawQuery("SELECT e.entry_ref FROM gl_journal_entries e LEFT JOIN gl_journal_lines l ON l.entry_id=e.id "+
+                "WHERE e.period_id=? AND e.status='POSTED' GROUP BY e.id,e.entry_ref "+
+                "HAVING COUNT(l.id)<2 OR COALESCE(SUM(l.base_debit_minor),0)<>COALESCE(SUM(l.base_credit_minor),0) LIMIT 1",
+                new String[]{String.valueOf(id)});
+            try {if(invalid.moveToFirst())throw new IllegalStateException("يوجد قيد غير متوازن أو ناقص: "+invalid.getString(0));}
+            finally {invalid.close();}
             Cursor drafts=db.rawQuery("SELECT COUNT(*) FROM gl_journal_entries WHERE period_id=? AND status='DRAFT'",
                 new String[]{String.valueOf(id)});
             try {drafts.moveToFirst();if(drafts.getLong(0)>0)throw new IllegalStateException("توجد قيود مسودة لم تُعالج");}
