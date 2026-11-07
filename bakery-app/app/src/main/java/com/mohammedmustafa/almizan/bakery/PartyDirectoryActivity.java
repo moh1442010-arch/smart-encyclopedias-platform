@@ -35,7 +35,7 @@ public class PartyDirectoryActivity extends Activity {
         Button home=button("⌂ الرئيسية");home.setOnClickListener(v->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();});root.addView(home);
         ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         setContentView(root);
-        customersSection();suppliersSection();bankAccountsSection();
+        customersSection();suppliersSection();bankAccountsSection();exchangeRatesSection();
     }
 
     private void customersSection(){
@@ -82,6 +82,23 @@ public class PartyDirectoryActivity extends Activity {
     private void insertPartyPayment(String type,long id,String direction,long amount,String method,String currency,String reference){
         ContentValues v=new ContentValues();v.put("party_type",type);v.put("party_id",id);v.put("direction",direction);v.put("payment_date",today());v.put("amount_minor",amount);v.put("method",method);v.put("currency_code",currency);v.put("reference",reference);v.put("created_at",System.currentTimeMillis());db.insertOrThrow("party_payments",null,v);
     }
+    private void exchangeRatesSection(){
+        heading("أسعار الصرف المؤرخة");
+        body.addView(note("أدخل السعر كنسبة دقيقة: وحدة واحدة من العملة الأولى تساوي البسط ÷ المقام من العملة الثانية. مثال توضيحي فقط: 1 USD = 2800/1 SDG. لا تُستخدم الأسعار في الفواتير حتى ربط كل مسار محاسبي بخدمة التحويل."));
+        Spinner base=currencySpinner(),quote=currencySpinner();
+        EditText numerator=cell("بسط سعر الصرف"),denominator=cell("مقام سعر الصرف"),effective=cell("تاريخ السريان YYYY-MM-DD"),source=cell("مصدر السعر");
+        effective.setText(today());denominator.setText("1");
+        addHorizontal(base,quote,numerator,denominator,effective,source);
+        Button save=button("حفظ سعر الصرف");save.setOnClickListener(v->{try{
+            String from=base.getSelectedItem().toString(),to=quote.getSelectedItem().toString();
+            long n=amount(numerator),d=amount(denominator);String date=effective.getText().toString().trim();
+            if(from.equals(to)||n<=0||d<=0||!date.matches("\\d{4}-\\d{2}-\\d{2}")||source.getText().toString().trim().isEmpty())throw new IllegalArgumentException("حدد عملتين مختلفتين وبسطاً ومقاماً موجبين وتاريخاً ومصدراً.");
+            ContentValues values=new ContentValues();values.put("base_code",from);values.put("quote_code",to);values.put("rate_num",n);values.put("rate_den",d);values.put("effective_at",date);values.put("source",source.getText().toString().trim());values.put("created_at",System.currentTimeMillis());
+            db.insertOrThrow("exchange_rates",null,values);toast("تم حفظ سعر الصرف المؤرخ.");refreshLists();
+        }catch(Exception e){toast("لم يُحفظ سعر الصرف: "+e.getMessage());}});body.addView(save);
+        list("SELECT '1 '||base_code||' = '||rate_num||'/'||rate_den||' '||quote_code||' | ساري من: '||effective_at||' | المصدر: '||source FROM exchange_rates ORDER BY effective_at DESC,id DESC");
+    }
+
     private void refreshLists(){render();}
     private void heading(String s){TextView t=note(s);t.setTextColor(NAVY);t.setTextSize(18);t.setTypeface(null,1);body.addView(t);}
     private TextView note(String s){TextView t=new TextView(this);t.setText(s);t.setTextSize(13);t.setTextColor(0xFF334155);t.setPadding(5,7,5,7);return t;}
