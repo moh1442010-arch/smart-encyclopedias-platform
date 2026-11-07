@@ -122,6 +122,10 @@ public class EnterpriseSchemaMigrationTest {
             }
             assertTrue("Income report must include posted revenue",revenue);
             assertTrue("Income report must exclude draft expense lines",draftExpense);
+            GeneralLedgerReports.IncomeStatement summary=GeneralLedgerReports.incomeStatementSummary(db,"2026-11-01","2026-11-30",null);
+            assertEquals("Income statement revenue must use credit-normal balances",500L,summary.revenueMinor);
+            assertEquals("Draft expense must not affect income statement totals",0L,summary.expenseMinor);
+            assertEquals("Net profit must be revenue less expenses",500L,summary.netProfitMinor);
         } finally {
             db.close();context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
         }
