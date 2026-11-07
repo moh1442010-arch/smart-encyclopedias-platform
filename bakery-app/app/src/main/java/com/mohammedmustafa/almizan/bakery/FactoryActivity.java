@@ -64,7 +64,6 @@ public class FactoryActivity extends Activity {
     @Override protected void onPause(){entitlementHandler.removeCallbacks(entitlementWatchdog);super.onPause();}
     @Override protected void onDestroy(){entitlementHandler.removeCallbacks(entitlementWatchdog);if(db!=null){db.close();db=null;}super.onDestroy();}
     @Override public void onBackPressed(){if(!enforceEntitlement())return;if("home".equals(screen))super.onBackPressed();else home();}
-    @Override public void onBackPressed(){if("home".equals(screen))super.onBackPressed();else home();}
     private TextView label(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(Color.rgb(30,40,50));t.setPadding(4,10,4,10);return t;}
     private Button btn(String s,Runnable r){Button b=new Button(this);b.setText(s);b.setOnClickListener(v->r.run());return b;}
     private void frame(String title){
