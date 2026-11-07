@@ -949,7 +949,7 @@ public class MainActivity extends Activity {
         }catch(Exception e){toast("تعذر حفظ التوزيع: "+e.getMessage());}}));dlg.show();
     }
     private void addDistributionTableRow(LinearLayout table,java.util.List<EditText[]> rows,String customer,String qty,String cash,String bank,String ref,String debt,String diff){
-        LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);EditText name=ruledCell(customer,"العميل",false);name.setFocusable(false);name.setTag(PartyDirectory.findCustomerIdByName(store.getReadableDatabase(),customer));name.setOnClickListener(v->chooseRegularCustomer(name));
+        LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);EditText name=ruledCell(customer,"العميل",false);name.setFocusable(false);long knownCustomerId=PartyDirectory.findCustomerIdByName(store.getReadableDatabase(),customer);if(knownCustomerId<=0&&!customer.trim().isEmpty())knownCustomerId=PartyDirectory.ensureCustomerName(store.getWritableDatabase(),customer);name.setTag(knownCustomerId);name.setOnClickListener(v->chooseRegularCustomer(name));
         EditText[] cells={name,ruledCell(qty,"العيش",true),ruledCell(cash,"نقدي",true),ruledCell(bank,"بنكك",true),ruledCell(ref,"رقم العملية",false),ruledCell(debt,"ديون",true),ruledCell(diff,"فرق السعر",true)};
         for(EditText e:cells){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(1,1,1,1);row.addView(e,lp);}Button pick=button("بحث");pick.setTextSize(10);pick.setOnClickListener(v->chooseRegularCustomer(name));row.addView(pick,new LinearLayout.LayoutParams(72,-2));table.addView(row);rows.add(cells);
     }
