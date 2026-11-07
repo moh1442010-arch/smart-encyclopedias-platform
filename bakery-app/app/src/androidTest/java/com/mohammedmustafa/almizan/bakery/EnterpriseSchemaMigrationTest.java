@@ -51,6 +51,12 @@ public class EnterpriseSchemaMigrationTest {
             PartyDirectory.saveBankAccount(db,"Test EUR","Test Bank","EUR","GB82WEST12345698765432","WESTGB22","");
             Cursor bank=db.rawQuery("SELECT currency_code,iban FROM company_bank_accounts WHERE account_name='Test EUR'",null);
             try { assertTrue(bank.moveToFirst());assertEquals("EUR",bank.getString(0));assertEquals("GB82WEST12345698765432",bank.getString(1)); } finally { bank.close(); }
+            JSONObject partySnapshot=PartyDirectoryBackup.export(db);
+            PartyDirectoryBackup.validate(partySnapshot);
+            db.delete("customers",null,null);db.delete("suppliers",null,null);db.delete("company_bank_accounts",null,null);
+            PartyDirectoryBackup.restore(db,partySnapshot);
+            Cursor restored=db.rawQuery("SELECT COUNT(*) FROM customers WHERE id=? AND name='عميل اختبار'",new String[]{String.valueOf(customerId)});
+            try { assertTrue(restored.moveToFirst());assertEquals(1,restored.getInt(0)); } finally { restored.close(); }
             Cursor fk=db.rawQuery("PRAGMA foreign_keys",null);
             try { assertTrue(fk.moveToFirst());assertEquals(1,fk.getInt(0)); } finally { fk.close(); }
             boolean orphanRejected=false;
