@@ -109,7 +109,8 @@ final class PartyDirectory {
     static long saveSupplier(SQLiteDatabase db,String name,String phone,String item,String unit,long quantityMilli,long invoiceTotal,long paidCash,long paidBank,String bankRef,String currency) {
         requireParty(name,invoiceTotal,currency);
         if(quantityMilli<0||paidCash<0||paidBank<0||paidCash>invoiceTotal||paidBank>invoiceTotal-paidCash||
-           (paidBank>0&&blank(bankRef))||(paidBank==0&&!blank(bankRef))||((quantityMilli>0)!=(invoiceTotal>0)))
+           (paidBank>0&&blank(bankRef))||(paidBank==0&&!blank(bankRef))||
+           (quantityMilli>0&&(invoiceTotal==0||blank(item))))
             throw new IllegalArgumentException("راجع الصنف والكمية وقيمة الفاتورة والسداد ورقم التحويل.");
         long debt=invoiceTotal-paidCash-paidBank;
         Cursor c=db.rawQuery("SELECT id FROM suppliers WHERE name=? COLLATE NOCASE AND phone=? LIMIT 1",new String[]{name.trim(),safe(phone)});
