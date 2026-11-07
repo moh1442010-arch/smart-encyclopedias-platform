@@ -18,6 +18,16 @@ public class FactoryActivity extends Activity {
     private static final String[][] DEFAULT_PRODUCTS={{"باسطة","باسطة"},{"فطائر","فطائر"},{"خبائز","خبائز"},{"حلويات","حلويات"},{"بلح شام","بلح شام"}};
     private String today(){return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());}
     private String businessName(){String n=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","");return n==null||n.trim().isEmpty()?"المخبز":n.trim();}
+    private void printVisibleScreen(String title){
+        StringBuilder out=new StringBuilder("المنشأة: ").append(businessName()).append("\\nالمصنع: مصنع الخبائز والحلويات والباسطة\\nالشاشة: ").append(title).append("\\nالتاريخ: ").append(today()).append("\\n\\n");
+        appendPrintable(body,out);if(out.length()<100){toast("لا توجد بيانات ظاهرة للطباعة.");return;}
+        try{PrinterService.print(this,businessName(),title+" - "+businessName(),out.toString());}catch(Exception e){toast("تعذر فتح الطباعة: "+e.getMessage());}
+    }
+    private void appendPrintable(View view,StringBuilder out){
+        if(view instanceof EditText){String value=((EditText)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");return;}
+        if(view instanceof TextView){String value=((TextView)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");}
+        if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++)appendPrintable(group.getChildAt(i),out);}
+    }
     private void printFactoryDaily(){
         StringBuilder out=new StringBuilder("التاريخ: ").append(today()).append("\\n");
         Cursor c=null;
@@ -39,11 +49,11 @@ public class FactoryActivity extends Activity {
     private Button btn(String s,Runnable r){Button b=new Button(this);b.setText(s);b.setOnClickListener(v->r.run());return b;}
     private void frame(String title){
         screen="الرئيسية".equals(title)?"home":title; LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(14,12,14,16);root.setBackgroundColor(Color.rgb(246,248,251));
-        TextView head=label("🏭 مصنع الخبائز والحلويات والباسطة\n"+title,21);head.setTextColor(NAVY);head.setBackgroundColor(Color.WHITE);root.addView(head);
+        TextView head=label(businessName()+"\n🏭 مصنع الخبائز والحلويات والباسطة — "+title,21);head.setTextColor(NAVY);head.setBackgroundColor(Color.WHITE);head.setGravity(Gravity.CENTER);root.addView(head);
         root.addView(btn("⌂ العودة إلى مصنع الخبائز والحلويات والباسطة",()->home()));
         root.addView(btn("↩ العودة إلى قائمة المخبز الرئيسية",()->finish()));
         root.addView(btn("⌂ الرئيسية",()->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();}));
-        ScrollView sc=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);body.setPadding(2,8,2,8);sc.addView(body);root.addView(sc,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);
+        ScrollView sc=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);body.setPadding(2,8,2,8);sc.addView(body);root.addView(sc,new LinearLayout.LayoutParams(-1,0,1));root.addView(btn("🖨️ طباعة الشاشة الحالية",()->printVisibleScreen(title)));setContentView(root);
     }
     private void home(){
         frame("الرئيسية");
