@@ -183,6 +183,7 @@ public class MainActivity extends Activity {
                 if(currencyCodes.isEmpty())throw new IllegalStateException("قائمة العملات غير مهيأة");
                 String selectedCurrency=currencyCodes.get(projectCurrency.getSelectedItemPosition());
                 ContentValues projectSettings=new ContentValues();projectSettings.put("base_currency",selectedCurrency);
+                projectSettings.put("business_name",enteredBusinessName);
                 store.getWritableDatabase().update("company_settings",projectSettings,"id=1",null);
                 getSharedPreferences("bakery_profile",MODE_PRIVATE).edit().putString("business_name",enteredBusinessName).apply();
                 getPreferences(MODE_PRIVATE).edit()
@@ -488,11 +489,15 @@ public class MainActivity extends Activity {
     }
 
 
-    private String businessName(){String n=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","");return n==null||n.trim().isEmpty()?"المخبز":n.trim();}
+    private String businessName(){
+        try{Cursor c=store.getReadableDatabase().rawQuery("SELECT business_name FROM company_settings WHERE id=1",null);try{if(c.moveToFirst()){String n=c.getString(0);if(n!=null&&!n.trim().isEmpty())return n.trim();}}finally{c.close();}}catch(Exception ignored){}
+        String n=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","");
+        return n==null||n.trim().isEmpty()?"المخبز":n.trim();
+    }
     private void editBusinessName(){
         EditText field=new EditText(this);field.setSingleLine(true);field.setHint("اسم المخبز أو المصنع");field.setText(businessName());
         new AlertDialog.Builder(this).setTitle("بيانات المنشأة").setMessage("سيظهر الاسم في رأس الشاشات والمطبوعات.").setView(field)
-            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{String n=field.getText().toString().trim();if(n.length()<2){toast("أدخل اسماً صحيحاً");return;}getSharedPreferences("bakery_profile",MODE_PRIVATE).edit().putString("business_name",n).apply();buildHome();}).show();
+            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{String n=field.getText().toString().trim();if(n.length()<2){toast("أدخل اسماً صحيحاً");return;}getSharedPreferences("bakery_profile",MODE_PRIVATE).edit().putString("business_name",n).apply();ContentValues cv=new ContentValues();cv.put("business_name",n);store.getWritableDatabase().update("company_settings",cv,"id=1",null);buildHome();}).show();
     }
     private void showPrinterSettings(){
         String[] choices={"طباعة عبر خدمة الطباعة في Android (Bluetooth / Wi-Fi / USB المدعوم)","حفظ نسخة PDF عبر خدمة الطباعة"};
