@@ -88,11 +88,11 @@ final class GeneralLedger {
                 if(line.debitMinor>0) {
                     baseDebits[i]=toBaseMinor(line.debitMinor,line.fxNumerator,line.fxDenominator,txMinorUnits,baseMinorUnits);
                     if(baseDebits[i]<=0) throw new IllegalArgumentException("قيمة السطر بعد التحويل إلى العملة الأساسية تساوي صفرًا");
-                    totalDebit=BigInteger.valueOf(totalDebit).add(BigInteger.valueOf(baseDebits[i])).longValueExact();
+                    totalDebit=EnterpriseMath.toLongExact(BigInteger.valueOf(totalDebit).add(BigInteger.valueOf(baseDebits[i])));
                 } else {
                     baseCredits[i]=toBaseMinor(line.creditMinor,line.fxNumerator,line.fxDenominator,txMinorUnits,baseMinorUnits);
                     if(baseCredits[i]<=0) throw new IllegalArgumentException("قيمة السطر بعد التحويل إلى العملة الأساسية تساوي صفرًا");
-                    totalCredit=BigInteger.valueOf(totalCredit).add(BigInteger.valueOf(baseCredits[i])).longValueExact();
+                    totalCredit=EnterpriseMath.toLongExact(BigInteger.valueOf(totalCredit).add(BigInteger.valueOf(baseCredits[i])));
                 }
                 accountIds[i]=requiredId(db,"SELECT id FROM chart_of_accounts WHERE account_code=? AND active=1",line.accountCode,"الحساب غير موجود أو غير نشط: "+line.accountCode);
                 branchIds[i]=requiredId(db,"SELECT id FROM branches WHERE branch_code=? AND active=1",line.branchCode,"الفرع غير موجود أو غير نشط: "+line.branchCode);
