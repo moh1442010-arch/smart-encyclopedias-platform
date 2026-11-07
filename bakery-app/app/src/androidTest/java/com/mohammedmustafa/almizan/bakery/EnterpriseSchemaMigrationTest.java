@@ -38,6 +38,8 @@ public class EnterpriseSchemaMigrationTest {
             Cursor currency=db.rawQuery("SELECT base_currency,country_code FROM company_settings WHERE id=1",null);
             try { assertTrue(currency.moveToFirst());assertEquals("SDG",currency.getString(0));assertEquals("SD",currency.getString(1)); }
             finally { currency.close(); }
+            Cursor subscriptionOnly=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE code IN ('USD','EUR') AND active=0",null);
+            try { assertTrue(subscriptionOnly.moveToFirst());assertEquals("USD and EUR must be inactive for in-app operations",2,subscriptionOnly.getInt(0)); } finally { subscriptionOnly.close(); }
             Cursor currencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE code IN ('USD','EUR','SAR','AED')",null);
             try { assertTrue(currencies.moveToFirst());assertEquals(4,currencies.getInt(0)); } finally { currencies.close(); }
             Cursor supplierColumns=db.rawQuery("PRAGMA table_info(suppliers)",null);
@@ -45,21 +47,21 @@ public class EnterpriseSchemaMigrationTest {
             try { while(supplierColumns.moveToNext()){if("default_item".equals(supplierColumns.getString(1)))defaultItem=true;if("default_unit".equals(supplierColumns.getString(1)))defaultUnit=true;} }
             finally { supplierColumns.close(); }
             assertTrue("Supplier default item field missing",defaultItem);assertTrue("Supplier default unit field missing",defaultUnit);
-            long customerId=PartyDirectory.saveCustomer(db,"عميل اختبار","249900000001",125000,"USD");
+            long customerId=PartyDirectory.saveCustomer(db,"عميل اختبار","249900000001",125000,"SAR");
             assertTrue(customerId>0);
-            long supplierId=PartyDirectory.saveSupplier(db,"مورد اختبار","249900000002","دقيق","جوال",50000,"EUR");
+            long supplierId=PartyDirectory.saveSupplier(db,"مورد اختبار","249900000002","دقيق","جوال",50000,"AED");
             assertTrue(supplierId>0);
-            PartyDirectory.saveBankAccount(db,"Test EUR","Test Bank","EUR","GB82WEST12345698765432","WESTGB22","");
-            Cursor bank=db.rawQuery("SELECT currency_code,iban FROM company_bank_accounts WHERE account_name='Test EUR'",null);
-            try { assertTrue(bank.moveToFirst());assertEquals("EUR",bank.getString(0));assertEquals("GB82WEST12345698765432",bank.getString(1)); } finally { bank.close(); }
-            db.execSQL("INSERT INTO exchange_rates(base_code,quote_code,rate_num,rate_den,effective_at,source,created_at) VALUES('USD','SDG',2800,1,'2026-11-07','TEST',1)");
+            PartyDirectory.saveBankAccount(db,"Test SAR","Test Bank","SAR","GB82WEST12345698765432","WESTGB22","");
+            Cursor bank=db.rawQuery("SELECT currency_code,iban FROM company_bank_accounts WHERE account_name='Test SAR'",null);
+            try { assertTrue(bank.moveToFirst());assertEquals("SAR",bank.getString(0));assertEquals("GB82WEST12345698765432",bank.getString(1)); } finally { bank.close(); }
+            db.execSQL("INSERT INTO exchange_rates(base_code,quote_code,rate_num,rate_den,effective_at,source,created_at) VALUES('SAR','SDG',750,1,'2026-11-07','TEST',1)");
             JSONObject partySnapshot=PartyDirectoryBackup.export(db);
             PartyDirectoryBackup.validate(partySnapshot);
             db.delete("customers",null,null);db.delete("suppliers",null,null);db.delete("company_bank_accounts",null,null);db.delete("exchange_rates",null,null);
             PartyDirectoryBackup.restore(db,partySnapshot);
             Cursor restored=db.rawQuery("SELECT COUNT(*) FROM customers WHERE id=? AND name='عميل اختبار'",new String[]{String.valueOf(customerId)});
             try { assertTrue(restored.moveToFirst());assertEquals(1,restored.getInt(0)); } finally { restored.close(); }
-            Cursor restoredRate=db.rawQuery("SELECT rate_num,rate_den FROM exchange_rates WHERE base_code='USD' AND quote_code='SDG'",null);
+            Cursor restoredRate=db.rawQuery("SELECT rate_num,rate_den FROM exchange_rates WHERE base_code='SAR' AND quote_code='SDG'",null);
             try { assertTrue(restoredRate.moveToFirst());assertEquals(2800,restoredRate.getLong(0));assertEquals(1,restoredRate.getLong(1)); } finally { restoredRate.close(); }
             Cursor fk=db.rawQuery("PRAGMA foreign_keys",null);
             try { assertTrue(fk.moveToFirst());assertEquals(1,fk.getInt(0)); } finally { fk.close(); }
