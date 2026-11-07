@@ -52,12 +52,15 @@ public class EnterpriseSchemaMigrationTest {
             PartyDirectory.saveBankAccount(db,"Test EUR","Test Bank","EUR","GB82WEST12345698765432","WESTGB22","");
             Cursor bank=db.rawQuery("SELECT currency_code,iban FROM company_bank_accounts WHERE account_name='Test EUR'",null);
             try { assertTrue(bank.moveToFirst());assertEquals("EUR",bank.getString(0));assertEquals("GB82WEST12345698765432",bank.getString(1)); } finally { bank.close(); }
+            db.execSQL("INSERT INTO exchange_rates(base_code,quote_code,rate_num,rate_den,effective_at,source,created_at) VALUES('USD','SDG',2800,1,'2026-11-07','TEST',1)");
             JSONObject partySnapshot=PartyDirectoryBackup.export(db);
             PartyDirectoryBackup.validate(partySnapshot);
-            db.delete("customers",null,null);db.delete("suppliers",null,null);db.delete("company_bank_accounts",null,null);
+            db.delete("customers",null,null);db.delete("suppliers",null,null);db.delete("company_bank_accounts",null,null);db.delete("exchange_rates",null,null);
             PartyDirectoryBackup.restore(db,partySnapshot);
             Cursor restored=db.rawQuery("SELECT COUNT(*) FROM customers WHERE id=? AND name='عميل اختبار'",new String[]{String.valueOf(customerId)});
             try { assertTrue(restored.moveToFirst());assertEquals(1,restored.getInt(0)); } finally { restored.close(); }
+            Cursor restoredRate=db.rawQuery("SELECT rate_num,rate_den FROM exchange_rates WHERE base_code='USD' AND quote_code='SDG'",null);
+            try { assertTrue(restoredRate.moveToFirst());assertEquals(2800,restoredRate.getLong(0));assertEquals(1,restoredRate.getLong(1)); } finally { restoredRate.close(); }
             Cursor fk=db.rawQuery("PRAGMA foreign_keys",null);
             try { assertTrue(fk.moveToFirst());assertEquals(1,fk.getInt(0)); } finally { fk.close(); }
             boolean orphanRejected=false;
