@@ -15,13 +15,19 @@ import java.util.*;
 
 public class FactoryLedgerActivity extends Activity {
     private SQLiteDatabase db;
+    private final android.os.Handler entitlementHandler=new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable entitlementWatchdog=new Runnable(){@Override public void run(){
+        if(!LicenseAccessGate.isAccessAllowed(FactoryLedgerActivity.this)){enforceEntitlement();return;}
+        entitlementHandler.postDelayed(this,30000L);
+    }};
     private LinearLayout body;
     private static final int GOLD=Color.rgb(212,175,55);
     private String today(){return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());}
-    private boolean enforceEntitlement(){if(LicenseAccessGate.isAccessAllowed(this))return true; Toast.makeText(this,"انتهت التجربة أو لا يوجد ترخيص ساري. بياناتك محفوظة؛ يرجى التفعيل للمتابعة.",Toast.LENGTH_LONG).show(); finish(); startActivity(new Intent(this,MainActivity.class)); return false;}
+    private boolean enforceEntitlement(){if(LicenseAccessGate.isAccessAllowed(this))return true;entitlementHandler.removeCallbacks(entitlementWatchdog);if(db!=null&&db.isOpen()){db.close();db=null;}Toast.makeText(this,"انتهت التجربة أو لا يوجد ترخيص ساري. بياناتك محفوظة؛ يرجى التفعيل للمتابعة.",Toast.LENGTH_LONG).show();finish();startActivity(new Intent(this,MainActivity.class));return false;}
     @Override public void onCreate(Bundle b){super.onCreate(b);if(!enforceEntitlement())return;db=SecureDatabase.open(this,"almizan_factory_1.db");schema();home();}
-    @Override protected void onResume(){super.onResume();if(db!=null&&!enforceEntitlement())return;}
-    @Override protected void onDestroy(){if(db!=null&&db.isOpen())db.close();super.onDestroy();}
+    @Override protected void onResume(){super.onResume();if(db!=null&&!enforceEntitlement())return;entitlementHandler.removeCallbacks(entitlementWatchdog);entitlementHandler.post(entitlementWatchdog);}
+    @Override protected void onPause(){entitlementHandler.removeCallbacks(entitlementWatchdog);super.onPause();}
+    @Override protected void onDestroy(){entitlementHandler.removeCallbacks(entitlementWatchdog);if(db!=null&&db.isOpen())db.close();super.onDestroy();}
     private void schema(){
         db.execSQL("CREATE TABLE IF NOT EXISTS sales_returns(id INTEGER PRIMARY KEY,sale_id INTEGER NOT NULL,product_id INTEGER NOT NULL,qty INTEGER NOT NULL,refund_value INTEGER NOT NULL,refund_cash INTEGER NOT NULL,refund_bank INTEGER NOT NULL,credit_adjustment INTEGER NOT NULL,restored_cogs INTEGER NOT NULL,bank_ref TEXT,reason TEXT,date TEXT)");
         db.execSQL("CREATE TABLE IF NOT EXISTS work_orders(id INTEGER PRIMARY KEY,work_ref TEXT UNIQUE,product_id INTEGER NOT NULL,batches INTEGER NOT NULL,planned_qty INTEGER NOT NULL,actual_qty INTEGER NOT NULL DEFAULT 0,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL DEFAULT 0,overhead INTEGER NOT NULL DEFAULT 0,total_cost INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL,date TEXT)");
