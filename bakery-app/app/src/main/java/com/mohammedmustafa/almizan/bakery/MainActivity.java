@@ -1583,7 +1583,7 @@ public class MainActivity extends Activity {
                 pendingBackupPassword=password;
                 Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("application/octet-stream");
                 i.putExtra(Intent.EXTRA_TITLE,"almizan-bakery-backup-"+day+".mizanbak");
-                try{startActivityForResult(i,REQUEST_EXPORT_BACKUP);}catch(Exception ex){java.util.Arrays.fill(password,'\\0');pendingBackupPassword=null;toast("تعذر فتح اختيار مكان حفظ النسخة");}
+                try{startActivityForResult(i,REQUEST_EXPORT_BACKUP);}catch(Exception ex){java.util.Arrays.fill(password,'\0');pendingBackupPassword=null;toast("تعذر فتح اختيار مكان حفظ النسخة");}
             });
         }));
         dialog.show();
@@ -1619,7 +1619,7 @@ public class MainActivity extends Activity {
         }
         if(resultCode!=RESULT_OK || data==null || data.getData()==null) {
             if(requestCode==REQUEST_EXPORT_BACKUP && pendingBackupPassword!=null) {
-                java.util.Arrays.fill(pendingBackupPassword,'\\0');
+                java.util.Arrays.fill(pendingBackupPassword,'\0');
                 pendingBackupPassword=null;
             }
             return;
@@ -1636,7 +1636,7 @@ public class MainActivity extends Activity {
                         if(out==null)throw new IllegalStateException("تعذر فتح ملف النسخة");out.write(encrypted);out.flush();
                     }finally{java.util.Arrays.fill(plain,(byte)0);java.util.Arrays.fill(encrypted,(byte)0);}
                     toast("تم تصدير نسخة مشفّرة للمخبز والمصنع. احفظ كلمة المرور؛ لا يمكن استعادة الملف دونها.");
-                }finally{java.util.Arrays.fill(password,'\\0');}
+                }finally{java.util.Arrays.fill(password,'\0');}
             } else if(requestCode==REQUEST_IMPORT_BACKUP) {
                 byte[] bytes;
                 try(InputStream in=getContentResolver().openInputStream(data.getData())) {
@@ -1650,7 +1650,7 @@ public class MainActivity extends Activity {
                     askBackupPassword("فك تشفير النسخة الاحتياطية",false,password->{
                         try{byte[] plain=PortableBackupCrypto.decrypt(bytes,password);try{processBackupImport(plain);}finally{java.util.Arrays.fill(plain,(byte)0);}}
                         catch(Exception ex){toast("تعذر فك النسخة. تحقق من كلمة المرور وسلامة الملف.");}
-                        finally{java.util.Arrays.fill(password,'\\0');}
+                        finally{java.util.Arrays.fill(password,'\0');}
                     });
                 }else{
                     new AlertDialog.Builder(this).setTitle("نسخة قديمة غير مشفّرة")
@@ -1664,7 +1664,7 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
-        if(pendingBackupPassword!=null){java.util.Arrays.fill(pendingBackupPassword,'\\0');pendingBackupPassword=null;}
+        if(pendingBackupPassword!=null){java.util.Arrays.fill(pendingBackupPassword,'\0');pendingBackupPassword=null;}
         super.onDestroy();
     }
 
