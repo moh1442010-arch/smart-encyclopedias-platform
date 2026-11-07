@@ -89,14 +89,9 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
-        try {
-            store = new Store();
-            day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
-            showPinGate();
-        } catch (RuntimeException ex) {
-            android.util.Log.e("AlMizanBakery", "Activity startup failed", ex);
-            showStartupFailure(ex);
-        }
+        day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+        // Do not open either operational database until PIN and entitlement checks pass.
+        showPinGate();
     }
 
     private void showPinGate() {
@@ -472,6 +467,14 @@ public class MainActivity extends Activity {
         if (!LicenseAccessGate.isAccessAllowed(this)) {
             showPaywall();
             return;
+        }
+        if (store == null) {
+            try { store = new Store(); }
+            catch (RuntimeException ex) {
+                android.util.Log.e("AlMizanBakery", "Authorized database startup failed", ex);
+                showStartupFailure(ex);
+                return;
+            }
         }
         base("🥖 المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + "");
         TextView intro = text("منظومة يومية متكاملة للمخبز — من رصيد الدقيق إلى الإنتاج والتحصيل وهامش الربح.",16);
