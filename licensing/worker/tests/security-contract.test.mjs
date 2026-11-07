@@ -66,3 +66,63 @@ test("activation token recovery requires an authenticated admin session", async 
   assert.equal(response.status, 401);
   assert.equal((await response.json()).error, "UNAUTHORIZED");
 });
+
+test("2.8.0 customer order is accepted and recorded as pending without issuing a token", async () => {
+  const writes = [];
+  const db = {
+    prepare(sql) {
+      return {
+        bind(...values) {
+          return {
+            first: async () => {
+              if (sql.includes("license_order_rate_limits")) return { attempts: 1 };
+              if (sql.includes("SELECT id FROM license_orders")) return null;
+              return null;
+            },
+            run: async () => {
+              writes.push({ sql, values });
+              return { meta: { changes: 1 } };
+            }
+          };
+        }
+      };
+    }
+  };
+  const response = await worker.fetch(new Request("https://bakery-test.local/api/orders", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      origin: "https://bakery-test.local",
+      "CF-Connecting-IP": "192.0.2.44"
+    },
+    body: JSON.stringify({
+      customerName: "Test Bakery",
+      contact: "+249123456789",
+      deviceId: "DEVICE-12345678",
+      plan: "monthly",
+      receiptReference: "BANKAK-20261107-TEST",
+      appVersion: "2.8.0"
+    })
+  }), { DB: db, APP_VERSION: "2.8.0", STORE_ORIGIN: "https://bakery-test.local" });
+
+  assert.equal(response.status, 201);
+  const body = await response.json();
+  assert.equal(body.status, "pending");
+  assert.equal(body.amountSdg, 55000);
+  assert.ok(body.orderId);
+  assert.equal("activationToken" in body, false);
+  assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_orders")));
+  assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_audit") && x.values.includes("order_created")));
+});
+
+test("admin login page is served without exposing dashboard data", async () => {
+  const response = await worker.fetch(
+    new Request("https://bakery-test.local/admin/login"),
+    { DB: {}, ADMIN_PASSWORD: "A".repeat(40) }
+  );
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /تسجيل الدخول/);
+  assert.doesNotMatch(html, /activationToken|LICENSE_PRIVATE_KEY_PKCS8_B64/);
+});
+
