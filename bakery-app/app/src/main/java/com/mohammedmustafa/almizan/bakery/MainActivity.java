@@ -1877,7 +1877,7 @@ public class MainActivity extends Activity {
     private void toast(String s) { Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
 
     private class Store extends SQLiteOpenHelper {
-        Store(){super(MainActivity.this,"almizan_bakery_250.db",SecureDatabase.passphrase(MainActivity.this,"almizan_bakery_250.db"),null,6,0,null,null,false);}
+        Store(){super(MainActivity.this,"almizan_bakery_250.db",SecureDatabase.passphrase(MainActivity.this,"almizan_bakery_250.db"),null,7,0,null,null,false);}
         @Override public void onConfigure(SQLiteDatabase db) {
             super.onConfigure(db);
             db.execSQL("PRAGMA foreign_keys=ON");
