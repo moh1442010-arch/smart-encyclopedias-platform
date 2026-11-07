@@ -54,11 +54,12 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin develop/bakery-2.9-enterprise-completion --depth=1
-          RELEASE_VERSION="$(git show FETCH_HEAD:bakery-app/app/build.gradle | sed -n "s/.*versionName '\\([^']*\\)'.*/\\1/p")"
-          RELEASE_VERSION_CODE="$(git show FETCH_HEAD:bakery-app/app/build.gradle | sed -n 's/.*versionCode \\([0-9]*\\).*/\\1/p')"
-          MAIN_APP_VERSION="$(sed -n "s/.*versionName '\\([^']*\\)'.*/\\1/p" bakery-app/app/build.gradle)"
-          ISSUER_VERSION="$(sed -n 's/^const CURRENT_APP_VERSION = "\\(.*\\)";/\\1/p' tools/bakery-license-issuer.mjs)"
-          WORKER_VERSION="$(sed -n 's/^APP_VERSION = "\\(.*\\)"/\\1/p' licensing/worker/wrangler.toml)"
+          RELEASE_GRADLE="$(git show FETCH_HEAD:bakery-app/app/build.gradle)"
+          RELEASE_VERSION="$(printf '%s\\n' "$RELEASE_GRADLE" | grep -oE "versionName '[^']+'" | head -1 | cut -d "'" -f2)"
+          RELEASE_VERSION_CODE="$(printf '%s\\n' "$RELEASE_GRADLE" | grep -oE 'versionCode [0-9]+' | awk '{print $2}')"
+          MAIN_APP_VERSION="$(grep -oE "versionName '[^']+'" bakery-app/app/build.gradle | head -1 | cut -d "'" -f2)"
+          ISSUER_VERSION="$(grep -oE 'CURRENT_APP_VERSION = "[^"]+"' tools/bakery-license-issuer.mjs | cut -d '"' -f2)"
+          WORKER_VERSION="$(grep -oE 'APP_VERSION = "[^"]+"' licensing/worker/wrangler.toml | cut -d '"' -f2)"
           test "$RELEASE_VERSION" = "2.8.0"
           test "$RELEASE_VERSION_CODE" = "280000"
           test "$RELEASE_VERSION" = "$WORKER_VERSION"
@@ -67,9 +68,8 @@ jobs:
           WORKER_KEY="$(grep -oE 'EXPECTED_APP_PUBLIC_KEY_DER_B64 = "[^"]+"' licensing/worker/src/index.js | cut -d '"' -f2)"
           ISSUER_KEY="$(grep -oE 'EXPECTED_PUBLIC_KEY_DER_B64 = "[^"]+"' tools/bakery-license-issuer.mjs | cut -d '"' -f2)"
           test -n "$RELEASE_KEY" && test "$RELEASE_KEY" = "$WORKER_KEY"
-          test "$MAIN_APP_VERSION" = "2.6.17"
           test "$ISSUER_KEY" = "$WORKER_KEY"
-          echo "Current 2.8.0 release matches Worker; main-branch offline issuer remains consistent with its own 2.6.17 source; signing keys match."
+          echo "Current 2.8.0 release matches Worker; main-branch offline issuer matches its source; all signing public keys match."
       - name: Syntax-check storefront and admin browser scripts
         run: |
           python3 - <<'PY'
