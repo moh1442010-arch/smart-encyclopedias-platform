@@ -959,7 +959,8 @@ public class MainActivity extends Activity {
                 store.put(day,"workers",record); updateStatus(); toast("تم حفظ جدول العمال المسطّر.");
                 dialog.dismiss();
             } catch(Exception ex) { toast("لم يُحفظ جدول العمال: "+ex.getMessage()); }
-        }));
+        });
+        });
         dialog.show();
     }
 
