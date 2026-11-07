@@ -234,8 +234,25 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_2
+          emulator-options: -no-snapshot -no-window -noaudio -gpu swiftshader_indirect
+          disable-animations: true
           script: |
-            adb install -r bakery-app/release/AlMizan-Bakery-2.8.1-review.apk
+            adb wait-for-device
+            ready=0
+            for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+              if adb shell cmd package list packages >/dev/null 2>&1; then ready=1; break; fi
+              echo "Android package service not ready (attempt $attempt); waiting..."
+              sleep 5
+            done
+            if [ "$ready" -ne 1 ]; then echo "Android package service did not become ready"; adb logcat -d -t 1000 || true; exit 1; fi
+            installed=0
+            for attempt in 1 2 3; do
+              if adb install --no-streaming -r bakery-app/release/AlMizan-Bakery-2.8.1-review.apk; then installed=1; break; fi
+              echo "APK installation failed (attempt $attempt); waiting for package service..."
+              adb wait-for-device || true
+              sleep 5
+            done
+            if [ "$installed" -ne 1 ]; then echo "Unable to install signed APK on API 35 emulator"; exit 1; fi
             adb logcat -c
             adb shell monkey -p com.mohammedmustafa.almizan.bakery 1
             sleep 8
