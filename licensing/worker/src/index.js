@@ -222,7 +222,7 @@ async function issueToken(env, deviceId, plan, purchasedAppVersion) {
   const key = await importPrivateKey(env);
   const now = Math.floor(Date.now() / 1000);
   const expires = plan === "lifetime" ? 0 : now + PLANS[plan].seconds;
-  const appVersion = cleanText(purchasedAppVersion || env.APP_VERSION || "2.6.17", 32);
+  const appVersion = cleanText(purchasedAppVersion || env.APP_VERSION || "2.8.0", 32);
   // This exact payload format is consumed by MainActivity.verifyLicenseToken().
   const maxVersion = plan === "lifetime" ? appVersion : "any";
   const payload = `app=${APP_ID};device=${deviceId};plan=${plan};max_version=${maxVersion};expires=${expires}`;
@@ -426,14 +426,14 @@ async function handle(request, env) {
       release,
       customerReviews: { channel: "first_party_moderated_form", counts: reviewSummary, url: "https://moh1442010-arch.github.io/smart-encyclopedias-platform/reviews.html" },
       visitorAnalytics: { provider: "first_party_aggregate", integrated: true, totalViews30Days: Number(analyticsTotal && analyticsTotal.views) || 0, pages: analyticsRows.results || [], privacy: "aggregate-only-no-cookie-no-ip-storage" },
-      serviceHealth: { healthEndpoint: "ok", signingReady, appVersion: cleanText(env.APP_VERSION || "2.6.17", 32) }
+      serviceHealth: { healthEndpoint: "ok", signingReady, appVersion: cleanText(env.APP_VERSION || "2.8.0", 32) }
     });
   }
 
   if (url.pathname === "/diagnostics/admin-config" && request.method === "GET") {
     return json({
       adminPasswordConfigured: adminPassword(env).length >= 32,
-      appVersion: cleanText(env.APP_VERSION || "2.6.17", 32)
+      appVersion: cleanText(env.APP_VERSION || "2.8.0", 32)
     });
   }
 
@@ -441,14 +441,14 @@ async function handle(request, env) {
     return json({
       ...signingDiagnostics(env),
       privateKeyFormat: privateKeyFormat(env.LICENSE_PRIVATE_KEY_PKCS8_B64),
-      appVersion: cleanText(env.APP_VERSION || "2.6.17", 32)
+      appVersion: cleanText(env.APP_VERSION || "2.8.0", 32)
     });
   }
 
   if (url.pathname === "/diagnostics/signing-pair" && request.method === "GET") {
     try {
       await importPrivateKey(env);
-      return json({ signingPairMatches: true, signingReady: true, appVersion: cleanText(env.APP_VERSION || "2.6.17", 32) });
+      return json({ signingPairMatches: true, signingReady: true, appVersion: cleanText(env.APP_VERSION || "2.8.0", 32) });
     } catch (e) {
       const code = String(e && e.message || e);
       const allowedCodes = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH", "LICENSE_PRIVATE_KEY_INVALID", "LICENSE_PUBLIC_KEY_INVALID"];
@@ -458,7 +458,7 @@ async function handle(request, env) {
         error: allowedCodes.includes(code) ? code : "LICENSE_SIGNING_INTERNAL_ERROR",
         ...signingDiagnostics(env),
         privateKeyFormat: privateKeyFormat(env.LICENSE_PRIVATE_KEY_PKCS8_B64),
-        appVersion: cleanText(env.APP_VERSION || "2.6.17", 32)
+        appVersion: cleanText(env.APP_VERSION || "2.8.0", 32)
       }, 503);
     }
   }
@@ -476,7 +476,7 @@ async function handle(request, env) {
     const plan = cleanText(body.plan, 20);
     const receiptRef = cleanText(body.receiptReference, 100);
     const requestedVersion = cleanText(body.appVersion, 32);
-    const appVersion = cleanText(env.APP_VERSION || "2.6.17", 32);
+    const appVersion = cleanText(env.APP_VERSION || "2.8.0", 32);
     if (customer.length < 2 || customer.length > 100 ||
         !/^[+0-9()\s-]{8,25}$/.test(contact) ||
         !/^[A-Za-z0-9\-_/]{4,100}$/.test(receiptRef) ||
@@ -515,7 +515,7 @@ async function handle(request, env) {
     if (!await verifyAdminSession(request,env)) return json({error:"UNAUTHORIZED"},401);
     try {
       await importPrivateKey(env);
-      return json({ ok: true, publicKeyMatchesApp: true, appVersion: cleanText(env.APP_VERSION || "2.6.17", 32) });
+      return json({ ok: true, publicKeyMatchesApp: true, appVersion: cleanText(env.APP_VERSION || "2.8.0", 32) });
     } catch (e) {
       const code = String(e && e.message || e);
       const allowedCodes = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH", "LICENSE_PRIVATE_KEY_INVALID", "LICENSE_PUBLIC_KEY_INVALID"];
