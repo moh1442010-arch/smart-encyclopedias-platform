@@ -20,8 +20,8 @@ final class GeneralLedgerReports {
             this.code=code;this.nameAr=nameAr;this.nameEn=nameEn;this.type=type;this.normalSide=normalSide;
             this.debitMinor=debit;this.creditMinor=credit;
             this.balanceMinor="DEBIT".equals(normalSide)
-                ? BigInteger.valueOf(debit).subtract(BigInteger.valueOf(credit)).longValueExact()
-                : BigInteger.valueOf(credit).subtract(BigInteger.valueOf(debit)).longValueExact();
+                ? exactLong(BigInteger.valueOf(debit).subtract(BigInteger.valueOf(credit)))
+                : exactLong(BigInteger.valueOf(credit).subtract(BigInteger.valueOf(debit)));
         }
     }
 
@@ -42,9 +42,7 @@ final class GeneralLedgerReports {
             periodDebitMinor=pd;periodCreditMinor=pc;
         }
         long closingSignedDebitBalance() {
-            return BigInteger.valueOf(openingDebitMinor).subtract(BigInteger.valueOf(openingCreditMinor))
-                .add(BigInteger.valueOf(periodDebitMinor)).subtract(BigInteger.valueOf(periodCreditMinor))
-                .longValueExact();
+            return exactLong(BigInteger.valueOf(openingDebitMinor).subtract(BigInteger.valueOf(openingCreditMinor)).add(BigInteger.valueOf(periodDebitMinor)).subtract(BigInteger.valueOf(periodCreditMinor)));
         }
     }
 
@@ -135,7 +133,12 @@ final class GeneralLedgerReports {
     }
 
     private static String branchArg(String branchCode){return branchCode==null?"":branchCode.trim();}
-    private static long add(long a,long b) {return BigInteger.valueOf(a).add(BigInteger.valueOf(b)).longValueExact();}
+    private static long add(long a,long b) {return exactLong(BigInteger.valueOf(a).add(BigInteger.valueOf(b)));}
+    private static long exactLong(BigInteger value) {
+        if(value.compareTo(BigInteger.valueOf(Long.MIN_VALUE))<0 || value.compareTo(BigInteger.valueOf(Long.MAX_VALUE))>0)
+            throw new ArithmeticException("المبلغ يتجاوز النطاق الرقمي المسموح");
+        return value.longValue();
+    }
     private static boolean blank(String s){return s==null||s.trim().isEmpty();}
     private static void validateRange(String from,String to) {
         if(from==null||to==null||!from.matches("\\d{4}-\\d{2}-\\d{2}")||
