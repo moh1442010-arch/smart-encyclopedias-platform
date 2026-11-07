@@ -70,13 +70,13 @@ public class MainActivity extends Activity {
     private TextView dateLabel, statusLabel, flourMetric, workMetric, productionMetric, marginMetric;
     private String currentScreenTitle = "";
     private boolean pinAuthenticated = false;
+    private boolean paywallLocked = false;
     private final android.os.Handler entitlementHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable entitlementWatchdog = new Runnable() {
         @Override public void run() {
-            if (pinAuthenticated && !LicenseAccessGate.isAccessAllowed(MainActivity.this) &&
-                !currentScreenTitle.startsWith("🔐 اشتراك المحاسب الميزان")) {
+            if (pinAuthenticated && !LicenseAccessGate.isAccessAllowed(MainActivity.this)) {
                 if (store != null) { store.close(); store = null; }
-                showPaywall();
+                if (!paywallLocked) showPaywall();
             }
             entitlementHandler.postDelayed(this, 30000L);
         }
@@ -485,6 +485,7 @@ public class MainActivity extends Activity {
             showPaywall();
             return;
         }
+        paywallLocked = false;
         if (store == null) {
             try { store = new Store(); }
             catch (RuntimeException ex) {
@@ -1765,6 +1766,7 @@ public class MainActivity extends Activity {
         base("🔐 اشتراك المحاسب الميزان للمخابز");
         boolean licensed = hasActiveLicense();
         boolean expired = trialExpired();
+        paywallLocked = expired && !licensed;
         String trialMessage = licensed
             ? "اشتراكك مفعّل على هذا الجهاز. يمكنك متابعة الدفاتر أو طلب تجديد الباقة عند الحاجة."
             : expired
