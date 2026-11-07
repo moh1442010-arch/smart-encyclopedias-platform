@@ -1,0 +1,146 @@
+package com.mohammedmustafa.almizan.bakery;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.os.Bundle;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.*;
+import android.database.Cursor;
+import net.zetetic.database.sqlcipher.SQLiteDatabase;
+import android.content.ContentValues;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+public class PartyDirectoryActivity extends Activity {
+    private static final int NAVY=0xFF0B1F3A,GOLD=0xFFD4AF37;
+    private PartyDirectory.Db helper;
+    private SQLiteDatabase db;
+    private LinearLayout body;
+    private EditText invoiceSupplier;
+    private long invoiceSupplierId=0;
+
+    @Override public void onCreate(Bundle state){
+        super.onCreate(state);
+        helper=new PartyDirectory.Db(this);db=helper.getWritableDatabase();
+        PartyDirectory.migrateLegacyCustomers(db);
+        render();
+    }
+    @Override protected void onDestroy(){if(helper!=null)helper.close();super.onDestroy();}
+
+    private void render(){
+        LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(12,10,12,12);root.setBackgroundColor(0xFFF6F8FB);
+        TextView title=new TextView(this);title.setText("سجل العملاء والموردين والحسابات البنكية");title.setTextSize(20);title.setTextColor(NAVY);title.setGravity(Gravity.CENTER);root.addView(title);
+        Button back=button("↩ رجوع إلى الشاشة السابقة");back.setOnClickListener(v->finish());root.addView(back);
+        ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        setContentView(root);
+        customersSection();suppliersSection();supplierInvoiceSection();customerReceiptSection();bankAccountsSection();
+    }
+
+    private void customersSection(){
+        heading("العملاء الأساسيون");
+        body.addView(note("سجّل العميل مرة واحدة. يظهر بعد ذلك في مؤشر البحث داخل شاشات البيع والتوزيع والتحصيل."));
+        EditText name=cell("اسم العميل"),phone=cell("رقم الهاتف"),debt=cell("مديونية افتتاحية");
+        Spinner currency=currencySpinner();
+        addHorizontal(name,phone,debt,currency);
+        Button save=button("حفظ العميل");save.setOnClickListener(v->{try{
+            long opening=amount(debt);long id=PartyDirectory.saveCustomer(db,name.getText().toString(),phone.getText().toString(),opening,currency.getSelectedItem().toString());
+            toast("تم حفظ العميل برقم "+id);name.setText("");phone.setText("");debt.setText("");refreshLists();
+        }catch(Exception e){toast("لم يُحفظ العميل: "+e.getMessage());}});body.addView(save);
+        body.addView(note("قائمة العملاء — الاسم | الهاتف | المديونية الافتتاحية | العملة"));
+        list("SELECT name||' | '||phone||' | '||opening_balance_minor||' | '||currency_code FROM customers WHERE active=1 ORDER BY name");
+    }
+
+    private void suppliersSection(){
+        heading("الموردون الأساسيون");
+        body.addView(note("سجّل المورد مرة واحدة. الصنف والوحدة حقول افتراضية تساعد في الفواتير اللاحقة."));
+        EditText name=cell("اسم المورد"),phone=cell("رقم الهاتف"),item=cell("الصنف المعتاد"),unit=cell("الوحدة"),debt=cell("مديونية افتتاحية");
+        Spinner currency=currencySpinner();
+        addHorizontal(name,phone,item,unit,debt,currency);
+        Button save=button("حفظ المورد");save.setOnClickListener(v->{try{
+            long id=PartyDirectory.saveSupplier(db,name.getText().toString(),phone.getText().toString(),item.getText().toString(),unit.getText().toString(),amount(debt),currency.getSelectedItem().toString());
+            toast("تم حفظ المورد برقم "+id);name.setText("");phone.setText("");item.setText("");unit.setText("");debt.setText("");refreshLists();
+        }catch(Exception e){toast("لم يُحفظ المورد: "+e.getMessage());}});body.addView(save);
+        body.addView(note("قائمة الموردين — الاسم | الهاتف | الصنف المعتاد | المديونية | العملة"));
+        list("SELECT name||' | '||phone||' | '||default_item||' | '||opening_balance_minor||' | '||currency_code FROM suppliers WHERE active=1 ORDER BY name");
+    }
+
+    private void supplierInvoiceSection(){
+        heading("فاتورة مورد وسدادها");
+        body.addView(note("اختر مورداً مسجلاً. يسجل النظام قيمة الفاتورة والمدفوع والمتبقي بدقة. ربط هذه الفاتورة بالمخزون وقيود الأستاذ سيُستكمل في خدمة المشتريات المتكاملة."));
+        invoiceSupplier=cell("اضغط لاختيار المورد");invoiceSupplier.setFocusable(false);invoiceSupplier.setOnClickListener(v->PartyDirectory.showSupplierPicker(this,(id,n)->{invoiceSupplierId=id;invoiceSupplier.setText(n);}));
+        EditText item=cell("الصنف"),qty=cell("الكمية"),total=cell("إجمالي الفاتورة"),cash=cell("سداد نقدي"),bank=cell("سداد بنكك/بنك"),ref=cell("رقم العملية");
+        Spinner currency=currencySpinner();
+        addHorizontal(invoiceSupplier,item,qty,total,cash,bank,ref,currency);
+        TextView debtLabel=note("المديونية المتبقية: تحسب تلقائياً بعد إدخال الفاتورة والسداد.");
+        body.addView(debtLabel);
+        TextWatcherAmount.watch(new EditText[]{total,cash,bank},()->{try{long d=amount(total)-amount(cash)-amount(bank);debtLabel.setText("المديونية المتبقية: "+d+" "+currency.getSelectedItem());}catch(Exception e){debtLabel.setText("راجع مبالغ الفاتورة والسداد.");}});
+        Button save=button("حفظ فاتورة المورد");save.setOnClickListener(v->{try{
+            if(invoiceSupplierId<=0)throw new IllegalArgumentException("اختر المورد من القائمة.");
+            String product=item.getText().toString().trim();long q=quantity(qty),t=amount(total),c=amount(cash),b=amount(bank);
+            if(product.isEmpty()||q<=0||t<=0||c<0||b<0||c>t||b>t-c)throw new IllegalArgumentException("راجع الصنف والكمية وقيمة الفاتورة والسداد.");
+            String br=ref.getText().toString().trim();if(b>0&&br.isEmpty())throw new IllegalArgumentException("رقم عملية التحويل مطلوب.");
+            ContentValues v=new ContentValues();v.put("supplier_id",invoiceSupplierId);v.put("item_name",product);v.put("quantity_milli",q);v.put("invoice_total_minor",t);v.put("paid_cash_minor",c);v.put("paid_bank_minor",b);v.put("bank_reference",br);v.put("debt_minor",t-c-b);v.put("currency_code",currency.getSelectedItem().toString());v.put("invoice_date",today());v.put("created_at",System.currentTimeMillis());
+            db.insertOrThrow("supplier_quick_invoices",null,v);toast("تم حفظ الفاتورة. المتبقي "+(t-c-b));refreshLists();
+        }catch(Exception e){toast("لم تحفظ الفاتورة: "+e.getMessage());}});body.addView(save);
+        list("SELECT s.name||' | '||i.item_name||' | كمية: '||printf('%.3f',i.quantity_milli/1000.0)||' | فاتورة: '||i.invoice_total_minor||' | مدفوع: '||(i.paid_cash_minor+i.paid_bank_minor)||' | متبقي: '||i.debt_minor||' '||i.currency_code FROM supplier_quick_invoices i JOIN suppliers s ON s.id=i.supplier_id ORDER BY i.id DESC LIMIT 50");
+    }
+
+    private void customerReceiptSection(){
+        heading("تحصيل من عميل");
+        EditText customer=cell("اضغط لاختيار العميل");customer.setFocusable(false);
+        final long[] customerId={0};customer.setOnClickListener(v->PartyDirectory.showCustomerPicker(this,(id,n)->{customerId[0]=id;customer.setText(n);}));
+        EditText cash=cell("مبلغ نقدي"),bank=cell("مبلغ بنك/بنكك"),ref=cell("رقم العملية");
+        Spinner currency=currencySpinner();
+        addHorizontal(customer,cash,bank,ref,currency);
+        Button save=button("حفظ التحصيل");save.setOnClickListener(v->{try{
+            if(customerId[0]<=0)throw new IllegalArgumentException("اختر العميل.");
+            long c=amount(cash),b=amount(bank);if(c<0||b<0||c+b<=0)throw new IllegalArgumentException("أدخل مبلغاً موجباً.");
+            String br=ref.getText().toString().trim();if(b>0&&br.isEmpty())throw new IllegalArgumentException("رقم العملية مطلوب للتحويل.");
+            db.beginTransaction();try{
+                if(c>0)insertPartyPayment("CUSTOMER",customerId[0],"RECEIPT",c,"CASH",currency.getSelectedItem().toString(),"");
+                if(b>0)insertPartyPayment("CUSTOMER",customerId[0],"RECEIPT",b,"BANKAK",currency.getSelectedItem().toString(),br);
+                db.setTransactionSuccessful();
+            }finally{db.endTransaction();}
+            toast("تم تسجيل التحصيل محلياً.");cash.setText("");bank.setText("");ref.setText("");
+        }catch(Exception e){toast("تعذر تسجيل التحصيل: "+e.getMessage());}});body.addView(save);
+    }
+
+    private void bankAccountsSection(){
+        heading("حسابات استقبال العملات وبيانات IBAN");
+        body.addView(note("أضف بيانات الحساب البنكي التي تصدرها الجهة المصرفية. لا نضع أرقام IBAN افتراضية."));
+        EditText account=cell("اسم الحساب/صاحب الحساب"),bank=cell("اسم البنك"),iban=cell("IBAN"),swift=cell("SWIFT/BIC"),number=cell("رقم الحساب المحلي");
+        Spinner currency=currencySpinner();
+        addHorizontal(account,bank,currency,iban,swift,number);
+        Button save=button("حفظ الحساب البنكي");save.setOnClickListener(v->{try{
+            PartyDirectory.saveBankAccount(db,account.getText().toString(),bank.getText().toString(),currency.getSelectedItem().toString(),iban.getText().toString(),swift.getText().toString(),number.getText().toString());
+            toast("تم حفظ حساب الاستقبال.");account.setText("");bank.setText("");iban.setText("");swift.setText("");number.setText("");refreshLists();
+        }catch(Exception e){toast("لم يُحفظ الحساب: "+e.getMessage());}});body.addView(save);
+        list("SELECT bank_name||' | '||account_name||' | '||currency_code||' | IBAN: '||CASE WHEN iban='' THEN 'غير مدخل' ELSE iban END FROM company_bank_accounts WHERE active=1 ORDER BY currency_code");
+    }
+
+    private void insertPartyPayment(String type,long id,String direction,long amount,String method,String currency,String reference){
+        ContentValues v=new ContentValues();v.put("party_type",type);v.put("party_id",id);v.put("direction",direction);v.put("payment_date",today());v.put("amount_minor",amount);v.put("method",method);v.put("currency_code",currency);v.put("reference",reference);v.put("created_at",System.currentTimeMillis());db.insertOrThrow("party_payments",null,v);
+    }
+    private void refreshLists(){render();}
+    private void heading(String s){TextView t=note(s);t.setTextColor(NAVY);t.setTextSize(18);t.setTypeface(null,1);body.addView(t);}
+    private TextView note(String s){TextView t=new TextView(this);t.setText(s);t.setTextSize(13);t.setTextColor(0xFF334155);t.setPadding(5,7,5,7);return t;}
+    private Button button(String s){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextColor(NAVY);b.setBackgroundColor(GOLD);return b;}
+    private EditText cell(String hint){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setMinWidth(dp(160));e.setTextSize(14);return e;}
+    private void addHorizontal(View... views){HorizontalScrollView h=new HorizontalScrollView(this);h.setHorizontalScrollBarEnabled(true);LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);for(View v:views){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dp(170),dp(56));lp.setMargins(2,2,2,2);row.addView(v,lp);}h.addView(row);body.addView(h,new LinearLayout.LayoutParams(-1,-2));}
+    private Spinner currencySpinner(){Spinner s=new Spinner(this);String[] codes={"SDG","USD","EUR","SAR","AED"};ArrayAdapter<String>a=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,codes);a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);s.setMinimumWidth(dp(130));return s;}
+    private void list(String sql){Cursor c=null;try{c=db.rawQuery(sql,null);while(c.moveToNext())body.addView(note("• "+c.getString(0)));}catch(Exception e){body.addView(note("تعذر عرض القائمة: "+e.getMessage()));}finally{if(c!=null)c.close();}}
+    private long amount(EditText e){String s=e.getText().toString().trim();if(s.isEmpty())return 0;return new java.math.BigDecimal(s).setScale(0,java.math.RoundingMode.UNNECESSARY).longValueExact();}
+    private long quantity(EditText e){String s=e.getText().toString().trim();if(s.isEmpty())return 0;return new java.math.BigDecimal(s).movePointRight(3).setScale(0,java.math.RoundingMode.UNNECESSARY).longValueExact();}
+    private int dp(int v){return (int)(v*getResources().getDisplayMetrics().density+0.5f);}
+    private String today(){return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());}
+    private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
+
+    private static final class TextWatcherAmount {
+        static void watch(EditText[] fields,Runnable update){
+            android.text.TextWatcher w=new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int c,int f){}public void onTextChanged(CharSequence s,int a,int b,int c){update.run();}public void afterTextChanged(android.text.Editable e){}};
+            for(EditText e:fields)e.addTextChangedListener(w);
+        }
+    }
+}
