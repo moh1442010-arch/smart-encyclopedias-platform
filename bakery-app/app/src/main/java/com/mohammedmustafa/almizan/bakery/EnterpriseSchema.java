@@ -14,8 +14,9 @@ final class EnterpriseSchema {
     static void ensure(SQLiteDatabase db) {
         db.execSQL("PRAGMA foreign_keys=ON");
         db.execSQL("CREATE TABLE IF NOT EXISTS enterprise_meta (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)");
-        db.execSQL("CREATE TABLE IF NOT EXISTS company_settings (id INTEGER PRIMARY KEY CHECK(id=1), country_code TEXT NOT NULL DEFAULT 'SD', base_currency TEXT NOT NULL DEFAULT 'SDG', timezone TEXT NOT NULL DEFAULT 'Africa/Khartoum', language TEXT NOT NULL DEFAULT 'ar', fiscal_year_start TEXT NOT NULL DEFAULT '01-01', tax_profile TEXT NOT NULL DEFAULT 'SD_DEFAULT')");
+        db.execSQL("CREATE TABLE IF NOT EXISTS company_settings (id INTEGER PRIMARY KEY CHECK(id=1), country_code TEXT NOT NULL DEFAULT 'SD', base_currency TEXT NOT NULL DEFAULT 'SDG', timezone TEXT NOT NULL DEFAULT 'Africa/Khartoum', language TEXT NOT NULL DEFAULT 'ar', fiscal_year_start TEXT NOT NULL DEFAULT '01-01', tax_profile TEXT NOT NULL DEFAULT 'SD_DEFAULT', business_name TEXT NOT NULL DEFAULT '')");
         db.execSQL("INSERT OR IGNORE INTO company_settings(id) VALUES(1)");
+        try { db.execSQL("ALTER TABLE company_settings ADD COLUMN business_name TEXT NOT NULL DEFAULT ''"); } catch (Exception ignored) { }
         db.execSQL("CREATE TABLE IF NOT EXISTS countries (code TEXT PRIMARY KEY NOT NULL, name_ar TEXT NOT NULL, name_en TEXT NOT NULL, tax_profile TEXT NOT NULL DEFAULT 'CUSTOM', active INTEGER NOT NULL DEFAULT 0 CHECK(active IN (0,1)))");
         db.execSQL("INSERT OR IGNORE INTO countries(code,name_ar,name_en,tax_profile,active) VALUES('SD','السودان','Sudan','SD_DEFAULT',1)");
         db.execSQL("CREATE TABLE IF NOT EXISTS currencies (code TEXT PRIMARY KEY NOT NULL CHECK(length(code)=3), name_ar TEXT NOT NULL, name_en TEXT NOT NULL, minor_units INTEGER NOT NULL CHECK(minor_units BETWEEN 0 AND 4), active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)))");
