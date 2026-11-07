@@ -52,10 +52,9 @@ final class GeneralLedgerReports {
         String sql="SELECT a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side,"+
             "COALESCE(SUM(CASE WHEN e.id IS NOT NULL THEN l.base_debit_minor ELSE 0 END),0),COALESCE(SUM(CASE WHEN e.id IS NOT NULL THEN l.base_credit_minor ELSE 0 END),0) "+
             "FROM chart_of_accounts a LEFT JOIN gl_journal_lines l ON l.account_id=a.id "+
-            "LEFT JOIN gl_journal_entries e ON e.id=l.entry_id AND e.status='POSTED' "+
+            "LEFT JOIN gl_journal_entries e ON e.id=l.entry_id AND e.status='POSTED' AND e.transaction_date<=? "+
             "LEFT JOIN branches b ON b.id=l.branch_id "+
-            "WHERE a.active=1 AND (e.id IS NULL OR e.transaction_date<=?) "+
-            "AND (? IS NULL OR b.branch_code=?) "+
+            "WHERE a.active=1 AND (? IS NULL OR b.branch_code=?) "+
             "GROUP BY a.id,a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side ORDER BY a.account_code";
         // A trial balance is cumulative through the closing date; the start date is retained only for API compatibility.
         Cursor c=db.rawQuery(sql,new String[]{to,branchCode,branchCode});
