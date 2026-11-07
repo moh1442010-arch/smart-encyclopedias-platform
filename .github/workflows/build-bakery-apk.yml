@@ -138,6 +138,12 @@ jobs:
           grep -Fq 'requireActiveEntitlement()' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq 'LicenseAccessGate.isAccessAllowed(this)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'LicenseAccessGate.isAccessAllowed(this)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
+          grep -Fq 'MainActivity_preferences' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java
+          grep -Fq 'Migrate the earlier gate-only store' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java
+          grep -Fq 'if (!LicenseAccessGate.isAccessAllowed(this))' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'if (!expired || licensed)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'expiredSevenDayTrialDeniesApplicationAccess' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGateTest.java
+          grep -Fq 'migratesExpiredLegacyGateStateWithoutRestartingTrial' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGateTest.java
           grep -Fq 'isCompatibleLifetimeVersion(maxVersion)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq 'compatibleLifetimeVersion(max)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java
           grep -Fq '27. التجربة المجانية والاشتراك' bakery-app/app/src/main/assets/bakery-guide.html
@@ -243,7 +249,7 @@ jobs:
           retention-days: 30
 
       - name: Publish approved commercial GitHub Release (blocked pending physical qualification)
-        if: false # P0 gate: enable only after documented 2.7.2-to-2.8.1 real-device upgrade and accounting/security acceptance.
+        if: false # P0 gate: enable only after documented 2.6.17-to-2.8.0-to-2.8.1 real-device upgrade and accounting/security acceptance.
         uses: softprops/action-gh-release@v2
         with:
           tag_name: al-mizan-bakery-2.8.1
