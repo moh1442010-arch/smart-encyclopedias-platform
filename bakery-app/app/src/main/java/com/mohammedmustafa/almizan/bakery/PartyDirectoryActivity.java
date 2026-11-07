@@ -18,8 +18,6 @@ public class PartyDirectoryActivity extends Activity {
     private PartyDirectory.Db helper;
     private SQLiteDatabase db;
     private LinearLayout body;
-    private EditText invoiceSupplier;
-    private long invoiceSupplierId=0;
 
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
@@ -35,7 +33,7 @@ public class PartyDirectoryActivity extends Activity {
         Button back=button("↩ رجوع إلى الشاشة السابقة");back.setOnClickListener(v->finish());root.addView(back);
         ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         setContentView(root);
-        customersSection();suppliersSection();supplierInvoiceSection();customerReceiptSection();bankAccountsSection();
+        customersSection();suppliersSection();bankAccountsSection();
     }
 
     private void customersSection(){
@@ -48,7 +46,7 @@ public class PartyDirectoryActivity extends Activity {
             long opening=amount(debt);long id=PartyDirectory.saveCustomer(db,name.getText().toString(),phone.getText().toString(),opening,currency.getSelectedItem().toString());
             toast("تم حفظ العميل برقم "+id);name.setText("");phone.setText("");debt.setText("");refreshLists();
         }catch(Exception e){toast("لم يُحفظ العميل: "+e.getMessage());}});body.addView(save);
-        body.addView(note("قائمة العملاء — الاسم | الهاتف | المديونية الافتتاحية | العملة"));
+        body.addView(note("قائمة العملاء — الاسم | الهاتف | المديونية الافتتاحية | العملة. تسجيل المبيعات والتحصيلات يتم من شاشة البيع بعد اختيار العميل."));
         list("SELECT name||' | '||phone||' | '||opening_balance_minor||' | '||currency_code FROM customers WHERE active=1 ORDER BY name");
     }
 
@@ -62,49 +60,8 @@ public class PartyDirectoryActivity extends Activity {
             long id=PartyDirectory.saveSupplier(db,name.getText().toString(),phone.getText().toString(),item.getText().toString(),unit.getText().toString(),amount(debt),currency.getSelectedItem().toString());
             toast("تم حفظ المورد برقم "+id);name.setText("");phone.setText("");item.setText("");unit.setText("");debt.setText("");refreshLists();
         }catch(Exception e){toast("لم يُحفظ المورد: "+e.getMessage());}});body.addView(save);
-        body.addView(note("قائمة الموردين — الاسم | الهاتف | الصنف المعتاد | المديونية | العملة"));
+        body.addView(note("قائمة الموردين — الاسم | الهاتف | الصنف المعتاد | المديونية | العملة. فواتير الشراء والسداد تسجل من شاشة مخزن المصنع، وتحدّث المخزون والدفتر معاً."));
         list("SELECT name||' | '||phone||' | '||default_item||' | '||opening_balance_minor||' | '||currency_code FROM suppliers WHERE active=1 ORDER BY name");
-    }
-
-    private void supplierInvoiceSection(){
-        heading("فاتورة مورد وسدادها");
-        body.addView(note("اختر مورداً مسجلاً. يسجل النظام قيمة الفاتورة والمدفوع والمتبقي بدقة. ربط هذه الفاتورة بالمخزون وقيود الأستاذ سيُستكمل في خدمة المشتريات المتكاملة."));
-        invoiceSupplier=cell("اضغط لاختيار المورد");invoiceSupplier.setFocusable(false);invoiceSupplier.setOnClickListener(v->PartyDirectory.showSupplierPicker(this,(id,n)->{invoiceSupplierId=id;invoiceSupplier.setText(n);}));
-        EditText item=cell("الصنف"),qty=cell("الكمية"),total=cell("إجمالي الفاتورة"),cash=cell("سداد نقدي"),bank=cell("سداد بنكك/بنك"),ref=cell("رقم العملية");
-        Spinner currency=currencySpinner();
-        addHorizontal(invoiceSupplier,item,qty,total,cash,bank,ref,currency);
-        TextView debtLabel=note("المديونية المتبقية: تحسب تلقائياً بعد إدخال الفاتورة والسداد.");
-        body.addView(debtLabel);
-        TextWatcherAmount.watch(new EditText[]{total,cash,bank},()->{try{long d=amount(total)-amount(cash)-amount(bank);debtLabel.setText("المديونية المتبقية: "+d+" "+currency.getSelectedItem());}catch(Exception e){debtLabel.setText("راجع مبالغ الفاتورة والسداد.");}});
-        Button save=button("حفظ فاتورة المورد");save.setOnClickListener(v->{try{
-            if(invoiceSupplierId<=0)throw new IllegalArgumentException("اختر المورد من القائمة.");
-            String product=item.getText().toString().trim();long q=quantity(qty),t=amount(total),c=amount(cash),b=amount(bank);
-            if(product.isEmpty()||q<=0||t<=0||c<0||b<0||c>t||b>t-c)throw new IllegalArgumentException("راجع الصنف والكمية وقيمة الفاتورة والسداد.");
-            String br=ref.getText().toString().trim();if(b>0&&br.isEmpty())throw new IllegalArgumentException("رقم عملية التحويل مطلوب.");
-            ContentValues v=new ContentValues();v.put("supplier_id",invoiceSupplierId);v.put("item_name",product);v.put("quantity_milli",q);v.put("invoice_total_minor",t);v.put("paid_cash_minor",c);v.put("paid_bank_minor",b);v.put("bank_reference",br);v.put("debt_minor",t-c-b);v.put("currency_code",currency.getSelectedItem().toString());v.put("invoice_date",today());v.put("created_at",System.currentTimeMillis());
-            db.insertOrThrow("supplier_quick_invoices",null,v);toast("تم حفظ الفاتورة. المتبقي "+(t-c-b));refreshLists();
-        }catch(Exception e){toast("لم تحفظ الفاتورة: "+e.getMessage());}});body.addView(save);
-        list("SELECT s.name||' | '||i.item_name||' | كمية: '||printf('%.3f',i.quantity_milli/1000.0)||' | فاتورة: '||i.invoice_total_minor||' | مدفوع: '||(i.paid_cash_minor+i.paid_bank_minor)||' | متبقي: '||i.debt_minor||' '||i.currency_code FROM supplier_quick_invoices i JOIN suppliers s ON s.id=i.supplier_id ORDER BY i.id DESC LIMIT 50");
-    }
-
-    private void customerReceiptSection(){
-        heading("تحصيل من عميل");
-        EditText customer=cell("اضغط لاختيار العميل");customer.setFocusable(false);
-        final long[] customerId={0};customer.setOnClickListener(v->PartyDirectory.showCustomerPicker(this,(id,n)->{customerId[0]=id;customer.setText(n);}));
-        EditText cash=cell("مبلغ نقدي"),bank=cell("مبلغ بنك/بنكك"),ref=cell("رقم العملية");
-        Spinner currency=currencySpinner();
-        addHorizontal(customer,cash,bank,ref,currency);
-        Button save=button("حفظ التحصيل");save.setOnClickListener(v->{try{
-            if(customerId[0]<=0)throw new IllegalArgumentException("اختر العميل.");
-            long c=amount(cash),b=amount(bank);if(c<0||b<0||c+b<=0)throw new IllegalArgumentException("أدخل مبلغاً موجباً.");
-            String br=ref.getText().toString().trim();if(b>0&&br.isEmpty())throw new IllegalArgumentException("رقم العملية مطلوب للتحويل.");
-            db.beginTransaction();try{
-                if(c>0)insertPartyPayment("CUSTOMER",customerId[0],"RECEIPT",c,"CASH",currency.getSelectedItem().toString(),"");
-                if(b>0)insertPartyPayment("CUSTOMER",customerId[0],"RECEIPT",b,"BANKAK",currency.getSelectedItem().toString(),br);
-                db.setTransactionSuccessful();
-            }finally{db.endTransaction();}
-            toast("تم تسجيل التحصيل محلياً.");cash.setText("");bank.setText("");ref.setText("");
-        }catch(Exception e){toast("تعذر تسجيل التحصيل: "+e.getMessage());}});body.addView(save);
     }
 
     private void bankAccountsSection(){
