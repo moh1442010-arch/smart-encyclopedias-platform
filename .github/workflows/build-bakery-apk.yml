@@ -136,7 +136,7 @@ jobs:
           grep -Fq 'migratesLegacyBakeryDatabaseAndHidesPlaintext' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/SecureDatabaseMigrationTest.java
           grep -Fq 'EnterpriseSchema.ensure(db)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq 'onConfigure(SQLiteDatabase db)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
-          grep -Fq 'null,6,0,null,null,false' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'null,7,0,null,null,false' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS suppliers' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS employees' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS fixed_assets' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
