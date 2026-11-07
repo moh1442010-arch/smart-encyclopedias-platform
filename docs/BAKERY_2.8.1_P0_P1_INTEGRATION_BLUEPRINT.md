@@ -11,17 +11,18 @@ Base: `release/bakery-2.8.0-financial-integrity`
 - Workflow verification metadata has now been corrected to expect versionCode 280001. Run 818 was later cancelled before arithmetic tests completed; the build job was explicitly re-run for a fresh attempt. The new attempt must establish whether signing and emulator checks pass.
 - Licensing workflow run 273 passed its validation checks.
 - PR #99 remains Draft and unmerged. Commercial release remains disabled pending real-device qualification.
-- Backup encryption, migration fault injection, API 23/API 35 completion, and physical 2.8.1 upgrade remain open acceptance gates.
+- Password-encrypted portable backup support (AES-256-GCM, PBKDF2 key derivation, authenticated tamper detection) and expired-trial regression tests have been implemented on the hotfix branch; CI and runtime acceptance remain pending.
+- Migration fault injection, API 23/API 35 completion, and physical 2.6.17 -> 2.8.0 -> 2.8.1 upgrade remain open acceptance gates.
 
 ## P0 acceptance checklist
 
 1. Build and sign 2.8.1; verify package, versionCode 280001, certificate fingerprint, and APK SHA-256.
 2. Pass emulator smoke tests at API 23 and API 35 on the exact same commit.
 3. Install 2.8.1 as an update over 2.8.0 on a physical device. Do not uninstall or clear app data.
-4. Test expired-trial entry through home, back navigation, activity resume, factory, and factory ledger.
+4. Test expired-trial entry through home, every home-navigation callback, activity resume, factory, and factory ledger; only the subscription and activation interface may remain reachable.
 5. Test a previously issued lifetime license, a newly issued lifetime license, annual and monthly licenses, and legacy device identifier compatibility.
 6. Compare bakery and factory database row counts, key balances, stock quantities, references, and trial state before and after update.
-7. Test offline transactions, force-stop/reopen, backup, restore, corrupted backup rejection, and wrong-password rejection.
+7. Test offline transactions, force-stop/reopen, encrypted backup, restore, corrupted backup rejection, wrong-password rejection, and compatibility import of legacy plaintext backups.
 8. Never remove or overwrite customer data as a licensing enforcement action.
 
 ## P1 architecture — shared accounting integration
@@ -87,3 +88,12 @@ The current factory ledger's `journal_entries` and `journal_lines` tables and it
 - Income statement, balance sheet and cash-flow statement reconcile to the same ledger.
 - Inter-unit transfers do not create duplicate group revenue, cost or inventory.
 - Offline retry and app restart do not duplicate a posting.
+
+## 2.8.1 security hardening added after the initial review
+
+- MainActivity and both factory activities now use the shared entitlement decision. The gate migrates the earlier gate-only preference store into the MainActivity preference store without resetting an existing trial or license.
+- The expired-trial paywall no longer exposes backup/restore or logo customization. Home navigation returns through the central entitlement check; factory and factory-ledger activities also re-check access on resume.
+- Portable bakery+factory backups are now wrapped in an AES-256-GCM authenticated envelope. A user-supplied password (minimum 10 characters) is converted with PBKDF2; the password is not stored. Import rejects wrong passwords and tampering. Legacy plaintext JSON backups remain importable only after a warning.
+- Android database encryption continues to use SQLCipher with a random key wrapped by Android Keystore AES-GCM. These controls protect local database files and backup files separately.
+- The seven-day offline trial still depends on local device time and app-local state. This reduces casual bypasses and detects clock rollback, but cannot guarantee anti-reinstall or rooted-device enforcement while fully offline. A server-issued, device-bound trial entitlement (or equivalent platform attestation) is required for that stronger guarantee.
+- These changes are code-level hardening, not a completed security certification. Emulator tests, API 23/API 35 checks, physical update tests and an independent security review remain mandatory.
