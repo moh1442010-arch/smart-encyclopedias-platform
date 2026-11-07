@@ -470,13 +470,15 @@ public class MainActivity extends Activity {
         head.setElevation(5f);
         root.addView(head);
         if (!title.startsWith("🥖 المحاسب الميزان للمخابز")) {
+            LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);actions.setPadding(8,4,8,4);
             Button home = button("⌂ الرئيسية");
-            home.setTextColor(Color.WHITE);
-            home.setBackground(rounded(Color.rgb(35,68,96),10));
+            home.setTextColor(Color.WHITE);home.setBackground(rounded(Color.rgb(35,68,96),10));
             home.setOnClickListener(v -> buildHome());
-            LinearLayout.LayoutParams homeLp = new LinearLayout.LayoutParams(-2,-2);
-            homeLp.setMargins(12,6,12,0);
-            root.addView(home, homeLp);
+            actions.addView(home,new LinearLayout.LayoutParams(0,-2,1f));
+            Button print=button("🖨️ طباعة الشاشة");
+            print.setOnClickListener(v->printVisibleScreen(title));
+            actions.addView(print,new LinearLayout.LayoutParams(0,-2,1f));
+            root.addView(actions);
         }
         ScrollView scroll = new ScrollView(this);
         content = new LinearLayout(this);
@@ -516,6 +518,17 @@ public class MainActivity extends Activity {
         printText("شغل اليوم - "+businessName(),report.toString());
     }
     private void printText(String jobName,String text){try{PrinterService.print(this,businessName(),jobName,text);}catch(Exception ex){toast("تعذر فتح الطباعة: "+ex.getMessage());}}
+    private void printVisibleScreen(String screenTitle){
+        StringBuilder out=new StringBuilder("المنشأة: ").append(businessName()).append("\\nالشاشة: ").append(screenTitle).append("\\nالتاريخ: ").append(day).append("\\n\\n");
+        appendPrintable(content,out);
+        if(out.length()<80){toast("لا توجد بيانات ظاهرة للطباعة.");return;}
+        printText(screenTitle+" - "+businessName(),out.toString());
+    }
+    private void appendPrintable(View view,StringBuilder out){
+        if(view instanceof EditText){String value=((EditText)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");return;}
+        if(view instanceof TextView){String value=((TextView)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");}
+        if(view instanceof android.view.ViewGroup){android.view.ViewGroup group=(android.view.ViewGroup)view;for(int i=0;i<group.getChildCount();i++)appendPrintable(group.getChildAt(i),out);}
+    }
 
     private void buildHome() {
         base("🥖 المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + "");
