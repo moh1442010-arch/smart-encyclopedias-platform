@@ -85,7 +85,6 @@ public class MainActivity extends Activity {
     private final Runnable entitlementWatchdog = new Runnable() {
         @Override public void run() {
             if (pinAuthenticated && !LicenseAccessGate.isAccessAllowed(MainActivity.this)) {
-                if (store != null) { store.close(); store = null; }
                 pinAuthenticated = false;
                 paywallLocked = true;
                 showPaywall();
@@ -1887,6 +1886,11 @@ public class MainActivity extends Activity {
     }
 
     private void showPaywall() {
+        // Keep backup and restore available after trial expiry; operational screens remain gated.
+        if (store == null) {
+            try { store = new Store(); }
+            catch (RuntimeException ex) { android.util.Log.e("AlMizanBakery","Backup database unavailable on paywall",ex); }
+        }
         base("🔐 اشتراك المحاسب الميزان للمخابز");
         boolean licensed = hasActiveLicense();
         boolean expired = !LicenseAccessGate.isAccessAllowed(this);
