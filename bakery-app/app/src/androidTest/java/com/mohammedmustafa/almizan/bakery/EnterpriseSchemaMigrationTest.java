@@ -50,7 +50,7 @@ public class EnterpriseSchemaMigrationTest {
             Cursor regionalCurrencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE active=1 AND code IN ('SDG','EGP','LYD','SAR','AED')",null);
             try { assertTrue(regionalCurrencies.moveToFirst());assertEquals("Required regional operating currencies missing",5,regionalCurrencies.getInt(0)); } finally { regionalCurrencies.close(); }
             Cursor sdgPrecision=db.rawQuery("SELECT minor_units FROM currencies WHERE code='SDG'",null);
-            try { assertTrue(sdgPrecision.moveToFirst());assertEquals("Legacy bakery ledger stores whole SDG units",0,sdgPrecision.getInt(0)); } finally { sdgPrecision.close(); }
+            try { assertTrue(sdgPrecision.moveToFirst());assertEquals("SDG follows its ISO minor-unit precision",2,sdgPrecision.getInt(0)); } finally { sdgPrecision.close(); }
             Cursor supplierColumns=db.rawQuery("PRAGMA table_info(suppliers)",null);
             boolean defaultItem=false,defaultUnit=false;
             try { while(supplierColumns.moveToNext()){if("default_item".equals(supplierColumns.getString(1)))defaultItem=true;if("default_unit".equals(supplierColumns.getString(1)))defaultUnit=true;} }
