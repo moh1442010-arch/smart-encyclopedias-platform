@@ -51,7 +51,7 @@ public class PartyDirectoryActivity extends Activity {
             name.setText("");phone.setText("");debt.setText("");cash.setText("");bank.setText("");bankRef.setText("");refreshLists();
         }catch(Exception e){toast("لم يُحفظ العميل: "+e.getMessage());}});body.addView(save);
         body.addView(note("التسجيل أفقي: اسم العميل | الهاتف | إجمالي المديونية | نقدي | بنكك | رقم العملية | العملة. تُحفظ المديونية المتبقية بعد خصم السداد الافتتاحي. وتبقى التحصيلات اللاحقة في شاشة التحصيل."));
-        list("SELECT name||' | '||phone||' | '||opening_balance_minor||' | '||currency_code FROM customers WHERE active=1 ORDER BY name");
+        list("SELECT x.name||' | '||x.phone||' | المديونية: '||CASE c.minor_units WHEN 2 THEN printf('%.2f',x.opening_balance_minor/100.0) ELSE CAST(x.opening_balance_minor AS TEXT) END||' '||x.currency_code FROM customers x JOIN currencies c ON c.code=x.currency_code WHERE x.active=1 ORDER BY x.name");
     }
 
     private void suppliersSection(){
@@ -67,7 +67,7 @@ public class PartyDirectoryActivity extends Activity {
             name.setText("");phone.setText("");item.setText("");unit.setText("");qty.setText("");invoice.setText("");cash.setText("");bank.setText("");bankRef.setText("");refreshLists();
         }catch(Exception e){toast("لم يُحفظ المورد: "+e.getMessage());}});body.addView(save);
         body.addView(note("التسجيل أفقي: اسم المورد | الهاتف | الصنف | الوحدة | الكمية | قيمة الفاتورة | نقدي | بنكك | رقم العملية | العملة. تحفظ الفاتورة الافتتاحية والمديونية المتبقية في سجل المورد."));
-        list("SELECT name||' | '||phone||' | '||default_item||' | '||opening_balance_minor||' | '||currency_code FROM suppliers WHERE active=1 ORDER BY name");
+        list("SELECT x.name||' | '||x.phone||' | '||x.default_item||' | المديونية: '||CASE c.minor_units WHEN 2 THEN printf('%.2f',x.opening_balance_minor/100.0) ELSE CAST(x.opening_balance_minor AS TEXT) END||' '||x.currency_code FROM suppliers x JOIN currencies c ON c.code=x.currency_code WHERE x.active=1 ORDER BY x.name");
     }
 
     private void bankAccountsSection(){
