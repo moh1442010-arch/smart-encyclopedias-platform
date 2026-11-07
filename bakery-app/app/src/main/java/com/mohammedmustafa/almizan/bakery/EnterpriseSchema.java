@@ -57,6 +57,32 @@ final class EnterpriseSchema {
             "('5300','مصروف الإهلاك','Depreciation Expense','EXPENSE','DEBIT')");
         db.execSQL("CREATE TABLE IF NOT EXISTS user_roles (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, role_id INTEGER NOT NULL REFERENCES roles(id), branch_id INTEGER NOT NULL REFERENCES branches(id), PRIMARY KEY(user_id,role_id,branch_id))");
         db.execSQL("INSERT OR IGNORE INTO currencies(code,name_ar,name_en,minor_units,active) VALUES('USD','الدولار الأمريكي','US Dollar',2,1),('EUR','اليورو','Euro',2,1),('SAR','الريال السعودي','Saudi Riyal',2,1),('AED','الدرهم الإماراتي','UAE Dirham',2,1)");
+        db.execSQL("INSERT OR IGNORE INTO currencies(code,name_ar,name_en,minor_units,active) VALUES" +
+            "('EGP','الجنيه المصري','Egyptian Pound',2,1),('LYD','الدينار الليبي','Libyan Dinar',3,1)," +
+            "('SDG','الجنيه السوداني','Sudanese Pound',0,1),('SYP','الليرة السورية','Syrian Pound',2,1)," +
+            "('LBP','الليرة اللبنانية','Lebanese Pound',2,1),('JOD','الدينار الأردني','Jordanian Dinar',3,1)," +
+            "('KWD','الدينار الكويتي','Kuwaiti Dinar',3,1),('BHD','الدينار البحريني','Bahraini Dinar',3,1)," +
+            "('OMR','الريال العماني','Omani Rial',3,1),('QAR','الريال القطري','Qatari Riyal',2,1)," +
+            "('IQD','الدينار العراقي','Iraqi Dinar',3,1),('YER','الريال اليمني','Yemeni Rial',2,1)," +
+            "('MAD','الدرهم المغربي','Moroccan Dirham',2,1),('DZD','الدينار الجزائري','Algerian Dinar',2,1)," +
+            "('TND','الدينار التونسي','Tunisian Dinar',3,1),('MRU','الأوقية الموريتانية','Mauritanian Ouguiya',2,1)," +
+            "('SOS','الشلن الصومالي','Somali Shilling',2,1),('DJF','الفرنك الجيبوتي','Djiboutian Franc',0,1)," +
+            "('KMF','الفرنك القمري','Comorian Franc',0,1),('ETB','البر الإثيوبي','Ethiopian Birr',2,1)," +
+            "('ERN','الناكفا الإريتري','Eritrean Nakfa',2,1),('SSP','جنيه جنوب السودان','South Sudanese Pound',2,1)," +
+            "('GBP','الجنيه الإسترليني','Pound Sterling',2,1),('CHF','الفرنك السويسري','Swiss Franc',2,1)," +
+            "('CAD','الدولار الكندي','Canadian Dollar',2,1),('AUD','الدولار الأسترالي','Australian Dollar',2,1)," +
+            "('NZD','الدولار النيوزيلندي','New Zealand Dollar',2,1),('JPY','الين الياباني','Japanese Yen',0,1)," +
+            "('CNY','اليوان الصيني','Chinese Yuan',2,1),('INR','الروبية الهندية','Indian Rupee',2,1)," +
+            "('PKR','الروبية الباكستانية','Pakistani Rupee',2,1),('TRY','الليرة التركية','Turkish Lira',2,1)," +
+            "('ZAR','الراند الجنوب أفريقي','South African Rand',2,1),('NGN','النيرة النيجيرية','Nigerian Naira',2,1)," +
+            "('GHS','السيدي الغاني','Ghanaian Cedi',2,1),('KES','الشلن الكيني','Kenyan Shilling',2,1)," +
+            "('UGX','الشلن الأوغندي','Ugandan Shilling',0,1),('TZS','الشلن التنزاني','Tanzanian Shilling',2,1)," +
+            "('RWF','الفرنك الرواندي','Rwandan Franc',0,1),('BRL','الريال البرازيلي','Brazilian Real',2,1)," +
+            "('MXN','البيزو المكسيكي','Mexican Peso',2,1),('SGD','الدولار السنغافوري','Singapore Dollar',2,1)," +
+            "('HKD','دولار هونغ كونغ','Hong Kong Dollar',2,1),('KRW','الوون الكوري','South Korean Won',0,1)," +
+            "('THB','البات التايلندي','Thai Baht',2,1),('IDR','الروبية الإندونيسية','Indonesian Rupiah',2,1)," +
+            "('MYR','الرنجت الماليزي','Malaysian Ringgit',2,1),('PHP','البيزو الفلبيني','Philippine Peso',2,1)," +
+            "('RUB','الروبل الروسي','Russian Ruble',2,1),('UAH','الهريفنيا الأوكرانية','Ukrainian Hryvnia',2,1)");
         // Sudanese Pound records in the existing bakery ledger use whole SDG units.
         db.execSQL("UPDATE currencies SET minor_units=0 WHERE code='SDG'");
         db.execSQL("CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY AUTOINCREMENT, customer_code TEXT NOT NULL UNIQUE, name TEXT NOT NULL COLLATE NOCASE, phone TEXT NOT NULL DEFAULT '', address TEXT NOT NULL DEFAULT '', opening_balance_minor INTEGER NOT NULL DEFAULT 0 CHECK(opening_balance_minor>=0), currency_code TEXT NOT NULL DEFAULT 'SDG' REFERENCES currencies(code), credit_limit_minor INTEGER NOT NULL DEFAULT 0 CHECK(credit_limit_minor>=0), active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)), notes TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL)");
