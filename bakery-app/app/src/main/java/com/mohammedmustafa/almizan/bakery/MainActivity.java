@@ -503,10 +503,11 @@ public class MainActivity extends Activity {
             .setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{String n=field.getText().toString().trim();if(n.length()<2){toast("أدخل اسماً صحيحاً");return;}getSharedPreferences("bakery_profile",MODE_PRIVATE).edit().putString("business_name",n).apply();ContentValues cv=new ContentValues();cv.put("business_name",n);store.getWritableDatabase().update("company_settings",cv,"id=1",null);buildHome();}).show();
     }
     private void showPrinterSettings(){
-        String[] choices={"طباعة عبر خدمة الطباعة في Android (Bluetooth / Wi-Fi / USB المدعوم)","حفظ نسخة PDF عبر خدمة الطباعة"};
-        new AlertDialog.Builder(this).setTitle("🖨️ إعداد الطابعة").setMessage("اختر الطابعة من نافذة الطباعة التي يوفرها Android. يظل آخر اختيار للطابعة محفوظاً لدى خدمة الطباعة في الجهاز. لا يحتاج التطبيق إلى الإنترنت للطباعة المحلية.")
-            .setItems(choices,(d,which)->{getSharedPreferences("bakery_profile",MODE_PRIVATE).edit().putString("printer_mode",which==0?"system":"pdf").apply();printText("اختبار الطابعة",businessName()+"\\nاختبار اتصال الطباعة\\n"+day);})
-            .setNegativeButton("إغلاق",null).show();
+        new AlertDialog.Builder(this).setTitle("🖨️ الطابعة الثابتة")
+            .setMessage("تتم الطباعة عبر خدمة الطباعة في Android. اختر الطابعة مرة واحدة من نافذة الطباعة؛ يحتفظ Android بآخر وجهة طباعة استخدمتها. يمكنك اختيار طابعة Bluetooth أو Wi-Fi أو USB إذا كانت خدمتها مثبتة، أو اختيار حفظ PDF. الطباعة المحلية لا تحتاج إلى الإنترنت.")
+            .setNegativeButton("إغلاق",null)
+            .setPositiveButton("اختبار الطباعة",(d,w)->printText("اختبار الطابعة",businessName()+"\\nاختبار اتصال الطباعة\\n"+day))
+            .show();
     }
     private void printDailyWork(){
         JSONObject data=store.get(day,"cuts");
