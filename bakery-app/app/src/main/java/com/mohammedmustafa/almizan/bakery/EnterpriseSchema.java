@@ -58,6 +58,8 @@ final class EnterpriseSchema {
             "('5300','مصروف الإهلاك','Depreciation Expense','EXPENSE','DEBIT')");
         db.execSQL("CREATE TABLE IF NOT EXISTS user_roles (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, role_id INTEGER NOT NULL REFERENCES roles(id), branch_id INTEGER NOT NULL REFERENCES branches(id), PRIMARY KEY(user_id,role_id,branch_id))");
         db.execSQL("INSERT OR IGNORE INTO currencies(code,name_ar,name_en,minor_units,active) VALUES('USD','الدولار الأمريكي','US Dollar',2,0),('EUR','اليورو','Euro',2,0),('SAR','الريال السعودي','Saudi Riyal',2,1),('AED','الدرهم الإماراتي','UAE Dirham',2,1)");
+        // USD and EUR are subscription display currencies only, never operational currencies.
+        db.execSQL("UPDATE currencies SET active=0 WHERE code IN ('USD','EUR')");
         db.execSQL("INSERT OR IGNORE INTO currencies(code,name_ar,name_en,minor_units,active) VALUES" +
             "('EGP','الجنيه المصري','Egyptian Pound',2,1),('LYD','الدينار الليبي','Libyan Dinar',3,1)," +
             "('SDG','الجنيه السوداني','Sudanese Pound',0,1),('SYP','الليرة السورية','Syrian Pound',2,1)," +
