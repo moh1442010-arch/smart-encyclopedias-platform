@@ -6,9 +6,9 @@ Base: `release/bakery-2.8.0-financial-integrity`
 
 ## P0 current evidence and blockers
 
-- User-reported field upgrade 2.7.2 -> 2.8.0 retained journal rows, balances, flour and stock balances, and remaining trial days. This is a positive field observation, not a full database-diff test.
-- 2.8.1 build run 816 completed compile and arithmetic unit tests. Signing verification failed because the workflow still expected versionCode 280000 while Gradle correctly declares 280001. The certificate SHA-256 matched the approved fingerprint and APK v1/v2/v3 signatures verified.
-- Workflow verification metadata has now been corrected to expect versionCode 280001. A fresh run is required to establish whether signing and emulator checks pass.
+- User-confirmed field upgrade path: 2.6.17 was installed first, then upgraded to 2.8.0. The user reported that accounting entries, balances, flour/stock balances, and remaining trial days were retained. This is a positive field observation for the 2.6.17 -> 2.8.0 path, not a full database-diff test and not proof of 2.8.1 compatibility.
+- 2.8.1 build run 816 completed compile and arithmetic unit tests. Signing verification failed because the workflow still expected versionCode 280000 while Gradle correctly declares 280001. The certificate SHA-256 matched the approved fingerprint and APK v1/v2/v3 signatures verified. Run 818 was cancelled before the arithmetic test step completed; it is not a passing build.
+- Workflow verification metadata has now been corrected to expect versionCode 280001. Run 818 was later cancelled before arithmetic tests completed; the build job was explicitly re-run for a fresh attempt. The new attempt must establish whether signing and emulator checks pass.
 - Licensing workflow run 273 passed its validation checks.
 - PR #99 remains Draft and unmerged. Commercial release remains disabled pending real-device qualification.
 - Backup encryption, migration fault injection, API 23/API 35 completion, and physical 2.8.1 upgrade remain open acceptance gates.
