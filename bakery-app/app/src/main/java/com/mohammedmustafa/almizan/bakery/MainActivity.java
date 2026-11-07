@@ -893,7 +893,8 @@ public class MainActivity extends Activity {
                 store.saveStockWithInventory(day,record); updateStatus(); dialog.dismiss();
                 toast("حُفظ جدول المواد ومعدلات الاستهلاك. سيُخصم الاستخدام عند حفظ شغل اليوم.");
             } catch(Exception ex) { toast("لم يُحفظ المخزون: "+ex.getMessage()); }
-        }));
+        });
+        });
         dialog.show();
     }
 
@@ -940,7 +941,8 @@ public class MainActivity extends Activity {
         EditText notes=ruledCell(saved.optString("notes",""),"ملاحظات اختيارية",false); notes.setGravity(Gravity.TOP|Gravity.RIGHT); notes.setMinLines(2); box.addView(notes);
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle("يومية العمال — "+day).setView(scroll)
             .setNegativeButton("إلغاء",null).setPositiveButton("حفظ الجدول",null).create();
-        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+        dialog.setOnShowListener(ignored->{
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
             try {
                 StringBuilder out=new StringBuilder();
                 for(EditText[] row:rows) {
