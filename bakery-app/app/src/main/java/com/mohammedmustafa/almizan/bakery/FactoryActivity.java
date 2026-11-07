@@ -151,8 +151,8 @@ public class FactoryActivity extends Activity {
         list("SELECT 'تكلفة التالف: '||COALESCE(SUM(cost),0)||' جنيه' FROM waste");
         list("SELECT 'صافي نتيجة التشغيل قبل البنود غير المسجلة: '||((COALESCE((SELECT SUM(total) FROM sales),0)-COALESCE((SELECT SUM(refund_value) FROM sales_returns),0))-(COALESCE((SELECT SUM(cogs) FROM sales),0)-COALESCE((SELECT SUM(restored_cogs) FROM sales_returns),0))-COALESCE((SELECT SUM(amount) FROM expenses),0)-COALESCE((SELECT SUM(cost) FROM waste),0))||' جنيه'");
         body.addView(label("ثانياً — المركز التشغيلي للأرصدة",18));
-        list("SELECT 'رصيد النقدية: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('EXPENSE','SALE_RETURN')),0))||' جنيه'");
-        list("SELECT 'رصيد بنكك: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('EXPENSE','SALE_RETURN')),0))||' جنيه'");
+        list("SELECT 'رصيد النقدية: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('EXPENSE','SALE_RETURN','PURCHASE')),0))||' جنيه'");
+        list("SELECT 'رصيد بنكك: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('EXPENSE','SALE_RETURN','PURCHASE')),0))||' جنيه'");
         list("SELECT 'مديونيات العملاء المتبقية: '||(COALESCE((SELECT SUM(debt) FROM sales),0)-COALESCE((SELECT SUM(cash+bank) FROM collections),0)-COALESCE((SELECT SUM(credit_adjustment) FROM sales_returns),0))||' جنيه'");
         list("SELECT 'قيمة مخزون المواد الخام: '||COALESCE(SUM(value),0)||' جنيه' FROM materials");
         list("SELECT 'قيمة مخزون الإنتاج التام: '||COALESCE(SUM(value),0)||' جنيه' FROM finished");
@@ -173,8 +173,8 @@ public class FactoryActivity extends Activity {
     private void accounts(){
         frame("الحسابات والأرصدة");
         list("SELECT 'إجمالي المبيعات بعد المرتجعات: '||(COALESCE(SUM(total),0)-COALESCE((SELECT SUM(refund_value) FROM sales_returns),0))||' جنيه' FROM sales");
-        list("SELECT 'صافي رصيد الصندوق النقدي: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('EXPENSE','SALE_RETURN')),0))||' جنيه'");
-        list("SELECT 'صافي رصيد بنكك: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('EXPENSE','SALE_RETURN')),0))||' جنيه'");
+        list("SELECT 'صافي رصيد الصندوق النقدي: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('EXPENSE','SALE_RETURN','PURCHASE')),0))||' جنيه'");
+        list("SELECT 'صافي رصيد بنكك: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('EXPENSE','SALE_RETURN','PURCHASE')),0))||' جنيه'");
         list("SELECT 'النقد المحصل من المبيعات: '||COALESCE(SUM(cash),0)||' جنيه' FROM sales");
         list("SELECT 'تحويلات بنكك: '||COALESCE(SUM(bank),0)||' جنيه' FROM sales");
         list("SELECT 'ديون العملاء المتبقية: '||(COALESCE((SELECT SUM(debt) FROM sales),0)-COALESCE((SELECT SUM(cash+bank) FROM collections),0)-COALESCE((SELECT SUM(credit_adjustment) FROM sales_returns),0))||' جنيه'");
