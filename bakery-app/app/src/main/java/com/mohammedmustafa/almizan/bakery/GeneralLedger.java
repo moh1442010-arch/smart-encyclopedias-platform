@@ -4,9 +4,11 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import net.zetetic.database.sqlcipher.SQLiteDatabase;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.text.ParsePosition;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
 
 /**
  * Atomic double-entry posting service for the bakery enterprise ledger.
@@ -60,8 +62,9 @@ final class GeneralLedger {
 
     static Result post(SQLiteDatabase db, Entry entry) {
         validateEntry(entry);
-        boolean ownTransaction=!db.inTransaction();
-        if (ownTransaction) db.beginTransaction();
+        if (db.inTransaction()) throw new IllegalStateException("يجب ترحيل القيد داخل معاملة مستقلة لمنع اعتماد جزء من القيد");
+        boolean ownTransaction=true;
+        db.beginTransaction();
         try {
             String prior=findIdempotentResult(db,entry.idempotencyKey);
             if (prior!=null) {
@@ -75,22 +78,23 @@ final class GeneralLedger {
             long totalDebit=0L,totalCredit=0L;
             long[] baseDebits=new long[entry.lines.size()],baseCredits=new long[entry.lines.size()];
             long[] accountIds=new long[entry.lines.size()],branchIds=new long[entry.lines.size()];
-            int[] transactionMinorUnits=new int[entry.lines.size()];
             for(int i=0;i<entry.lines.size();i++) {
                 Line line=entry.lines.get(i);
                 validateLine(line);
+                int txMinorUnits=currencyMinorUnits(db,line.currencyCode);
+                if (baseCurrency.equals(line.currencyCode) && line.fxNumerator!=line.fxDenominator)
+                    throw new IllegalArgumentException("سعر صرف العملة الأساسية يجب أن يساوي 1");
                 if(line.debitMinor>0) {
-                    baseDebits[i]=toBaseMinor(line.debitMinor,line.fxNumerator,line.fxDenominator,
-                        currencyMinorUnits(db,line.currencyCode),baseMinorUnits);
+                    baseDebits[i]=toBaseMinor(line.debitMinor,line.fxNumerator,line.fxDenominator,txMinorUnits,baseMinorUnits);
+                    if(baseDebits[i]<=0) throw new IllegalArgumentException("قيمة السطر بعد التحويل إلى العملة الأساسية تساوي صفرًا");
                     totalDebit=Math.addExact(totalDebit,baseDebits[i]);
                 } else {
-                    baseCredits[i]=toBaseMinor(line.creditMinor,line.fxNumerator,line.fxDenominator,
-                        currencyMinorUnits(db,line.currencyCode),baseMinorUnits);
+                    baseCredits[i]=toBaseMinor(line.creditMinor,line.fxNumerator,line.fxDenominator,txMinorUnits,baseMinorUnits);
+                    if(baseCredits[i]<=0) throw new IllegalArgumentException("قيمة السطر بعد التحويل إلى العملة الأساسية تساوي صفرًا");
                     totalCredit=Math.addExact(totalCredit,baseCredits[i]);
                 }
                 accountIds[i]=requiredId(db,"SELECT id FROM chart_of_accounts WHERE account_code=? AND active=1",line.accountCode,"الحساب غير موجود أو غير نشط: "+line.accountCode);
                 branchIds[i]=requiredId(db,"SELECT id FROM branches WHERE branch_code=? AND active=1",line.branchCode,"الفرع غير موجود أو غير نشط: "+line.branchCode);
-                transactionMinorUnits[i]=currencyMinorUnits(db,line.currencyCode);
             }
             validateBalancedTotals(totalDebit,totalCredit,entry.lines.size());
             long periodId=openPeriod(db,entry.date);
@@ -141,7 +145,11 @@ final class GeneralLedger {
     }
     private static boolean validDate(String d) {
         if(d==null||!d.matches("\\d{4}-\\d{2}-\\d{2}")) return false;
-        try { java.time.LocalDate.parse(d); return true; } catch(Exception ex) { return false; }
+        SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
+        format.setLenient(false);
+        ParsePosition position=new ParsePosition(0);
+        java.util.Date parsed=format.parse(d,position);
+        return parsed!=null && position.getIndex()==d.length();
     }
     private static boolean blank(String s){return s==null||s.trim().isEmpty();}
     private static String scalar(SQLiteDatabase db,String sql,String[] args) {
