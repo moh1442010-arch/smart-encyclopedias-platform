@@ -112,7 +112,7 @@ test("2.8.0 customer order is accepted and recorded as pending without issuing a
   assert.ok(body.orderId);
   assert.equal("activationToken" in body, false);
   assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_orders")));
-  assert.ok(writes.some(x => x.sql.includes("order_created")));
+  assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_audit") && x.values.includes("order_created")));
 });
 
 test("admin login page is served without exposing dashboard data", async () => {
