@@ -82,4 +82,45 @@ public class EnterpriseSchemaMigrationTest {
             context.deleteDatabase(name+"-shm");
         }
     }
+
+    @Test public void ledgerReportsIncludeEquityAndExcludeDraftsWithCumulativeTrialBalance() throws Exception {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="ledger_reports_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase db=SecureDatabase.open(context,name);
+        try {
+            EnterpriseSchema.ensure(db);
+            db.execSQL("INSERT INTO chart_of_accounts(id,account_code,name_ar,name_en,account_type,normal_side,active) VALUES"+
+                "(101,'1000','النقدية','Cash','ASSET','DEBIT',1),"+
+                "(102,'3000','رأس المال','Capital','EQUITY','CREDIT',1),"+
+                "(103,'4000','الإيرادات','Revenue','REVENUE','CREDIT',1),"+
+                "(104,'5000','المصروفات','Expenses','EXPENSE','DEBIT',1)");
+            db.execSQL("INSERT INTO gl_journal_entries(id,entry_ref,description,transaction_date,source_type,source_id,status,created_at) VALUES"+
+                "(201,'OPEN-1','Opening capital','2026-10-01','TEST','OPEN-1','POSTED',1),"+
+                "(202,'SALE-1','Posted sale','2026-11-05','TEST','SALE-1','POSTED',2),"+
+                "(203,'DRAFT-1','Draft expense','2026-11-10','TEST','DRAFT-1','DRAFT',3)");
+            db.execSQL("INSERT INTO gl_journal_lines(entry_id,account_id,branch_id,base_currency_code,base_debit_minor,base_credit_minor,transaction_currency_code,transaction_debit_minor,transaction_credit_minor) VALUES"+
+                "(201,101,1,'SDG',1000,0,'SDG',1000,0),"+
+                "(201,102,1,'SDG',0,1000,'SDG',0,1000),"+
+                "(202,101,1,'SDG',500,0,'SDG',500,0),"+
+                "(202,103,1,'SDG',0,500,'SDG',0,500),"+
+                "(203,104,1,'SDG',700,0,'SDG',700,0),"+
+                "(203,101,1,'SDG',0,700,'SDG',0,700)");
+            GeneralLedgerReports.TrialBalance trial=GeneralLedgerReports.trialBalance(db,"2026-11-01","2026-11-30",null);
+            assertTrue("Trial balance must include opening entries before report start",trial.debitMinor==1500&&trial.creditMinor==1500);
+            assertTrue(trial.isBalanced());
+            GeneralLedgerReports.TrialBalance position=GeneralLedgerReports.balanceSheetAccounts(db,"2026-11-30",null);
+            boolean equity=false;for(GeneralLedgerReports.Line line:position.lines)if("3000".equals(line.code))equity=true;
+            assertTrue("Balance sheet account query must include EQUITY",equity);
+            GeneralLedgerReports.TrialBalance income=GeneralLedgerReports.incomeStatement(db,"2026-11-01","2026-11-30",null);
+            boolean revenue=false,draftExpense=false;
+            for(GeneralLedgerReports.Line line:income.lines){
+                if("4000".equals(line.code))revenue=line.creditMinor==500;
+                if("5000".equals(line.code))draftExpense=line.debitMinor==0;
+            }
+            assertTrue("Income report must include posted revenue",revenue);
+            assertTrue("Income report must exclude draft expense lines",draftExpense);
+        } finally {
+            db.close();context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
+        }
+    }
 }
