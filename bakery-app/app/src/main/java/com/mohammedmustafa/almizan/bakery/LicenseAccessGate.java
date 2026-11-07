@@ -20,7 +20,25 @@ public final class LicenseAccessGate {
         "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvsK66CYxt4X7R9GcVaJ0FjrheMAkFpzbirdz7/X/lj8UAuqUabNOPN3R5dGuZro90i+raIyngTz+VxRxLcNPRQru4VzWIDLsoBEwi/CrsOaMJFgVLom7jYXFjQ5P25TO5hRxzPN8ZOOG1MTo8j6ipgPOKY5be6Gmsj8R03SbulYnVO8STWC4bSkqwvV9YlEIpZwnyAJVbWHbE4JSKiCC/TMOcfrBgGG0W7qCJeEjnUKPfHAtH85ayZjBQwMIQx+z1CoTFWrqKXywSWN65G7yZbHwsnREovRprxjyVHqmTtLd45VyNQU2zXBKchzkwnpiG1zeD8kfdDeACeaAmxbsiwIDAQAB"
     };
     private static SharedPreferences prefs(Context c) {
-        return c.getSharedPreferences("MainActivity", Context.MODE_PRIVATE);
+        // Activity.getPreferences() in MainActivity resolves to MainActivity_preferences.
+        // Migrate the earlier gate-only store once, without overwriting existing customer data.
+        SharedPreferences canonical = c.getSharedPreferences("MainActivity_preferences", Context.MODE_PRIVATE);
+        SharedPreferences legacy = c.getSharedPreferences("MainActivity", Context.MODE_PRIVATE);
+        String[] keys = {"license_token","license_device_id","license_last_seen","trial_start","trial_last_seen","trial_clock_rollback_detected"};
+        SharedPreferences.Editor edit = canonical.edit();
+        boolean changed = false;
+        for (String key : keys) {
+            if (canonical.contains(key) || !legacy.contains(key)) continue;
+            Object value = legacy.getAll().get(key);
+            if (value instanceof String) edit.putString(key, (String)value);
+            else if (value instanceof Long) edit.putLong(key, (Long)value);
+            else if (value instanceof Integer) edit.putInt(key, (Integer)value);
+            else if (value instanceof Boolean) edit.putBoolean(key, (Boolean)value);
+            else continue;
+            changed = true;
+        }
+        if (changed && !edit.commit()) throw new IllegalStateException("تعذر ترحيل إعدادات الترخيص القديمة بأمان");
+        return canonical;
     }
     private static boolean compatibleLifetimeVersion(String licensedVersion) {
         if ("2.6.15".equals(licensedVersion)) return true;
