@@ -1109,52 +1109,51 @@ public class MainActivity extends Activity {
         box.addView(text("ملاحظات شغل اليوم",14)); box.addView(notes);
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle("🥖 شغل اليوم والقطعيات — "+day).setView(scroll)
             .setNegativeButton("إلغاء",null).setNeutralButton("🖨️ طباعة البيانات",null).setPositiveButton("حفظ شغل اليوم",null).create();
-        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
-            try {
-                long units=parseLong(work.getText().toString());
-                long price=parseLong(perThousand.getText().toString());
-                if(units<0) throw new IllegalArgumentException("عدد شغل اليوم لا يقبل قيمة سالبة.");
-                if(price<=0) throw new IllegalArgumentException("أدخل عدد الأرغفة التي تساوي 1,000 جنيه.");
-                StringBuilder rows=new StringBuilder(); long sum=0L; int used=0;
-                for(EditText cell:loafCells) {
-                    String value=cell.getText().toString().trim();
-                    if(value.isEmpty()) continue;
-                    long count=parseLong(value);
-                    if(count<0) throw new IllegalArgumentException("عدد الأرغفة لا يقبل قيمة سالبة.");
-                    if(rows.length()>0) rows.append("\n");
-                    rows.append(++used).append(" | ").append(count);
-                    sum=exactAdd(sum,count);
-                }
-                if(used==0) throw new IllegalArgumentException("أدخل عدد الأرغفة في قطعية واحدة على الأقل.");
-                JSONObject record=new JSONObject();
-                record.put("work_units",String.valueOf(units));
-                record.put("production_rows",rows.toString());
-                record.put("loaves_per_1000",String.valueOf(price));
-                record.put("total_loaves",String.valueOf(sum));
-                record.put("production_value",String.valueOf(BakeryMath.valueForLoaves(sum,price)));
-                record.put("notes",notes.getText().toString().trim());
+        dialog.setOnShowListener(ignored->{
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
                 try {
-                    store.saveCutsWithInventory(day,record,units);
-                    updateStatus(); dialog.dismiss();
-                    toast("تم حفظ شغل اليوم والقطعيات وتحديث المخزون والتكلفة. إجمالي الإنتاج "+fmt(sum)+" رغيف، وقيمته "+fmt(BakeryMath.valueForLoaves(sum,price))+" جنيه.");
-                } catch(Exception inventoryError) {
-                    // Preserve the accountant's entered production rows and price if inventory validation blocks posting.
-                    // Do not apply stock/costing usage or pretend the full accounting post succeeded.
-                    record.put("inventory_pending", true);
-                    record.put("inventory_pending_reason", String.valueOf(inventoryError.getMessage()));
-                    store.saveCutsDraft(day,record);
-                    updateStatus(); dialog.dismiss();
-                    toast("حُفظت بيانات الإنتاج والسعر كمسودة، لكن لم يُرحّل المخزون أو التكلفة: "+inventoryError.getMessage()+"؛ راجع رصيد الصنف ووحدته ثم أعد الحفظ.");
-                }
-            } catch(Exception ex) { toast("تعذر حفظ بيانات شغل اليوم: "+ex.getMessage()); }
-        });
-        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v->{
-            StringBuilder report=new StringBuilder("التاريخ: ").append(day).append("\\nاسم المنشأة: ").append(businessName()).append("\\n");
-            report.append("عدد جوالات الدقيق: ").append(work.getText()).append("\\nعدد الأرغفة لكل 1,000 جنيه: ").append(perThousand.getText()).append("\\n");
-            for(int i=0;i<loafCells.size();i++)report.append("القطعية ").append(i+1).append(": ").append(loafCells.get(i).getText()).append(" رغيف\\n");
-            report.append("ملاحظات: ").append(notes.getText());
-            printText("شغل اليوم - "+day,report.toString());
-        });
+                    long units=parseLong(work.getText().toString());
+                    long price=parseLong(perThousand.getText().toString());
+                    if(units<0) throw new IllegalArgumentException("عدد شغل اليوم لا يقبل قيمة سالبة.");
+                    if(price<=0) throw new IllegalArgumentException("أدخل عدد الأرغفة التي تساوي 1,000 جنيه.");
+                    StringBuilder rows=new StringBuilder(); long sum=0L; int used=0;
+                    for(EditText cell:loafCells) {
+                        String value=cell.getText().toString().trim();
+                        if(value.isEmpty()) continue;
+                        long count=parseLong(value);
+                        if(count<0) throw new IllegalArgumentException("عدد الأرغفة لا يقبل قيمة سالبة.");
+                        if(rows.length()>0) rows.append("\n");
+                        rows.append(++used).append(" | ").append(count);
+                        sum=exactAdd(sum,count);
+                    }
+                    if(used==0) throw new IllegalArgumentException("أدخل عدد الأرغفة في قطعية واحدة على الأقل.");
+                    JSONObject record=new JSONObject();
+                    record.put("work_units",String.valueOf(units));
+                    record.put("production_rows",rows.toString());
+                    record.put("loaves_per_1000",String.valueOf(price));
+                    record.put("total_loaves",String.valueOf(sum));
+                    record.put("production_value",String.valueOf(BakeryMath.valueForLoaves(sum,price)));
+                    record.put("notes",notes.getText().toString().trim());
+                    try {
+                        store.saveCutsWithInventory(day,record,units);
+                        updateStatus(); dialog.dismiss();
+                        toast("تم حفظ شغل اليوم والقطعيات وتحديث المخزون والتكلفة. إجمالي الإنتاج "+fmt(sum)+" رغيف، وقيمته "+fmt(BakeryMath.valueForLoaves(sum,price))+" جنيه.");
+                    } catch(Exception inventoryError) {
+                        record.put("inventory_pending", true);
+                        record.put("inventory_pending_reason", String.valueOf(inventoryError.getMessage()));
+                        store.saveCutsDraft(day,record);
+                        updateStatus(); dialog.dismiss();
+                        toast("حُفظت بيانات الإنتاج والسعر كمسودة، لكن لم يُرحّل المخزون أو التكلفة: "+inventoryError.getMessage()+"؛ راجع رصيد الصنف ووحدته ثم أعد الحفظ.");
+                    }
+                } catch(Exception ex) { toast("تعذر حفظ بيانات شغل اليوم: "+ex.getMessage()); }
+            });
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v->{
+                StringBuilder report=new StringBuilder("التاريخ: ").append(day).append("\\nاسم المنشأة: ").append(businessName()).append("\\n");
+                report.append("عدد جوالات الدقيق: ").append(work.getText()).append("\\nعدد الأرغفة لكل 1,000 جنيه: ").append(perThousand.getText()).append("\\n");
+                for(int i=0;i<loafCells.size();i++) report.append("القطعية ").append(i+1).append(": ").append(loafCells.get(i).getText()).append(" رغيف\\n");
+                report.append("ملاحظات: ").append(notes.getText());
+                printText("شغل اليوم - "+day,report.toString());
+            });
         });
         dialog.show();
     }
