@@ -23,15 +23,15 @@ final class EnterpriseMath {
         BigInteger rounded = new BigDecimal(numerator)
             .divide(new BigDecimal(denominator), 0, RoundingMode.HALF_UP)
             .toBigIntegerExact();
-        return rounded.longValueExact();
+        return toLongExact(rounded);
     }
 
     static long payrollNet(long basicMinor, long additionsMinor, long deductionsMinor) {
         if (basicMinor < 0 || additionsMinor < 0 || deductionsMinor < 0) {
             throw new IllegalArgumentException("Payroll values cannot be negative");
         }
-        long gross = BigInteger.valueOf(basicMinor).add(BigInteger.valueOf(additionsMinor)).longValueExact();
-        long net = BigInteger.valueOf(gross).subtract(BigInteger.valueOf(deductionsMinor)).longValueExact();
+        long gross = toLongExact(BigInteger.valueOf(basicMinor).add(BigInteger.valueOf(additionsMinor)));
+        long net = toLongExact(BigInteger.valueOf(gross).subtract(BigInteger.valueOf(deductionsMinor)));
         if (net < 0) throw new IllegalArgumentException("Deductions exceed gross pay");
         return net;
     }
@@ -48,7 +48,7 @@ final class EnterpriseMath {
         BigInteger rounded = new BigDecimal(numerator)
             .divide(BigDecimal.valueOf(usefulLifeMonths), 0, RoundingMode.HALF_UP)
             .toBigIntegerExact();
-        return Math.min(depreciable, rounded.longValueExact());
+        return Math.min(depreciable, toLongExact(rounded));
     }
 
     static long depreciationForPeriod(long costMinor, long residualMinor, int usefulLifeMonths,
@@ -56,12 +56,20 @@ final class EnterpriseMath {
         if (elapsedMonths <= 0) throw new IllegalArgumentException("Elapsed month must be positive");
         long current = cumulativeStraightLineDepreciation(costMinor, residualMinor, usefulLifeMonths, elapsedMonths);
         long previous = cumulativeStraightLineDepreciation(costMinor, residualMinor, usefulLifeMonths, elapsedMonths - 1);
-        return BigInteger.valueOf(current).subtract(BigInteger.valueOf(previous)).longValueExact();
+        return toLongExact(BigInteger.valueOf(current).subtract(BigInteger.valueOf(previous)));
     }
 
     static long remainingBookValue(long costMinor, long residualMinor, int usefulLifeMonths,
                                    int elapsedMonths) {
         long accumulated = cumulativeStraightLineDepreciation(costMinor, residualMinor, usefulLifeMonths, elapsedMonths);
-        return BigInteger.valueOf(costMinor).subtract(BigInteger.valueOf(accumulated)).longValueExact();
+        return toLongExact(BigInteger.valueOf(costMinor).subtract(BigInteger.valueOf(accumulated)));
+    }
+
+    static long toLongExact(BigInteger value) {
+        if (value.compareTo(BigInteger.valueOf(Long.MIN_VALUE)) < 0 ||
+            value.compareTo(BigInteger.valueOf(Long.MAX_VALUE)) > 0) {
+            throw new ArithmeticException("Amount exceeds supported 64-bit integer range");
+        }
+        return value.longValue();
     }
 }
