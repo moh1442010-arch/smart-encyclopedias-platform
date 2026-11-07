@@ -929,7 +929,7 @@ public class MainActivity extends Activity {
         LinearLayout head=new LinearLayout(this);head.setOrientation(0);head.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
         for(String title:new String[]{"العميل","العيش","نقدي","بنكك","رقم العملية","ديون","فرق السعر"}){TextView h=ruledHeading(title);head.addView(h,new LinearLayout.LayoutParams(0,-2,1f));}table.addView(head);
         String raw=normalizeRows(saved.optString("rows",""));for(String line:raw.split("\\r?\\n")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);
-            if(p.length>=7)addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),p[3].trim(),p[4].trim(),p[5].trim(),p[6].trim());
+            if(p.length>=7){addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),p[3].trim(),p[4].trim(),p[5].trim(),p[6].trim());if(p.length>=8)try{rows.get(rows.size()-1)[0].setTag(Long.parseLong(p[7].trim()));}catch(Exception ignored){}}
             else if(p.length>=6)addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),p[4].trim(),"",p[3].trim(),p[5].trim());
             else if(p.length>=5)addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),"","",p[3].trim(),p[4].trim());
             else addDistributionTableRow(table,rows,p[0].trim(),"","","","","","");
@@ -941,21 +941,21 @@ public class MainActivity extends Activity {
         dlg.setOnShowListener(x->dlg.getButton(-1).setOnClickListener(v->{try{
             StringBuilder out=new StringBuilder(),names=new StringBuilder();for(EditText[] row:rows){
                 String customer=row[0].getText().toString().trim(),q=row[1].getText().toString().trim(),c=row[2].getText().toString().trim(),b=row[3].getText().toString().trim(),ref=row[4].getText().toString().trim(),d=row[5].getText().toString().trim(),f=row[6].getText().toString().trim();
-                if(customer.isEmpty()&&q.isEmpty()&&c.isEmpty()&&b.isEmpty()&&ref.isEmpty()&&d.isEmpty()&&f.isEmpty())continue;if(customer.isEmpty())throw new IllegalArgumentException("اسم العميل مطلوب");
+                if(customer.isEmpty()&&q.isEmpty()&&c.isEmpty()&&b.isEmpty()&&ref.isEmpty()&&d.isEmpty()&&f.isEmpty())continue;if(customer.isEmpty())throw new IllegalArgumentException("اختر عميلاً مسجلاً من مؤشر البحث");long customerId=row[0].getTag() instanceof Number?((Number)row[0].getTag()).longValue():0;if(customerId<=0)throw new IllegalArgumentException("لا يمكن ترحيل حركة دون ربطها بعميل مسجل. افتح سجل العملاء ثم اختر العميل.");
                 long nq=parseLong(q),nc=parseLong(c),nb=parseLong(b),nd=parseLong(d),nf=parseLong(f);if(nq<0||nc<0||nb<0||nd<0||nf<0)throw new IllegalArgumentException("لا تقبل القيم السالبة");if(nb>0&&ref.isEmpty())throw new IllegalArgumentException("رقم عملية بنكك مطلوب");if(nb==0&&!ref.isEmpty())throw new IllegalArgumentException("أدخل مبلغ بنكك مع رقم العملية");
-                if(out.length()>0)out.append("\n");out.append(customer.replace("|","/")).append(" | ").append(nq).append(" | ").append(nc).append(" | ").append(nb).append(" | ").append(ref.replace("|","/")).append(" | ").append(nd).append(" | ").append(nf);if(names.length()>0)names.append("\n");names.append(customer);
+                if(out.length()>0)out.append("\n");out.append(customer.replace("|","/")).append(" | ").append(nq).append(" | ").append(nc).append(" | ").append(nb).append(" | ").append(ref.replace("|","/")).append(" | ").append(nd).append(" | ").append(nf).append(" | ").append(customerId);if(names.length()>0)names.append("\n");names.append(customer);
             }
             JSONObject rec=new JSONObject();rec.put("rows",out.toString());rec.put("notes",notes.getText().toString());store.put(day,"distribution",rec);for(String n:names.toString().split("\\r?\\n"))if(!n.trim().isEmpty())PartyDirectory.ensureCustomerName(store.getWritableDatabase(),n.trim());mergeRegularCustomers(names.toString());updateStatus();dlg.dismiss();toast("تم حفظ بيانات التوزيع.");
         }catch(Exception e){toast("تعذر حفظ التوزيع: "+e.getMessage());}}));dlg.show();
     }
     private void addDistributionTableRow(LinearLayout table,java.util.List<EditText[]> rows,String customer,String qty,String cash,String bank,String ref,String debt,String diff){
-        LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);EditText name=ruledCell(customer,"العميل",false);name.setFocusable(false);name.setOnClickListener(v->chooseRegularCustomer(name));
+        LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);EditText name=ruledCell(customer,"العميل",false);name.setFocusable(false);name.setTag(PartyDirectory.findCustomerIdByName(store.getReadableDatabase(),customer));name.setOnClickListener(v->chooseRegularCustomer(name));
         EditText[] cells={name,ruledCell(qty,"العيش",true),ruledCell(cash,"نقدي",true),ruledCell(bank,"بنكك",true),ruledCell(ref,"رقم العملية",false),ruledCell(debt,"ديون",true),ruledCell(diff,"فرق السعر",true)};
         for(EditText e:cells){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(1,1,1,1);row.addView(e,lp);}Button pick=button("بحث");pick.setTextSize(10);pick.setOnClickListener(v->chooseRegularCustomer(name));row.addView(pick,new LinearLayout.LayoutParams(72,-2));table.addView(row);rows.add(cells);
     }
     private JSONObject regularCustomers(){return store.getLatest(day,"customers");}
     private void chooseRegularCustomer(EditText target){
-        PartyDirectory.showCustomerPicker(this,(id,name)->target.setText(name));
+        PartyDirectory.showCustomerPicker(this,(id,name)->{target.setText(name);target.setTag(id);});
     }
     private void mergeRegularCustomers(String names){
         try{java.util.LinkedHashMap<String,String> all=new java.util.LinkedHashMap<>();for(String line:normalizeRows(regularCustomers().optString("rows","")).split("\\r?\\n")){String[] p=line.split("\\|",-1);if(p.length>0&&!p[0].trim().isEmpty())all.put(p[0].trim(),p.length>1?p[1].trim():"عميل");}
