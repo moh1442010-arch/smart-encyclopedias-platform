@@ -109,7 +109,12 @@ public final class LicenseAccessGate {
         long now=System.currentTimeMillis();
         long start=p.getLong("trial_start",0L);
         long seen=p.getLong("trial_last_seen",0L);
-        if(start<=0L) { p.edit().putLong("trial_start",now).putLong("trial_last_seen",now).apply();return true; }
+        // A previously issued but now invalid/expired token must never bootstrap a fresh trial.
+        if(start<=0L) {
+            if(token!=null&&!token.trim().isEmpty())return false;
+            p.edit().putLong("trial_start",now).putLong("trial_last_seen",now).apply();
+            return true;
+        }
         if(seen>0L&&now<seen-300000L)p.edit().putBoolean("trial_clock_rollback_detected",true).apply();
         if(p.getBoolean("trial_clock_rollback_detected",false))return false;
         p.edit().putLong("trial_last_seen",Math.max(seen,now)).apply();
