@@ -34,6 +34,15 @@ final class GeneralLedgerReports {
         boolean isBalanced(){return debitMinor==creditMinor;}
     }
 
+    static final class IncomeStatement {
+        final List<Line> lines;
+        final long revenueMinor, expenseMinor, netProfitMinor;
+        IncomeStatement(List<Line> lines,long revenue,long expense) {
+            this.lines=lines;this.revenueMinor=revenue;this.expenseMinor=expense;
+            this.netProfitMinor=exactLong(BigInteger.valueOf(revenue).subtract(BigInteger.valueOf(expense)));
+        }
+    }
+
     static final class AccountStatement {
         final String accountCode;
         final long openingDebitMinor, openingCreditMinor, periodDebitMinor, periodCreditMinor;
@@ -81,6 +90,22 @@ final class GeneralLedgerReports {
 
     static TrialBalance incomeStatement(SQLiteDatabase db,String from,String to,String branchCode) {
         return byTypes(db,from,to,branchCode,new String[]{"REVENUE","EXPENSE"});
+    }
+
+    static IncomeStatement incomeStatementSummary(SQLiteDatabase db,String from,String to,String branchCode) {
+        TrialBalance source=byTypes(db,from,to,branchCode,new String[]{"REVENUE","EXPENSE"});
+        long revenue=0L,expense=0L;
+        for(Line line:source.lines) {
+            long net=exactLong(BigInteger.valueOf(line.debitMinor).subtract(BigInteger.valueOf(line.creditMinor)));
+            if("REVENUE".equals(line.type)) {
+                long amount="CREDIT".equals(line.normalSide)?-net:net;
+                revenue=add(revenue,amount);
+            } else if("EXPENSE".equals(line.type)) {
+                long amount="DEBIT".equals(line.normalSide)?net:-net;
+                expense=add(expense,amount);
+            }
+        }
+        return new IncomeStatement(source.lines,revenue,expense);
     }
 
     // Account balances only; a complete statement of financial position also requires a posted profit/loss close to equity.
