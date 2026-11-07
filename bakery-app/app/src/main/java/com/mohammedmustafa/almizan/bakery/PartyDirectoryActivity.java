@@ -41,28 +41,32 @@ public class PartyDirectoryActivity extends Activity {
     private void customersSection(){
         heading("العملاء الأساسيون");
         body.addView(note("سجّل العميل مرة واحدة. يظهر بعد ذلك في مؤشر البحث داخل شاشات البيع والتوزيع والتحصيل."));
-        EditText name=cell("اسم العميل"),phone=cell("رقم الهاتف"),debt=cell("مديونية افتتاحية");
+        EditText name=cell("اسم العميل"),phone=cell("رقم الهاتف"),debt=cell("إجمالي المديونية"),cash=cell("سداد نقدي"),bank=cell("سداد بنكك"),bankRef=cell("رقم العملية");
         Spinner currency=currencySpinner();
-        addHorizontal(name,phone,debt,currency);
+        addHorizontal(name,phone,debt,cash,bank,bankRef,currency);
         Button save=button("حفظ العميل");save.setOnClickListener(v->{try{
-            long opening=amount(debt);long id=PartyDirectory.saveCustomer(db,name.getText().toString(),phone.getText().toString(),opening,currency.getSelectedItem().toString());
-            toast("تم حفظ العميل برقم "+id);name.setText("");phone.setText("");debt.setText("");refreshLists();
+            long opening=amount(debt),cashPaid=amount(cash),bankPaid=amount(bank);
+            long id=PartyDirectory.saveCustomer(db,name.getText().toString(),phone.getText().toString(),opening,cashPaid,bankPaid,bankRef.getText().toString(),currency.getSelectedItem().toString());
+            toast("تم حفظ العميل برقم "+id+" — المديونية المتبقية: "+(opening-cashPaid-bankPaid));
+            name.setText("");phone.setText("");debt.setText("");cash.setText("");bank.setText("");bankRef.setText("");refreshLists();
         }catch(Exception e){toast("لم يُحفظ العميل: "+e.getMessage());}});body.addView(save);
-        body.addView(note("قائمة العملاء — الاسم | الهاتف | المديونية الافتتاحية | العملة. تسجيل المبيعات والتحصيلات يتم من شاشة البيع بعد اختيار العميل."));
+        body.addView(note("التسجيل أفقي: اسم العميل | الهاتف | إجمالي المديونية | نقدي | بنكك | رقم العملية | العملة. تُحفظ المديونية المتبقية بعد خصم السداد الافتتاحي. وتبقى التحصيلات اللاحقة في شاشة التحصيل."));
         list("SELECT name||' | '||phone||' | '||opening_balance_minor||' | '||currency_code FROM customers WHERE active=1 ORDER BY name");
     }
 
     private void suppliersSection(){
         heading("الموردون الأساسيون");
         body.addView(note("سجّل المورد مرة واحدة. الصنف والوحدة حقول افتراضية تساعد في الفواتير اللاحقة."));
-        EditText name=cell("اسم المورد"),phone=cell("رقم الهاتف"),item=cell("الصنف المعتاد"),unit=cell("الوحدة"),debt=cell("مديونية افتتاحية");
+        EditText name=cell("اسم المورد"),phone=cell("رقم الهاتف"),item=cell("الصنف"),unit=cell("الوحدة"),qty=cell("الكمية"),invoice=cell("قيمة الفاتورة"),cash=cell("سداد نقدي"),bank=cell("سداد بنكك"),bankRef=cell("رقم العملية");
         Spinner currency=currencySpinner();
-        addHorizontal(name,phone,item,unit,debt,currency);
-        Button save=button("حفظ المورد");save.setOnClickListener(v->{try{
-            long id=PartyDirectory.saveSupplier(db,name.getText().toString(),phone.getText().toString(),item.getText().toString(),unit.getText().toString(),amount(debt),currency.getSelectedItem().toString());
-            toast("تم حفظ المورد برقم "+id);name.setText("");phone.setText("");item.setText("");unit.setText("");debt.setText("");refreshLists();
+        addHorizontal(name,phone,item,unit,qty,invoice,cash,bank,bankRef,currency);
+        Button save=button("حفظ المورد والفاتورة الافتتاحية");save.setOnClickListener(v->{try{
+            long quantity=quantity(qty),invoiceTotal=amount(invoice),cashPaid=amount(cash),bankPaid=amount(bank);
+            long id=PartyDirectory.saveSupplier(db,name.getText().toString(),phone.getText().toString(),item.getText().toString(),unit.getText().toString(),quantity,invoiceTotal,cashPaid,bankPaid,bankRef.getText().toString(),currency.getSelectedItem().toString());
+            toast("تم حفظ المورد برقم "+id+" — المديونية المتبقية: "+(invoiceTotal-cashPaid-bankPaid));
+            name.setText("");phone.setText("");item.setText("");unit.setText("");qty.setText("");invoice.setText("");cash.setText("");bank.setText("");bankRef.setText("");refreshLists();
         }catch(Exception e){toast("لم يُحفظ المورد: "+e.getMessage());}});body.addView(save);
-        body.addView(note("قائمة الموردين — الاسم | الهاتف | الصنف المعتاد | المديونية | العملة. فواتير الشراء والسداد تسجل من شاشة مخزن المصنع، وتحدّث المخزون والدفتر معاً."));
+        body.addView(note("التسجيل أفقي: اسم المورد | الهاتف | الصنف | الوحدة | الكمية | قيمة الفاتورة | نقدي | بنكك | رقم العملية | العملة. تحفظ الفاتورة الافتتاحية والمديونية المتبقية في سجل المورد."));
         list("SELECT name||' | '||phone||' | '||default_item||' | '||opening_balance_minor||' | '||currency_code FROM suppliers WHERE active=1 ORDER BY name");
     }
 
