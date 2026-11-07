@@ -30,10 +30,21 @@ public class FactoryLedgerActivity extends Activity {
     }
     private void frame(String title){
         LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(12,10,12,12);root.setBackgroundColor(Color.rgb(246,248,251));
-        TextView h=label(getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","المخبز")+"\\nدفتر المصنع — "+title,20);h.setTextColor(Color.rgb(11,31,58));root.addView(h);
+        TextView h=label(getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","المخبز")+"\\nدفتر المصنع — "+title,20);h.setTextColor(Color.rgb(11,31,58));h.setGravity(Gravity.CENTER);root.addView(h);
         root.addView(button("العودة إلى مصنع الخبائز والحلويات",()->finish()));
         root.addView(button("⌂ الرئيسية",()->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();}));
-        ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);
+        ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));root.addView(button("🖨️ طباعة الشاشة الحالية",()->printVisibleScreen(title)));setContentView(root);
+    }
+    private void printVisibleScreen(String title){
+        String business=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","المخبز");
+        StringBuilder out=new StringBuilder("المنشأة: ").append(business).append("\\nدفتر المصنع: ").append(title).append("\\nالتاريخ: ").append(today()).append("\\n\\n");
+        appendPrintable(body,out);if(out.length()<80){say("لا توجد بيانات ظاهرة للطباعة.");return;}
+        try{PrinterService.print(this,business,title+" - "+business,out.toString());}catch(Exception e){say("تعذر فتح الطباعة: "+e.getMessage());}
+    }
+    private void appendPrintable(View view,StringBuilder out){
+        if(view instanceof EditText){String value=((EditText)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");return;}
+        if(view instanceof TextView){String value=((TextView)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");}
+        if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++)appendPrintable(group.getChildAt(i),out);}
     }
     private TextView label(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(Color.rgb(30,40,50));t.setPadding(5,9,5,9);return t;}
     private Button button(String s,Runnable r){Button b=new Button(this);b.setText(s);b.setOnClickListener(v->r.run());return b;}
