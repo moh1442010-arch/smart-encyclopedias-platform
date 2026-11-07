@@ -86,6 +86,7 @@ public class MainActivity extends Activity {
         @Override public void run() {
             if (pinAuthenticated && !LicenseAccessGate.isAccessAllowed(MainActivity.this)) {
                 if (store != null) { store.close(); store = null; }
+                pinAuthenticated = false;
                 paywallLocked = true;
                 showPaywall();
             }
@@ -1886,8 +1887,8 @@ public class MainActivity extends Activity {
 
     private void showPaywall() {
         base("🔐 اشتراك المحاسب الميزان للمخابز");
-        boolean licensed = LicenseAccessGate.isAccessAllowed(this);
-        boolean expired = !licensed;
+        boolean licensed = hasActiveLicense();
+        boolean expired = !LicenseAccessGate.isAccessAllowed(this);
         paywallLocked = expired;
         String trialMessage = licensed
             ? "اشتراكك مفعّل على هذا الجهاز. يمكنك متابعة الدفاتر أو طلب تجديد الباقة عند الحاجة."
