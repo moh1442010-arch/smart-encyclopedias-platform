@@ -949,9 +949,9 @@ public class MainActivity extends Activity {
         }catch(Exception e){toast("تعذر حفظ التوزيع: "+e.getMessage());}}));dlg.show();
     }
     private void addDistributionTableRow(LinearLayout table,java.util.List<EditText[]> rows,String customer,String qty,String cash,String bank,String ref,String debt,String diff){
-        LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);EditText name=ruledCell(customer,"العميل",false);name.setOnLongClickListener(v->{chooseRegularCustomer(name);return true;});
+        LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);EditText name=ruledCell(customer,"العميل",false);name.setFocusable(false);name.setOnClickListener(v->chooseRegularCustomer(name));
         EditText[] cells={name,ruledCell(qty,"العيش",true),ruledCell(cash,"نقدي",true),ruledCell(bank,"بنكك",true),ruledCell(ref,"رقم العملية",false),ruledCell(debt,"ديون",true),ruledCell(diff,"فرق السعر",true)};
-        for(EditText e:cells){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(1,1,1,1);row.addView(e,lp);}table.addView(row);rows.add(cells);
+        for(EditText e:cells){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1f);lp.setMargins(1,1,1,1);row.addView(e,lp);}Button pick=button("بحث");pick.setTextSize(10);pick.setOnClickListener(v->chooseRegularCustomer(name));row.addView(pick,new LinearLayout.LayoutParams(72,-2));table.addView(row);rows.add(cells);
     }
     private JSONObject regularCustomers(){return store.getLatest(day,"customers");}
     private void chooseRegularCustomer(EditText target){
@@ -962,13 +962,7 @@ public class MainActivity extends Activity {
             for(String n:names.split("\\r?\\n"))if(!n.trim().isEmpty()&&!all.containsKey(n.trim()))all.put(n.trim(),"عميل");StringBuilder out=new StringBuilder();for(java.util.Map.Entry<String,String> e:all.entrySet()){if(out.length()>0)out.append("\n");out.append(e.getKey()).append(" | ").append(e.getValue());}JSONObject rec=new JSONObject();rec.put("rows",out.toString());store.put(day,"customers",rec);
         }catch(Exception e){android.util.Log.w("AlMizanBakery","Customer save failed",e);}
     }
-    private void manageRegularCustomers(){
-        EditText list=ruledCell(regularCustomers().optString("rows",""),"الاسم | دكان أو بقالة أو مطعم",false);list.setSingleLine(false);list.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE);list.setMinLines(7);list.setGravity(Gravity.TOP|Gravity.RIGHT);
-        new AlertDialog.Builder(this).setTitle("العملاء الثابتون").setMessage("سطر لكل عميل. مثال: دكان النيل | دكان").setView(list).setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{try{
-            java.util.LinkedHashMap<String,String> unique=new java.util.LinkedHashMap<>();for(String line:normalizeRows(list.getText().toString()).split("\\r?\\n")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);String name=p[0].trim(),type=p.length>1?p[1].trim():"عميل";if(name.isEmpty())throw new IllegalArgumentException("اسم العميل مطلوب");unique.put(name,type.isEmpty()?"عميل":type);}
-            StringBuilder out=new StringBuilder();for(java.util.Map.Entry<String,String> e:unique.entrySet()){if(out.length()>0)out.append("\n");out.append(e.getKey()).append(" | ").append(e.getValue());}JSONObject rec=new JSONObject();rec.put("rows",out.toString());store.put(day,"customers",rec);toast("تم حفظ "+unique.size()+" عميل ثابت.");
-        }catch(Exception e){toast("تعذر حفظ العملاء: "+e.getMessage());}}).show();
-    }
+    private void manageRegularCustomers(){startActivity(new Intent(MainActivity.this,PartyDirectoryActivity.class));}
 
     private void openCutsTable() {
         JSONObject saved=store.get(day,"cuts");
