@@ -250,6 +250,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           script: |
+            (cd bakery-app && gradle connectedDebugAndroidTest)
             adb install -r bakery-app/release/AlMizan-Bakery-2.8.0-review.apk
             adb logcat -c
             adb shell monkey -p com.mohammedmustafa.almizan.bakery 1
