@@ -21,14 +21,33 @@ public class PartyDirectoryActivity extends Activity {
     private PartyDirectory.Db helper;
     private SQLiteDatabase db;
     private LinearLayout body;
+    private final android.os.Handler entitlementHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable entitlementWatchdog = new Runnable() {
+        @Override public void run() {
+            if (!LicenseAccessGate.isAccessAllowed(PartyDirectoryActivity.this)) enforceEntitlement();
+            else entitlementHandler.postDelayed(this,30000L);
+        }
+    };
+    private boolean enforceEntitlement() {
+        if (LicenseAccessGate.isAccessAllowed(this)) return true;
+        entitlementHandler.removeCallbacks(entitlementWatchdog);
+        if (helper != null) { helper.close(); helper=null; db=null; }
+        Toast.makeText(this,"انتهت التجربة أو لا يوجد ترخيص ساري. بياناتك محفوظة؛ يرجى التفعيل للمتابعة.",Toast.LENGTH_LONG).show();
+        finish();
+        startActivity(new Intent(this,MainActivity.class));
+        return false;
+    }
 
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
+        if(!enforceEntitlement())return;
         helper=new PartyDirectory.Db(this);db=helper.getWritableDatabase();
         PartyDirectory.migrateLegacyCustomers(db);
         render();
     }
-    @Override protected void onDestroy(){if(helper!=null)helper.close();super.onDestroy();}
+    @Override protected void onResume(){super.onResume();if(db!=null&&!enforceEntitlement())return;entitlementHandler.removeCallbacks(entitlementWatchdog);entitlementHandler.post(entitlementWatchdog);}
+    @Override protected void onPause(){entitlementHandler.removeCallbacks(entitlementWatchdog);super.onPause();}
+    @Override protected void onDestroy(){entitlementHandler.removeCallbacks(entitlementWatchdog);if(helper!=null)helper.close();super.onDestroy();}
 
     private void render(){
         LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(12,10,12,12);root.setBackgroundColor(0xFFF6F8FB);
