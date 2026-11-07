@@ -68,7 +68,7 @@ public class EnterpriseSchemaMigrationTest {
             Cursor restored=db.rawQuery("SELECT COUNT(*) FROM customers WHERE id=? AND name='عميل اختبار'",new String[]{String.valueOf(customerId)});
             try { assertTrue(restored.moveToFirst());assertEquals(1,restored.getInt(0)); } finally { restored.close(); }
             Cursor restoredRate=db.rawQuery("SELECT rate_num,rate_den FROM exchange_rates WHERE base_code='SAR' AND quote_code='SDG'",null);
-            try { assertTrue(restoredRate.moveToFirst());assertEquals(2800,restoredRate.getLong(0));assertEquals(1,restoredRate.getLong(1)); } finally { restoredRate.close(); }
+            try { assertTrue(restoredRate.moveToFirst());assertEquals(750,restoredRate.getLong(0));assertEquals(1,restoredRate.getLong(1)); } finally { restoredRate.close(); }
             Cursor fk=db.rawQuery("PRAGMA foreign_keys",null);
             try { assertTrue(fk.moveToFirst());assertEquals(1,fk.getInt(0)); } finally { fk.close(); }
             boolean orphanRejected=false;
@@ -109,13 +109,13 @@ public class EnterpriseSchemaMigrationTest {
             assertTrue("Trial balance must include opening entries before report start",trial.debitMinor==1500&&trial.creditMinor==1500);
             assertTrue(trial.isBalanced());
             GeneralLedgerReports.TrialBalance position=GeneralLedgerReports.balanceSheetAccounts(db,"2026-11-30",null);
-            boolean equity=false;for(GeneralLedgerReports.Line line:position.lines)if("3000".equals(line.code))equity=true;
+            boolean equity=false;for(GeneralLedgerReports.Line line:position.lines)if("TST-E102".equals(line.code))equity=true;
             assertTrue("Balance sheet account query must include EQUITY",equity);
             GeneralLedgerReports.TrialBalance income=GeneralLedgerReports.incomeStatement(db,"2026-11-01","2026-11-30",null);
             boolean revenue=false,draftExpense=false;
             for(GeneralLedgerReports.Line line:income.lines){
-                if("4000".equals(line.code))revenue=line.creditMinor==500;
-                if("5000".equals(line.code))draftExpense=line.debitMinor==0;
+                if("TST-R103".equals(line.code))revenue=line.creditMinor==500;
+                if("TST-X104".equals(line.code))draftExpense=line.debitMinor==0;
             }
             assertTrue("Income report must include posted revenue",revenue);
             assertTrue("Income report must exclude draft expense lines",draftExpense);
