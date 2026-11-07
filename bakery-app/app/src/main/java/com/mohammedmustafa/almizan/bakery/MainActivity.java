@@ -63,6 +63,7 @@ public class MainActivity extends Activity {
     private static final String LEGACY_LICENSE_PUBLIC_KEY_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvsK66CYxt4X7R9GcVaJ0FjrheMAkFpzbirdz7/X/lj8UAuqUabNOPN3R5dGuZro90i+raIyngTz+VxRxLcNPRQru4VzWIDLsoBEwi/CrsOaMJFgVLom7jYXFjQ5P25TO5hRxzPN8ZOOG1MTo8j6ipgPOKY5be6Gmsj8R03SbulYnVO8STWC4bSkqwvV9YlEIpZwnyAJVbWHbE4JSKiCC/TMOcfrBgGG0W7qCJeEjnUKPfHAtH85ayZjBQwMIQx+z1CoTFWrqKXywSWN65G7yZbHwsnREovRprxjyVHqmTtLd45VyNQU2zXBKchzkwnpiG1zeD8kfdDeACeaAmxbsiwIDAQAB";
     private static final int REQUEST_EXPORT_BACKUP = 4250, REQUEST_IMPORT_BACKUP = 4251, REQUEST_PAYMENT_RECEIPT = 4252, REQUEST_COMPANY_LOGO = 4253;
     private String pendingActivationMessage = "";
+    private char[] pendingBackupPassword = null;
     private Store store;
     private LinearLayout root, content;
     private String day;
@@ -1547,18 +1548,62 @@ public class MainActivity extends Activity {
     }
 
 
+    private interface BackupPasswordCallback { void onPassword(char[] password); }
+
+    private void askBackupPassword(String title,boolean confirm,BackupPasswordCallback callback) {
+        LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(24,8,24,4);
+        EditText password=new EditText(this);password.setSingleLine(true);password.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);password.setHint("كلمة مرور النسخة — 10 أحرف على الأقل");box.addView(password);
+        EditText repeated=null;
+        if(confirm){repeated=new EditText(this);repeated.setSingleLine(true);repeated.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);repeated.setHint("تأكيد كلمة المرور");box.addView(repeated);}
+        final EditText confirmation=repeated;
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(title).setMessage("استخدم كلمة مرور قوية واحفظها خارج الهاتف. لا يستطيع الدعم استعادة نسخة لا تعرف كلمة مرورها.")
+            .setView(box).setNegativeButton("إلغاء",null).setPositiveButton("متابعة",null).create();
+        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+            String first=password.getText().toString();
+            if(first.length()<10){password.setError("استخدم 10 أحرف على الأقل");return;}
+            if(confirmation!=null&&!first.equals(confirmation.getText().toString())){confirmation.setError("كلمتا المرور غير متطابقتين");return;}
+            char[] secret=first.toCharArray();password.setText("");if(confirmation!=null)confirmation.setText("");
+            dialog.dismiss();callback.onPassword(secret);
+        }));
+        dialog.show();
+    }
+
     private void backupRestoreMenu() {
-        new AlertDialog.Builder(this).setTitle("نسخ احتياطي واستعادة")
-            .setMessage("أنشئ ملف JSON يحفظ سجلات المخبز وبيانات المصنع. تنبيه: ملف النسخة الحالي غير مشفر؛ لا ترسله عبر قنوات عامة واحفظه في مكان آمن. الاستعادة تستبدل بيانات المصنع وتدمج سجلات المخبز.")
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("نسخ احتياطي مشفّر واستعادة")
+            .setMessage("تُشفّر النسخة بكلمة مرور تختارها باستخدام AES-256-GCM. لا تُحفظ كلمة المرور داخل التطبيق. الاستعادة تدعم النسخ القديمة غير المشفرة مع تنبيه واضح.")
             .setNegativeButton("الرئيسية",(d,w)->buildHome())
             .setNeutralButton("استعادة نسخة",(d,w)->{
-                Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT); i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("application/json");
-                try { startActivityForResult(i,REQUEST_IMPORT_BACKUP); } catch(Exception ex) { toast("تعذر فتح اختيار ملف النسخة الاحتياطية"); }
+                Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("*/*");
+                try{startActivityForResult(i,REQUEST_IMPORT_BACKUP);}catch(Exception ex){toast("تعذر فتح اختيار ملف النسخة الاحتياطية");}
             })
-            .setPositiveButton("تصدير نسخة",(d,w)->{
-                Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT); i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("application/json");
-                i.putExtra(Intent.EXTRA_TITLE,"almizan-bakery-backup-"+day+".json");
-                try { startActivityForResult(i,REQUEST_EXPORT_BACKUP); } catch(Exception ex) { toast("تعذر فتح اختيار مكان حفظ النسخة"); }
+            .setPositiveButton("تصدير نسخة مشفّرة",null).create();
+        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+            dialog.dismiss();
+            askBackupPassword("تأمين ملف النسخة الاحتياطية",true,password->{
+                pendingBackupPassword=password;
+                Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("application/octet-stream");
+                i.putExtra(Intent.EXTRA_TITLE,"almizan-bakery-backup-"+day+".mizanbak");
+                try{startActivityForResult(i,REQUEST_EXPORT_BACKUP);}catch(Exception ex){java.util.Arrays.fill(password,'\\0');pendingBackupPassword=null;toast("تعذر فتح اختيار مكان حفظ النسخة");}
+            });
+        }));
+        dialog.show();
+    }
+
+    private void processBackupImport(byte[] plainBytes) throws Exception {
+        JSONArray imported=new JSONArray(new String(plainBytes,StandardCharsets.UTF_8));
+        JSONArray records=new JSONArray();JSONObject factorySnapshot=null;
+        for(int i=0;i<imported.length();i++){
+            JSONObject row=imported.getJSONObject(i);
+            if(FactoryBackup.TYPE.equals(row.optString("_type"))){if(factorySnapshot!=null)throw new IllegalArgumentException("Duplicate factory backup section");factorySnapshot=row;}
+            else records.put(row);
+        }
+        if(factorySnapshot!=null)FactoryBackup.validate(factorySnapshot);
+        final JSONArray bakeryRecords=records;final JSONObject factoryData=factorySnapshot;
+        new AlertDialog.Builder(this).setTitle("تأكيد الاستعادة")
+            .setMessage("سيتم دمج "+bakeryRecords.length()+" سجل للمخبز"+(factoryData!=null?" وبيانات المصنع":" (النسخة لا تحتوي على بيانات المصنع)")+" مع البيانات الحالية. أنشئ نسخة احتياطية مشفّرة من الحالة الحالية قبل المتابعة.")
+            .setNegativeButton("إلغاء",null).setPositiveButton("استعادة ودمج",(d,w)->{
+                try{int count=store.restoreAll(bakeryRecords);if(factoryData!=null)FactoryBackup.restore(this,factoryData);updateStatus();toast("اكتملت الاستعادة: "+count+" سجل للمخبز وبيانات المصنع. راجع التسوية قبل الاستخدام.");}
+                catch(Exception ex){toast("تعذرت استعادة أحد الجزأين. لا تكرر العملية قبل مراجعة البيانات والتواصل مع الدعم.");}
             }).show();
     }
 
@@ -1575,13 +1620,17 @@ public class MainActivity extends Activity {
         if(resultCode!=RESULT_OK || data==null || data.getData()==null) return;
         try {
             if(requestCode==REQUEST_EXPORT_BACKUP) {
-                JSONArray records=store.exportAll();
-                records.put(FactoryBackup.export(this));
-                try(OutputStream out=getContentResolver().openOutputStream(data.getData(),"w")) {
-                    if(out==null) throw new IllegalStateException("تعذر فتح ملف النسخة");
-                    out.write(records.toString(2).getBytes(StandardCharsets.UTF_8)); out.flush();
-                }
-                toast("تم تصدير نسخة المخبز والمصنع. احتفظ بالملف في مكان آمن.");
+                if(pendingBackupPassword==null)throw new IllegalStateException("كلمة مرور النسخة غير متاحة");
+                char[] password=pendingBackupPassword;pendingBackupPassword=null;
+                try{
+                    JSONArray records=store.exportAll();records.put(FactoryBackup.export(this));
+                    byte[] plain=records.toString(2).getBytes(StandardCharsets.UTF_8);
+                    byte[] encrypted=PortableBackupCrypto.encrypt(plain,password);
+                    try(OutputStream out=getContentResolver().openOutputStream(data.getData(),"w")){
+                        if(out==null)throw new IllegalStateException("تعذر فتح ملف النسخة");out.write(encrypted);out.flush();
+                    }finally{java.util.Arrays.fill(plain,(byte)0);java.util.Arrays.fill(encrypted,(byte)0);}
+                    toast("تم تصدير نسخة مشفّرة للمخبز والمصنع. احفظ كلمة المرور؛ لا يمكن استعادة الملف دونها.");
+                }finally{java.util.Arrays.fill(password,'\\0');}
             } else if(requestCode==REQUEST_IMPORT_BACKUP) {
                 byte[] bytes;
                 try(InputStream in=getContentResolver().openInputStream(data.getData())) {
@@ -1591,29 +1640,19 @@ public class MainActivity extends Activity {
                     while((n=in.read(chunk))!=-1) { total+=n; if(total>25L*1024*1024) throw new IllegalArgumentException("حجم النسخة أكبر من 25 ميغابايت"); buffer.write(chunk,0,n); }
                     bytes=buffer.toByteArray();
                 }
-                JSONArray imported=new JSONArray(new String(bytes,StandardCharsets.UTF_8));
-                JSONArray records=new JSONArray();
-                JSONObject factorySnapshot=null;
-                for(int i=0;i<imported.length();i++) {
-                    JSONObject row=imported.getJSONObject(i);
-                    if(FactoryBackup.TYPE.equals(row.optString("_type"))) {
-                        if(factorySnapshot!=null) throw new IllegalArgumentException("Duplicate factory backup section");
-                        factorySnapshot=row;
-                    } else records.put(row);
+                if(PortableBackupCrypto.isEncrypted(bytes)){
+                    askBackupPassword("فك تشفير النسخة الاحتياطية",false,password->{
+                        try{byte[] plain=PortableBackupCrypto.decrypt(bytes,password);try{processBackupImport(plain);}finally{java.util.Arrays.fill(plain,(byte)0);}}
+                        catch(Exception ex){toast("تعذر فك النسخة. تحقق من كلمة المرور وسلامة الملف.");}
+                        finally{java.util.Arrays.fill(password,'\\0');}
+                    });
+                }else{
+                    new AlertDialog.Builder(this).setTitle("نسخة قديمة غير مشفّرة")
+                        .setMessage("هذا الملف بصيغة النسخ القديمة غير المشفّرة. استمر فقط إذا كان الملف من مصدر موثوق.")
+                        .setNegativeButton("إلغاء",null).setPositiveButton("متابعة الاستعادة",(d,w)->{
+                            try{processBackupImport(bytes);}catch(Exception ex){toast("تعذر قراءة النسخة القديمة. لم يتم حذف البيانات الحالية.");}
+                        }).show();
                 }
-                if(factorySnapshot!=null) FactoryBackup.validate(factorySnapshot);
-                final JSONArray bakeryRecords=records;
-                final JSONObject factoryData=factorySnapshot;
-                new AlertDialog.Builder(this).setTitle("تأكيد الاستعادة")
-                    .setMessage("سيتم دمج "+bakeryRecords.length()+" سجل للمخبز"+(factoryData!=null?" وبيانات المصنع":" (النسخة لا تحتوي على بيانات المصنع)")+" مع البيانات الحالية. أنشئ نسخة احتياطية من الحالة الحالية قبل المتابعة.")
-                    .setNegativeButton("إلغاء",null).setPositiveButton("استعادة ودمج",(d,w)->{
-                        try {
-                            int count=store.restoreAll(bakeryRecords);
-                            if(factoryData!=null) FactoryBackup.restore(this,factoryData);
-                            updateStatus();
-                            toast("اكتملت الاستعادة: "+count+" سجل للمخبز وبيانات المصنع. راجع التسوية قبل الاستخدام.");
-                        } catch(Exception ex) { toast("تعذرت استعادة أحد الجزأين. لا تكرر العملية قبل مراجعة البيانات والتواصل مع الدعم."); }
-                    }).show();
             }
         } catch(Exception ex) { toast("تعذر التعامل مع ملف النسخة الاحتياطية. لم يتم حذف البيانات الحالية."); }
     }
