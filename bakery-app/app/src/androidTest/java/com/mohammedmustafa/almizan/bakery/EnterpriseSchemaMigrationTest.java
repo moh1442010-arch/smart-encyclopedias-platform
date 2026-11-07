@@ -28,7 +28,7 @@ public class EnterpriseSchemaMigrationTest {
             Cursor old=db.rawQuery("SELECT payload FROM records WHERE day='2026-11-06' AND module='stock'",null);
             try { assertTrue(old.moveToFirst()); assertEquals("KEEP_EXISTING_STOCK",old.getString(0)); }
             finally { old.close(); }
-            String[] required={"company_settings","countries","currencies","exchange_rates","branches","users","roles","permissions","suppliers","purchase_invoices","purchase_lines","supplier_payments","employees","payroll_periods","payroll_items","fixed_assets","depreciation_entries","sync_outbox","tax_rules","financial_periods","chart_of_accounts","gl_journal_entries","gl_journal_lines","idempotency_keys"};
+            String[] required={"company_settings","countries","currencies","exchange_rates","branches","users","roles","permissions","suppliers","customers","company_bank_accounts","party_opening_payments","party_payments","supplier_quick_invoices","purchase_invoices","purchase_lines","supplier_payments","employees","payroll_periods","payroll_items","fixed_assets","depreciation_entries","sync_outbox","tax_rules","financial_periods","chart_of_accounts","gl_journal_entries","gl_journal_lines","idempotency_keys"};
             for(String table:required) {
                 Cursor exists=db.rawQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",new String[]{table});
                 try { assertTrue("Missing table "+table,exists.moveToFirst()&&exists.getInt(0)==1); }
@@ -37,6 +37,20 @@ public class EnterpriseSchemaMigrationTest {
             Cursor currency=db.rawQuery("SELECT base_currency,country_code FROM company_settings WHERE id=1",null);
             try { assertTrue(currency.moveToFirst());assertEquals("SDG",currency.getString(0));assertEquals("SD",currency.getString(1)); }
             finally { currency.close(); }
+            Cursor currencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE code IN ('USD','EUR','SAR','AED')",null);
+            try { assertTrue(currencies.moveToFirst());assertEquals(4,currencies.getInt(0)); } finally { currencies.close(); }
+            Cursor supplierColumns=db.rawQuery("PRAGMA table_info(suppliers)",null);
+            boolean defaultItem=false,defaultUnit=false;
+            try { while(supplierColumns.moveToNext()){if("default_item".equals(supplierColumns.getString(1)))defaultItem=true;if("default_unit".equals(supplierColumns.getString(1)))defaultUnit=true;} }
+            finally { supplierColumns.close(); }
+            assertTrue("Supplier default item field missing",defaultItem);assertTrue("Supplier default unit field missing",defaultUnit);
+            long customerId=PartyDirectory.saveCustomer(db,"عميل اختبار","249900000001",125000,"USD");
+            assertTrue(customerId>0);
+            long supplierId=PartyDirectory.saveSupplier(db,"مورد اختبار","249900000002","دقيق","جوال",50000,"EUR");
+            assertTrue(supplierId>0);
+            PartyDirectory.saveBankAccount(db,"Test EUR","Test Bank","EUR","GB82WEST12345698765432","WESTGB22","");
+            Cursor bank=db.rawQuery("SELECT currency_code,iban FROM company_bank_accounts WHERE account_name='Test EUR'",null);
+            try { assertTrue(bank.moveToFirst());assertEquals("EUR",bank.getString(0));assertEquals("GB82WEST12345698765432",bank.getString(1)); } finally { bank.close(); }
             Cursor fk=db.rawQuery("PRAGMA foreign_keys",null);
             try { assertTrue(fk.moveToFirst());assertEquals(1,fk.getInt(0)); } finally { fk.close(); }
             boolean orphanRejected=false;
