@@ -20,7 +20,7 @@ final class GeneralLedgerReports {
              long debit,long credit) {
             this.code=code;this.nameAr=nameAr;this.nameEn=nameEn;this.type=type;this.normalSide=normalSide;
             this.debitMinor=debit;this.creditMinor=credit;
-            this.balanceMinor="DEBIT".equals(normalSide)?debit-credit:credit-debit;
+            this.balanceMinor="DEBIT".equals(normalSide)?BigInteger.valueOf(debit).subtract(BigInteger.valueOf(credit)).longValueExact():BigInteger.valueOf(credit).subtract(BigInteger.valueOf(debit)).longValueExact();
         }
     }
 
@@ -50,7 +50,7 @@ final class GeneralLedgerReports {
     static TrialBalance trialBalance(SQLiteDatabase db,String from,String to,String branchCode) {
         validateRange(from,to);
         String sql="SELECT a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side,"+
-            "COALESCE(SUM(l.base_debit_minor),0),COALESCE(SUM(l.base_credit_minor),0) "+
+            "COALESCE(SUM(CASE WHEN e.id IS NOT NULL THEN l.base_debit_minor ELSE 0 END),0),COALESCE(SUM(CASE WHEN e.id IS NOT NULL THEN l.base_credit_minor ELSE 0 END),0) "+
             "FROM chart_of_accounts a LEFT JOIN gl_journal_lines l ON l.account_id=a.id "+
             "LEFT JOIN gl_journal_entries e ON e.id=l.entry_id AND e.status='POSTED' "+
             "LEFT JOIN branches b ON b.id=l.branch_id "+
@@ -84,7 +84,7 @@ final class GeneralLedgerReports {
         return byTypes(db,from,to,branchCode,new String[]{"REVENUE","EXPENSE"});
     }
 
-    static TrialBalance balanceSheet(SQLiteDatabase db,String asOf,String branchCode) {
+    // Account balances only; a complete statement of financial position also requires a posted profit/loss close to equity.\n    static TrialBalance balanceSheetAccounts(SQLiteDatabase db,String asOf,String branchCode) {
         validateRange(asOf,asOf);
         return byTypes(db,"0001-01-01",asOf,branchCode,new String[]{"ASSET","LIABILITY","EQUITY"});
     }
