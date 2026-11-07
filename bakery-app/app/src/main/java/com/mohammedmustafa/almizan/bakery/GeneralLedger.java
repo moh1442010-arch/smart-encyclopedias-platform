@@ -61,6 +61,15 @@ final class GeneralLedger {
             transactionMinorUnits, baseMinorUnits);
     }
 
+    static Result postAuthorized(SQLiteDatabase db,Entry entry,String username) {
+        if(entry==null||entry.lines==null)throw new IllegalArgumentException("بيانات القيد غير مكتملة");
+        for(Line line:entry.lines) {
+            if(line==null)throw new IllegalArgumentException("سطر القيد غير صحيح");
+            PermissionService.requirePermission(db,username,line.branchCode,"JOURNAL_POST");
+        }
+        return post(db,entry);
+    }
+
     static Result post(SQLiteDatabase db, Entry entry) {
         validateEntry(entry);
         if (db.inTransaction()) throw new IllegalStateException("يجب ترحيل القيد داخل معاملة مستقلة لمنع اعتماد جزء من القيد");
