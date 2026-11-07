@@ -26,6 +26,7 @@ public class FactoryActivity extends Activity {
         TextView head=label("🏭 مصنع الخبائز والحلويات والباسطة\n"+title,21);head.setTextColor(NAVY);head.setBackgroundColor(Color.WHITE);root.addView(head);
         root.addView(btn("⌂ العودة إلى مصنع الخبائز والحلويات والباسطة",()->home()));
         root.addView(btn("↩ العودة إلى قائمة المخبز الرئيسية",()->finish()));
+        root.addView(btn("⌂ الرئيسية",()->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();}));
         ScrollView sc=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);body.setPadding(2,8,2,8);sc.addView(body);root.addView(sc,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);
     }
     private void home(){
@@ -44,6 +45,8 @@ public class FactoryActivity extends Activity {
         body.addView(btn("9. مرتجعات المبيعات والأعمال تحت التشغيل وعكس القيود",()->startActivity(new Intent(this,FactoryLedgerActivity.class))));
     }
     private EditText field(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setInputType(decimal?android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:android.text.InputType.TYPE_CLASS_TEXT);body.addView(e);return e;}
+    private EditText cell(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setTextSize(14);e.setInputType(decimal?android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:android.text.InputType.TYPE_CLASS_TEXT);return e;}
+    private void horizontalFields(View... views){HorizontalScrollView h=new HorizontalScrollView(this);h.setHorizontalScrollBarEnabled(true);LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);for(View v:views){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams((int)(155*getResources().getDisplayMetrics().density+0.5f),(int)(58*getResources().getDisplayMetrics().density+0.5f));p.setMargins(3,2,3,2);row.addView(v,p);}h.addView(row);body.addView(h,new LinearLayout.LayoutParams(-1,-2));}
     private long num(EditText e){try{java.math.BigDecimal x=new java.math.BigDecimal(e.getText().toString().trim());return x.movePointRight(3).longValueExact();}catch(Exception ex){return 0;}}
     private long money(EditText e){try{return new java.math.BigDecimal(e.getText().toString().trim()).longValueExact();}catch(Exception ex){return 0;}}
     private void warehouse(){
@@ -56,14 +59,18 @@ public class FactoryActivity extends Activity {
             while(rows.moveToNext()) tableRow(rows.getString(0),String.format(Locale.US,"%.3f %s",rows.getLong(1)/1000.0,rows.getString(2)),String.format(Locale.US,"%.2f",rows.getLong(3)/1000.0),String.format(Locale.US,"%.3f",rows.getLong(4)/1000.0));
         }catch(Exception ex){body.addView(label("تعذر عرض المخزن: "+ex.getMessage(),13));}finally{if(rows!=null)rows.close();}
         body.addView(label("إضافة وارد مخزني",16));
-        EditText supplier=field("المورد المختار",false);supplier.setFocusable(false);final long[] supplierId={0};
+        EditText supplier=cell("المورد المختار",false);supplier.setFocusable(false);final long[] supplierId={0};
+        horizontalFields(supplier);
         body.addView(btn("بحث واختيار المورد",()->PartyDirectory.showSupplierPicker(this,(id,name)->{supplierId[0]=id;supplier.setText(name);} )));
-        EditText n=field("اسم الصنف",false),u=field("وحدة القياس: كجم، لتر، طبق، قطعة",false),q=field("الكمية الواردة",true),unitPrice=field("سعر الوحدة بالجنيه",false),paidCash=field("سداد نقدي",false),paidBank=field("سداد بنكك/بنك",false),bankRef=field("رقم عملية التحويل",false);
+        EditText n=cell("اسم الصنف",false),u=cell("وحدة القياس",false),q=cell("الكمية",true),unitPrice=cell("سعر الوحدة SDG",false),paidCash=cell("سداد نقدي",false),paidBank=cell("سداد بنكك",false),bankRef=cell("رقم العملية",false);
+        horizontalFields(n,u,q,unitPrice,paidCash,paidBank,bankRef);
         body.addView(btn("حفظ فاتورة المورد وتحديث المخزون",()->{String name=n.getText().toString().trim(),unit=u.getText().toString().trim(),ref=bankRef.getText().toString().trim();long qty=num(q),price=money(unitPrice),cashPaid=money(paidCash),bankPaid=money(paidBank);if(supplierId[0]<=0||name.isEmpty()||unit.isEmpty()||qty<=0||price<0||cashPaid<0||bankPaid<0){toast("اختر مورداً مسجلاً وأدخل الصنف والكمية والسعر والسداد");return;}try{long total=java.math.BigDecimal.valueOf(qty).multiply(java.math.BigDecimal.valueOf(price)).divide(java.math.BigDecimal.valueOf(1000),0,java.math.RoundingMode.HALF_UP).longValueExact();if(cashPaid>total||bankPaid>total-cashPaid||(bankPaid>0&&ref.isEmpty()))throw new IllegalArgumentException("راجع السداد ورقم العملية؛ لا يمكن أن يتجاوز المدفوع قيمة الفاتورة.");db.receive(name,unit,qty,total,supplierId[0],supplier.getText().toString(),cashPaid,bankPaid,ref);toast("تم حفظ فاتورة المورد وتحديث المخزون. المديونية المتبقية: "+(total-cashPaid-bankPaid));warehouse();}catch(Exception ex){toast("تعذر تسجيل فاتورة المورد: "+ex.getMessage());}}));
         body.addView(label("سداد مديونية مورد",16));
-        EditText paySupplier=field("المورد المختار للسداد",false);paySupplier.setFocusable(false);final long[] paySupplierId={0};
+        EditText paySupplier=cell("المورد المختار للسداد",false);paySupplier.setFocusable(false);final long[] paySupplierId={0};
+        horizontalFields(paySupplier);
         body.addView(btn("بحث واختيار المورد",()->PartyDirectory.showSupplierPicker(this,(id,name)->{paySupplierId[0]=id;paySupplier.setText(name);} )));
-        EditText supplierCash=field("سداد نقدي",false),supplierBank=field("سداد بنكك/بنك",false),supplierRef=field("رقم عملية التحويل",false);
+        EditText supplierCash=cell("سداد نقدي",false),supplierBank=cell("سداد بنكك",false),supplierRef=cell("رقم العملية",false);
+        horizontalFields(supplierCash,supplierBank,supplierRef);
         body.addView(btn("حفظ سداد المورد",()->{long cash=money(supplierCash),bank=money(supplierBank);String ref=supplierRef.getText().toString().trim();if(paySupplierId[0]<=0||cash<0||bank<0||cash+bank<=0||(bank>0&&ref.isEmpty())){toast("اختر المورد وأدخل مبلغ السداد ورقم العملية للتحويل");return;}try{db.paySupplier(paySupplierId[0],paySupplier.getText().toString(),cash,bank,ref);toast("تم حفظ سداد المورد");warehouse();}catch(Exception ex){toast("تعذر سداد المورد: "+ex.getMessage());}}));
         body.addView(label("أرصدة الموردين المدينة",15));
         Cursor supplierBalances=null;try{supplierBalances=db.getReadableDatabase().rawQuery("SELECT supplier_name||' | المتبقي: '||(SUM(debt)-COALESCE((SELECT SUM(p.cash+p.bank) FROM supplier_payment_records p WHERE p.supplier_master_id=supplier_purchase_records.supplier_master_id),0)) FROM supplier_purchase_records GROUP BY supplier_master_id,supplier_name HAVING SUM(debt)>COALESCE((SELECT SUM(p.cash+p.bank) FROM supplier_payment_records p WHERE p.supplier_master_id=supplier_purchase_records.supplier_master_id),0) ORDER BY supplier_name",null);while(supplierBalances.moveToNext())body.addView(label(supplierBalances.getString(0),13));}finally{if(supplierBalances!=null)supplierBalances.close();}
