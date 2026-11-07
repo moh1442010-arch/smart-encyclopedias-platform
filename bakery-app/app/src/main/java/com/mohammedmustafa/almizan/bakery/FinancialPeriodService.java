@@ -30,7 +30,7 @@ final class FinancialPeriodService {
             ContentValues v=new ContentValues();
             v.put("period_code",code.trim());v.put("start_date",start);v.put("end_date",end);v.put("status","OPEN");
             long id=db.insertOrThrow("financial_periods",null,v);
-            audit(db,"FINANCIAL_PERIOD_OPENED",code.trim(),start+".."+end);
+            audit(db,"SYSTEM","FINANCIAL_PERIOD_OPENED",code.trim(),start+".."+end);
             db.setTransactionSuccessful();
             return id;
         } finally {db.endTransaction();}
@@ -62,13 +62,13 @@ final class FinancialPeriodService {
             finally {drafts.close();}
             ContentValues v=new ContentValues();v.put("status","CLOSED");v.put("closed_at",System.currentTimeMillis());
             db.update("financial_periods",v,"id=?",new String[]{String.valueOf(id)});
-            audit(db,"FINANCIAL_PERIOD_CLOSED",code.trim(),actor==null?"SYSTEM":actor);
+            audit(db,actor==null?"SYSTEM":actor,"FINANCIAL_PERIOD_CLOSED",code.trim(),"Closed by authorized actor");
             db.setTransactionSuccessful();
         } finally {db.endTransaction();}
     }
 
-    private static void audit(SQLiteDatabase db,String action,String ref,String detail) {
-        ContentValues v=new ContentValues();v.put("actor","SYSTEM");v.put("action",action);
+    private static void audit(SQLiteDatabase db,String actor,String action,String ref,String detail) {
+        ContentValues v=new ContentValues();v.put("actor",actor);v.put("action",action);
         v.put("entity_type","FINANCIAL_PERIOD");v.put("entity_ref",ref);v.put("details",detail);
         v.put("created_at",System.currentTimeMillis());db.insertOrThrow("enterprise_audit_log",null,v);
     }
