@@ -88,7 +88,7 @@ public class PartyDirectoryActivity extends Activity {
     }
     private void exchangeRatesSection(){
         heading("أسعار الصرف المؤرخة");
-        body.addView(note("أدخل السعر كنسبة دقيقة: وحدة واحدة من العملة الأولى تساوي البسط ÷ المقام من العملة الثانية. مثال توضيحي فقط: 1 USD = 2800/1 SDG. لا تُستخدم الأسعار في الفواتير حتى ربط كل مسار محاسبي بخدمة التحويل."));
+        body.addView(note("أدخل السعر كنسبة دقيقة: وحدة واحدة من العملة الأولى تساوي البسط ÷ المقام من العملة الثانية. مثال توضيحي فقط: 1 SAR = 750/1 SDG. لا تُستخدم الأسعار في الفواتير حتى ربط كل مسار محاسبي بخدمة التحويل."));
         Spinner base=currencySpinner(),quote=currencySpinner();
         EditText numerator=cell("بسط سعر الصرف"),denominator=cell("مقام سعر الصرف"),effective=cell("تاريخ السريان YYYY-MM-DD"),source=cell("مصدر السعر");
         effective.setText(today());denominator.setText("1");
@@ -109,7 +109,7 @@ public class PartyDirectoryActivity extends Activity {
     private Button button(String s){Button b=new Button(this);b.setText(s);b.setAllCaps(false);b.setTextColor(NAVY);b.setBackgroundColor(GOLD);return b;}
     private EditText cell(String hint){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setMinWidth(dp(160));e.setTextSize(14);return e;}
     private void addHorizontal(View... views){HorizontalScrollView h=new HorizontalScrollView(this);h.setHorizontalScrollBarEnabled(true);LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);for(View v:views){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dp(170),dp(56));lp.setMargins(2,2,2,2);row.addView(v,lp);}h.addView(row);body.addView(h,new LinearLayout.LayoutParams(-1,-2));}
-    private Spinner currencySpinner(){Spinner s=new Spinner(this);String[] codes={"SDG","USD","EUR","SAR","AED"};ArrayAdapter<String>a=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,codes);a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);s.setMinimumWidth(dp(130));return s;}
+    private Spinner currencySpinner(){Spinner s=new Spinner(this);ArrayList<String> codes=new ArrayList<>();Cursor cur=db.rawQuery("SELECT code FROM currencies WHERE active=1 ORDER BY CASE code WHEN 'SDG' THEN 0 ELSE 1 END,name_ar",null);try{while(cur.moveToNext())codes.add(cur.getString(0));}finally{cur.close();}ArrayAdapter<String>a=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,codes);a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);s.setMinimumWidth(dp(130));return s;}
     private void list(String sql){Cursor c=null;try{c=db.rawQuery(sql,null);while(c.moveToNext())body.addView(note("• "+c.getString(0)));}catch(Exception e){body.addView(note("تعذر عرض القائمة: "+e.getMessage()));}finally{if(c!=null)c.close();}}
     private long amount(EditText e,String currency){String s=e.getText().toString().trim();if(s.isEmpty())return 0;int units=0;Cursor c=null;try{c=db.rawQuery("SELECT minor_units FROM currencies WHERE code=?",new String[]{currency});if(c.moveToFirst())units=c.getInt(0);}finally{if(c!=null)c.close();}return new java.math.BigDecimal(s).movePointRight(units).setScale(0,java.math.RoundingMode.UNNECESSARY).longValueExact();}
     private long amount(EditText e){String s=e.getText().toString().trim();if(s.isEmpty())return 0;return new java.math.BigDecimal(s).setScale(0,java.math.RoundingMode.UNNECESSARY).longValueExact();}
