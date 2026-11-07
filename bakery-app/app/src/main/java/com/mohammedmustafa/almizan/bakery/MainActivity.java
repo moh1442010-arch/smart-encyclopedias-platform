@@ -480,6 +480,7 @@ public class MainActivity extends Activity {
         Button choose = button("اختيار التاريخ"); choose.setOnClickListener(v -> chooseDate()); dateRow.addView(choose); content.addView(dateRow);
         statusLabel = text("",14); content.addView(statusLabel);
         addDashboardSummary();
+        addCard("👥 العملاء والموردون والحسابات البنكية","سجل مركزي للبحث والاختيار، وبيانات IBAN والعملات.",()->startActivity(new Intent(MainActivity.this, PartyDirectoryActivity.class)));
         addCard("🏭 مصنع الخبائز والحلويات والباسطة","نظام مستقل للمخزون والوصفات والإنتاج والتوزيع والمبيعات والتكاليف والحسابات.",()->startActivity(new Intent(MainActivity.this, FactoryActivity.class)));
         addCard("📦 1. المخزن","أرصدة الدقيق والخميرة والأكياس والزيت والملح والوقود والمعدات. يظهر رصيد اليوم السابق تلقائيًا.",()->openModule("stock"));
         addCard("🥖 2. شغل اليوم والإنتاج","عدد جوالات الدقيق المستخدمة، عدد الأرغفة لكل جوال، وقيمة الإنتاج بالجنيه. يُخصم الدقيق تلقائيًا من المخزن.",()->openModule("cuts"));
@@ -923,7 +924,7 @@ public class MainActivity extends Activity {
         LinearLayout box=new LinearLayout(this);box.setOrientation(1);box.setPadding(8,8,8,12);sc.addView(box);
         addHomeNavigation(box);
         box.addView(text("كل عميل في صف مستقل. أدخل النقدي وبنكك ورقم العملية والديون وفرق السعر. العملاء الثابتون محفوظون للاستخدام المتكرر.",14));
-        Button manage=button("إدارة العملاء الثابتين");manage.setOnClickListener(v->manageRegularCustomers());box.addView(manage);
+        Button manage=button("إدارة العملاء الأساسيين");manage.setOnClickListener(v->startActivity(new Intent(MainActivity.this,PartyDirectoryActivity.class)));box.addView(manage);
         LinearLayout table=new LinearLayout(this);table.setOrientation(1);java.util.List<EditText[]> rows=new java.util.ArrayList<>();
         LinearLayout head=new LinearLayout(this);head.setOrientation(0);head.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
         for(String title:new String[]{"العميل","العيش","نقدي","بنكك","رقم العملية","ديون","فرق السعر"}){TextView h=ruledHeading(title);head.addView(h,new LinearLayout.LayoutParams(0,-2,1f));}table.addView(head);
@@ -954,8 +955,7 @@ public class MainActivity extends Activity {
     }
     private JSONObject regularCustomers(){return store.getLatest(day,"customers");}
     private void chooseRegularCustomer(EditText target){
-        java.util.ArrayList<String> names=new java.util.ArrayList<>();for(String line:normalizeRows(regularCustomers().optString("rows","")).split("\\r?\\n")){String[] p=line.split("\\|",-1);if(p.length>0&&!p[0].trim().isEmpty())names.add(p[0].trim());}
-        if(names.isEmpty()){toast("أضف العملاء الثابتين أولًا");return;}String[] opts=names.toArray(new String[0]);new AlertDialog.Builder(this).setTitle("اختر العميل").setItems(opts,(d,w)->target.setText(opts[w])).setNegativeButton("إلغاء",null).show();
+        PartyDirectory.showCustomerPicker(this,(id,name)->target.setText(name));
     }
     private void mergeRegularCustomers(String names){
         try{java.util.LinkedHashMap<String,String> all=new java.util.LinkedHashMap<>();for(String line:normalizeRows(regularCustomers().optString("rows","")).split("\\r?\\n")){String[] p=line.split("\\|",-1);if(p.length>0&&!p[0].trim().isEmpty())all.put(p[0].trim(),p.length>1?p[1].trim():"عميل");}
@@ -1876,7 +1876,7 @@ public class MainActivity extends Activity {
     private void toast(String s) { Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
 
     private class Store extends SQLiteOpenHelper {
-        Store(){super(MainActivity.this,"almizan_bakery_250.db",SecureDatabase.passphrase(MainActivity.this,"almizan_bakery_250.db"),null,5,0,null,null,false);}
+        Store(){super(MainActivity.this,"almizan_bakery_250.db",SecureDatabase.passphrase(MainActivity.this,"almizan_bakery_250.db"),null,6,0,null,null,false);}
         @Override public void onConfigure(SQLiteDatabase db) {
             super.onConfigure(db);
             db.execSQL("PRAGMA foreign_keys=ON");
@@ -1885,6 +1885,7 @@ public class MainActivity extends Activity {
             db.execSQL("CREATE TABLE records (day TEXT NOT NULL, module TEXT NOT NULL, payload TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(day,module))");
             db.execSQL("CREATE TABLE inventory_usage (day TEXT PRIMARY KEY NOT NULL, flour_bags INTEGER NOT NULL DEFAULT 0, material_usage TEXT NOT NULL DEFAULT '{}')");
             EnterpriseSchema.ensure(db);
+            PartyDirectory.migrateLegacyCustomers(db);
         }
         @Override public void onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion) {
             // Schema v3 keeps the existing records table intact and ensures the stock-usage ledger exists.
@@ -1896,6 +1897,7 @@ public class MainActivity extends Activity {
                 try { db.execSQL("ALTER TABLE inventory_usage ADD COLUMN material_usage TEXT NOT NULL DEFAULT '{}'"); } catch (Exception ignored) { }
             }
             EnterpriseSchema.ensure(db);
+            PartyDirectory.migrateLegacyCustomers(db);
         }
         JSONObject get(String date,String module) {
             SQLiteDatabase db=getReadableDatabase(); Cursor c=db.rawQuery("SELECT payload FROM records WHERE day=? AND module=?",new String[]{date,module});
