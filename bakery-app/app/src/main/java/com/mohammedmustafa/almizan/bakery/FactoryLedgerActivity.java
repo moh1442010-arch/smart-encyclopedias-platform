@@ -30,7 +30,7 @@ public class FactoryLedgerActivity extends Activity {
     }
     private void frame(String title){
         LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(12,10,12,12);root.setBackgroundColor(Color.rgb(246,248,251));
-        TextView h=label("دفتر المصنع — "+title,20);h.setTextColor(Color.rgb(11,31,58));root.addView(h);
+        TextView h=label(getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","المخبز")+"\\nدفتر المصنع — "+title,20);h.setTextColor(Color.rgb(11,31,58));root.addView(h);
         root.addView(button("العودة إلى مصنع الخبائز والحلويات",()->finish()));
         root.addView(button("⌂ الرئيسية",()->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();}));
         ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);
