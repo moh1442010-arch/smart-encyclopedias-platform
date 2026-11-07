@@ -1089,7 +1089,7 @@ public class MainActivity extends Activity {
         EditText notes=ruledCell(saved.optString("notes",""),"ملاحظات شغل اليوم (اختياري)",false);
         box.addView(text("ملاحظات شغل اليوم",14)); box.addView(notes);
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle("🥖 شغل اليوم والقطعيات — "+day).setView(scroll)
-            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ شغل اليوم",null).create();
+            .setNegativeButton("إلغاء",null).setNeutralButton("🖨️ طباعة البيانات",null).setPositiveButton("حفظ شغل اليوم",null).create();
         dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
             try {
                 long units=parseLong(work.getText().toString());
@@ -1128,6 +1128,13 @@ public class MainActivity extends Activity {
                     toast("حُفظت بيانات الإنتاج والسعر كمسودة، لكن لم يُرحّل المخزون أو التكلفة: "+inventoryError.getMessage()+"؛ راجع رصيد الصنف ووحدته ثم أعد الحفظ.");
                 }
             } catch(Exception ex) { toast("تعذر حفظ بيانات شغل اليوم: "+ex.getMessage()); }
+        }));
+        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v->{
+            StringBuilder report=new StringBuilder("التاريخ: ").append(day).append("\\nاسم المنشأة: ").append(businessName()).append("\\n");
+            report.append("عدد جوالات الدقيق: ").append(work.getText()).append("\\nعدد الأرغفة لكل 1,000 جنيه: ").append(perThousand.getText()).append("\\n");
+            for(int i=0;i<loafCells.size();i++)report.append("القطعية ").append(i+1).append(": ").append(loafCells.get(i).getText()).append(" رغيف\\n");
+            report.append("ملاحظات: ").append(notes.getText());
+            printText("شغل اليوم - "+day,report.toString());
         }));
         dialog.show();
     }
