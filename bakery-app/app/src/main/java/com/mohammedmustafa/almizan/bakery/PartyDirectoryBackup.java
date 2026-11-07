@@ -10,7 +10,7 @@ import java.util.Arrays;
 /** Portable snapshot for offline party master records and company receiving accounts. */
 final class PartyDirectoryBackup {
     static final String TYPE="almizan_party_directory_backup";
-    private static final String[] TABLES={"customers","suppliers","company_bank_accounts","party_payments","party_opening_payments","supplier_quick_invoices","purchase_invoices","purchase_lines","supplier_payments"};
+    private static final String[] TABLES={"customers","suppliers","company_bank_accounts","party_payments","party_opening_payments","supplier_quick_invoices","purchase_invoices","purchase_lines","supplier_payments","exchange_rates"};
     private static final String[][] COLUMNS={
         {"id","customer_code","name","phone","address","opening_balance_minor","currency_code","credit_limit_minor","active","notes","created_at"},
         {"id","supplier_code","name","phone","address","opening_balance_minor","currency_code","active","notes","created_at","default_item","default_unit"},
@@ -20,7 +20,8 @@ final class PartyDirectoryBackup {
         {"id","supplier_id","item_name","quantity_milli","invoice_total_minor","paid_cash_minor","paid_bank_minor","bank_reference","debt_minor","currency_code","invoice_date","created_at"},
         {"id","invoice_no","supplier_id","branch_id","invoice_date","due_date","currency_code","fx_rate_num","fx_rate_den","subtotal_minor","tax_minor","total_minor","paid_minor","status","notes","created_at"},
         {"id","invoice_id","item_name","unit","quantity_milli","unit_cost_minor","line_total_minor","inventory_item_id","created_at"},
-        {"id","supplier_id","invoice_id","payment_date","amount_minor","currency_code","method","reference","branch_id","journal_ref","created_at"}
+        {"id","supplier_id","invoice_id","payment_date","amount_minor","currency_code","method","reference","branch_id","journal_ref","created_at"},
+        {"id","base_code","quote_code","rate_num","rate_den","effective_at","source","created_at"}
     };
     private PartyDirectoryBackup(){}
 
