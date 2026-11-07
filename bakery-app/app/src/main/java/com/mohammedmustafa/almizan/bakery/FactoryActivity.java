@@ -17,6 +17,22 @@ public class FactoryActivity extends Activity {
     private static final String[][] DEFAULT_MATERIALS={{"دقيق","كجم"},{"سكر","كجم"},{"زيت","لتر"},{"خميرة","كجم"},{"سمن","كجم"},{"بيض","طبق"},{"لبن","لتر"},{"مواد تغليف","قطعة"},{"غاز","أسطوانة"},{"وقود","لتر"}};
     private static final String[][] DEFAULT_PRODUCTS={{"باسطة","باسطة"},{"فطائر","فطائر"},{"خبائز","خبائز"},{"حلويات","حلويات"},{"بلح شام","بلح شام"}};
     private String today(){return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());}
+    private String businessName(){String n=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","");return n==null||n.trim().isEmpty()?"المخبز":n.trim();}
+    private void printFactoryDaily(){
+        StringBuilder out=new StringBuilder("التاريخ: ").append(today()).append("\\n");
+        Cursor c=null;
+        try{
+            out.append("المواد الخام\\n");
+            c=db.getReadableDatabase().rawQuery("SELECT name,qty,unit,value FROM materials ORDER BY name",null);
+            while(c.moveToNext())out.append(c.getString(0)).append(" | ").append(c.getLong(1)/1000.0).append(" ").append(c.getString(2)).append(" | القيمة ").append(c.getLong(3)).append("\\n");
+            c.close();c=null;
+            out.append("\\nالمنتجات الجاهزة\\n");
+            c=db.getReadableDatabase().rawQuery("SELECT p.name,f.qty,f.value FROM finished f JOIN products p ON p.id=f.product_id ORDER BY p.name",null);
+            while(c.moveToNext())out.append(c.getString(0)).append(" | الكمية ").append(c.getLong(1)/1000.0).append(" | القيمة ").append(c.getLong(2)).append("\\n");
+            PrinterService.print(this,businessName(),"تقرير المصنع اليومي",out.toString());
+        }catch(Exception e){toast("تعذر تجهيز التقرير للطباعة: "+e.getMessage());}
+        finally{if(c!=null)c.close();}
+    }
     @Override public void onCreate(Bundle b){super.onCreate(b); db=new DB(this); db.seedMaterials(DEFAULT_MATERIALS); db.seedProducts(DEFAULT_PRODUCTS); home();}
     @Override public void onBackPressed(){if("home".equals(screen))super.onBackPressed();else home();}
     private TextView label(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(Color.rgb(30,40,50));t.setPadding(4,10,4,10);return t;}
@@ -31,7 +47,8 @@ public class FactoryActivity extends Activity {
     }
     private void home(){
         frame("الرئيسية");
-        body.addView(label("نظام مستقل عن دفاتر المخبز. كل المخزون والحركات والتكاليف هنا محفوظة في قاعدة بيانات منفصلة.",15));
+        body.addView(label("المنشأة: "+businessName()+"\\nنظام مستقل عن دفاتر المخبز. كل المخزون والحركات والتكاليف هنا محفوظة في قاعدة بيانات منفصلة.",15));
+        body.addView(btn("🖨️ إعداد الطابعة / طباعة تقرير المصنع",()->{new AlertDialog.Builder(this).setTitle("الطباعة").setMessage("ستظهر طابعات Android المتاحة. يمكن استخدام طابعة Bluetooth أو Wi-Fi أو USB إذا كان نظام الجهاز يوفر خدمتها.").setNegativeButton("إغلاق",null).setPositiveButton("طباعة تقرير المصنع",(d,w)->printFactoryDaily()).show();}));
         body.addView(btn("سجل العملاء والموردين وحسابات IBAN",()->startActivity(new Intent(this,PartyDirectoryActivity.class))));
         body.addView(btn("1. مخزن المواد الخام ومستلزمات المصنع",()->warehouse()));
         body.addView(btn("2. الإنتاج: اسم المنتج والكمية وسعر الوحدة",()->products()));
