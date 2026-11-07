@@ -92,7 +92,9 @@ public final class LicenseAccessGate {
             String max=fields.get("max_version");
             if(!"any".equals(max)&&!("lifetime".equals(plan)&&compatibleLifetimeVersion(max)))return false;
             long expires=Long.parseLong(fields.get("expires"));
-            if(expires==0L)return true;
+            // Only the explicitly approved lifetime plan may carry a non-expiring token.
+            if("lifetime".equals(plan)) return expires==0L;
+            if(expires<=0L) return false;
             long now=System.currentTimeMillis()/1000L;
             long seen=prefs(c).getLong("license_last_seen",0L);
             if(seen>0L&&now<seen-300L)return false;
