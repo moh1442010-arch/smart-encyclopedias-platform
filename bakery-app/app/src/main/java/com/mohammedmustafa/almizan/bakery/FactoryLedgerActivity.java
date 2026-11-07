@@ -1,6 +1,7 @@
 package com.mohammedmustafa.almizan.bakery;
 
-import android.app.Activity;\nimport android.content.Intent;
+import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.content.ContentValues;
 import android.database.Cursor;
