@@ -126,4 +126,29 @@ public class EnterpriseSchemaMigrationTest {
             db.close();context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
         }
     }
+    @Test public void permissionMatrixIsBranchScopedAndLeastPrivilege() throws Exception {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="permission_matrix_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase db=SecureDatabase.open(context,name);
+        try {
+            EnterpriseSchema.ensure(db);
+            db.execSQL("INSERT INTO users(username,display_name,pin_salt,pin_hash,active,created_at) VALUES('owner_test','Owner',X'01',X'02',1,1)");
+            db.execSQL("INSERT INTO users(username,display_name,pin_salt,pin_hash,active,created_at) VALUES('auditor_test','Auditor',X'01',X'02',1,1)");
+            db.execSQL("INSERT INTO user_roles(user_id,role_id,branch_id) SELECT u.id,r.id,b.id FROM users u,roles r,branches b WHERE u.username='owner_test' AND r.role_code='OWNER' AND b.branch_code='MAIN'");
+            db.execSQL("INSERT INTO user_roles(user_id,role_id,branch_id) SELECT u.id,r.id,b.id FROM users u,roles r,branches b WHERE u.username='auditor_test' AND r.role_code='AUDITOR' AND b.branch_code='MAIN'");
+            assertTrue("Owner must be allowed to post journals",PermissionService.hasPermission(db,"owner_test","MAIN","JOURNAL_POST"));
+            assertTrue("Owner must manage users",PermissionService.hasPermission(db,"owner_test","MAIN","USERS_MANAGE"));
+            assertTrue("Auditor must read payroll",PermissionService.hasPermission(db,"auditor_test","MAIN","PAYROLL_READ"));
+            assertFalse("Auditor must not post journals",PermissionService.hasPermission(db,"auditor_test","MAIN","JOURNAL_POST"));
+            assertFalse("Auditor must not restore backups",PermissionService.hasPermission(db,"auditor_test","MAIN","BACKUP_RESTORE"));
+            assertFalse("Role must not grant access to another branch",PermissionService.hasPermission(db,"owner_test","UNKNOWN","JOURNAL_POST"));
+            boolean denied=false;
+            try { PermissionService.requirePermission(db,"auditor_test","MAIN","JOURNAL_POST"); }
+            catch(SecurityException expected) { denied=true; }
+            assertTrue("Service layer must throw on unauthorized writes",denied);
+        } finally {
+            db.close();context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
+        }
+    }
+
 }
