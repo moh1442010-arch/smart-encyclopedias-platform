@@ -21,20 +21,32 @@ public final class LicenseAccessGate {
     };
     private static SharedPreferences prefs(Context c) {
         // Activity.getPreferences() in MainActivity resolves to MainActivity_preferences.
-        // Migrate the earlier gate-only store once, without overwriting existing customer data.
+        // Merge both historical stores conservatively: earliest trial start and latest seen time win.
         SharedPreferences canonical = c.getSharedPreferences("MainActivity_preferences", Context.MODE_PRIVATE);
         SharedPreferences legacy = c.getSharedPreferences("MainActivity", Context.MODE_PRIVATE);
-        String[] keys = {"license_token","license_device_id","license_last_seen","trial_start","trial_last_seen","trial_clock_rollback_detected"};
         SharedPreferences.Editor edit = canonical.edit();
         boolean changed = false;
-        for (String key : keys) {
-            if (canonical.contains(key) || !legacy.contains(key)) continue;
-            Object value = legacy.getAll().get(key);
-            if (value instanceof String) edit.putString(key, (String)value);
-            else if (value instanceof Long) edit.putLong(key, (Long)value);
-            else if (value instanceof Integer) edit.putInt(key, (Integer)value);
-            else if (value instanceof Boolean) edit.putBoolean(key, (Boolean)value);
-            else continue;
+        for (String key : new String[]{"license_token","license_device_id"}) {
+            if (!canonical.contains(key) && legacy.contains(key)) {
+                edit.putString(key, legacy.getString(key, null));
+                changed = true;
+            }
+        }
+        long currentStart = canonical.getLong("trial_start", 0L);
+        long oldStart = legacy.getLong("trial_start", 0L);
+        if (oldStart > 0L && (currentStart <= 0L || oldStart < currentStart)) {
+            edit.putLong("trial_start", oldStart);
+            changed = true;
+        }
+        long currentSeen = canonical.getLong("trial_last_seen", 0L);
+        long oldSeen = legacy.getLong("trial_last_seen", 0L);
+        if (oldSeen > currentSeen) { edit.putLong("trial_last_seen", oldSeen); changed = true; }
+        long currentLicenseSeen = canonical.getLong("license_last_seen", 0L);
+        long oldLicenseSeen = legacy.getLong("license_last_seen", 0L);
+        if (oldLicenseSeen > currentLicenseSeen) { edit.putLong("license_last_seen", oldLicenseSeen); changed = true; }
+        if (legacy.getBoolean("trial_clock_rollback_detected", false) &&
+            !canonical.getBoolean("trial_clock_rollback_detected", false)) {
+            edit.putBoolean("trial_clock_rollback_detected", true);
             changed = true;
         }
         if (changed && !edit.commit()) throw new IllegalStateException("تعذر ترحيل إعدادات الترخيص القديمة بأمان");
