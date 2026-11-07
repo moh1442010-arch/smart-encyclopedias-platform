@@ -79,7 +79,9 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
-        if (store != null && pinAuthenticated && !hasActiveLicense() && trialExpired() && !currentScreenTitle.contains("اشتراك المحاسب الميزان")) {
+        // Re-check the same canonical entitlement store whenever the app returns to foreground.
+        if (pinAuthenticated && !LicenseAccessGate.isAccessAllowed(this) &&
+            !currentScreenTitle.startsWith("🔐 اشتراك المحاسب الميزان")) {
             showPaywall();
         }
     }
@@ -108,7 +110,7 @@ public class MainActivity extends Activity {
     private void continueAfterPinAccepted() {
         pinAuthenticated = true;
         try {
-            if (!hasActiveLicense() && trialExpired()) { showPaywall(); return; }
+            if (!LicenseAccessGate.isAccessAllowed(this)) { showPaywall(); return; }
             buildHome();
         } catch (RuntimeException ex) {
             android.util.Log.e("AlMizanBakery", "Failed to open home after login", ex);
@@ -389,21 +391,8 @@ public class MainActivity extends Activity {
     }
 
     private boolean trialExpired() {
-        android.content.SharedPreferences prefs = getPreferences(0);
-        long now = System.currentTimeMillis();
-        long start = prefs.getLong("trial_start", 0L);
-        long lastSeen = prefs.getLong("trial_last_seen", 0L);
-        if (start <= 0L) {
-            prefs.edit().putLong("trial_start", now).putLong("trial_last_seen", now).apply();
-            return false;
-        }
-        // Prevent a backwards device-clock change from silently extending the offline trial.
-        if (lastSeen > 0L && now < lastSeen - 300000L) {
-            prefs.edit().putBoolean("trial_clock_rollback_detected", true).apply();
-        }
-        if (prefs.getBoolean("trial_clock_rollback_detected", false)) return true;
-        prefs.edit().putLong("trial_last_seen", Math.max(lastSeen, now)).apply();
-        return now - start >= 7L * 24L * 60L * 60L * 1000L;
+        // One entitlement implementation is shared by the bakery and factory entry points.
+        return !LicenseAccessGate.isAccessAllowed(this) && !hasActiveLicense();
     }
 
     private GradientDrawable rounded(int color, float radiusDp) {
@@ -479,7 +468,7 @@ public class MainActivity extends Activity {
     private void buildHome() {
         // Central authorization gate: every existing "الرئيسية" callback routes here.
         // Do not rely on hiding one button; deny ledger entry from every navigation path.
-        if (!hasActiveLicense() && trialExpired()) {
+        if (!LicenseAccessGate.isAccessAllowed(this)) {
             showPaywall();
             return;
         }
@@ -1742,12 +1731,16 @@ public class MainActivity extends Activity {
         copy.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("Bankak",BANKAK));toast("تم نسخ رقم بنكك");});
         content.addView(copy);
         content.addView(text("سجّل طلب الترخيص في البوابة وأدخل مرجع التحويل. أرسل إشعار واتساب للمالك. لن يصدر الترخيص إلا بعد تأكيد وصول المبلغ إلى حساب بنكك وموافقة المالك. لا ترسل الرقم السري أو رمز التحقق البنكي.",14));
-        Button logoRequest=button("🌾 إرسال شعار المخبز لتخصيص الفواتير عبر واتساب");
-        logoRequest.setOnClickListener(v->chooseCompanyLogo());
-        content.addView(logoRequest);
-        Button backup=button("🗂️ تصدير / استعادة بياناتك");
-        backup.setOnClickListener(v->backupRestoreMenu());
-        content.addView(backup);
+        // After trial expiry, expose only subscription selection and activation.
+        // Backup, logo setup and every route into operational screens stay unavailable.
+        if (!expired || licensed) {
+            Button logoRequest=button("🌾 إرسال شعار المخبز لتخصيص الفواتير عبر واتساب");
+            logoRequest.setOnClickListener(v->chooseCompanyLogo());
+            content.addView(logoRequest);
+            Button backup=button("🗂️ تصدير / استعادة بياناتك");
+            backup.setOnClickListener(v->backupRestoreMenu());
+            content.addView(backup);
+        }
         if (!trialExpired() || hasActiveLicense()) { Button back=button("العودة إلى التطبيق"); back.setOnClickListener(v->buildHome()); content.addView(back); }
     }
 
