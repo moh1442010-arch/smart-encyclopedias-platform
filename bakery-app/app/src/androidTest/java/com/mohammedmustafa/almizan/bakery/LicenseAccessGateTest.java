@@ -71,4 +71,14 @@ public class LicenseAccessGateTest {
         assertFalse("Migration must not grant a fresh trial",LicenseAccessGate.isAccessAllowed(context));
         assertEquals(started,canonical.getLong("trial_start",0L));
     }
+
+    @Test public void choosesEarliestTrialStartAcrossHistoricalStores() {
+        long now=System.currentTimeMillis();
+        long earlier=now-9L*24L*60L*60L*1000L;
+        long later=now-2L*24L*60L*60L*1000L;
+        canonical.edit().putLong("trial_start",later).putLong("trial_last_seen",now).commit();
+        legacy.edit().putLong("trial_start",earlier).putLong("trial_last_seen",now).commit();
+        assertFalse("The older trial start must win to prevent an extension",LicenseAccessGate.isAccessAllowed(context));
+        assertEquals(earlier,canonical.getLong("trial_start",0L));
+    }
 }
