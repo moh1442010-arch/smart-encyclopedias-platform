@@ -144,6 +144,10 @@ jobs:
           grep -Fq 'if (!expired || licensed)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq 'expiredSevenDayTrialDeniesApplicationAccess' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGateTest.java
           grep -Fq 'migratesExpiredLegacyGateStateWithoutRestartingTrial' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGateTest.java
+          grep -Fq 'AES/GCM/NoPadding' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/PortableBackupCrypto.java
+          grep -Fq 'PortableBackupCrypto.encrypt(plain,password)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'PortableBackupCrypto.decrypt(bytes,password)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'rejectsTamperedCiphertext' bakery-app/app/src/test/java/com/mohammedmustafa/almizan/bakery/PortableBackupCryptoTest.java
           grep -Fq 'isCompatibleLifetimeVersion(maxVersion)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq 'compatibleLifetimeVersion(max)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java
           grep -Fq '27. التجربة المجانية والاشتراك' bakery-app/app/src/main/assets/bakery-guide.html
@@ -268,7 +272,7 @@ jobs:
             - يحتوي على حسابات المخبز اليومية ووحدة المصنع ودفاتر المواد والإنتاج والمبيعات والمردودات والتشغيل تحت التنفيذ والقيود وسجل التدقيق.
             - الأسعار المعتمدة: الشهري 55,000 جنيه سوداني؛ السنوي 550,000 جنيه سوداني؛ الدائم 1,050,000 جنيه سوداني.
             - الاشتراكات الشهرية والسنوية محددة المدة. الترخيص الدائم لا يصدر إلا بعد مراجعة الدفع وموافقة الإدارة.
-            - احتفظ بنسخة احتياطية دورية. ملف النسخة الاحتياطية الحالي غير مشفر؛ احفظه في مكان آمن.
+            - احتفظ بنسخة احتياطية دورية. تُشفّر النسخ الاحتياطية المحمولة بكلمة مرور باستخدام AES-256-GCM؛ احفظ كلمة المرور خارج الهاتف.
             - تم اختبار الإصدار من مالك المنتج على جهاز فعلي. لا يعني ذلك ضمان التوافق مع كل طراز هاتف؛ راجع متطلبات Android قبل التثبيت.
           files: |
             bakery-app/release/AlMizan-Bakery-2.8.1-review.apk
