@@ -64,6 +64,12 @@ final class PartyDirectory {
         } finally {c.close();}
     }
 
+    static long findCustomerIdByName(SQLiteDatabase db,String name) {
+        if(name==null||name.trim().isEmpty())return 0;
+        Cursor c=db.rawQuery("SELECT id FROM customers WHERE name=? COLLATE NOCASE ORDER BY id LIMIT 1",new String[]{name.trim()});
+        try{return c.moveToFirst()?c.getLong(0):0;}finally{c.close();}
+    }
+
     static long ensureCustomerName(SQLiteDatabase db,String name) {
         if(name==null||name.trim().isEmpty())throw new IllegalArgumentException("اسم العميل مطلوب.");
         Cursor c=db.rawQuery("SELECT id FROM customers WHERE name=? COLLATE NOCASE ORDER BY id LIMIT 1",new String[]{name.trim()});
