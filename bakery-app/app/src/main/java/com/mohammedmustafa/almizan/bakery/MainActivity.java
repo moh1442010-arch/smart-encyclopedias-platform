@@ -3,6 +3,17 @@ package com.mohammedmustafa.almizan.bakery;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
+import android.print.PrintManager;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintDocumentInfo;
+import android.print.PageRange;
+import android.print.PrintAttributes;
+import android.os.CancellationSignal;
+import android.os.ParcelFileDescriptor;
+import android.graphics.pdf.PdfDocument;
+import android.graphics.Paint;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
@@ -127,8 +138,9 @@ public class MainActivity extends Activity {
         LinearLayout box = new LinearLayout(this);
         box.setPadding(24, 12, 24, 4);
         box.setOrientation(LinearLayout.VERTICAL);
-        TextView instructions = text("ابدأ إعداد مشروعك. اختر عملة الدفاتر الأساسية؛ يمكنك تسجيل معاملات بعملات أخرى لاحقاً مع سعر صرف موثق. ثم أنشئ كلمة مرور رقمية لا تقل عن 6 أرقام.", 15);
+        TextView instructions = text("ابدأ إعداد منشأتك. أدخل اسم المخبز أو المصنع كما سيظهر في الشاشات والفواتير والتقارير، ثم اختر عملة الدفاتر الأساسية وأنشئ كلمة المرور.", 15);
         box.addView(instructions);
+        EditText businessName=new EditText(this);businessName.setSingleLine(true);businessName.setHint("اسم المخبز أو المصنع");businessName.setTextSize(17);box.addView(businessName);
         box.addView(text("عملة المشروع الأساسية",15));
         ArrayList<String> currencyCodes=new ArrayList<>(),currencyLabels=new ArrayList<>();
         Cursor currencyCursor=store.getReadableDatabase().rawQuery("SELECT code,name_ar FROM currencies WHERE active=1 ORDER BY CASE code WHEN 'SDG' THEN 0 ELSE 1 END,name_ar",null);
@@ -148,12 +160,14 @@ public class MainActivity extends Activity {
         confirm.setSingleLine(true);
         confirm.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
         box.addView(confirm);
-        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("🔐 إعداد كلمة مرور المخبز")
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("🏭 إعداد المنشأة وكلمة المرور")
             .setView(box).setCancelable(false)
             .setPositiveButton("حفظ كلمة المرور", null).create();
         dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             String p1 = normalizePin(pin.getText().toString());
             String p2 = normalizePin(confirm.getText().toString());
+            String enteredBusinessName=businessName.getText().toString().trim();
+            if(enteredBusinessName.length()<2){businessName.setError("أدخل اسم المخبز أو المصنع");return;}
             if (p1.length() < 6 || !p1.matches("[0-9]+")) {
                 pin.setError("أدخل 6 أرقام على الأقل");
                 return;
@@ -170,6 +184,7 @@ public class MainActivity extends Activity {
                 String selectedCurrency=currencyCodes.get(projectCurrency.getSelectedItemPosition());
                 ContentValues projectSettings=new ContentValues();projectSettings.put("base_currency",selectedCurrency);
                 store.getWritableDatabase().update("company_settings",projectSettings,"id=1",null);
+                getSharedPreferences("bakery_profile",MODE_PRIVATE).edit().putString("business_name",enteredBusinessName).apply();
                 getPreferences(MODE_PRIVATE).edit()
                     .putString("pin_salt", Base64.encodeToString(salt, Base64.NO_WRAP))
                     .putString("pin_hash", Base64.encodeToString(hash, Base64.NO_WRAP))
@@ -193,7 +208,8 @@ public class MainActivity extends Activity {
         LinearLayout box = new LinearLayout(this);
         box.setPadding(24, 8, 24, 4);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.addView(text("افتح دفاتر المخبز بكلمة المرور التي أنشأتها عند أول تشغيل.", 15));
+        box.addView(text("المنشأة: "+businessName(),17));
+        box.addView(text("افتح الدفاتر بكلمة المرور التي أنشأتها عند أول تشغيل.", 15));
         box.addView(pin);
         AlertDialog dialog = new AlertDialog.Builder(this).setTitle("🔐 تسجيل الدخول")
             .setView(box).setCancelable(false)
@@ -444,7 +460,7 @@ public class MainActivity extends Activity {
         name.setTextColor(Color.WHITE);
         name.setTypeface(null,1);
         TextView subtitle = new TextView(this);
-        subtitle.setText("إدارة المخبز • المخزون • التشغيل • الربحية");
+        subtitle.setText(businessName()+"  •  إدارة المخبز والمخزون والتشغيل");
         subtitle.setTextSize(12);
         subtitle.setTextColor(Color.rgb(236,226,190));
         titles.addView(name);
@@ -471,6 +487,54 @@ public class MainActivity extends Activity {
         setContentView(root);
     }
 
+
+    private String businessName(){String n=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","");return n==null||n.trim().isEmpty()?"المخبز":n.trim();}
+    private void editBusinessName(){
+        EditText field=new EditText(this);field.setSingleLine(true);field.setHint("اسم المخبز أو المصنع");field.setText(businessName());
+        new AlertDialog.Builder(this).setTitle("بيانات المنشأة").setMessage("سيظهر الاسم في رأس الشاشات والمطبوعات.").setView(field)
+            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{String n=field.getText().toString().trim();if(n.length()<2){toast("أدخل اسماً صحيحاً");return;}getSharedPreferences("bakery_profile",MODE_PRIVATE).edit().putString("business_name",n).apply();buildHome();}).show();
+    }
+    private void showPrinterSettings(){
+        String[] choices={"طباعة عبر خدمة الطباعة في Android (Bluetooth / Wi-Fi / USB المدعوم)","حفظ نسخة PDF عبر خدمة الطباعة"};
+        new AlertDialog.Builder(this).setTitle("🖨️ إعداد الطابعة").setMessage("اختر الطابعة من نافذة الطباعة التي يوفرها Android. يظل آخر اختيار للطابعة محفوظاً لدى خدمة الطباعة في الجهاز. لا يحتاج التطبيق إلى الإنترنت للطباعة المحلية.")
+            .setItems(choices,(d,which)->{getSharedPreferences("bakery_profile",MODE_PRIVATE).edit().putString("printer_mode",which==0?"system":"pdf").apply();printText("اختبار الطابعة",businessName()+"\\nاختبار اتصال الطباعة\\n"+day);})
+            .setNegativeButton("إغلاق",null).show();
+    }
+    private void printDailyWork(){
+        JSONObject data=store.get(day,"cuts");
+        StringBuilder report=new StringBuilder();
+        report.append("التاريخ: ").append(day).append("\\n");
+        report.append("اسم المنشأة: ").append(businessName()).append("\\n");
+        report.append("شغل اليوم\\n");
+        if(data!=null){java.util.Iterator<String> keys=data.keys();while(keys.hasNext()){String k=keys.next();report.append(k).append(": ").append(data.optString(k,"")).append("\\n");}}
+        else report.append("لا توجد بيانات مسجلة لشغل اليوم.\\n");
+        printText("شغل اليوم - "+businessName(),report.toString());
+    }
+    private void printText(String jobName,String text){
+        try{
+            PrintManager manager=(PrintManager)getSystemService(PRINT_SERVICE);
+            if(manager==null){toast("خدمة الطباعة غير متاحة على هذا الجهاز");return;}
+            manager.print(jobName,new PrintDocumentAdapter(){
+                @Override public void onLayout(PrintAttributes oldA,PrintAttributes newA,CancellationSignal signal,LayoutResultCallback callback,android.os.Bundle extras){
+                    if(signal.isCanceled()){callback.onLayoutCancelled();return;}
+                    PrintDocumentInfo info=new PrintDocumentInfo.Builder(jobName+".pdf").setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT).setPageCount(1).build();
+                    callback.onLayoutFinished(info,true);
+                }
+                @Override public void onWrite(PageRange[] pages,ParcelFileDescriptor destination,CancellationSignal signal,WriteResultCallback callback){
+                    PdfDocument pdf=null;
+                    try{
+                        PrintAttributes attrs=new PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4).setResolution(new PrintAttributes.Resolution("almizan","AlMizan",300,300)).setMinMargins(PrintAttributes.Margins.NO_MARGINS).build();
+                        pdf=new PdfDocument();PdfDocument.PageInfo info=new PdfDocument.PageInfo.Builder(595,842,1).create();PdfDocument.Page page=pdf.startPage(info);
+                        Paint paint=new Paint();paint.setTextSize(12);paint.setColor(Color.BLACK);
+                        String[] lines=(businessName()+"\\n"+jobName+"\\n\\n"+text).split("\\n",-1);int y=48;
+                        for(String line:lines){if(signal.isCanceled())throw new IOException("تم إلغاء الطباعة");page.getCanvas().drawText(line,36,y,paint);y+=22;if(y>810)break;}
+                        pdf.finishPage(page);pdf.writeTo(new FileOutputStream(destination.getFileDescriptor()));callback.onWriteFinished(new PageRange[]{PageRange.ALL_PAGES});
+                    }catch(Exception ex){callback.onWriteFailed(ex.getMessage());}
+                    finally{if(pdf!=null)pdf.close();try{destination.close();}catch(Exception ignored){}}
+                }
+            },new PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4).setResolution(new PrintAttributes.Resolution("almizan","AlMizan",300,300)).setMinMargins(PrintAttributes.Margins.NO_MARGINS).build());
+        }catch(Exception ex){toast("تعذر فتح الطباعة: "+ex.getMessage());}
+    }
     private void buildHome() {
         base("🥖 المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + "");
         TextView intro = text("منظومة يومية متكاملة للمخبز — من رصيد الدقيق إلى الإنتاج والتحصيل وهامش الربح.",16);
@@ -491,6 +555,9 @@ public class MainActivity extends Activity {
             content.addView(plans);
         }
         addBakeryHero();
+        Button profile=button("🏷️ بيانات المنشأة: "+businessName());profile.setOnClickListener(v->editBusinessName());content.addView(profile);
+        Button printer=button("🖨️ إعداد الطابعة والطباعة");printer.setOnClickListener(v->showPrinterSettings());content.addView(printer);
+        Button printDaily=button("🖨️ طباعة شغل اليوم");printDaily.setOnClickListener(v->printDailyWork());content.addView(printDaily);
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
         dateLabel = text("📅 التاريخ: " + day,16); dateRow.addView(dateLabel,new LinearLayout.LayoutParams(0,-2,1f));
         Button choose = button("اختيار التاريخ"); choose.setOnClickListener(v -> chooseDate()); dateRow.addView(choose); content.addView(dateRow);
