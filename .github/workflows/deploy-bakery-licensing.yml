@@ -178,3 +178,11 @@ jobs:
           response="$(curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 20 https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/signing-pair)"
           echo "$response"
           node -e 'const x=JSON.parse(process.argv[1]); if (x.signingReady !== true || x.signingPairMatches !== true) { console.error("::error::Live signing-pair test failed: " + (x.error || "UNKNOWN")); process.exit(1); }' "$response"
+
+      - name: Verify deployed bakery app version
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 3 --connect-timeout 10 --max-time 20 https://al-mizan-bakery-licensing.moh1442010.workers.dev/diagnostics/admin-config)"
+          echo "$response"
+          node -e 'const x=JSON.parse(process.argv[1]); if (x.appVersion !== "2.8.0") { console.error("::error::Production Worker appVersion mismatch: expected 2.8.0, got " + String(x.appVersion)); process.exit(1); }' "$response"
