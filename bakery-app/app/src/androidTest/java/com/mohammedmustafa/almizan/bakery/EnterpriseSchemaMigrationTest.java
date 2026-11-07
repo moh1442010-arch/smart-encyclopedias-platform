@@ -35,6 +35,8 @@ public class EnterpriseSchemaMigrationTest {
                 try { assertTrue("Missing table "+table,exists.moveToFirst()&&exists.getInt(0)==1); }
                 finally { exists.close(); }
             }
+            Cursor profileColumn=db.rawQuery("SELECT COUNT(*) FROM pragma_table_info('company_settings') WHERE name='business_name'",null);
+            try { assertTrue(profileColumn.moveToFirst());assertEquals("Company name must be persisted in encrypted company settings",1,profileColumn.getInt(0)); } finally { profileColumn.close(); }
             Cursor currency=db.rawQuery("SELECT base_currency,country_code FROM company_settings WHERE id=1",null);
             try { assertTrue(currency.moveToFirst());assertEquals("SDG",currency.getString(0));assertEquals("SD",currency.getString(1)); }
             finally { currency.close(); }
