@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import net.zetetic.database.sqlcipher.SQLiteDatabase;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.text.ParsePosition;
@@ -87,11 +88,11 @@ final class GeneralLedger {
                 if(line.debitMinor>0) {
                     baseDebits[i]=toBaseMinor(line.debitMinor,line.fxNumerator,line.fxDenominator,txMinorUnits,baseMinorUnits);
                     if(baseDebits[i]<=0) throw new IllegalArgumentException("قيمة السطر بعد التحويل إلى العملة الأساسية تساوي صفرًا");
-                    totalDebit=Math.addExact(totalDebit,baseDebits[i]);
+                    totalDebit=BigInteger.valueOf(totalDebit).add(BigInteger.valueOf(baseDebits[i])).longValueExact();
                 } else {
                     baseCredits[i]=toBaseMinor(line.creditMinor,line.fxNumerator,line.fxDenominator,txMinorUnits,baseMinorUnits);
                     if(baseCredits[i]<=0) throw new IllegalArgumentException("قيمة السطر بعد التحويل إلى العملة الأساسية تساوي صفرًا");
-                    totalCredit=Math.addExact(totalCredit,baseCredits[i]);
+                    totalCredit=BigInteger.valueOf(totalCredit).add(BigInteger.valueOf(baseCredits[i])).longValueExact();
                 }
                 accountIds[i]=requiredId(db,"SELECT id FROM chart_of_accounts WHERE account_code=? AND active=1",line.accountCode,"الحساب غير موجود أو غير نشط: "+line.accountCode);
                 branchIds[i]=requiredId(db,"SELECT id FROM branches WHERE branch_code=? AND active=1",line.branchCode,"الفرع غير موجود أو غير نشط: "+line.branchCode);
