@@ -79,6 +79,19 @@ public class MainActivity extends Activity {
     private static final int REQUEST_EXPORT_BACKUP = 4250, REQUEST_IMPORT_BACKUP = 4251, REQUEST_PAYMENT_RECEIPT = 4252, REQUEST_COMPANY_LOGO = 4253;
     private String pendingActivationMessage = "";
     private Store store;
+    private boolean pinAuthenticated = false;
+    private boolean paywallLocked = false;
+    private final android.os.Handler entitlementHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable entitlementWatchdog = new Runnable() {
+        @Override public void run() {
+            if (pinAuthenticated && !LicenseAccessGate.isAccessAllowed(MainActivity.this)) {
+                if (store != null) { store.close(); store = null; }
+                paywallLocked = true;
+                showPaywall();
+            }
+            entitlementHandler.postDelayed(this, 30000L);
+        }
+    };
     private LinearLayout root, content;
     private String day;
     private TextView dateLabel, statusLabel, flourMetric, workMetric, productionMetric, marginMetric;
@@ -90,11 +103,34 @@ public class MainActivity extends Activity {
     private static Field f(String k, String l) { return new Field(k,l,"",true); }
     private static Field t(String k, String l, String hint) { return new Field(k,l,hint,false); }
 
+    @Override protected void onResume() {
+        super.onResume();
+        entitlementHandler.removeCallbacks(entitlementWatchdog);
+        entitlementHandler.post(entitlementWatchdog);
+    }
+
+    @Override protected void onPause() {
+        entitlementHandler.removeCallbacks(entitlementWatchdog);
+        super.onPause();
+    }
+
+    @Override protected void onDestroy() {
+        entitlementHandler.removeCallbacks(entitlementWatchdog);
+        if (store != null) { store.close(); store = null; }
+        super.onDestroy();
+    }
+
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+        // Check entitlement before opening the operational database.
+        if (!LicenseAccessGate.isAccessAllowed(this)) {
+            paywallLocked = true;
+            showPaywall();
+            return;
+        }
         try {
             store = new Store();
-            day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
             showPinGate();
         } catch (RuntimeException ex) {
             android.util.Log.e("AlMizanBakery", "Activity startup failed", ex);
@@ -112,8 +148,14 @@ public class MainActivity extends Activity {
     }
 
     private void continueAfterPinAccepted() {
+        pinAuthenticated = true;
         try {
-            if (!hasActiveLicense() && trialExpired()) { showPaywall(); return; }
+            if (!LicenseAccessGate.isAccessAllowed(this)) {
+                if (store != null) { store.close(); store = null; }
+                paywallLocked = true;
+                showPaywall();
+                return;
+            }
             buildHome();
         } catch (RuntimeException ex) {
             android.util.Log.e("AlMizanBakery", "Failed to open home after login", ex);
@@ -533,6 +575,11 @@ public class MainActivity extends Activity {
     }
 
     private void buildHome() {
+        if (!LicenseAccessGate.isAccessAllowed(this)) {
+            paywallLocked = true;
+            showPaywall();
+            return;
+        }
         base("🥖 المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + "");
         TextView intro = text("منظومة يومية متكاملة للمخبز — من رصيد الدقيق إلى الإنتاج والتحصيل وهامش الربح.",16);
         content.addView(intro);
@@ -1832,8 +1879,9 @@ public class MainActivity extends Activity {
 
     private void showPaywall() {
         base("🔐 اشتراك المحاسب الميزان للمخابز");
-        boolean licensed = hasActiveLicense();
-        boolean expired = trialExpired();
+        boolean licensed = LicenseAccessGate.isAccessAllowed(this);
+        boolean expired = !licensed;
+        paywallLocked = expired;
         String trialMessage = licensed
             ? "اشتراكك مفعّل على هذا الجهاز. يمكنك متابعة الدفاتر أو طلب تجديد الباقة عند الحاجة."
             : expired
@@ -1876,7 +1924,7 @@ public class MainActivity extends Activity {
         Button backup=button("🗂️ تصدير / استعادة بياناتك");
         backup.setOnClickListener(v->backupRestoreMenu());
         content.addView(backup);
-        if (!trialExpired() || hasActiveLicense()) { Button back=button("العودة إلى التطبيق"); back.setOnClickListener(v->buildHome()); content.addView(back); }
+        if (LicenseAccessGate.isAccessAllowed(this)) { Button back=button("العودة إلى التطبيق"); back.setOnClickListener(v->buildHome()); content.addView(back); }
     }
 
     private void requestActivation(String plan,String amount) {
