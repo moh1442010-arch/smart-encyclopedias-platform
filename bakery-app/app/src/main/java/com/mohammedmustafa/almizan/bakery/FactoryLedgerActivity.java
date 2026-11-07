@@ -1,6 +1,6 @@
 package com.mohammedmustafa.almizan.bakery;
 
-import android.app.Activity;
+import android.app.Activity;\nimport android.content.Intent;
 import android.os.Bundle;
 import android.content.ContentValues;
 import android.database.Cursor;
@@ -31,6 +31,7 @@ public class FactoryLedgerActivity extends Activity {
         LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(12,10,12,12);root.setBackgroundColor(Color.rgb(246,248,251));
         TextView h=label("دفتر المصنع — "+title,20);h.setTextColor(Color.rgb(11,31,58));root.addView(h);
         root.addView(button("العودة إلى مصنع الخبائز والحلويات",()->finish()));
+        root.addView(button("⌂ الرئيسية",()->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();}));
         ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));setContentView(root);
     }
     private TextView label(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(Color.rgb(30,40,50));t.setPadding(5,9,5,9);return t;}
