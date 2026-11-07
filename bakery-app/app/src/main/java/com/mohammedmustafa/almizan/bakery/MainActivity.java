@@ -16,6 +16,8 @@ import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -124,8 +126,17 @@ public class MainActivity extends Activity {
         LinearLayout box = new LinearLayout(this);
         box.setPadding(24, 12, 24, 4);
         box.setOrientation(LinearLayout.VERTICAL);
-        TextView instructions = text("أنشئ كلمة مرور رقمية لا تقل عن 6 أرقام. احفظها جيدًا؛ لا تُرسلها للدعم ولا تضعها في واتساب.", 15);
+        TextView instructions = text("ابدأ إعداد مشروعك. اختر عملة الدفاتر الأساسية؛ يمكنك تسجيل معاملات بعملات أخرى لاحقاً مع سعر صرف موثق. ثم أنشئ كلمة مرور رقمية لا تقل عن 6 أرقام.", 15);
         box.addView(instructions);
+        box.addView(text("عملة المشروع الأساسية",15));
+        ArrayList<String> currencyCodes=new ArrayList<>(),currencyLabels=new ArrayList<>();
+        Cursor currencyCursor=store.getReadableDatabase().rawQuery("SELECT code,name_ar FROM currencies WHERE active=1 ORDER BY CASE code WHEN 'SDG' THEN 0 ELSE 1 END,name_ar",null);
+        try {while(currencyCursor.moveToNext()){currencyCodes.add(currencyCursor.getString(0));currencyLabels.add(currencyCursor.getString(1)+" ("+currencyCursor.getString(0)+")");}} finally {currencyCursor.close();}
+        Spinner projectCurrency=new Spinner(this);
+        ArrayAdapter<String> currencyAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,currencyLabels);
+        currencyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);projectCurrency.setAdapter(currencyAdapter);
+        int sdgIndex=currencyCodes.indexOf("SDG");if(sdgIndex>=0)projectCurrency.setSelection(sdgIndex);
+        box.addView(projectCurrency);
         EditText pin = new EditText(this);
         pin.setHint("كلمة المرور الجديدة — 6 أرقام على الأقل");
         pin.setSingleLine(true);
@@ -154,6 +165,10 @@ public class MainActivity extends Activity {
                 byte[] salt = new byte[16];
                 new SecureRandom().nextBytes(salt);
                 byte[] hash = derivePinHash(p1, salt);
+                if(currencyCodes.isEmpty())throw new IllegalStateException("قائمة العملات غير مهيأة");
+                String selectedCurrency=currencyCodes.get(projectCurrency.getSelectedItemPosition());
+                ContentValues projectSettings=new ContentValues();projectSettings.put("base_currency",selectedCurrency);
+                store.getWritableDatabase().update("company_settings",projectSettings,"id=1",null);
                 getPreferences(MODE_PRIVATE).edit()
                     .putString("pin_salt", Base64.encodeToString(salt, Base64.NO_WRAP))
                     .putString("pin_hash", Base64.encodeToString(hash, Base64.NO_WRAP))
