@@ -148,7 +148,8 @@ public class FactoryActivity extends Activity {
                 long total=FactoryMath.saleTotal(q,p);
                 if(total<=0||c>total||bk>total-c||(bk>0&&br.isEmpty())){toast("راجع الإجمالي والتحصيل ورقم بنكك");return;}
                 db.sell(pid,customerId[0],q,total,c,bk,cust,br,"نقطة البيع");
-                toast("تم البيع. الإجمالي "+total+" جنيه، والآجل "+(total-c-bk)+" جنيه");pointOfSale();
+                String invoice="رقم المستند: POS-"+System.currentTimeMillis()+"\\nالتاريخ: "+today()+"\\nالعميل: "+cust+"\\nالمنتج: "+product.getText()+"\\nالكمية: "+(q/1000.0)+"\\nسعر الوحدة: "+p+" جنيه\\nالإجمالي: "+total+" جنيه\\nنقدي: "+c+" جنيه\\nبنكك: "+bk+" جنيه\\nرقم العملية: "+br+"\\nالآجل: "+(total-c-bk)+" جنيه";
+                new AlertDialog.Builder(this).setTitle("تم حفظ فاتورة البيع").setMessage("الإجمالي "+total+" جنيه. هل تريد طباعة الفاتورة الآن؟").setNegativeButton("لاحقاً",(d,w)->pointOfSale()).setPositiveButton("🖨️ طباعة الفاتورة",(d,w)->{try{PrinterService.print(this,businessName(),"فاتورة بيع",invoice);}catch(Exception ex){toast("تعذر الطباعة: "+ex.getMessage());}pointOfSale();}).show();
             }catch(Exception ex){toast("لم يتم البيع: "+ex.getMessage());}
         }));
         body.addView(label("تحصيل مديونية سابقة",15));
