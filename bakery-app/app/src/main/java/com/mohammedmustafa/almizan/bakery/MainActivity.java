@@ -103,8 +103,10 @@ public class MainActivity extends Activity {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
-        // Do not open either operational database until PIN and entitlement checks pass.
-        showPinGate();
+        // Expired installations go straight to the subscription screen, without exposing PIN or ledger screens.
+        // Valid installations must pass the PIN gate before any operational database is opened.
+        if (LicenseAccessGate.isAccessAllowed(this)) showPinGate();
+        else showPaywall();
     }
 
     private void showPinGate() {
@@ -396,8 +398,10 @@ public class MainActivity extends Activity {
             }
             getPreferences(0).edit().putString("license_token", token).apply();
             dialog.dismiss();
-            toast("تم تفعيل الاشتراك والتحقق من الرمز.");
-            buildHome();
+            toast("تم تفعيل الاشتراك والتحقق من الرمز. أدخل كلمة مرور التطبيق للمتابعة.");
+            // Activation grants entitlement, but does not bypass the local application PIN.
+            pinAuthenticated = false;
+            showPinGate();
         }));
         dialog.show();
     }
