@@ -16,11 +16,12 @@ final class GeneralLedgerReports {
     static final class Line {
         final String code, nameAr, nameEn, type, normalSide;
         final long debitMinor, creditMinor, balanceMinor;
-        Line(String code,String nameAr,String nameEn,String type,String normalSide,
-             long debit,long credit) {
+        Line(String code,String nameAr,String nameEn,String type,String normalSide,long debit,long credit) {
             this.code=code;this.nameAr=nameAr;this.nameEn=nameEn;this.type=type;this.normalSide=normalSide;
             this.debitMinor=debit;this.creditMinor=credit;
-            this.balanceMinor="DEBIT".equals(normalSide)?BigInteger.valueOf(debit).subtract(BigInteger.valueOf(credit)).longValueExact():BigInteger.valueOf(credit).subtract(BigInteger.valueOf(debit)).longValueExact();
+            this.balanceMinor="DEBIT".equals(normalSide)
+                ? BigInteger.valueOf(debit).subtract(BigInteger.valueOf(credit)).longValueExact()
+                : BigInteger.valueOf(credit).subtract(BigInteger.valueOf(debit)).longValueExact();
         }
     }
 
@@ -50,17 +51,17 @@ final class GeneralLedgerReports {
     static TrialBalance trialBalance(SQLiteDatabase db,String from,String to,String branchCode) {
         validateRange(from,to);
         String sql="SELECT a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side,"+
-            "COALESCE(SUM(CASE WHEN e.id IS NOT NULL THEN l.base_debit_minor ELSE 0 END),0),COALESCE(SUM(CASE WHEN e.id IS NOT NULL THEN l.base_credit_minor ELSE 0 END),0) "+
+            "COALESCE(SUM(CASE WHEN e.id IS NOT NULL THEN l.base_debit_minor ELSE 0 END),0),"+
+            "COALESCE(SUM(CASE WHEN e.id IS NOT NULL THEN l.base_credit_minor ELSE 0 END),0) "+
             "FROM chart_of_accounts a LEFT JOIN gl_journal_lines l ON l.account_id=a.id "+
             "LEFT JOIN gl_journal_entries e ON e.id=l.entry_id AND e.status='POSTED' AND e.transaction_date<=? "+
             "LEFT JOIN branches b ON b.id=l.branch_id "+
-            "WHERE a.active=1 AND (? IS NULL OR b.branch_code=?) "+
+            "WHERE a.active=1 AND (?='' OR b.branch_code=?) "+
             "GROUP BY a.id,a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side ORDER BY a.account_code";
-        // A trial balance is cumulative through the closing date; the start date is retained only for API compatibility.
-        Cursor c=db.rawQuery(sql,new String[]{to,branchCode,branchCode});
+        String branch=branchArg(branchCode);
+        Cursor c=db.rawQuery(sql,new String[]{to,branch,branch});
         try {
-            List<Line> lines=new ArrayList<>();
-            long debit=0,credit=0;
+            List<Line> lines=new ArrayList<>();long debit=0,credit=0;
             while(c.moveToNext()) {
                 long d=c.getLong(5),cr=c.getLong(6);
                 debit=add(debit,d);credit=add(credit,cr);
@@ -94,9 +95,7 @@ final class GeneralLedgerReports {
         validateRange(from,to);
         if(types==null||types.length==0)throw new IllegalArgumentException("أنواع الحسابات مطلوبة");
         StringBuilder placeholders=new StringBuilder();
-        String[] args=new String[types.length+3];
-        for(int i=0;i<types.length;i++){if(i>0)placeholders.append(",");placeholders.append("?");args[i]=types[i];}
-        args[types.length]=from;args[types.length+1]=to;args[types.length+2]=branchCode;
+        for(int i=0;i<types.length;i++){if(i>0)placeholders.append(",");placeholders.append("?");}
         String sql="SELECT a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side,"+
             "COALESCE(SUM(CASE WHEN e.id IS NOT NULL THEN l.base_debit_minor ELSE 0 END),0),"+
             "COALESCE(SUM(CASE WHEN e.id IS NOT NULL THEN l.base_credit_minor ELSE 0 END),0) "+
@@ -104,13 +103,13 @@ final class GeneralLedgerReports {
             "LEFT JOIN gl_journal_entries e ON e.id=l.entry_id AND e.status='POSTED' AND e.transaction_date>=? AND e.transaction_date<=? "+
             "LEFT JOIN branches b ON b.id=l.branch_id "+
             "WHERE a.active=1 AND a.account_type IN ("+placeholders+") "+
-            "AND (? IS NULL OR b.branch_code=?) "+
+            "AND (?='' OR b.branch_code=?) "+
             "GROUP BY a.id,a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side ORDER BY a.account_code";
-        // Date predicates belong in the LEFT JOIN so accounts without posted activity remain visible.
         String[] queryArgs=new String[types.length+4];
         queryArgs[0]=from;queryArgs[1]=to;
-        System.arraycopy(args,0,queryArgs,2,types.length);
-        queryArgs[types.length+2]=branchCode;queryArgs[types.length+3]=branchCode;
+        System.arraycopy(types,0,queryArgs,2,types.length);
+        String branch=branchArg(branchCode);
+        queryArgs[types.length+2]=branch;queryArgs[types.length+3]=branch;
         Cursor c=db.rawQuery(sql,queryArgs);
         try {
             List<Line> lines=new ArrayList<>();long debit=0,credit=0;
@@ -122,18 +121,20 @@ final class GeneralLedgerReports {
         } finally {c.close();}
     }
 
-    private static long sum(SQLiteDatabase db,String code,String from,String to,String branch,String side) {
+    private static long sum(SQLiteDatabase db,String code,String from,String to,String branchCode,String side) {
         String amount="DEBIT".equals(side)?"l.base_debit_minor":"l.base_credit_minor";
         String dateClause=from==null?"e.transaction_date<?":"e.transaction_date>=? AND e.transaction_date<=?";
         String sql="SELECT COALESCE(SUM("+amount+"),0) FROM gl_journal_lines l "+
             "JOIN gl_journal_entries e ON e.id=l.entry_id JOIN chart_of_accounts a ON a.id=l.account_id "+
             "JOIN branches b ON b.id=l.branch_id WHERE a.account_code=? AND e.status='POSTED' AND "+dateClause+
-            " AND (? IS NULL OR b.branch_code=?)";
+            " AND (?='' OR b.branch_code=?)";
+        String branch=branchArg(branchCode);
         String[] args=from==null?new String[]{code,to,branch,branch}:new String[]{code,from,to,branch,branch};
         Cursor c=db.rawQuery(sql,args);
         try {c.moveToFirst();return c.getLong(0);} finally {c.close();}
     }
 
+    private static String branchArg(String branchCode){return branchCode==null?"":branchCode.trim();}
     private static long add(long a,long b) {return BigInteger.valueOf(a).add(BigInteger.valueOf(b)).longValueExact();}
     private static boolean blank(String s){return s==null||s.trim().isEmpty();}
     private static void validateRange(String from,String to) {
