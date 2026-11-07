@@ -446,11 +446,11 @@ public class MainActivity extends Activity {
                 return;
             }
             if (store == null) store = new Store();
-            pinAuthenticated = true;
+            pinAuthenticated = false;
             paywallLocked = false;
             dialog.dismiss();
-            toast("تم تفعيل الاشتراك والتحقق من الرمز.");
-            buildHome();
+            toast("تم تفعيل الاشتراك والتحقق من الرمز. سجّل الدخول للمتابعة.");
+            showPinGate();
         }));
         dialog.show();
     }
@@ -584,6 +584,7 @@ public class MainActivity extends Activity {
 
     private void buildHome() {
         if (!LicenseAccessGate.isAccessAllowed(this)) {
+            pinAuthenticated = false;
             paywallLocked = true;
             showPaywall();
             return;
