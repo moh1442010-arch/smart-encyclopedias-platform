@@ -36,7 +36,7 @@ public class PartyDirectoryActivity extends Activity {
         Button back=button("↩ رجوع إلى الشاشة السابقة");back.setOnClickListener(v->finish());root.addView(back);
         Button home=button("⌂ الرئيسية");home.setOnClickListener(v->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();});root.addView(home);
         ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        root.addView(button("🖨️ طباعة سجل العملاء والموردين والحسابات",()->printDirectory()));
+        Button print=button("🖨️ طباعة سجل العملاء والموردين والحسابات");print.setOnClickListener(v->printDirectory());root.addView(print);
         setContentView(root);
         customersSection();suppliersSection();bankAccountsSection();exchangeRatesSection();
     }
