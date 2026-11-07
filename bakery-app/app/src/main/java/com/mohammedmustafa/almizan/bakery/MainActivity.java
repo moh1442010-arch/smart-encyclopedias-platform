@@ -390,20 +390,21 @@ public class MainActivity extends Activity {
     private void showActivationDialog() {
         LinearLayout activationBox = new LinearLayout(this);
         activationBox.setOrientation(LinearLayout.VERTICAL);
-        activationBox.setPadding(24, 12, 24, 8);
+        activationBox.setPadding(20, 8, 20, 8);
 
         TextView instructions = text(
             "انسخ رمز التفعيل كاملًا كما وصلك من إدارة الميزان، من أول حرف إلى آخر حرف. " +
-            "يتكوّن الرمز من جزأين بينهما نقطة (.). لا تنسخ رقم الطلب أو اسم الباقة، ولا تحذف النقطة أو أي جزء من الرمز. " +
-            "الصق الرمز كاملًا في الحقل أدناه، ثم اضغط «تفعيل».", 14);
+            "يتكوّن الرمز من جزأين بينهما نقطة (.). يمكنك لصق الرمز بين القوسين كما وصلك؛ " +
+            "سيزيل التطبيق القوسين الخارجيين تلقائيًا. لا تنسخ رقم الطلب أو اسم الباقة، ولا تحذف النقطة أو أي جزء من الرمز.", 14);
         activationBox.addView(instructions);
 
         EditText code = new EditText(this);
         code.setHint("الصق رمز التفعيل كاملًا هنا");
         code.setMinLines(3);
+        code.setMaxLines(6);
         code.setGravity(Gravity.TOP | Gravity.START);
         code.setTextDirection(View.TEXT_DIRECTION_LTR);
-        code.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        code.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         activationBox.addView(code);
 
         Button paste = button("لصق الرمز من الحافظة");
@@ -429,12 +430,44 @@ public class MainActivity extends Activity {
         });
         activationBox.addView(paste);
 
-        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("🔑 تفعيل الاشتراك")
-            .setMessage("أدخل الرمز الذي صدر بعد اعتماد طلبك. الرمز مخصص لهذا الجهاز والباقة.")
-            .setView(activationBox).setNegativeButton("إلغاء", null)
-            .setPositiveButton("تفعيل", null).create();
-        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            String token = code.getText().toString().replaceAll("\\s+", "");
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(false);
+        scroll.setClipToPadding(false);
+        scroll.addView(activationBox);
+
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.VERTICAL);
+        header.setPadding(24, 16, 24, 8);
+        TextView title = text("🔑 تفعيل الاشتراك", 22);
+        title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+        header.addView(title);
+
+        Button activate = button("تفعيل");
+        activate.setAllCaps(false);
+        LinearLayout.LayoutParams activateParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        activateParams.topMargin = 10;
+        header.addView(activate, activateParams);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+            .setCustomTitle(header)
+            .setView(scroll)
+            .setNegativeButton("إلغاء", null)
+            .create();
+
+        activate.setOnClickListener(v -> {
+            String token = code.getText().toString().trim();
+            boolean opens = token.startsWith("(");
+            boolean closes = token.endsWith(")");
+            if (opens != closes) {
+                code.setError("تأكد من وجود القوسين معًا حول الرمز أو احذفهما معًا.");
+                return;
+            }
+            if (opens && closes && token.length() >= 2) {
+                token = token.substring(1, token.length() - 1).trim();
+            }
+            token = token.replaceAll("\\s+", "");
             if (!verifyLicenseToken(token)) {
                 code.setError("الرمز غير صحيح أو غير مكتمل أو لا يخص هذا الجهاز أو انتهت صلاحيته. انسخه كاملًا دون تعديل.");
                 return;
@@ -450,7 +483,16 @@ public class MainActivity extends Activity {
             dialog.dismiss();
             toast("تم تفعيل الاشتراك والتحقق من الرمز. سجّل الدخول للمتابعة.");
             showPinGate();
-        }));
+        });
+
+        dialog.setOnShowListener(ignored -> {
+            android.view.Window window = dialog.getWindow();
+            if (window != null) {
+                window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+                int width = (int) (getResources().getDisplayMetrics().widthPixels * 0.94f);
+                window.setLayout(width, android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+            }
+        });
         dialog.show();
     }
 
