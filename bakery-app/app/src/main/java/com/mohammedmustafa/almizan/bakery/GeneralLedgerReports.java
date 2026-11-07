@@ -84,7 +84,8 @@ final class GeneralLedgerReports {
         return byTypes(db,from,to,branchCode,new String[]{"REVENUE","EXPENSE"});
     }
 
-    // Account balances only; a complete statement of financial position also requires a posted profit/loss close to equity.\n    static TrialBalance balanceSheetAccounts(SQLiteDatabase db,String asOf,String branchCode) {
+    // Account balances only; a complete statement of financial position also requires a posted profit/loss close to equity.
+    static TrialBalance balanceSheetAccounts(SQLiteDatabase db,String asOf,String branchCode) {
         validateRange(asOf,asOf);
         return byTypes(db,"0001-01-01",asOf,branchCode,new String[]{"ASSET","LIABILITY","EQUITY"});
     }
