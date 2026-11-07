@@ -150,6 +150,16 @@ public class EnterpriseSchemaMigrationTest {
             try { PermissionService.requirePermission(db,"auditor_test","MAIN","JOURNAL_POST"); }
             catch(SecurityException expected) { denied=true; }
             assertTrue("Service layer must throw on unauthorized writes",denied);
+            GeneralLedger.Entry protectedEntry=new GeneralLedger.Entry("SEC-1","Unauthorized journal","2026-11-07","TEST","SEC-1","SEC-IDEM-1","auditor_test",
+                java.util.Arrays.asList(
+                    new GeneralLedger.Line("1000","MAIN","SDG",100,0,1,1),
+                    new GeneralLedger.Line("3000","MAIN","SDG",0,100,1,1)));
+            boolean postingDenied=false;
+            try { GeneralLedger.postAuthorized(db,protectedEntry,"auditor_test"); }
+            catch(SecurityException expected) { postingDenied=true; }
+            assertTrue("Unauthorized actor must be blocked before journal persistence",postingDenied);
+            Cursor noJournal=db.rawQuery("SELECT COUNT(*) FROM gl_journal_entries WHERE entry_ref='SEC-1'",null);
+            try { assertTrue(noJournal.moveToFirst());assertEquals(0,noJournal.getInt(0)); } finally { noJournal.close(); }
         } finally {
             db.close();context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
         }
