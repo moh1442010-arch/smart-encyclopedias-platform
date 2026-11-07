@@ -20,7 +20,9 @@ final class EnterpriseSchema {
         db.execSQL("CREATE TABLE IF NOT EXISTS countries (code TEXT PRIMARY KEY NOT NULL, name_ar TEXT NOT NULL, name_en TEXT NOT NULL, tax_profile TEXT NOT NULL DEFAULT 'CUSTOM', active INTEGER NOT NULL DEFAULT 0 CHECK(active IN (0,1)))");
         db.execSQL("INSERT OR IGNORE INTO countries(code,name_ar,name_en,tax_profile,active) VALUES('SD','السودان','Sudan','SD_DEFAULT',1)");
         db.execSQL("CREATE TABLE IF NOT EXISTS currencies (code TEXT PRIMARY KEY NOT NULL CHECK(length(code)=3), name_ar TEXT NOT NULL, name_en TEXT NOT NULL, minor_units INTEGER NOT NULL CHECK(minor_units BETWEEN 0 AND 4), active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)))");
-        db.execSQL("INSERT OR IGNORE INTO currencies(code,name_ar,name_en,minor_units,active) VALUES('SDG','الجنيه السوداني','Sudanese Pound',2,1)");
+        db.execSQL("INSERT OR IGNORE INTO currencies(code,name_ar,name_en,minor_units,active) VALUES('SDG','الجنيه السوداني','Sudanese Pound',0,1)");
+        // SDG operational amounts are whole pounds; update metadata only, never rescale stored customer balances.
+        db.execSQL("UPDATE currencies SET minor_units=0 WHERE code='SDG'");
         db.execSQL("CREATE TABLE IF NOT EXISTS exchange_rates (id INTEGER PRIMARY KEY AUTOINCREMENT, base_code TEXT NOT NULL REFERENCES currencies(code), quote_code TEXT NOT NULL REFERENCES currencies(code), rate_num INTEGER NOT NULL CHECK(rate_num>0), rate_den INTEGER NOT NULL CHECK(rate_den>0), effective_at TEXT NOT NULL, source TEXT NOT NULL, created_at INTEGER NOT NULL, UNIQUE(base_code,quote_code,effective_at,source), CHECK(base_code<>quote_code))");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_exchange_rates_pair_date ON exchange_rates(base_code,quote_code,effective_at)");
         db.execSQL("CREATE TABLE IF NOT EXISTS branches (id INTEGER PRIMARY KEY AUTOINCREMENT, branch_code TEXT NOT NULL UNIQUE, name TEXT NOT NULL, address TEXT NOT NULL DEFAULT '', active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)), created_at INTEGER NOT NULL)");
