@@ -42,6 +42,12 @@ public class EnterpriseSchemaMigrationTest {
             try { assertTrue(subscriptionOnly.moveToFirst());assertEquals("USD and EUR must be inactive for in-app operations",2,subscriptionOnly.getInt(0)); } finally { subscriptionOnly.close(); }
             Cursor currencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE code IN ('USD','EUR','SAR','AED')",null);
             try { assertTrue(currencies.moveToFirst());assertEquals(4,currencies.getInt(0)); } finally { currencies.close(); }
+            Cursor operationalCurrencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE active=1 AND code IN ('USD','EUR')",null);
+            try { assertTrue(operationalCurrencies.moveToFirst());assertEquals("USD/EUR must never appear in operational currency pickers",0,operationalCurrencies.getInt(0)); } finally { operationalCurrencies.close(); }
+            Cursor regionalCurrencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE active=1 AND code IN ('SDG','EGP','LYD','SAR','AED')",null);
+            try { assertTrue(regionalCurrencies.moveToFirst());assertEquals("Required regional operating currencies missing",5,regionalCurrencies.getInt(0)); } finally { regionalCurrencies.close(); }
+            Cursor sdgPrecision=db.rawQuery("SELECT minor_units FROM currencies WHERE code='SDG'",null);
+            try { assertTrue(sdgPrecision.moveToFirst());assertEquals("Legacy bakery ledger stores whole SDG units",0,sdgPrecision.getInt(0)); } finally { sdgPrecision.close(); }
             Cursor supplierColumns=db.rawQuery("PRAGMA table_info(suppliers)",null);
             boolean defaultItem=false,defaultUnit=false;
             try { while(supplierColumns.moveToNext()){if("default_item".equals(supplierColumns.getString(1)))defaultItem=true;if("default_unit".equals(supplierColumns.getString(1)))defaultUnit=true;} }
