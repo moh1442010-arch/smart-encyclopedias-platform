@@ -860,7 +860,8 @@ public class MainActivity extends Activity {
         box.addView(text("المعدات (اختياري)",14)); EditText equipment=inventoryCell(saved.optString("equipment",""),"اسم المعدة وحالتها",false); box.addView(equipment);
         box.addView(text("ملاحظات المخزن",14)); EditText notes=inventoryCell(saved.optString("notes",""),"ملاحظات",false); box.addView(notes);
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle("📦 المخزن والتكلفة حسب الاستهلاك — "+day).setView(scroll).setNegativeButton("إلغاء",null).setPositiveButton("حفظ جدول المخزون",null).create();
-        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
+        dialog.setOnShowListener(ignored->{
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
             try {
                 StringBuilder textRows=new StringBuilder();
                 for(EditText[] cells:rows) {
@@ -1128,14 +1129,15 @@ public class MainActivity extends Activity {
                     toast("حُفظت بيانات الإنتاج والسعر كمسودة، لكن لم يُرحّل المخزون أو التكلفة: "+inventoryError.getMessage()+"؛ راجع رصيد الصنف ووحدته ثم أعد الحفظ.");
                 }
             } catch(Exception ex) { toast("تعذر حفظ بيانات شغل اليوم: "+ex.getMessage()); }
-        }));
-        dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v->{
+        });
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v->{
             StringBuilder report=new StringBuilder("التاريخ: ").append(day).append("\\nاسم المنشأة: ").append(businessName()).append("\\n");
             report.append("عدد جوالات الدقيق: ").append(work.getText()).append("\\nعدد الأرغفة لكل 1,000 جنيه: ").append(perThousand.getText()).append("\\n");
             for(int i=0;i<loafCells.size();i++)report.append("القطعية ").append(i+1).append(": ").append(loafCells.get(i).getText()).append(" رغيف\\n");
             report.append("ملاحظات: ").append(notes.getText());
             printText("شغل اليوم - "+day,report.toString());
-        }));
+        });
+        });
         dialog.show();
     }
 
