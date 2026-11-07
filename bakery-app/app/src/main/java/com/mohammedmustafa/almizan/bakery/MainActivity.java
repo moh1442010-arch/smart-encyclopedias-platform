@@ -1617,7 +1617,13 @@ public class MainActivity extends Activity {
             if(resultCode==RESULT_OK && data!=null && data.getData()!=null) shareCompanyLogo(data.getData());
             return;
         }
-        if(resultCode!=RESULT_OK || data==null || data.getData()==null) return;
+        if(resultCode!=RESULT_OK || data==null || data.getData()==null) {
+            if(requestCode==REQUEST_EXPORT_BACKUP && pendingBackupPassword!=null) {
+                java.util.Arrays.fill(pendingBackupPassword,'\\0');
+                pendingBackupPassword=null;
+            }
+            return;
+        }
         try {
             if(requestCode==REQUEST_EXPORT_BACKUP) {
                 if(pendingBackupPassword==null)throw new IllegalStateException("كلمة مرور النسخة غير متاحة");
@@ -1655,6 +1661,11 @@ public class MainActivity extends Activity {
                 }
             }
         } catch(Exception ex) { toast("تعذر التعامل مع ملف النسخة الاحتياطية. لم يتم حذف البيانات الحالية."); }
+    }
+
+    @Override protected void onDestroy() {
+        if(pendingBackupPassword!=null){java.util.Arrays.fill(pendingBackupPassword,'\\0');pendingBackupPassword=null;}
+        super.onDestroy();
     }
 
     private void showUpdateDialog() {
