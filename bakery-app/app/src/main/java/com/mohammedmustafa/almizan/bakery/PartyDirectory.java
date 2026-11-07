@@ -64,6 +64,15 @@ final class PartyDirectory {
         } finally {c.close();}
     }
 
+    static long ensureCustomerName(SQLiteDatabase db,String name) {
+        if(name==null||name.trim().isEmpty())throw new IllegalArgumentException("اسم العميل مطلوب.");
+        Cursor c=db.rawQuery("SELECT id FROM customers WHERE name=? COLLATE NOCASE ORDER BY id LIMIT 1",new String[]{name.trim()});
+        try {if(c.moveToFirst())return c.getLong(0);} finally {c.close();}
+        ContentValues v=new ContentValues();v.put("customer_code","CUS-"+UUID.randomUUID().toString().substring(0,8).toUpperCase(Locale.US));
+        v.put("name",name.trim());v.put("phone","");v.put("currency_code","SDG");v.put("created_at",System.currentTimeMillis());
+        return db.insertOrThrow("customers",null,v);
+    }
+
     static long saveCustomer(SQLiteDatabase db,String name,String phone,long openingBalance,String currency) {
         requireParty(name,openingBalance,currency);
         Cursor c=db.rawQuery("SELECT id FROM customers WHERE name=? COLLATE NOCASE AND phone=? LIMIT 1",new String[]{name.trim(),safe(phone)});
