@@ -112,7 +112,6 @@ final class FactoryBackup {
             JSONArray rows = tables.optJSONArray(TABLES[i]);
             if (rows == null && root.optInt("schema_version")<5 && Arrays.asList("sales_returns","work_orders","work_order_materials","journal_entries","journal_lines").contains(TABLES[i])) continue;
             if (rows == null && root.optInt("schema_version")<6 && "work_order_stages".equals(TABLES[i])) continue;
-                    if (rows == null && root.optInt("schema_version")<7 && Arrays.asList("supplier_purchase_records","supplier_payment_records").contains(TABLES[i])) continue;
             if (rows == null && root.optInt("schema_version")<7 && Arrays.asList("supplier_purchase_records","supplier_payment_records").contains(TABLES[i])) continue;
             if (rows == null && root.optInt("schema_version")==3 && "daily_usage".equals(TABLES[i])) continue;
             if (rows == null) throw new IllegalArgumentException("Missing factory table: " + TABLES[i]);
@@ -225,6 +224,7 @@ final class FactoryBackup {
                     JSONArray rows = tables.optJSONArray(TABLES[i]);
                     if (rows == null && root.optInt("schema_version")<5 && Arrays.asList("sales_returns","work_orders","work_order_materials","journal_entries","journal_lines").contains(TABLES[i])) continue;
                     if (rows == null && root.optInt("schema_version")<6 && "work_order_stages".equals(TABLES[i])) continue;
+                    if (rows == null && root.optInt("schema_version")<7 && Arrays.asList("supplier_purchase_records","supplier_payment_records").contains(TABLES[i])) continue;
                     if (rows == null && root.optInt("schema_version")==3 && "daily_usage".equals(TABLES[i])) continue;
                     if (rows == null) throw new IllegalArgumentException("Missing factory table: "+TABLES[i]);
                     for (int n=0;n<rows.length();n++) {
