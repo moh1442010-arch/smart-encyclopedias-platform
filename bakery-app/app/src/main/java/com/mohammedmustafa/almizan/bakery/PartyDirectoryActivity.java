@@ -45,8 +45,8 @@ public class PartyDirectoryActivity extends Activity {
         Spinner currency=currencySpinner();
         addHorizontal(name,phone,debt,cash,bank,bankRef,currency);
         Button save=button("حفظ العميل");save.setOnClickListener(v->{try{
-            long opening=amount(debt),cashPaid=amount(cash),bankPaid=amount(bank);
-            long id=PartyDirectory.saveCustomer(db,name.getText().toString(),phone.getText().toString(),opening,cashPaid,bankPaid,bankRef.getText().toString(),currency.getSelectedItem().toString());
+            String currencyCode=currency.getSelectedItem().toString();long opening=amount(debt,currencyCode),cashPaid=amount(cash,currencyCode),bankPaid=amount(bank,currencyCode);
+            long id=PartyDirectory.saveCustomer(db,name.getText().toString(),phone.getText().toString(),opening,cashPaid,bankPaid,bankRef.getText().toString(),currencyCode);
             toast("تم حفظ العميل برقم "+id+" — المديونية المتبقية: "+(opening-cashPaid-bankPaid));
             name.setText("");phone.setText("");debt.setText("");cash.setText("");bank.setText("");bankRef.setText("");refreshLists();
         }catch(Exception e){toast("لم يُحفظ العميل: "+e.getMessage());}});body.addView(save);
@@ -61,8 +61,8 @@ public class PartyDirectoryActivity extends Activity {
         Spinner currency=currencySpinner();
         addHorizontal(name,phone,item,unit,qty,invoice,cash,bank,bankRef,currency);
         Button save=button("حفظ المورد والفاتورة الافتتاحية");save.setOnClickListener(v->{try{
-            long quantity=quantity(qty),invoiceTotal=amount(invoice),cashPaid=amount(cash),bankPaid=amount(bank);
-            long id=PartyDirectory.saveSupplier(db,name.getText().toString(),phone.getText().toString(),item.getText().toString(),unit.getText().toString(),quantity,invoiceTotal,cashPaid,bankPaid,bankRef.getText().toString(),currency.getSelectedItem().toString());
+            String currencyCode=currency.getSelectedItem().toString();long quantity=quantity(qty),invoiceTotal=amount(invoice,currencyCode),cashPaid=amount(cash,currencyCode),bankPaid=amount(bank,currencyCode);
+            long id=PartyDirectory.saveSupplier(db,name.getText().toString(),phone.getText().toString(),item.getText().toString(),unit.getText().toString(),quantity,invoiceTotal,cashPaid,bankPaid,bankRef.getText().toString(),currencyCode);
             toast("تم حفظ المورد برقم "+id+" — المديونية المتبقية: "+(invoiceTotal-cashPaid-bankPaid));
             name.setText("");phone.setText("");item.setText("");unit.setText("");qty.setText("");invoice.setText("");cash.setText("");bank.setText("");bankRef.setText("");refreshLists();
         }catch(Exception e){toast("لم يُحفظ المورد: "+e.getMessage());}});body.addView(save);
@@ -111,6 +111,7 @@ public class PartyDirectoryActivity extends Activity {
     private void addHorizontal(View... views){HorizontalScrollView h=new HorizontalScrollView(this);h.setHorizontalScrollBarEnabled(true);LinearLayout row=new LinearLayout(this);row.setOrientation(0);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);for(View v:views){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dp(170),dp(56));lp.setMargins(2,2,2,2);row.addView(v,lp);}h.addView(row);body.addView(h,new LinearLayout.LayoutParams(-1,-2));}
     private Spinner currencySpinner(){Spinner s=new Spinner(this);String[] codes={"SDG","USD","EUR","SAR","AED"};ArrayAdapter<String>a=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,codes);a.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);s.setAdapter(a);s.setMinimumWidth(dp(130));return s;}
     private void list(String sql){Cursor c=null;try{c=db.rawQuery(sql,null);while(c.moveToNext())body.addView(note("• "+c.getString(0)));}catch(Exception e){body.addView(note("تعذر عرض القائمة: "+e.getMessage()));}finally{if(c!=null)c.close();}}
+    private long amount(EditText e,String currency){String s=e.getText().toString().trim();if(s.isEmpty())return 0;int units=0;Cursor c=null;try{c=db.rawQuery("SELECT minor_units FROM currencies WHERE code=?",new String[]{currency});if(c.moveToFirst())units=c.getInt(0);}finally{if(c!=null)c.close();}return new java.math.BigDecimal(s).movePointRight(units).setScale(0,java.math.RoundingMode.UNNECESSARY).longValueExact();}
     private long amount(EditText e){String s=e.getText().toString().trim();if(s.isEmpty())return 0;return new java.math.BigDecimal(s).setScale(0,java.math.RoundingMode.UNNECESSARY).longValueExact();}
     private long quantity(EditText e){String s=e.getText().toString().trim();if(s.isEmpty())return 0;return new java.math.BigDecimal(s).movePointRight(3).setScale(0,java.math.RoundingMode.UNNECESSARY).longValueExact();}
     private int dp(int v){return (int)(v*getResources().getDisplayMetrics().density+0.5f);}
