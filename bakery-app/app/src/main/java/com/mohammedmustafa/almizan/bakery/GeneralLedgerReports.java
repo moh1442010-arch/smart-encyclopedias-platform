@@ -54,10 +54,11 @@ final class GeneralLedgerReports {
             "FROM chart_of_accounts a LEFT JOIN gl_journal_lines l ON l.account_id=a.id "+
             "LEFT JOIN gl_journal_entries e ON e.id=l.entry_id AND e.status='POSTED' "+
             "LEFT JOIN branches b ON b.id=l.branch_id "+
-            "WHERE a.active=1 AND (e.id IS NULL OR (e.transaction_date>=? AND e.transaction_date<=?)) "+
+            "WHERE a.active=1 AND (e.id IS NULL OR e.transaction_date<=?) "+
             "AND (? IS NULL OR b.branch_code=?) "+
             "GROUP BY a.id,a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side ORDER BY a.account_code";
-        Cursor c=db.rawQuery(sql,new String[]{from,to,branchCode,branchCode});
+        // A trial balance is cumulative through the closing date; the start date is retained only for API compatibility.
+        Cursor c=db.rawQuery(sql,new String[]{to,branchCode,branchCode});
         try {
             List<Line> lines=new ArrayList<>();
             long debit=0,credit=0;
@@ -92,16 +93,26 @@ final class GeneralLedgerReports {
 
     private static TrialBalance byTypes(SQLiteDatabase db,String from,String to,String branchCode,String[] types) {
         validateRange(from,to);
+        if(types==null||types.length==0)throw new IllegalArgumentException("أنواع الحسابات مطلوبة");
+        StringBuilder placeholders=new StringBuilder();
+        String[] args=new String[types.length+3];
+        for(int i=0;i<types.length;i++){if(i>0)placeholders.append(",");placeholders.append("?");args[i]=types[i];}
+        args[types.length]=from;args[types.length+1]=to;args[types.length+2]=branchCode;
         String sql="SELECT a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side,"+
-            "COALESCE(SUM(l.base_debit_minor),0),COALESCE(SUM(l.base_credit_minor),0) "+
+            "COALESCE(SUM(CASE WHEN e.id IS NOT NULL THEN l.base_debit_minor ELSE 0 END),0),"+
+            "COALESCE(SUM(CASE WHEN e.id IS NOT NULL THEN l.base_credit_minor ELSE 0 END),0) "+
             "FROM chart_of_accounts a LEFT JOIN gl_journal_lines l ON l.account_id=a.id "+
-            "LEFT JOIN gl_journal_entries e ON e.id=l.entry_id AND e.status='POSTED' "+
+            "LEFT JOIN gl_journal_entries e ON e.id=l.entry_id AND e.status='POSTED' AND e.transaction_date>=? AND e.transaction_date<=? "+
             "LEFT JOIN branches b ON b.id=l.branch_id "+
-            "WHERE a.active=1 AND a.account_type IN (?,?) AND (e.id IS NULL OR (e.transaction_date>=? AND e.transaction_date<=?)) "+
+            "WHERE a.active=1 AND a.account_type IN ("+placeholders+") "+
             "AND (? IS NULL OR b.branch_code=?) "+
             "GROUP BY a.id,a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side ORDER BY a.account_code";
-        String t1=types[0],t2=types.length>1?types[1]:types[0];
-        Cursor c=db.rawQuery(sql,new String[]{t1,t2,from,to,branchCode,branchCode});
+        // Date predicates belong in the LEFT JOIN so accounts without posted activity remain visible.
+        String[] queryArgs=new String[types.length+4];
+        queryArgs[0]=from;queryArgs[1]=to;
+        System.arraycopy(args,0,queryArgs,2,types.length);
+        queryArgs[types.length+2]=branchCode;queryArgs[types.length+3]=branchCode;
+        Cursor c=db.rawQuery(sql,queryArgs);
         try {
             List<Line> lines=new ArrayList<>();long debit=0,credit=0;
             while(c.moveToNext()) {
