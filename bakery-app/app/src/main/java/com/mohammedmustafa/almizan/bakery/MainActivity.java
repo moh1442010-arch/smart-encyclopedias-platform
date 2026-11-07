@@ -945,7 +945,7 @@ public class MainActivity extends Activity {
                 long nq=parseLong(q),nc=parseLong(c),nb=parseLong(b),nd=parseLong(d),nf=parseLong(f);if(nq<0||nc<0||nb<0||nd<0||nf<0)throw new IllegalArgumentException("لا تقبل القيم السالبة");if(nb>0&&ref.isEmpty())throw new IllegalArgumentException("رقم عملية بنكك مطلوب");if(nb==0&&!ref.isEmpty())throw new IllegalArgumentException("أدخل مبلغ بنكك مع رقم العملية");
                 if(out.length()>0)out.append("\n");out.append(customer.replace("|","/")).append(" | ").append(nq).append(" | ").append(nc).append(" | ").append(nb).append(" | ").append(ref.replace("|","/")).append(" | ").append(nd).append(" | ").append(nf);if(names.length()>0)names.append("\n");names.append(customer);
             }
-            JSONObject rec=new JSONObject();rec.put("rows",out.toString());rec.put("notes",notes.getText().toString());store.put(day,"distribution",rec);mergeRegularCustomers(names.toString());updateStatus();dlg.dismiss();toast("تم حفظ بيانات التوزيع.");
+            JSONObject rec=new JSONObject();rec.put("rows",out.toString());rec.put("notes",notes.getText().toString());store.put(day,"distribution",rec);for(String n:names.toString().split("\\r?\\n"))if(!n.trim().isEmpty())PartyDirectory.ensureCustomerName(store.getWritableDatabase(),n.trim());mergeRegularCustomers(names.toString());updateStatus();dlg.dismiss();toast("تم حفظ بيانات التوزيع.");
         }catch(Exception e){toast("تعذر حفظ التوزيع: "+e.getMessage());}}));dlg.show();
     }
     private void addDistributionTableRow(LinearLayout table,java.util.List<EditText[]> rows,String customer,String qty,String cash,String bank,String ref,String debt,String diff){
