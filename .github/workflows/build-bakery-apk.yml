@@ -152,6 +152,9 @@ jobs:
           grep -Fq 'supplier_purchase_records' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'PartyDirectoryBackup.export' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq 'PartyDirectoryBackup.restore' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'exchangeRatesSection' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/PartyDirectoryActivity.java
+          grep -Fq 'exchange_rates' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/PartyDirectoryBackup.java
+          grep -Fq 'supplier_payment_records' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
           grep -Fq '.PartyDirectoryActivity' bakery-app/app/src/main/AndroidManifest.xml
           grep -Fq 'addsEnterpriseTablesWithoutChangingExistingBakeryRecords' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchemaMigrationTest.java
           grep -Fq 'convertsCurrenciesUsingRationalRatesAndMinorUnits' bakery-app/app/src/test/java/com/mohammedmustafa/almizan/bakery/EnterpriseMathTest.java
