@@ -50,7 +50,7 @@ public class EnterpriseSchemaMigrationTest {
             Cursor regionalCurrencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE active=1 AND code IN ('SDG','EGP','LYD','SAR','AED')",null);
             try { assertTrue(regionalCurrencies.moveToFirst());assertEquals("Required regional operating currencies missing",5,regionalCurrencies.getInt(0)); } finally { regionalCurrencies.close(); }
             Cursor sdgPrecision=db.rawQuery("SELECT minor_units FROM currencies WHERE code='SDG'",null);
-            try { assertTrue(sdgPrecision.moveToFirst());assertEquals("SDG follows its ISO minor-unit precision",2,sdgPrecision.getInt(0)); } finally { sdgPrecision.close(); }
+            try { assertTrue(sdgPrecision.moveToFirst());assertEquals("SDG preserves the existing bakery ledger whole-pound precision",0,sdgPrecision.getInt(0)); } finally { sdgPrecision.close(); }
             Cursor supplierColumns=db.rawQuery("PRAGMA table_info(suppliers)",null);
             boolean defaultItem=false,defaultUnit=false;
             try { while(supplierColumns.moveToNext()){if("default_item".equals(supplierColumns.getString(1)))defaultItem=true;if("default_unit".equals(supplierColumns.getString(1)))defaultUnit=true;} }
@@ -93,10 +93,10 @@ public class EnterpriseSchemaMigrationTest {
         try {
             EnterpriseSchema.ensure(db);
             db.execSQL("INSERT INTO chart_of_accounts(id,account_code,name_ar,name_en,account_type,normal_side,active) VALUES"+
-                "(101,'1000','النقدية','Cash','ASSET','DEBIT',1),"+
-                "(102,'3000','رأس المال','Capital','EQUITY','CREDIT',1),"+
-                "(103,'4000','الإيرادات','Revenue','REVENUE','CREDIT',1),"+
-                "(104,'5000','المصروفات','Expenses','EXPENSE','DEBIT',1)");
+                "(101,'TST-A101','النقدية','Cash','ASSET','DEBIT',1),"+
+                "(102,'TST-E102','رأس المال','Capital','EQUITY','CREDIT',1),"+
+                "(103,'TST-R103','الإيرادات','Revenue','REVENUE','CREDIT',1),"+
+                "(104,'TST-X104','المصروفات','Expenses','EXPENSE','DEBIT',1)");
             db.execSQL("INSERT INTO gl_journal_entries(id,entry_ref,description,transaction_date,source_type,source_id,status,created_at) VALUES"+
                 "(201,'OPEN-1','Opening capital','2026-10-01','TEST','OPEN-1','POSTED',1),"+
                 "(202,'SALE-1','Posted sale','2026-11-05','TEST','SALE-1','POSTED',2),"+
