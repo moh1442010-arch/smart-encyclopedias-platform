@@ -97,3 +97,23 @@ The current factory ledger's `journal_entries` and `journal_lines` tables and it
 - Android database encryption continues to use SQLCipher with a random key wrapped by Android Keystore AES-GCM. These controls protect local database files and backup files separately.
 - The seven-day offline trial still depends on local device time and app-local state. This reduces casual bypasses and detects clock rollback, but cannot guarantee anti-reinstall or rooted-device enforcement while fully offline. A server-issued, device-bound trial entitlement (or equivalent platform attestation) is required for that stronger guarantee.
 - These changes are code-level hardening, not a completed security certification. Emulator tests, API 23/API 35 checks, physical update tests and an independent security review remain mandatory.
+
+## P0 closeout status — 2026-11-07 16:29 UTC
+
+### Passed in the current CI run
+- Arithmetic and source checks passed.
+- Debug and release APK build passed.
+- APK signing and signature verification passed.
+- Minimum supported Android emulator API 23 smoke test passed.
+- Licensing workflow run #293 completed successfully.
+
+### Still open
+- Android API 35 smoke test is still running in workflow run [#864](https://github.com/moh1442010-arch/smart-encyclopedias-platform/actions/runs/42390714161).
+- Signed review APK and verification records have not yet been uploaded; only an internal debug artifact is currently available.
+- Physical-device upgrade qualification remains outstanding for the real user path 2.6.17 -> 2.8.0 -> 2.8.1.
+- Trial-expiry tests must cover fresh launch, current session, every navigation path, app resume, factory, and factory ledger.
+- Server-issued device-bound offline trial entitlement remains a stronger future control; local-only offline state cannot guarantee anti-reinstall resistance on rooted/reset devices.
+- Independent security review and backup/restore fault-injection tests remain outstanding.
+
+### Release decision
+P0 is **not closed** and no commercial release is authorized until API 35 passes, signed review artifacts are published, and the physical-device update/data-preservation test passes. Keep PR 99 as Draft until those gates pass.
