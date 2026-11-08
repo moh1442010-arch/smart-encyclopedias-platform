@@ -37,7 +37,7 @@
 <div class="field"><label for="customer">اسم العميل أو المخبز</label><input id="customer" maxlength="100" required autocomplete="name"></div>
 <div class="field"><label for="contact">رقم واتساب للتواصل</label><input id="contact" maxlength="40" required autocomplete="tel"></div>
 <div class="field"><label for="device">معرّف الجهاز من التطبيق</label><input id="device" maxlength="100" required autocomplete="off" autocapitalize="off"></div>
-<div class="field"><label for="plan">الباقة</label><select id="plan" required>
+<div class="field"><label for="currency">عملة الترخيص والدفع</label><select id="currency" required><option value="SDG">جنيه سوداني — SDG</option><option value="SAR">ريال سعودي — SAR</option><option value="AED">درهم إماراتي — AED</option><option value="USD">دولار أمريكي — USD</option></select></div>\n<div class="field"><label for="plan">الباقة</label><select id="plan" required>
 <option value="monthly">شهري — 55,000 جنيه</option>
 <option value="annual">سنوي — 550,000 جنيه</option>
 <option value="lifetime">شراء مرة واحدة — 1,050,000 جنيه</option>
@@ -67,7 +67,7 @@ const initialPlan=params.get("plan");
 if(params.get("deviceId"))document.getElementById("device").value=params.get("deviceId");
 if(validPlans.includes(initialPlan))document.getElementById("plan").value=initialPlan;
 const version=params.get("appVersion")||"2.8.0";
-const amounts={monthly:55000,annual:550000,lifetime:1050000};
+
 const labels={monthly:"شهري — 55,000 جنيه — 30 يوماً",annual:"سنوي — 550,000 جنيه — 365 يوماً",lifetime:"شراء مرة واحدة — 1,050,000 جنيه — دائم لهذا الإصدار فقط"};
 document.getElementById("requestForm").addEventListener("submit",async event=>{
  event.preventDefault();
@@ -86,12 +86,12 @@ document.getElementById("requestForm").addEventListener("submit",async event=>{
  try{
   const response=await fetch("https://al-mizan-bakery-licensing.moh1442010.workers.dev/api/orders",{
    method:"POST",headers:{"content-type":"application/json"},
-   body:JSON.stringify({customerName:customer,contact,deviceId:device,plan,receiptReference:receipt,appVersion:version})
+   body:JSON.stringify({customerName:customer,contact,deviceId:device,plan,currencyCode,receiptReference:receipt,appVersion:version})
   });
   const data=await response.json().catch(()=>({}));
   if(!response.ok||!data.orderId||data.status!=="pending"){
    const errors={
-    APP_VERSION_UNSUPPORTED:"إصدار التطبيق غير متزامن مع خدمة التراخيص. حدّث التطبيق أو أعد فتح رابط الاشتراك من داخل الإصدار 2.8.0.",
+    APP_VERSION_UNSUPPORTED:"إصدار التطبيق غير متزامن مع خدمة التراخيص. حدّث التطبيق أو أعد فتح رابط الاشتراك من داخل الإصدار 2.8.1.",
     INVALID_FIELDS:"بعض البيانات غير مقبولة. راجع رقم الهاتف ومعرّف الجهاز ومرجع التحويل.",
     RECEIPT_REFERENCE_ALREADY_USED:"مرجع التحويل مستخدم في طلب سابق. لا تعِد إرسال الطلب؛ تواصل مع الإدارة برقم المرجع.",
     ORDER_RATE_LIMITED:"تم تجاوز عدد محاولات التسجيل. انتظر قليلاً ثم أعد المحاولة."
@@ -106,8 +106,8 @@ document.getElementById("requestForm").addEventListener("submit",async event=>{
    "رقم التواصل: "+contact,
    "معرّف الجهاز: "+device,
    "الباقة: "+labels[plan],
-   "المبلغ: "+amounts[plan].toLocaleString("en-US")+" جنيه سوداني",
-   "مرجع تحويل بنكك: "+receipt,
+   "المبلغ: "+amount.toLocaleString("en-US")+" "+currencyCode,
+   "مرجع التحويل: "+receipt,
    "",
    "تم تسجيل الطلب في النظام. أرفق صورة الإيصال هنا. لا يصدر رمز التفعيل إلا بعد تحقق المالك وموافقته."
   ].join("\n");
