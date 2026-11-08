@@ -52,8 +52,8 @@ public class PartyDirectoryActivity extends Activity {
     private void render(){
         LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(12,10,12,12);root.setBackgroundColor(0xFFF6F8FB);
         TextView title=new TextView(this);title.setText(getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","المخبز")+"\\nسجل العملاء والموردين والحسابات البنكية");title.setTextSize(20);title.setTextColor(NAVY);title.setGravity(Gravity.CENTER);root.addView(title);
-        Button back=button("↩ رجوع إلى الشاشة السابقة");back.setOnClickListener(v->finish());root.addView(back);
         Button home=button("⌂ الرئيسية");home.setOnClickListener(v->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();});root.addView(home);
+        Button back=button("↩ رجوع إلى الشاشة السابقة");back.setOnClickListener(v->finish());root.addView(back);
         ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         Button print=button("🖨️ طباعة سجل العملاء والموردين والحسابات");print.setOnClickListener(v->printDirectory());root.addView(print);
         setContentView(root);
@@ -72,6 +72,9 @@ public class PartyDirectoryActivity extends Activity {
             toast("تم حفظ العميل برقم "+id+" — المديونية المتبقية: "+(opening-cashPaid-bankPaid));
             name.setText("");phone.setText("");debt.setText("");cash.setText("");bank.setText("");bankRef.setText("");refreshLists();
         }catch(Exception e){toast("لم يُحفظ العميل: "+e.getMessage());}});body.addView(save);
+        Button searchCustomer=button("بحث عن عميل مسجل");
+        searchCustomer.setOnClickListener(v->PartyDirectory.showCustomerPicker(this,(id,selectedName)->{name.setText(selectedName);name.setTag(id);}));
+        body.addView(searchCustomer);
         body.addView(note("التسجيل أفقي: اسم العميل | الهاتف | إجمالي المديونية | نقدي | بنكك | رقم العملية | العملة. تُحفظ المديونية المتبقية بعد خصم السداد الافتتاحي. وتبقى التحصيلات اللاحقة في شاشة التحصيل."));
         list("SELECT x.name||' | '||x.phone||' | المديونية: '||CASE c.minor_units WHEN 2 THEN printf('%.2f',x.opening_balance_minor/100.0) ELSE CAST(x.opening_balance_minor AS TEXT) END||' '||x.currency_code FROM customers x JOIN currencies c ON c.code=x.currency_code WHERE x.active=1 ORDER BY x.name");
     }
@@ -88,6 +91,9 @@ public class PartyDirectoryActivity extends Activity {
             toast("تم حفظ المورد برقم "+id+" — المديونية المتبقية: "+(invoiceTotal-cashPaid-bankPaid));
             name.setText("");phone.setText("");item.setText("");unit.setText("");qty.setText("");invoice.setText("");cash.setText("");bank.setText("");bankRef.setText("");refreshLists();
         }catch(Exception e){toast("لم يُحفظ المورد: "+e.getMessage());}});body.addView(save);
+        Button searchSupplier=button("بحث عن مورد مسجل");
+        searchSupplier.setOnClickListener(v->PartyDirectory.showSupplierPicker(this,(id,selectedName)->{name.setText(selectedName);name.setTag(id);}));
+        body.addView(searchSupplier);
         body.addView(note("التسجيل أفقي: اسم المورد | الهاتف | الصنف | الوحدة | الكمية | قيمة الفاتورة | نقدي | بنكك | رقم العملية | العملة. تحفظ الفاتورة الافتتاحية والمديونية المتبقية في سجل المورد."));
         list("SELECT x.name||' | '||x.phone||' | '||x.default_item||' | المديونية: '||CASE c.minor_units WHEN 2 THEN printf('%.2f',x.opening_balance_minor/100.0) ELSE CAST(x.opening_balance_minor AS TEXT) END||' '||x.currency_code FROM suppliers x JOIN currencies c ON c.code=x.currency_code WHERE x.active=1 ORDER BY x.name");
     }
