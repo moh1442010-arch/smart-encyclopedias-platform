@@ -2,6 +2,7 @@ package com.mohammedmustafa.almizan.bakery;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -13,6 +14,7 @@ import net.zetetic.database.sqlcipher.SQLiteDatabase;
 import android.content.ContentValues;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Calendar;
 import java.util.Locale;
 import java.util.ArrayList;
 
@@ -52,8 +54,8 @@ public class PartyDirectoryActivity extends Activity {
     private void render(){
         LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(12,10,12,12);root.setBackgroundColor(0xFFF6F8FB);
         TextView title=new TextView(this);title.setText(getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","المخبز")+"\\nسجل العملاء والموردين والحسابات البنكية");title.setTextSize(20);title.setTextColor(NAVY);title.setGravity(Gravity.CENTER);root.addView(title);
+        Button home=button("⌂ العودة إلى الرئيسية");home.setTextSize(17);home.setMinHeight(dp(54));home.setOnClickListener(v->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();});root.addView(home);
         Button back=button("↩ رجوع إلى الشاشة السابقة");back.setOnClickListener(v->finish());root.addView(back);
-        Button home=button("⌂ الرئيسية");home.setOnClickListener(v->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();});root.addView(home);
         ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         Button print=button("🖨️ طباعة سجل العملاء والموردين والحسابات");print.setOnClickListener(v->printDirectory());root.addView(print);
         setContentView(root);
@@ -66,6 +68,7 @@ public class PartyDirectoryActivity extends Activity {
         EditText name=cell("اسم العميل"),phone=cell("رقم الهاتف"),debt=cell("إجمالي المديونية"),cash=cell("سداد نقدي"),bank=cell("سداد بنكك"),bankRef=cell("رقم العملية");
         Spinner currency=currencySpinner();
         addHorizontal(name,phone,debt,cash,bank,bankRef,currency);
+        Button find=button("بحث / اختيار عميل مسجل");find.setOnClickListener(v->PartyDirectory.showCustomerPicker(this,(id,selectedName)->{name.setText(selectedName);name.setTag(id);}));body.addView(find);
         Button save=button("حفظ العميل");save.setOnClickListener(v->{try{
             String currencyCode=currency.getSelectedItem().toString();long opening=amount(debt,currencyCode),cashPaid=amount(cash,currencyCode),bankPaid=amount(bank,currencyCode);
             long id=PartyDirectory.saveCustomer(db,name.getText().toString(),phone.getText().toString(),opening,cashPaid,bankPaid,bankRef.getText().toString(),currencyCode);
@@ -81,12 +84,15 @@ public class PartyDirectoryActivity extends Activity {
         body.addView(note("سجّل المورد مرة واحدة. الصنف والوحدة حقول افتراضية تساعد في الفواتير اللاحقة."));
         EditText name=cell("اسم المورد"),phone=cell("رقم الهاتف"),item=cell("الصنف"),unit=cell("الوحدة"),qty=cell("الكمية"),invoice=cell("قيمة الفاتورة"),cash=cell("سداد نقدي"),bank=cell("سداد بنكك"),bankRef=cell("رقم العملية");
         Spinner currency=currencySpinner();
-        addHorizontal(name,phone,item,unit,qty,invoice,cash,bank,bankRef,currency);
+        EditText invoiceDate=cell("تاريخ الفاتورة YYYY-MM-DD");invoiceDate.setText(today());
+        addHorizontal(name,phone,item,unit,qty,invoice,cash,bank,bankRef,currency,invoiceDate);
+        Button chooseInvoiceDate=button("📅 اختيار تاريخ الفاتورة");chooseInvoiceDate.setOnClickListener(v->pickDate(invoiceDate));body.addView(chooseInvoiceDate);
+        Button find=button("بحث / اختيار مورد مسجل");find.setOnClickListener(v->PartyDirectory.showSupplierPicker(this,(id,selectedName)->{name.setText(selectedName);name.setTag(id);}));body.addView(find);
         Button save=button("حفظ المورد والفاتورة الافتتاحية");save.setOnClickListener(v->{try{
             String currencyCode=currency.getSelectedItem().toString();long quantity=quantity(qty),invoiceTotal=amount(invoice,currencyCode),cashPaid=amount(cash,currencyCode),bankPaid=amount(bank,currencyCode);
-            long id=PartyDirectory.saveSupplier(db,name.getText().toString(),phone.getText().toString(),item.getText().toString(),unit.getText().toString(),quantity,invoiceTotal,cashPaid,bankPaid,bankRef.getText().toString(),currencyCode);
+            long id=PartyDirectory.saveSupplier(db,name.getText().toString(),phone.getText().toString(),item.getText().toString(),unit.getText().toString(),quantity,invoiceTotal,cashPaid,bankPaid,bankRef.getText().toString(),currencyCode,invoiceDate.getText().toString());
             toast("تم حفظ المورد برقم "+id+" — المديونية المتبقية: "+(invoiceTotal-cashPaid-bankPaid));
-            name.setText("");phone.setText("");item.setText("");unit.setText("");qty.setText("");invoice.setText("");cash.setText("");bank.setText("");bankRef.setText("");refreshLists();
+            name.setText("");phone.setText("");item.setText("");unit.setText("");qty.setText("");invoice.setText("");cash.setText("");bank.setText("");bankRef.setText("");invoiceDate.setText(today());refreshLists();
         }catch(Exception e){toast("لم يُحفظ المورد: "+e.getMessage());}});body.addView(save);
         body.addView(note("التسجيل أفقي: اسم المورد | الهاتف | الصنف | الوحدة | الكمية | قيمة الفاتورة | نقدي | بنكك | رقم العملية | العملة. تحفظ الفاتورة الافتتاحية والمديونية المتبقية في سجل المورد."));
         list("SELECT x.name||' | '||x.phone||' | '||x.default_item||' | المديونية: '||CASE c.minor_units WHEN 2 THEN printf('%.2f',x.opening_balance_minor/100.0) ELSE CAST(x.opening_balance_minor AS TEXT) END||' '||x.currency_code FROM suppliers x JOIN currencies c ON c.code=x.currency_code WHERE x.active=1 ORDER BY x.name");
@@ -115,6 +121,7 @@ public class PartyDirectoryActivity extends Activity {
         EditText numerator=cell("بسط سعر الصرف"),denominator=cell("مقام سعر الصرف"),effective=cell("تاريخ السريان YYYY-MM-DD"),source=cell("مصدر السعر");
         effective.setText(today());denominator.setText("1");
         addHorizontal(base,quote,numerator,denominator,effective,source);
+        Button chooseEffective=button("📅 اختيار تاريخ سريان سعر الصرف");chooseEffective.setOnClickListener(v->pickDate(effective));body.addView(chooseEffective);
         Button save=button("حفظ سعر الصرف");save.setOnClickListener(v->{try{
             String from=base.getSelectedItem().toString(),to=quote.getSelectedItem().toString();
             long n=amount(numerator),d=amount(denominator);String date=effective.getText().toString().trim();
@@ -149,6 +156,11 @@ public class PartyDirectoryActivity extends Activity {
     private long quantity(EditText e){String s=e.getText().toString().trim();if(s.isEmpty())return 0;return new java.math.BigDecimal(s).movePointRight(3).setScale(0,java.math.RoundingMode.UNNECESSARY).longValueExact();}
     private int dp(int v){return (int)(v*getResources().getDisplayMetrics().density+0.5f);}
     private String today(){return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());}
+    private void pickDate(EditText target){
+        Calendar c=Calendar.getInstance();
+        try{Date parsed=new SimpleDateFormat("yyyy-MM-dd",Locale.US).parse(target.getText().toString().trim());if(parsed!=null)c.setTime(parsed);}catch(Exception ignored){}
+        new DatePickerDialog(this,(view,y,m,d)->target.setText(String.format(Locale.US,"%04d-%02d-%02d",y,m+1,d)),c.get(Calendar.YEAR),c.get(Calendar.MONTH),c.get(Calendar.DAY_OF_MONTH)).show();
+    }
     private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
 
     private static final class TextWatcherAmount {
