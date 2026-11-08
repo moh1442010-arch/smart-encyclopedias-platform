@@ -574,29 +574,42 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("🖨️ الطابعة الثابتة")
             .setMessage("تتم الطباعة عبر خدمة الطباعة في Android. اختر الطابعة مرة واحدة من نافذة الطباعة؛ يحتفظ Android بآخر وجهة طباعة استخدمتها. يمكنك اختيار طابعة Bluetooth أو Wi-Fi أو USB إذا كانت خدمتها مثبتة، أو اختيار حفظ PDF. الطباعة المحلية لا تحتاج إلى الإنترنت.")
             .setNegativeButton("إغلاق",null)
-            .setPositiveButton("اختبار الطباعة",(d,w)->printText("اختبار الطابعة",businessName()+"\\nاختبار اتصال الطباعة\\n"+day))
+            .setPositiveButton("اختبار الطباعة",(d,w)->printText("اختبار الطابعة",businessName()+"
+اختبار اتصال الطباعة
+"+day))
             .show();
     }
     private void printDailyWork(){
         JSONObject data=store.get(day,"cuts");
         StringBuilder report=new StringBuilder();
-        report.append("التاريخ: ").append(day).append("\\n");
-        report.append("اسم المنشأة: ").append(businessName()).append("\\n");
-        report.append("شغل اليوم\\n");
-        if(data!=null){java.util.Iterator<String> keys=data.keys();while(keys.hasNext()){String k=keys.next();report.append(k).append(": ").append(data.optString(k,"")).append("\\n");}}
-        else report.append("لا توجد بيانات مسجلة لشغل اليوم.\\n");
+        report.append("التاريخ: ").append(day).append("
+");
+        report.append("اسم المنشأة: ").append(businessName()).append("
+");
+        report.append("شغل اليوم
+");
+        if(data!=null){java.util.Iterator<String> keys=data.keys();while(keys.hasNext()){String k=keys.next();report.append(k).append(": ").append(data.optString(k,"")).append("
+");}}
+        else report.append("لا توجد بيانات مسجلة لشغل اليوم.
+");
         printText("شغل اليوم - "+businessName(),report.toString());
     }
     private void printText(String jobName,String text){try{PrinterService.print(this,businessName(),jobName,text);}catch(Exception ex){toast("تعذر فتح الطباعة: "+ex.getMessage());}}
     private void printVisibleScreen(String screenTitle){
-        StringBuilder out=new StringBuilder("المنشأة: ").append(businessName()).append("\\nالشاشة: ").append(screenTitle).append("\\nالتاريخ: ").append(day).append("\\n\\n");
+        StringBuilder out=new StringBuilder("المنشأة: ").append(businessName()).append("
+الشاشة: ").append(screenTitle).append("
+التاريخ: ").append(day).append("
+
+");
         appendPrintable(content,out);
         if(out.length()<80){toast("لا توجد بيانات ظاهرة للطباعة.");return;}
         printText(screenTitle+" - "+businessName(),out.toString());
     }
     private void appendPrintable(View view,StringBuilder out){
-        if(view instanceof EditText){String value=((EditText)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");return;}
-        if(view instanceof TextView){String value=((TextView)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");}
+        if(view instanceof EditText){String value=((EditText)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("
+");return;}
+        if(view instanceof TextView){String value=((TextView)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("
+");}
         if(view instanceof android.view.ViewGroup){android.view.ViewGroup group=(android.view.ViewGroup)view;for(int i=0;i<group.getChildCount();i++)appendPrintable(group.getChildAt(i),out);}
     }
 
@@ -897,7 +910,8 @@ public class MainActivity extends Activity {
     private String normalizeRows(String raw) {
         if (raw == null || raw.isEmpty()) return "";
         // Recover rows saved by older builds with literal backslash-n separators.
-        return raw.replace("\\n", "\n").replace("\r\n", "\n").replace("\r", "\n");
+        return raw.replace("
+", "\n").replace("\r\n", "\n").replace("\r", "\n");
     }
 
     private String[] stockParts(String line) {
@@ -944,7 +958,8 @@ public class MainActivity extends Activity {
         }
         table.addView(header);
         java.util.List<EditText[]> rows=new java.util.ArrayList<>();
-        for(String line:normalizeRows(saved.optString("items_rows","")).split("\\r?\\n")) {
+        for(String line:normalizeRows(saved.optString("items_rows","")).split("\\r?
+")) {
             if(line.trim().isEmpty()) continue;
             String[] p=stockParts(line);
             addInventoryRow(table,rows,p[0],p[1],p[2],p[3]);
@@ -1012,7 +1027,8 @@ public class MainActivity extends Activity {
         table.addView(header);
         java.util.List<EditText[]> rows=new java.util.ArrayList<>();
         String raw=normalizeRows(saved.optString("rows",""));
-        for(String line:raw.split("\\r?\\n")) {
+        for(String line:raw.split("\\r?
+")) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             addWorkerTableRow(table,rows,p.length>0?p[0].trim():"",p.length>1?p[1].trim():"",p.length>2?p[2].trim():"",p.length>3?p[3].trim():"");
@@ -1064,7 +1080,8 @@ public class MainActivity extends Activity {
         box.addView(text("تحويلات بنكك",15));LinearLayout table=new LinearLayout(this);table.setOrientation(1);
         java.util.List<EditText[]> rows=new java.util.ArrayList<>();
         String raw=normalizeRows(saved.optString("bank_transfers",""));
-        for(String line:raw.split("\\r?\\n"))if(!line.trim().isEmpty()){String[] p=line.split("\\|",-1);addBankTransferRow(table,rows,p[0].trim(),p.length>1?p[1].trim():"");}
+        for(String line:raw.split("\\r?
+"))if(!line.trim().isEmpty()){String[] p=line.split("\\|",-1);addBankTransferRow(table,rows,p[0].trim(),p.length>1?p[1].trim():"");}
         if(rows.isEmpty()){long old=saved.optLong("bank",0);if(old>0||!saved.optString("bank_ref","").isEmpty())addBankTransferRow(table,rows,String.valueOf(old),saved.optString("bank_ref",""));else addBankTransferRow(table,rows,"","");}
         box.addView(table);Button add=button("＋ إضافة تحويل بنكك");box.addView(add);
         TextView total=text("إجمالي بنكك: 0",15);box.addView(total);
@@ -1095,7 +1112,8 @@ public class MainActivity extends Activity {
         LinearLayout table=new LinearLayout(this);table.setOrientation(1);java.util.List<EditText[]> rows=new java.util.ArrayList<>();
         LinearLayout head=new LinearLayout(this);head.setOrientation(0);head.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
         for(String title:new String[]{"العميل","العيش","نقدي","بنكك","رقم العملية","ديون","فرق السعر"}){TextView h=ruledHeading(title);head.addView(h,new LinearLayout.LayoutParams(0,-2,1f));}table.addView(head);
-        String raw=normalizeRows(saved.optString("rows",""));for(String line:raw.split("\\r?\\n")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);
+        String raw=normalizeRows(saved.optString("rows",""));for(String line:raw.split("\\r?
+")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);
             if(p.length>=7){addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),p[3].trim(),p[4].trim(),p[5].trim(),p[6].trim());if(p.length>=8)try{rows.get(rows.size()-1)[0].setTag(Long.parseLong(p[7].trim()));}catch(Exception ignored){}}
             else if(p.length>=6)addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),p[4].trim(),"",p[3].trim(),p[5].trim());
             else if(p.length>=5)addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),"","",p[3].trim(),p[4].trim());
@@ -1125,8 +1143,10 @@ public class MainActivity extends Activity {
         PartyDirectory.showCustomerPicker(this,(id,name)->{target.setText(name);target.setTag(id);});
     }
     private void mergeRegularCustomers(String names){
-        try{java.util.LinkedHashMap<String,String> all=new java.util.LinkedHashMap<>();for(String line:normalizeRows(regularCustomers().optString("rows","")).split("\\r?\\n")){String[] p=line.split("\\|",-1);if(p.length>0&&!p[0].trim().isEmpty())all.put(p[0].trim(),p.length>1?p[1].trim():"عميل");}
-            for(String n:names.split("\\r?\\n"))if(!n.trim().isEmpty()&&!all.containsKey(n.trim()))all.put(n.trim(),"عميل");StringBuilder out=new StringBuilder();for(java.util.Map.Entry<String,String> e:all.entrySet()){if(out.length()>0)out.append("\n");out.append(e.getKey()).append(" | ").append(e.getValue());}JSONObject rec=new JSONObject();rec.put("rows",out.toString());store.put(day,"customers",rec);
+        try{java.util.LinkedHashMap<String,String> all=new java.util.LinkedHashMap<>();for(String line:normalizeRows(regularCustomers().optString("rows","")).split("\\r?
+")){String[] p=line.split("\\|",-1);if(p.length>0&&!p[0].trim().isEmpty())all.put(p[0].trim(),p.length>1?p[1].trim():"عميل");}
+            for(String n:names.split("\\r?
+"))if(!n.trim().isEmpty()&&!all.containsKey(n.trim()))all.put(n.trim(),"عميل");StringBuilder out=new StringBuilder();for(java.util.Map.Entry<String,String> e:all.entrySet()){if(out.length()>0)out.append("\n");out.append(e.getKey()).append(" | ").append(e.getValue());}JSONObject rec=new JSONObject();rec.put("rows",out.toString());store.put(day,"customers",rec);
         }catch(Exception e){android.util.Log.w("AlMizanBakery","Customer save failed",e);}
     }
     private void manageRegularCustomers(){startActivity(new Intent(MainActivity.this,PartyDirectoryActivity.class));}
@@ -1150,7 +1170,8 @@ public class MainActivity extends Activity {
         java.util.List<EditText> loafCells=new java.util.ArrayList<>();
         String raw=normalizeRows(saved.optString("production_rows",""));
         int next=1;
-        for(String line:raw.split("\\r?\\n")) {
+        for(String line:raw.split("\\r?
+")) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             String loaf=p.length>1?p[1].trim():"";
@@ -1231,9 +1252,14 @@ public class MainActivity extends Activity {
                 } catch(Exception ex) { toast("تعذر حفظ بيانات شغل اليوم: "+ex.getMessage()); }
             });
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v->{
-                StringBuilder report=new StringBuilder("التاريخ: ").append(day).append("\\nاسم المنشأة: ").append(businessName()).append("\\n");
-                report.append("عدد جوالات الدقيق: ").append(work.getText()).append("\\nعدد الأرغفة لكل 1,000 جنيه: ").append(perThousand.getText()).append("\\n");
-                for(int i=0;i<loafCells.size();i++) report.append("القطعية ").append(i+1).append(": ").append(loafCells.get(i).getText()).append(" رغيف\\n");
+                StringBuilder report=new StringBuilder("التاريخ: ").append(day).append("
+اسم المنشأة: ").append(businessName()).append("
+");
+                report.append("عدد جوالات الدقيق: ").append(work.getText()).append("
+عدد الأرغفة لكل 1,000 جنيه: ").append(perThousand.getText()).append("
+");
+                for(int i=0;i<loafCells.size();i++) report.append("القطعية ").append(i+1).append(": ").append(loafCells.get(i).getText()).append(" رغيف
+");
                 report.append("ملاحظات: ").append(notes.getText());
                 printText("شغل اليوم - "+day,report.toString());
             });
@@ -1435,7 +1461,8 @@ public class MainActivity extends Activity {
     private void validateStockRows(String raw) {
         if (raw.trim().isEmpty()) throw new IllegalArgumentException("أدخل أصناف المخزن أولًا.");
         boolean flourFound=false;
-        for (String line : normalizeRows(raw).split("\\r?\\n")) {
+        for (String line : normalizeRows(raw).split("\\r?
+")) {
             if (line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             if (p.length<4 || p[0].trim().isEmpty() || p[1].trim().isEmpty() || p[2].trim().isEmpty() || p[3].trim().isEmpty())
@@ -1452,7 +1479,8 @@ public class MainActivity extends Activity {
     private long stockFlourQuantity(JSONObject stock) {
         String rows=stock.optString("items_rows","").trim();
         if(!rows.isEmpty()) {
-            for(String line:normalizeRows(rows).split("\\r?\\n")) {
+            for(String line:normalizeRows(rows).split("\\r?
+")) {
                 String[] p=line.split("\\|",-1);
                 if(p.length>=2 && (p[0].trim().contains("دقيق") || p[0].trim().equalsIgnoreCase("flour"))) {
                     String[] q=p[1].trim().split("\\s+");
@@ -1464,7 +1492,8 @@ public class MainActivity extends Activity {
     }
     private String setStockFlourQuantity(String raw,long quantity) {
         StringBuilder out=new StringBuilder(); boolean found=false;
-        for(String line:normalizeRows(raw).split("\\r?\\n")) {
+        for(String line:normalizeRows(raw).split("\\r?
+")) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             if(p.length>=3 && (p[0].trim().contains("دقيق") || p[0].trim().equalsIgnoreCase("flour"))) {
@@ -1495,7 +1524,8 @@ public class MainActivity extends Activity {
         String rows=record("cuts").optString("production_rows","").trim();
         if(!rows.isEmpty()) {
             long total=0L;
-            for(String line:normalizeRows(rows).split("\\r?\\n")) {
+            for(String line:normalizeRows(rows).split("\\r?
+")) {
                 if(line.trim().isEmpty()) continue;
                 String[] p=line.split("\\|",-1);
                 if(p.length<2) throw new IllegalArgumentException("اكتب رقم الجوال | عدد الأرغفة");
@@ -1549,7 +1579,8 @@ public class MainActivity extends Activity {
         String rows=stock.optString("items_rows","").trim();
         if(rows.isEmpty()) return 0L;
         long total=0L;
-        for(String line:normalizeRows(rows).split("\\r?\\n")) {
+        for(String line:normalizeRows(rows).split("\\r?
+")) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             if(p.length<3) throw new IllegalArgumentException("راجع جدول المخزن: الصنف | الكمية والوحدة | سعر الوحدة");
@@ -1567,7 +1598,8 @@ public class MainActivity extends Activity {
         String raw=stock.optString("items_rows","");
         if(raw.trim().isEmpty()) raw=legacyStockRows(stock);
         long total=0L;
-        for(String line:normalizeRows(raw).split("\\r?\\n")) {
+        for(String line:normalizeRows(raw).split("\\r?
+")) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             if(p.length==3) p=new String[]{p[0],p[1],(p[0].trim().contains("دقيق")?"1":"0"),p[2]};
@@ -1611,7 +1643,8 @@ public class MainActivity extends Activity {
     private long bankTotal() {
         Totals d=distribution();JSONObject window=record("window");long windowBank=window.optLong("bank",0L);
         String raw=normalizeRows(window.optString("bank_transfers",""));
-        if(!raw.trim().isEmpty()){windowBank=0L;for(String line:raw.split("\\r?\\n")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);if(p.length<2||p[1].trim().isEmpty())throw new IllegalArgumentException("رقم عملية بنكك غير مكتمل");long n=parseLong(p[0].trim());if(n<0)throw new IllegalArgumentException("مبلغ بنكك سالب");windowBank=exactAdd(windowBank,n);}}
+        if(!raw.trim().isEmpty()){windowBank=0L;for(String line:raw.split("\\r?
+")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);if(p.length<2||p[1].trim().isEmpty())throw new IllegalArgumentException("رقم عملية بنكك غير مكتمل");long n=parseLong(p[0].trim());if(n<0)throw new IllegalArgumentException("مبلغ بنكك سالب");windowBank=exactAdd(windowBank,n);}}
         return exactAdd(windowBank,d.bank);
     }
     private long distributionDiff() { return distribution().diff; }
@@ -2177,7 +2210,8 @@ public class MainActivity extends Activity {
 
         private JSONObject materialUsageFor(String raw,long workUnits) throws Exception {
             JSONObject usage=new JSONObject();
-            for(String line:normalizeRows(raw).split("\\r?\\n")) {
+            for(String line:normalizeRows(raw).split("\\r?
+")) {
                 if(line.trim().isEmpty()) continue;
                 String[] p=line.split("\\|",-1);
                 if(p.length==3) p=new String[]{p[0],p[1],(p[0].trim().contains("دقيق")?"1":"0"),p[2]};
@@ -2189,7 +2223,8 @@ public class MainActivity extends Activity {
         }
         private String adjustMaterialRows(String raw,JSONObject usage,boolean restore) throws Exception {
             StringBuilder out=new StringBuilder();
-            for(String line:normalizeRows(raw).split("\\r?\\n")) {
+            for(String line:normalizeRows(raw).split("\\r?
+")) {
                 if(line.trim().isEmpty()) continue;
                 String[] p=line.split("\\|",-1);
                 if(p.length==3) p=new String[]{p[0],p[1],(p[0].trim().contains("دقيق")?"1":"0"),p[2]};
@@ -2253,7 +2288,8 @@ public class MainActivity extends Activity {
             } finally { db.endTransaction(); }
         }
         private long stockFlourQuantityFromRows(String raw) {
-            for(String line:normalizeRows(raw).split("\\r?\\n")) {
+            for(String line:normalizeRows(raw).split("\\r?
+")) {
                 String[] p=line.split("\\|",-1);
                 if(p.length>=2 && (p[0].trim().contains("دقيق") || p[0].trim().equalsIgnoreCase("flour")))
                     return parseLong(p[1].trim().split("\\s+")[0]);
