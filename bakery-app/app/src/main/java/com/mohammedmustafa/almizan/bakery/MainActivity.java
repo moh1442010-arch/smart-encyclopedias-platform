@@ -1810,8 +1810,7 @@ public class MainActivity extends Activity {
                 records.put(row);
             }
         }
-        if(manifest!=null&&(!"com.mohammedmustafa.almizan.bakery".equals(manifest.optString("app_id"))||manifest.optInt("schema_version")!=1))
-            throw new IllegalArgumentException("Unsupported backup app identity or schema version");
+        BackupManifestValidator.validate(manifest,partySnapshot,factorySnapshot);
         if(factorySnapshot!=null)FactoryBackup.validate(factorySnapshot);
         if(partySnapshot!=null)PartyDirectoryBackup.validate(partySnapshot);
         final JSONArray bakeryRecords=records;final JSONObject factoryData=factorySnapshot;final JSONObject partyData=partySnapshot;
