@@ -78,6 +78,7 @@ public class MainActivity extends Activity {
     // Retain the previous public key so any previously issued licenses remain valid.
     private static final String LEGACY_LICENSE_PUBLIC_KEY_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvsK66CYxt4X7R9GcVaJ0FjrheMAkFpzbirdz7/X/lj8UAuqUabNOPN3R5dGuZro90i+raIyngTz+VxRxLcNPRQru4VzWIDLsoBEwi/CrsOaMJFgVLom7jYXFjQ5P25TO5hRxzPN8ZOOG1MTo8j6ipgPOKY5be6Gmsj8R03SbulYnVO8STWC4bSkqwvV9YlEIpZwnyAJVbWHbE4JSKiCC/TMOcfrBgGG0W7qCJeEjnUKPfHAtH85ayZjBQwMIQx+z1CoTFWrqKXywSWN65G7yZbHwsnREovRprxjyVHqmTtLd45VyNQU2zXBKchzkwnpiG1zeD8kfdDeACeaAmxbsiwIDAQAB";
     private static final int REQUEST_EXPORT_BACKUP = 4250, REQUEST_IMPORT_BACKUP = 4251, REQUEST_PAYMENT_RECEIPT = 4252, REQUEST_COMPANY_LOGO = 4253;
+    private static final String BAKERY_PROFILE_BACKUP_TYPE = "almizan_bakery_profile_backup";
     private String pendingActivationMessage = "";
     private String pendingBackupExportSystem = "bakery";
     private Store store;
@@ -1772,6 +1773,7 @@ public class MainActivity extends Activity {
             if("bakery".equals(system)){
                 JSONArray records=store.exportAll();for(int i=0;i<records.length();i++)snapshot.put(records.get(i));
                 snapshot.put(PartyDirectoryBackup.export(store.getReadableDatabase()));
+                snapshot.put(exportBakeryProfile());
             }else{
                 snapshot.put(FactoryBackup.export(this));
             }
@@ -1808,7 +1810,7 @@ public class MainActivity extends Activity {
 
     private void importBackupPayload(byte[] bytes) throws Exception {
         JSONArray imported=new JSONArray(new String(bytes,StandardCharsets.UTF_8));
-        JSONArray records=new JSONArray();JSONObject factorySnapshot=null,partySnapshot=null,manifest=null;
+        JSONArray records=new JSONArray();JSONObject factorySnapshot=null,partySnapshot=null,bakeryProfileSnapshot=null,manifest=null;
         for(int i=0;i<imported.length();i++){
             JSONObject row=imported.getJSONObject(i);String type=row.optString("_type","");
             if("almizan_backup_manifest".equals(type)){
@@ -1820,6 +1822,9 @@ public class MainActivity extends Activity {
             }else if(FactoryBackup.TYPE.equals(type)){
                 if(factorySnapshot!=null)throw new IllegalArgumentException("Duplicate factory backup section");
                 factorySnapshot=row;
+            }else if(BAKERY_PROFILE_BACKUP_TYPE.equals(type)){
+                if(bakeryProfileSnapshot!=null)throw new IllegalArgumentException("Duplicate bakery identity section");
+                bakeryProfileSnapshot=row;
             }else{
                 if(!type.isEmpty())throw new IllegalArgumentException("Unknown backup section type");
                 records.put(row);
@@ -1827,32 +1832,56 @@ public class MainActivity extends Activity {
         }
         String system=manifest==null?"":manifest.optString("system","");
         BackupManifestValidator.validate(manifest!=null,manifest==null?null:manifest.optString("app_id"),manifest==null?-1:manifest.optInt("schema_version",-1),system,partySnapshot!=null,factorySnapshot!=null);
+        if("bakery".equals(system)&&bakeryProfileSnapshot==null)throw new IllegalArgumentException("نسخة المخبز لا تحتوي على هوية المنشأة");
+        if("factory".equals(system)&&bakeryProfileSnapshot!=null)throw new IllegalArgumentException("نسخة المصنع لا يجوز أن تحتوي على هوية المخبز");
         if(!system.isEmpty()){
-            restoreBackupSystem(system,records,partySnapshot,factorySnapshot);
+            restoreBackupSystem(system,records,partySnapshot,factorySnapshot,bakeryProfileSnapshot);
             return;
         }
         final JSONArray legacyRecords=records;
-        final JSONObject legacyPartySnapshot=partySnapshot,legacyFactorySnapshot=factorySnapshot;
+        final JSONObject legacyPartySnapshot=partySnapshot,legacyFactorySnapshot=factorySnapshot,legacyBakeryProfile= bakeryProfileSnapshot;
         new AlertDialog.Builder(this).setTitle("اختيار نظام الاستعادة")
             .setMessage("هذه نسخة قديمة أو لا تحدد النظام. اختر نظاماً واحداً فقط. لن تتغير بيانات النظام الآخر.")
             .setNegativeButton("إلغاء",null)
-            .setNeutralButton("المصنع",(d,w)->{try{restoreBackupSystem("factory",legacyRecords,legacyPartySnapshot,legacyFactorySnapshot);}catch(Exception ex){toast("تعذرت استعادة المصنع: "+ex.getMessage());}})
-            .setPositiveButton("المخبز",(d,w)->{try{restoreBackupSystem("bakery",legacyRecords,legacyPartySnapshot,legacyFactorySnapshot);}catch(Exception ex){toast("تعذرت استعادة المخبز: "+ex.getMessage());}})
+            .setNeutralButton("المصنع",(d,w)->{try{restoreBackupSystem("factory",legacyRecords,legacyPartySnapshot,legacyFactorySnapshot,legacyBakeryProfile);}catch(Exception ex){toast("تعذرت استعادة المصنع: "+ex.getMessage());}})
+            .setPositiveButton("المخبز",(d,w)->{try{restoreBackupSystem("bakery",legacyRecords,legacyPartySnapshot,legacyFactorySnapshot,legacyBakeryProfile);}catch(Exception ex){toast("تعذرت استعادة المخبز: "+ex.getMessage());}})
             .show();
     }
 
-    private void restoreBackupSystem(String system,JSONArray bakeryRecords,JSONObject partyData,JSONObject factoryData) throws Exception {
+    private JSONObject exportBakeryProfile() throws Exception {
+        JSONObject profile=new JSONObject();profile.put("_type",BAKERY_PROFILE_BACKUP_TYPE);
+        String name=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","");
+        String currency="";
+        Cursor cursor=store.getReadableDatabase().rawQuery("SELECT business_name,base_currency FROM company_settings WHERE id=1",null);
+        try{if(cursor.moveToFirst()){if(name==null||name.trim().isEmpty())name=cursor.getString(0);currency=cursor.getString(1);}}finally{cursor.close();}
+        profile.put("business_name",name==null?"":name);profile.put("base_currency",currency==null?"":currency);
+        return profile;
+    }
+
+    private void restoreBakeryProfile(JSONObject profile) throws Exception {
+        if(profile==null)return;
+        String name=profile.optString("business_name","").trim(),currency=profile.optString("base_currency","").trim();
+        ContentValues values=new ContentValues();
+        if(!name.isEmpty())values.put("business_name",name);
+        if(!currency.isEmpty())values.put("base_currency",currency);
+        if(values.size()>0)store.getWritableDatabase().update("company_settings",values,"id=1",null);
+        if(!name.isEmpty())getSharedPreferences("bakery_profile",MODE_PRIVATE).edit().putString("business_name",name).apply();
+    }
+
+    private void restoreBackupSystem(String system,JSONArray bakeryRecords,JSONObject partyData,JSONObject factoryData,JSONObject bakeryProfileData) throws Exception {
         if("bakery".equals(system)){
             if(bakeryRecords==null||(bakeryRecords.length()==0&&partyData==null))throw new IllegalArgumentException("الملف لا يحتوي على بيانات المخبز");
             if(partyData!=null)PartyDirectoryBackup.validate(partyData);
-            JSONArray previousBakery=null;JSONObject previousParties=null;boolean bakeryRestored=false,partiesRestored=false;
+            JSONArray previousBakery=null;JSONObject previousParties=null,previousProfile=null;boolean bakeryRestored=false,partiesRestored=false,profileRestored=false;
             try{
-                previousBakery=store.exportAll();previousParties=PartyDirectoryBackup.export(store.getReadableDatabase());
+                previousBakery=store.exportAll();previousParties=PartyDirectoryBackup.export(store.getReadableDatabase());previousProfile=exportBakeryProfile();
                 int count=store.restoreAll(bakeryRecords);bakeryRestored=true;
                 if(partyData!=null){PartyDirectoryBackup.restore(store.getWritableDatabase(),partyData);partiesRestored=true;}
+                if(bakeryProfileData!=null){restoreBakeryProfile(bakeryProfileData);profileRestored=true;}
                 updateStatus();toast("اكتملت استعادة بيانات المخبز فقط: "+count+" سجل. لم تتغير بيانات المصنع.");
             }catch(Exception ex){
                 boolean rollbackOk=true;
+                try{if(profileRestored&&previousProfile!=null)restoreBakeryProfile(previousProfile);}catch(Exception rollback){rollbackOk=false;android.util.Log.e("AlMizanBakery","Bakery profile rollback failed",rollback);}
                 try{if(partiesRestored&&previousParties!=null)PartyDirectoryBackup.restore(store.getWritableDatabase(),previousParties);}catch(Exception rollback){rollbackOk=false;android.util.Log.e("AlMizanBakery","Bakery party rollback failed",rollback);}
                 try{if(bakeryRestored&&previousBakery!=null)store.replaceAll(previousBakery);}catch(Exception rollback){rollbackOk=false;android.util.Log.e("AlMizanBakery","Bakery restore rollback failed",rollback);}
                 if(!rollbackOk)toast("تعذر التراجع الكامل عن استعادة المخبز. أوقف إدخال العمليات وخذ نسخة من الحالة الحالية.");
