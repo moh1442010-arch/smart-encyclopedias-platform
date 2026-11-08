@@ -73,6 +73,13 @@ public class MainActivity extends Activity {
     }
     private static final int NAVY = Color.rgb(11,31,58), GOLD = Color.rgb(212,175,55), BG = Color.rgb(246,248,251);
     private static final String SUPPORT = "249121851285", BANKAK = "1882224";
+    private static final int REQUEST_EXPORT_BACKUP = 4250, REQUEST_IMPORT_BACKUP = 4251, REQUEST_PAYMENT_RECEIPT = 4252, REQUEST_COMPANY_LOGO = 4253;
+    private static final String BAKERY_PROFILE_BACKUP_TYPE = "almizan_bakery_profile_backup";
+    private String pendingActivationMessage = "";
+    private String pendingBackupExportSystem = "bakery";
+    private Store store;
+    private boolean pinAuthenticated = false;
+    private boolean paywallLocked = false;
     private final android.os.Handler entitlementHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable entitlementWatchdog = new Runnable() {
         @Override public void run() {
