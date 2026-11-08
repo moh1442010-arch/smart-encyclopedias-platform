@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   build:
-    # Feature/foundation branches must never produce APKs; release branch is opened only after all gates pass.
+    # Only the dedicated device-review branch may build an APK; this workflow never publishes a commercial release.
     if: github.ref == 'refs/heads/review/bakery-2.8.1-device-acceptance'
     runs-on: ubuntu-latest
     steps:
@@ -129,6 +129,9 @@ jobs:
           grep -Fq 'CREATE TABLE IF NOT EXISTS work_orders' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS journal_entries' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'root.put("schema_version", 9)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
+          grep -Fq 'SD8504018822240001' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq '1882224' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          test -s bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryBackupRestoreTest.java
           grep -Fq 'net.zetetic:sqlcipher-android:4.19.1@aar' bakery-app/app/build.gradle
           grep -Fq 'System.loadLibrary("sqlcipher")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/SecureDatabase.java
           grep -Fq 'AndroidKeyStore' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/SecureDatabase.java
@@ -241,7 +244,6 @@ jobs:
 
       - name: Smoke test signed APK on minimum Android API 23
         timeout-minutes: 10
-        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 23
