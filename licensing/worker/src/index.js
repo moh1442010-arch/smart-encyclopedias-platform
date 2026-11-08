@@ -1,10 +1,15 @@
 const APP_ID = "com.mohammedmustafa.almizan.bakery";
 const EXPECTED_APP_PUBLIC_KEY_DER_B64 = "MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAnWLF2Y4nmN7MWU1q9tzTVJCCacOf7iaGiRYrA21Ej7Xp7vV2/BgMu7N3OmcB0UJyIn1A22z34fKf3YEEDTjBz4pHHEtXeB+bjH+jn7VOcwQS9mZhTUR1+/2gYJxIKUEz9233Ab1eupGcCzuziQck362qiRBdjlHEViW0koE87TmPKRkkqzKtkOm0MzIfYr7tM/DmqncZ9RKUnctvoJd05kDxg0PXdNZ539Ip7tT6y11nmakYg5lJv9XOqNWnQbPRUDjOO9jWIPFnUvaPVofYrBOENPTu8S7414Twb7/0zmhFgNuizHbZQEOYD3ZNK0GfNDYH8Tk1ZEe9H7WHE3+B0UYkCBEfJCdXkHxRIJLb1KSyxpLw7iiGxAJdCQ95SNkcYfl6KTsZFPtt4pssXRH9XvJsvQEmP7OmqtPSJy0ZFSL/KgS5T3EIeuG2DyJom5WJ8lya4zy3noU9hL8gSjpzOdzR87KqiOYSy890nwtvHIi73qxvNpPGxPghG3JIEEBFAgMBAAE=";
-const PLANS = {
-  monthly: { amount: 55000, seconds: 30 * 86400 },
-  annual: { amount: 550000, seconds: 365 * 86400 },
-  lifetime: { amount: 1050000, seconds: 0 }
+const PRICE_MATRIX = {
+  SDG: { monthly: 55000, annual: 550000, lifetime: 1050000 },
+  SAR: { monthly: 29, annual: 290, lifetime: 725 },
+  AED: { monthly: 29, annual: 290, lifetime: 725 },
+  USD: { monthly: 8, annual: 80, lifetime: 199 }
 };
+const PLAN_SECONDS = { monthly: 30 * 86400, annual: 365 * 86400, lifetime: 0 };
+function licensePrice(currency, plan) {
+  return PRICE_MATRIX[currency] && PLAN_SECONDS[plan] !== undefined ? PRICE_MATRIX[currency][plan] : null;
+}
 const encoder = new TextEncoder();
 const ADMIN_PRODUCT_REGISTRY = [
   { id: "accounting-android", name: "المحاسب الميزان", platform: "Android", category: "محاسبة", scope: "التطبيق المحاسبي العام" },
@@ -221,7 +226,7 @@ async function importPrivateKey(env) {
 async function issueToken(env, deviceId, plan, purchasedAppVersion) {
   const key = await importPrivateKey(env);
   const now = Math.floor(Date.now() / 1000);
-  const expires = plan === "lifetime" ? 0 : now + PLANS[plan].seconds;
+  const expires = plan === "lifetime" ? 0 : now + PLAN_SECONDS[plan];
   const appVersion = cleanText(purchasedAppVersion || env.APP_VERSION || "2.8.1", 32);
   // This exact payload format is consumed by MainActivity.verifyLicenseToken().
   const maxVersion = plan === "lifetime" ? appVersion : "any";
@@ -475,6 +480,8 @@ async function handle(request, env) {
     const contact = cleanText(body.contact, 80);
     const deviceId = cleanText(body.deviceId, 100);
     const plan = cleanText(body.plan, 20);
+    const currencyCode = cleanText(body.currencyCode || "SDG", 3).toUpperCase();
+    const amount = licensePrice(currencyCode, plan);
     const receiptRef = cleanText(body.receiptReference, 100);
     const requestedVersion = cleanText(body.appVersion, 32);
     const appVersion = cleanText(env.APP_VERSION || "2.8.1", 32);
@@ -483,7 +490,7 @@ async function handle(request, env) {
     if (customer.length < 2 || customer.length > 100 ||
         !/^[+0-9()\s-]{8,25}$/.test(contact) ||
         !/^[A-Za-z0-9\-_/]{4,100}$/.test(receiptRef) ||
-        !validDevice(deviceId) || !PLANS[plan] ||
+        !validDevice(deviceId) || amount === null ||
         (requestedVersion && requestedVersion !== appVersion && requestedVersion !== previousAppVersion)) {
       return json({ error: requestedVersion && requestedVersion !== appVersion && requestedVersion !== previousAppVersion ? "APP_VERSION_UNSUPPORTED" : "INVALID_FIELDS" }, 400);
     }
@@ -495,22 +502,22 @@ async function handle(request, env) {
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     await env.DB.prepare(
-      "INSERT INTO license_orders(id,created_at,updated_at,customer_name,contact,device_id,plan,amount_sdg,receipt_reference,status,app_version) VALUES(?,?,?,?,?,?,?,?,?,?,?)"
-    ).bind(id, now, now, customer, contact, deviceId, plan, PLANS[plan].amount, receiptRef, "pending", orderAppVersion).run();
+      "INSERT INTO license_orders(id,created_at,updated_at,customer_name,contact,device_id,plan,amount_sdg,receipt_reference,status,app_version,currency_code,amount_minor) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)"
+    ).bind(id, now, now, customer, contact, deviceId, plan, currencyCode === "SDG" ? amount : 0, receiptRef, "pending", orderAppVersion, currencyCode, amount).run();
     await audit(env, id, "order_created", "customer", "Payment requires manual verification; receipt reference recorded.");
-    return json({ orderId: id, status: "pending", amountSdg: PLANS[plan].amount, message: "تم تسجيل الطلب. لن يصدر الترخيص قبل مراجعة الدفع." }, 201);
+    return json({ orderId: id, status: "pending", amount, currencyCode, message: "تم تسجيل الطلب. لن يصدر الترخيص قبل مراجعة الدفع." }, 201);
   }
 
   const statusMatch = url.pathname.match(/^\/api\/orders\/([0-9a-f-]{36})$/i);
   if (statusMatch && request.method === "GET") {
     const row = await env.DB.prepare(
-      "SELECT id,created_at,plan,amount_sdg,status,app_version FROM license_orders WHERE id=?"
+      "SELECT id,created_at,plan,amount_sdg,status,app_version,currency_code,amount_minor FROM license_orders WHERE id=?"
     ).bind(statusMatch[1]).first();
     if (!row) return json({ error: "ORDER_NOT_FOUND" }, 404);
     // Public status lookup never exposes customer details, reviewer notes, or activation tokens.
     return json({
       orderId: row.id, createdAt: row.created_at, plan: row.plan,
-      amountSdg: row.amount_sdg, status: row.status, appVersion: row.app_version
+      amount: row.amount_minor || row.amount_sdg, currencyCode: row.currency_code || "SDG", status: row.status, appVersion: row.app_version
     });
   }
 
@@ -534,7 +541,7 @@ async function handle(request, env) {
     const status = url.searchParams.get("status") || "pending";
     if (!["pending", "approved", "rejected"].includes(status)) return json({ error: "INVALID_STATUS" }, 400);
     const rows = await env.DB.prepare(
-      "SELECT id,created_at,customer_name,contact,device_id,plan,amount_sdg,receipt_reference,status,reviewer_note,app_version FROM license_orders WHERE status=? ORDER BY created_at DESC LIMIT 100"
+      "SELECT id,created_at,customer_name,contact,device_id,plan,amount_sdg,receipt_reference,status,reviewer_note,app_version,currency_code,amount_minor FROM license_orders WHERE status=? ORDER BY created_at DESC LIMIT 100"
     ).bind(status).all();
     return json({ orders: rows.results || [] });
   }
