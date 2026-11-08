@@ -84,6 +84,7 @@ public class FactoryActivity extends Activity {
         body.addView(btn("3. الوصفات ومكونات الإنتاج",()->recipes()));
         body.addView(btn("4. الإنتاج والتشغيل اليومي",()->production()));
         body.addView(btn("5. نقطة البيع",()->pointOfSale()));
+        body.addView(btn("5.1 مبيعات التوزيع",()->distributionSales()));
         body.addView(btn("6. المصروفات والتالف",()->expenses()));
         body.addView(btn("7. حساب التشغيل والتكلفة",()->costing()));
         body.addView(btn("8. الحسابات والأرصدة والتقارير",()->accounts()));
@@ -163,11 +164,12 @@ public class FactoryActivity extends Activity {
     }
     // All legacy sales entry points are redirected to this single accounting screen.
     private void pointOfSale(){sales("نقطة البيع");}
+    private void distributionSales(){sales("التوزيع");}
     private void sales(){pointOfSale();}
     private void cashWindow(){pointOfSale();}
     private void sales(String channel){
-        frame("نقطة البيع");
-        body.addView(label("شاشة بيع موحدة لمنتجات المصنع. تختار المنتج وتحدد الكمية وسعر الوحدة، ويحسب النظام الإجمالي ثم يوزع التحصيل إلى نقد وبنكك وآجل.",14));
+        frame(channel);
+        body.addView(label("شاشة مبيعات "+channel+" لمنتجات المصنع. تسجل الكمية وسعر الوحدة، ثم توزع قيمة الفاتورة إلى نقد وبنكك وآجل. تظهر مبيعات هذا المسار منفصلة في التقارير ويجمعها المركز المحاسبي دون خصم.",14));
         EditText customer=field("العميل المختار من السجل",false);customer.setFocusable(false);final long[] customerId={0};
         body.addView(btn("بحث واختيار العميل",()->PartyDirectory.showCustomerPicker(this,(id,name)->{customerId[0]=id;customer.setText(name);} )));
         EditText product=field("اسم المنتج",false),qty=field("الكمية المباعة",true),unitPrice=field("سعر بيع الوحدة بالجنيه",false),cash=field("المبلغ النقدي المستلم",false),bank=field("المبلغ المحول عبر بنكك",false),ref=field("رقم عملية بنكك عند التحويل",false);
@@ -178,7 +180,7 @@ public class FactoryActivity extends Activity {
             try{
                 long total=FactoryMath.saleTotal(q,p);
                 if(total<=0||c>total||bk>total-c||(bk>0&&br.isEmpty())){toast("راجع الإجمالي والتحصيل ورقم بنكك");return;}
-                db.sell(pid,customerId[0],q,total,c,bk,cust,br,"نقطة البيع");
+                db.sell(pid,customerId[0],q,total,c,bk,cust,br,channel);
                 String invoice="رقم المستند: POS-"+System.currentTimeMillis()+"\\nالتاريخ: "+today()+"\\nالعميل: "+cust+"\\nالمنتج: "+product.getText()+"\\nالكمية: "+(q/1000.0)+"\\nسعر الوحدة: "+p+" جنيه\\nالإجمالي: "+total+" جنيه\\nنقدي: "+c+" جنيه\\nبنكك: "+bk+" جنيه\\nرقم العملية: "+br+"\\nالآجل: "+(total-c-bk)+" جنيه";
                 new AlertDialog.Builder(this).setTitle("تم حفظ فاتورة البيع").setMessage("الإجمالي "+total+" جنيه. هل تريد طباعة الفاتورة الآن؟").setNegativeButton("لاحقاً",(d,w)->pointOfSale()).setPositiveButton("🖨️ طباعة الفاتورة",(d,w)->{try{PrinterService.print(this,businessName(),"فاتورة بيع",invoice);}catch(Exception ex){toast("تعذر الطباعة: "+ex.getMessage());}pointOfSale();}).show();
             }catch(Exception ex){toast("لم يتم البيع: "+ex.getMessage());}
@@ -236,6 +238,10 @@ public class FactoryActivity extends Activity {
     }
     private void costing(){
         frame("حساب التشغيل والتكلفة");
+        FactoryAccountingSummary summary=accountingSummary();
+        summaryLine("إجمالي المبيعات بعد المرتجعات",summary.netSales);
+        summaryLine("إجمالي تكلفة التشغيل",summary.totalOperatingCost);
+        summaryLine("صافي الربح أو الخسارة التشغيلية",summary.operatingProfit);
         list("SELECT p.name||' | رصيد المنتج: '||printf('%.3f',f.qty/1000.0)||' | تكلفة الوحدة بالجنيه: '||printf('%.2f',f.unit_cost/1000.0) FROM finished f JOIN products p ON p.id=f.product_id");
         list("SELECT m.name||' | رصيد الخام: '||printf('%.3f',m.qty/1000.0)||' '||m.unit||' | قيمة المخزون: '||m.value FROM materials m ORDER BY m.name");
         list("SELECT 'إجمالي المصروفات: '||COALESCE(SUM(amount),0)||' جنيه' FROM expenses");
