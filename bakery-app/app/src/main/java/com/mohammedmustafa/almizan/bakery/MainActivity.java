@@ -334,62 +334,11 @@ public class MainActivity extends Activity {
     }
 
     private boolean hasActiveLicense() {
-        String token = getPreferences(0).getString("license_token", null);
-        return token != null && verifyLicenseToken(token);
+        return LicenseAccessGate.hasValidLicense(this);
     }
 
     private boolean verifyLicenseToken(String token) {
-        try {
-            String[] parts = token.trim().split("\\.", -1);
-            if (parts.length != 2) return false;
-            int flags = Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING;
-            byte[] payloadBytes = Base64.decode(parts[0], flags);
-            byte[] signatureBytes = Base64.decode(parts[1], flags);
-            String payload = new String(payloadBytes, StandardCharsets.UTF_8);
-            boolean signatureValid = false;
-            for (String publicKeyB64 : new String[]{LICENSE_PUBLIC_KEY_B64, LEGACY_LICENSE_PUBLIC_KEY_B64}) {
-                try {
-                    java.security.PublicKey key = java.security.KeyFactory.getInstance("RSA").generatePublic(
-                        new java.security.spec.X509EncodedKeySpec(Base64.decode(publicKeyB64, Base64.NO_WRAP)));
-                    java.security.Signature verifier = java.security.Signature.getInstance("SHA256withRSA");
-                    verifier.initVerify(key);
-                    verifier.update(payloadBytes);
-                    if (verifier.verify(signatureBytes)) { signatureValid = true; break; }
-                } catch (Exception ignored) { }
-            }
-            if (!signatureValid) return false;
-            java.util.Map<String,String> fields = new java.util.HashMap<>();
-            for (String field : payload.split(";")) {
-                int at = field.indexOf('=');
-                if (at <= 0) return false;
-                fields.put(field.substring(0, at), field.substring(at + 1));
-            }
-            if (!"com.mohammedmustafa.almizan.bakery".equals(fields.get("app"))) return false;
-            String licensedDevice = fields.get("device");
-            // Accept the old locally stored UUID for already-issued licenses, while new orders use Android ID.
-            String legacyDevice = legacyDeviceId();
-            if (!deviceId().equals(licensedDevice) &&
-                (legacyDevice == null || !legacyDevice.equals(licensedDevice))) return false;
-            String plan = fields.get("plan");
-            if (!"monthly".equals(plan) && !"annual".equals(plan) && !"lifetime".equals(plan)) return false;
-            // New lifetime purchases are bound to the purchased app version; dated subscriptions remain version-flexible.
-            String maxVersion = fields.get("max_version");
-            // New lifetime tokens use "any". Preserve existing 2.6.15 lifetime tokens too.
-            if (!"any".equals(maxVersion) &&
-                !("lifetime".equals(plan) &&
-                    ("2.6.15".equals(maxVersion) || BuildConfig.VERSION_NAME.equals(maxVersion)))) return false;
-            long expires = Long.parseLong(fields.get("expires"));
-            if (expires == 0L) return true;
-            android.content.SharedPreferences prefs = getPreferences(0);
-            long now = System.currentTimeMillis() / 1000L;
-            long lastSeen = prefs.getLong("license_last_seen", 0L);
-            if (lastSeen > 0L && now < lastSeen - 300L) return false;
-            prefs.edit().putLong("license_last_seen", Math.max(lastSeen, now)).apply();
-            return now <= expires;
-        } catch (Exception ex) {
-            android.util.Log.w("AlMizanBakery", "Activation token rejected", ex);
-            return false;
-        }
+        return LicenseAccessGate.verifyToken(this,token);
     }
 
     private void showActivationDialog() {
