@@ -20,6 +20,7 @@ concurrency:
 jobs:
   deploy:
     name: Deploy al-mizan-bakery-licensing
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
