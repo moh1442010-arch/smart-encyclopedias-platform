@@ -18,7 +18,7 @@
 4. Security, identity and localization — salted PIN hash, rate limiting and safe recovery; independent bakery/factory names; Arabic and English across all screens, receipts, reports and offline guide.
 5. Release engineering and acceptance — version and certificate consistency, API 23+ tests, migration/backup/restore tests, low-end Android and physical-device acceptance, checksums, and a documented rollback path.
 
-Detailed acceptance gates: licensing/RELEASE_ACCEPTANCE.md. The licensing CI checks both the 2.8.1 candidate and 2.8.0 compatibility branch, including exact active-key extraction that excludes legacy verification keys.
+Detailed acceptance gates: licensing/RELEASE_ACCEPTANCE.md. The licensing CI checks both the 2.8.1 candidate and 2.8.0 compatibility branch, including exact active-key extraction that excludes legacy verification keys, plus deployment branch-guard checks.
 
 ## Customer licensing flow
 
