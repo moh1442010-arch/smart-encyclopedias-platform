@@ -73,6 +73,7 @@ const initialPlan=params.get("plan");
 if(params.get("deviceId"))document.getElementById("device").value=params.get("deviceId");
 if(validPlans.includes(initialPlan))document.getElementById("plan").value=initialPlan;
 const initialCurrency=params.get("currency");if(["SDG","SAR","AED","USD"].includes(initialCurrency))currency.value=initialCurrency;
+updatePriceLabels();
 const version=params.get("appVersion")||"2.8.1";
 
 const labels={monthly:"شهري — 30 يوماً",annual:"سنوي — 365 يوماً",lifetime:"دائم لجهاز واحد"};
