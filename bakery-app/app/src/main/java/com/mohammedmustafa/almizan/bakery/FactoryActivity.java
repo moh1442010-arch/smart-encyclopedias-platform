@@ -30,8 +30,8 @@ public class FactoryActivity extends Activity {
         startActivity(new Intent(this,MainActivity.class));
         return false;
     }
-    private static final String[][] DEFAULT_MATERIALS={{"دقيق","كجم"},{"سكر","كجم"},{"زيت","لتر"},{"خميرة","كجم"},{"سمن","كجم"},{"بيض","طبق"},{"لبن","لتر"},{"مواد تغليف","قطعة"},{"غاز","أسطوانة"},{"وقود","لتر"}};
-    private static final String[][] DEFAULT_PRODUCTS={{"باسطة","باسطة"},{"فطائر","فطائر"},{"خبائز","خبائز"},{"حلويات","حلويات"},{"بلح شام","بلح شام"}};
+    private static final String[][] DEFAULT_MATERIALS={{"دقيق","كجم"},{"سكر","كجم"},{"زيت","لتر"},{"خميرة","كجم"},{"سمن","كجم"},{"بيض","طبق"},{"لبن","لتر"},{"زبدة","كجم"},{"قشطة","كجم"},{"كريمة","لتر"},{"جبن","كجم"},{"شوكولاتة","كجم"},{"كاكاو","كجم"},{"فانيليا","جرام"},{"بيكنج باودر","جرام"},{"ملح","كجم"},{"تمر","كجم"},{"سمسم","كجم"},{"جوز هند","كجم"},{"عسل","كجم"},{"شيرة / قطر","لتر"},{"مكسرات","كجم"},{"هيل","جرام"},{"قرفة","جرام"},{"مواد تغليف","قطعة"},{"علب حلويات","قطعة"},{"أكياس","قطعة"},{"غاز","أسطوانة"},{"حطب","ربطة"},{"وقود","لتر"}};
+    private static final String[][] DEFAULT_PRODUCTS={{"باسطة","باسطة"},{"فطائر","فطائر"},{"خبائز","خبائز"},{"حلويات","حلويات"},{"بلح شام","بلح شام"},{"كيك","مخبوزات"},{"بسكويت","مخبوزات"},{"معمول","حلويات"},{"كنافة","حلويات"},{"دونات","مخبوزات"},{"سمبوسة","فطائر"},{"خبز","خبائز"},{"صامولي","خبائز"},{"بيتزا","فطائر"}};
     private String today(){return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());}
     private String businessName(){String n=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","");return n==null||n.trim().isEmpty()?"المخبز":n.trim();}
     private void printVisibleScreen(String title){
