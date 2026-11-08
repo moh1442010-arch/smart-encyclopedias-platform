@@ -581,6 +581,38 @@ final class AppLanguage {
         put("كمية التالف","Waste quantity");
         put("سبب التلف","Waste reason");
         put("تسجيل التالف","Record waste");
+        put("↩ رجوع إلى الشاشة السابقة","↩ Back to previous screen");
+        put("🖨️ طباعة سجل العملاء والموردين والحسابات","🖨️ Print customers, suppliers and accounts");
+        put(" — المديونية المتبقية: "," — Remaining balance: ");
+        put("الوحدة","Unit");
+        put("قيمة الفاتورة","Invoice value");
+        put("لم يُحفظ الحساب: ","Account was not saved: ");
+        put("المنشأة: ","Business: ");
+        put("سجل العملاء والموردين","Customers and suppliers directory");
+        put("تعذر عرض القائمة: ","Could not display list: ");
+        put("\\nسجل العملاء والموردين والحسابات البنكية","\\nCustomers, suppliers and bank accounts");
+        put("\\nسجل العملاء والموردين والحسابات البنكية\\nالتاريخ: ","\\nCustomers, suppliers and bank accounts\\nDate: ");
+        put("\\nدفتر المصنع — ","\\nFactory ledger — ");
+        put("🖨️ طباعة الشاشة الحالية","🖨️ Print current screen");
+        put("\\nدفتر المصنع: ","\\nFactory ledger: ");
+        put("تعذر تسجيل المرتجع: ","Could not record return: ");
+        put("قيمة تخفيض الآجل أكبر من مديونية العميل المتبقية: ","Credit reduction exceeds the customer's remaining balance: ");
+        put("إعادة تكلفة مخزون المرتجع رقم ","Restore returned inventory cost no. ");
+        put("تعذر بدء التشغيل: ","Could not start production: ");
+        put("مرجع الأمر الجاري","Active work order reference");
+        put("تعذر إكمال الأمر: ","Could not complete work order: ");
+        put("ألغي الأمر وأعيدت خاماته بقيمة ","Work order cancelled; materials worth ");
+        put("أجور مرحلة أمر التشغيل ","Work-order stage wages ");
+        put("تكاليف مرحلة أمر التشغيل ","Work-order stage costs ");
+        put("تحويل إنتاج المرحلة ","Transfer stage output ");
+        put(" من أمر "," from work order ");
+        put("أمر التشغيل غير موجود","Work order not found");
+        put("إلغاء أمر التشغيل ","Cancel work order ");
+        put("رقم القيد المطلوب عكسه","Journal entry reference to reverse");
+        put("مرتجع مبيعات ","Sales return ");
+        put(" — مستند "," — document ");
+        put("هذا القيد مرتبط بمستند أصلي أو هو قيد عكسي؛ راجع المستند الأصلي ولا تعكسه مرة أخرى","This entry is linked to an original document or is already a reversal. Review the source document; do not reverse it again.");
+        put("عكس ","Reverse ");
         put("إغلاق","Close");
     }
     private AppLanguage() {}
