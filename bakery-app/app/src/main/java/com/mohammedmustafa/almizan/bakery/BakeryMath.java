@@ -82,10 +82,13 @@ public final class BakeryMath {
         return checkedSubtract(checkedSubtract(checkedSubtract(checkedSubtract(checkedSubtract(salesRevenue,spoilageCost),wages),expenses),operatingCost),priceDifference);
     }
 
-    /** Approved bakery margin: total cash, bank transfers and debts less daily consumed operating cost. */
+    /** Approved margin delegates to the shared bakery/factory accounting formula. */
     public static long salesLessOperatingCost(long totalSalesAndReceivables,long dailyOperatingCost) {
         if(totalSalesAndReceivables<0 || dailyOperatingCost<0) throw new IllegalArgumentException("Negative amount");
-        return checkedSubtract(totalSalesAndReceivables,dailyOperatingCost);
+        java.util.List<UnifiedAccountingMath.CostItem> costs = java.util.Collections.singletonList(
+            new UnifiedAccountingMath.CostItem("daily-operating-cost","OPERATING_COST",dailyOperatingCost,false));
+        return UnifiedAccountingMath.profit(
+            new UnifiedAccountingMath.Sales(totalSalesAndReceivables,0,0,0,0,0,0), costs);
     }
 
     /** Compatibility overload for calculations where no separate price difference is recorded. */
