@@ -194,6 +194,26 @@ public class MainActivity extends Activity {
         currencyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);projectCurrency.setAdapter(currencyAdapter);
         int sdgIndex=currencyCodes.indexOf("SDG");if(sdgIndex>=0)projectCurrency.setSelection(sdgIndex);
         box.addView(projectCurrency);
+        box.addView(text("الدولة صاحبة العملة والملف الضريبي",15));
+        ArrayList<String> jurisdictionCodes=new ArrayList<>(),jurisdictionLabels=new ArrayList<>();
+        Cursor jurisdictionCursor=store.getReadableDatabase().rawQuery("SELECT code,name_ar,name_en FROM countries WHERE active=1 ORDER BY name_ar",null);
+        try {while(jurisdictionCursor.moveToNext()){jurisdictionCodes.add(jurisdictionCursor.getString(0));jurisdictionLabels.add(jurisdictionCursor.getString(1)+" / "+jurisdictionCursor.getString(2));}} finally {jurisdictionCursor.close();}
+        Spinner jurisdictionSpinner=new Spinner(this);
+        ArrayAdapter<String> jurisdictionAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,jurisdictionLabels);
+        jurisdictionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);jurisdictionSpinner.setAdapter(jurisdictionAdapter);
+        int defaultCountryIndex=jurisdictionCodes.indexOf("SD");if(defaultCountryIndex>=0)jurisdictionSpinner.setSelection(defaultCountryIndex);
+        TextView taxProfileHint=text("سيُحمّل ملف الدولة الضريبي. العملات المشتركة أو غير المدعومة تتطلب تأكيد الدولة ومراجعة القواعد المحلية.",12);
+        box.addView(jurisdictionSpinner);box.addView(taxProfileHint);
+        projectCurrency.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
+                if(position<0||position>=currencyCodes.size())return;
+                java.util.List<String> mapped=TaxJurisdictionProfiles.countriesForCurrency(currencyCodes.get(position));
+                if(mapped.size()==1){int countryIndex=jurisdictionCodes.indexOf(mapped.get(0));if(countryIndex>=0)jurisdictionSpinner.setSelection(countryIndex);}
+                taxProfileHint.setText(mapped.size()==1?"تم تحديد الدولة تلقائياً من العملة. راجع الملف الضريبي قبل بدء التسجيلات.":"هذه العملة قد تستخدمها أكثر من دولة أو لم تُعتمد لها مطابقة تلقائية. اختر دولة التسجيل الفعلية.");
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
+        });
+        if(sdgIndex>=0){int sd=jurisdictionCodes.indexOf("SD");if(sd>=0)jurisdictionSpinner.setSelection(sd);}
         EditText pin = new EditText(this);
         pin.setHint("كلمة المرور الجديدة — 6 أرقام على الأقل");
         pin.setSingleLine(true);
@@ -226,7 +246,12 @@ public class MainActivity extends Activity {
                 byte[] hash = derivePinHash(p1, salt);
                 if(currencyCodes.isEmpty())throw new IllegalStateException("قائمة العملات غير مهيأة");
                 String selectedCurrency=currencyCodes.get(projectCurrency.getSelectedItemPosition());
+                if(jurisdictionCodes.isEmpty()||jurisdictionSpinner.getSelectedItemPosition()<0)throw new IllegalStateException("قائمة الدول غير مهيأة");
+                String selectedCountry=jurisdictionCodes.get(jurisdictionSpinner.getSelectedItemPosition());
+                Cursor profileCursor=store.getReadableDatabase().rawQuery("SELECT tax_profile FROM countries WHERE code=?",new String[]{selectedCountry});
+                String selectedTaxProfile="CUSTOM_REVIEW_REQUIRED";try{if(profileCursor.moveToFirst())selectedTaxProfile=profileCursor.getString(0);}finally{profileCursor.close();}
                 ContentValues projectSettings=new ContentValues();projectSettings.put("base_currency",selectedCurrency);
+                projectSettings.put("country_code",selectedCountry);projectSettings.put("tax_profile",selectedTaxProfile);
                 projectSettings.put("business_name",enteredBusinessName);
                 store.getWritableDatabase().update("company_settings",projectSettings,"id=1",null);
                 getSharedPreferences("bakery_profile",MODE_PRIVATE).edit().putString("business_name",enteredBusinessName).apply();
