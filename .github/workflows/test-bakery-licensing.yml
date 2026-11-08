@@ -75,15 +75,19 @@ jobs:
           test "$WORKER_PREVIOUS" = "$PREVIOUS_VERSION" || { echo "::error::Worker PREVIOUS_APP_VERSION does not match previous app"; exit 1; }
 
           extract_first_public_key() { grep -oE '"[A-Za-z0-9+/=]{100,}"' "$1" | head -1 | tr -d '"'; }
-          PREVIOUS_KEY="$(git show origin/develop/bakery-2.9-enterprise-completion:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | grep -oE 'LICENSE_PUBLIC_KEY_B64 = "[^"]+"' | head -1 | cut -d '"' -f2)"
-          CANDIDATE_KEY="$(git show origin/feature/almizan-global-platform-foundation:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java 2>/dev/null | grep -oE '"[A-Za-z0-9+/=]{100,}"' | head -1 | tr -d '"')"
-          if [ -z "$CANDIDATE_KEY" ]; then CANDIDATE_KEY="$(git show origin/feature/almizan-global-platform-foundation:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | grep -oE 'LICENSE_PUBLIC_KEY_B64 = "[^"]+"' | head -1 | cut -d '"' -f2)"; fi
+          PREVIOUS_GATE="$(git show origin/develop/bakery-2.9-enterprise-completion:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java 2>/dev/null || true)"
+          if [ -z "$PREVIOUS_GATE" ]; then PREVIOUS_GATE="$(git show origin/develop/bakery-2.9-enterprise-completion:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java)"; fi
+          PREVIOUS_KEY="$(printf '%s' "$PREVIOUS_GATE" | grep -oE '"[A-Za-z0-9+/=]{100,}"' | head -1 | tr -d '"')"
+          CANDIDATE_GATE="$(git show origin/feature/almizan-global-platform-foundation:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java 2>/dev/null || true)"
+          if [ -z "$CANDIDATE_GATE" ]; then CANDIDATE_GATE="$(git show origin/feature/almizan-global-platform-foundation:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java)"; fi
+          CANDIDATE_KEY="$(printf '%s' "$CANDIDATE_GATE" | grep -oE '"[A-Za-z0-9+/=]{100,}"' | head -1 | tr -d '"')"
           WORKER_KEY="$(grep -oE 'EXPECTED_APP_PUBLIC_KEY_DER_B64 = "[^"]+"' licensing/worker/src/index.js | cut -d '"' -f2)"
           MAIN_APP_KEY="$(extract_first_public_key bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java)"
           MAIN_ISSUER_KEY="$(grep -oE 'EXPECTED_PUBLIC_KEY_DER_B64 = "[^"]+"' tools/bakery-license-issuer.mjs | cut -d '"' -f2)"
-          test -n "$PREVIOUS_KEY" && test "$PREVIOUS_KEY" = "$WORKER_KEY"
+          test -n "$PREVIOUS_KEY" && grep -Fq "$PREVIOUS_KEY" bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java
           test "$CANDIDATE_KEY" = "$WORKER_KEY"
-          test "$MAIN_APP_KEY" = "$MAIN_ISSUER_KEY"
+          test "$MAIN_APP_KEY" = "$WORKER_KEY"
+          test "$MAIN_ISSUER_KEY" = "$WORKER_KEY"
           echo "PASS: Worker candidate 2.8.1 and previous 2.8.0 versions and all reviewed public keys are consistent."
           echo "NOTE: main remains on its legacy 2.6.17 app baseline; it is not the 2.8.1 release source."
 
