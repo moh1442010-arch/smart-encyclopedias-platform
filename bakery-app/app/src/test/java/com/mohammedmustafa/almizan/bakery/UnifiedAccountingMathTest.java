@@ -21,11 +21,11 @@ public class UnifiedAccountingMathTest {
             new UnifiedAccountingMath.CostItem("wages:day:1","LABOR",100,false),
             new UnifiedAccountingMath.CostItem("expense:1","OVERHEAD",50,false),
             new UnifiedAccountingMath.CostItem("spoilage:1","SPOILAGE",25,false),
-            new UnifiedAccountingMath.CostItem("asset:oven:1","CAPITAL_ASSET",900,false==true)
+            new UnifiedAccountingMath.CostItem("asset:oven:1","CAPITAL_ASSET",900,true)
         ));
-        assertEquals(1375,sales.netRevenue());
-        assertEquals(1375,costs);
-        assertEquals(0,UnifiedAccountingMath.profit(sales,Arrays.asList(
+        assertEquals(2400,sales.netRevenue());
+        assertEquals(475,costs);
+        assertEquals(1925,UnifiedAccountingMath.profit(sales,Arrays.asList(
             new UnifiedAccountingMath.CostItem("flour:issue:1","RAW_MATERIAL",300,false),
             new UnifiedAccountingMath.CostItem("wages:day:1","LABOR",100,false),
             new UnifiedAccountingMath.CostItem("expense:1","OVERHEAD",50,false),
