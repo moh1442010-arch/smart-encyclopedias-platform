@@ -259,7 +259,7 @@ async function load(status="pending"){
     const row=document.createElement("div");row.className="row";
     const approve=document.createElement("button");approve.className="btn";approve.textContent="اعتماد وإصدار الرمز";
     approve.addEventListener("click",async()=>{
-     if(!confirm("تأكدت بنفسك من وصول مبلغ "+Number(o.amount_sdg).toLocaleString("en-US")+" ج.س إلى الحساب؟ لن تعتمد الطلب إلا بعد التحقق الفعلي."))return;
+     if(!confirm("تأكدت بنفسك من وصول مبلغ "+Number(o.amount_minor||o.amount_sdg||0).toLocaleString("en-US")+" "+(o.currency_code||"SDG")+" إلى الحساب؟ لن تعتمد الطلب إلا بعد التحقق الفعلي."))return;
      approve.disabled=true;
      try{
       const result=await call("/admin/orders/"+encodeURIComponent(o.id)+"/approve",{method:"POST",body:JSON.stringify({note:note.value.trim()})});
