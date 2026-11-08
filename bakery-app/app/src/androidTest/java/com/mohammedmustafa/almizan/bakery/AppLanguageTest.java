@@ -20,6 +20,9 @@ public class AppLanguageTest {
         AppLanguage.setLanguage(context,"en");
         assertTrue(AppLanguage.isEnglish(context));
         assertEquals("Save",AppLanguage.tr(context,"حفظ"));
+        assertEquals("Save return",AppLanguage.tr(context,"حفظ المرتجع"));
+        assertEquals("Factory details",AppLanguage.tr(context,"بيانات المصنع"));
+        assertEquals("Country selected automatically from currency. Review the tax profile before recording transactions.",AppLanguage.tr(context,"تم تحديد الدولة تلقائياً من العملة. راجع الملف الضريبي قبل بدء التسجيلات."));
         Context english=AppLanguage.wrap(context);
         Configuration configuration=english.getResources().getConfiguration();
         assertEquals("en",configuration.locale.getLanguage());
