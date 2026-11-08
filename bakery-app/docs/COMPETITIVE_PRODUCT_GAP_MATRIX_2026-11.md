@@ -27,6 +27,18 @@ Do not claim global superiority until the full workflows, reconciliations, resto
 - Wafeq international pricing: https://www.wafeq.com/en/pricing
 - Qoyod plan documentation (2025 reference): https://www.qoyod.com/en/knowledge-base/qoyod-plans-and-pricing-subscription-tiers-features-add-ons/
 
+## Public price snapshot — 2026-11-08
+
+Prices below are competitor list prices in their own currencies, not direct SDG equivalents. Tax treatment, user limits, included modules, and annual-billing discounts differ.
+
+| Product and market | Public price examples | Relevant tier features |
+|---|---|---|
+| Zoho Books UAE | Standard AED 60/month annual billing or AED 69 monthly; Professional AED 90/129; Premium AED 120/159; Elite AED 280/349. Prices exclude local taxes. | Professional adds sales/purchase orders, multi-currency, inventory and custom roles. Premium adds fixed assets and cash-flow forecasting. Elite adds warehouses and batch tracking. |
+| Wafeq Saudi | Starter SAR 99/month annual billing; Plus SAR 119; Premium SAR 199. Annual totals shown as SAR 1,190, 1,430 and 2,390. | Public page describes inventory, payroll and 40+ financial reports; higher tiers add branches and production-related workflows. |
+| Wafeq international | Starter USD 26/month annual billing; Plus USD 32; Premium USD 55. Annual totals shown as USD 312, 384 and 660. | Premium adds inventory, multiple warehouses, assembly/kitting, production orders, payroll and fixed assets; Enterprise adds advanced reconciliation and bank integrations. |
+
+These are competitor benchmarks, not Al-Mizan pricing recommendations. Do not convert them to SDG using a floating rate or copy their prices without a local willingness-to-pay study.
+
 ## Product gap matrix
 
 ### P0 — financial integrity and data safety
