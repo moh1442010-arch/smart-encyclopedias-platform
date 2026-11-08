@@ -1784,7 +1784,7 @@ public class MainActivity extends Activity {
             }
             toast("تم إنشاء نسخة مشفرة مستقلة لـ"+("bakery".equals(system)?"المخبز":"المصنع")+". احفظ كلمة المرور في مكان آمن.");
         } catch(Exception ex) { toast("تعذر إنشاء النسخة المشفرة: "+ex.getMessage()); }
-        finally { java.util.Arrays.fill(password,'\\0'); }
+        finally { java.util.Arrays.fill(password,'\0'); }
     }
 
     private void importBackupFile(Uri uri) {
