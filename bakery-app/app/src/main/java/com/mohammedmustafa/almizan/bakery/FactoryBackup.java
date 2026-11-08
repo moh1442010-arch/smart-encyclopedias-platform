@@ -247,9 +247,26 @@ final class FactoryBackup {
                         db.insertWithOnConflict(TABLES[i], null, values, SQLiteDatabase.CONFLICT_REPLACE);
                     }
                 }
+                ensureFactoryPartyMasters(db);
                 db.setTransactionSuccessful();
             } finally { db.endTransaction(); }
         } finally { db.close(); }
+    }
+
+    private static void ensureFactoryPartyMasters(SQLiteDatabase d) {
+        d.execSQL("CREATE TABLE IF NOT EXISTS factory_customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,phone TEXT NOT NULL DEFAULT '',iban TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+        d.execSQL("CREATE TABLE IF NOT EXISTS factory_suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,phone TEXT NOT NULL DEFAULT '',iban TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+        d.execSQL("INSERT OR IGNORE INTO factory_customers(name) SELECT DISTINCT TRIM(customer) FROM sales WHERE customer IS NOT NULL AND TRIM(customer)<>''");
+        d.execSQL("INSERT OR IGNORE INTO factory_customers(name) SELECT DISTINCT TRIM(customer) FROM collections WHERE customer IS NOT NULL AND TRIM(customer)<>''");
+        d.execSQL("UPDATE sales SET customer_master_id=COALESCE((SELECT id FROM factory_customers p WHERE p.name=TRIM(sales.customer)),0)");
+        d.execSQL("UPDATE collections SET customer_master_id=COALESCE((SELECT id FROM factory_customers p WHERE p.name=TRIM(collections.customer)),0)");
+        d.execSQL("INSERT OR IGNORE INTO factory_suppliers(name) SELECT DISTINCT TRIM(supplier_name) FROM supplier_purchase_records WHERE supplier_name IS NOT NULL AND TRIM(supplier_name)<>''");
+        d.execSQL("INSERT OR IGNORE INTO factory_suppliers(name) SELECT DISTINCT TRIM(supplier_name) FROM supplier_payment_records WHERE supplier_name IS NOT NULL AND TRIM(supplier_name)<>''");
+        d.execSQL("UPDATE supplier_purchase_records SET supplier_master_id=COALESCE((SELECT id FROM factory_suppliers p WHERE p.name=TRIM(supplier_purchase_records.supplier_name)),0)");
+        d.execSQL("UPDATE supplier_payment_records SET supplier_master_id=COALESCE((SELECT id FROM factory_suppliers p WHERE p.name=TRIM(supplier_payment_records.supplier_name)),0)");
+        d.execSQL("UPDATE movements SET supplier_master_id=0");
+        d.execSQL("UPDATE movements SET ref=COALESCE((SELECT sp.supplier_name FROM supplier_purchase_records sp JOIN materials m ON m.id=movements.item_id WHERE movements.kind='RAW_IN' AND sp.item_name=m.name AND sp.quantity_milli=movements.qty AND sp.invoice_total=movements.value AND sp.date=movements.date LIMIT 1),ref) WHERE kind='RAW_IN'");
+        d.execSQL("UPDATE movements SET supplier_master_id=COALESCE((SELECT id FROM factory_suppliers p WHERE p.name=movements.ref),0) WHERE kind='RAW_IN'");
     }
 
     private static void ensureColumn(SQLiteDatabase d,String table,String column,String definition){Cursor c=d.rawQuery("PRAGMA table_info("+table+")",null);boolean found=false;try{while(c.moveToNext())if(column.equals(c.getString(1)))found=true;}finally{c.close();}if(!found)d.execSQL("ALTER TABLE "+table+" ADD COLUMN "+column+" "+definition);}
