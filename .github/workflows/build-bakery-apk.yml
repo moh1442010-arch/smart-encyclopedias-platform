@@ -1,4 +1,4 @@
-name: Build Al-Mizan Bakery 2.8.0 Review APK
+name: Build Al-Mizan Bakery 2.8.1 Review APK
 
 on:
   workflow_dispatch:
@@ -69,15 +69,16 @@ jobs:
           const appKey = appMain.match(/LICENSE_PUBLIC_KEY_B64 = "([^"]+)"/)?.[1];
           const workerKey = worker.match(/EXPECTED_APP_PUBLIC_KEY_DER_B64 = "([^"]+)"/)?.[1];
           if (!appKey || appKey !== workerKey) throw new Error("Worker signing public key does not match Android app.");
-          if (!workerConfig.includes('APP_VERSION = "2.8.0"')) throw new Error("Worker APP_VERSION must be 2.8.0.");
+          if (!workerConfig.includes('APP_VERSION = "2.8.1"')) throw new Error("Worker APP_VERSION must be 2.8.1.");
+          if (!workerConfig.includes('PREVIOUS_APP_VERSION = "2.8.0"')) throw new Error("Worker must preserve support for existing 2.8.0 customers.");
           const expected = {
             applicationId: "com.mohammedmustafa.almizan.bakery",
-            versionName: "2.8.0"
+            versionName: "2.8.1"
           };
           for (const [key, value] of Object.entries(expected)) {
             if (!gradle.includes(`${key} '${value}'`)) throw new Error(`Release identity mismatch: ${key}`);
           }
-          if (!gradle.includes("versionCode 280000")) throw new Error("Release identity mismatch: versionCode");
+          if (!gradle.includes("versionCode 280001")) throw new Error("Release identity mismatch: versionCode");
           for (const price of ["55,000 جنيه سوداني", "550,000 جنيه سوداني", "1,050,000 جنيه سوداني"]) {
             if (!app.includes(price)) throw new Error(`App is missing approved price: ${price}`);
           }
@@ -188,7 +189,7 @@ jobs:
       - name: Upload internal debug build (not for distribution)
         uses: actions/upload-artifact@v4
         with:
-          name: al-mizan-bakery-2.8.0-debug-internal
+          name: al-mizan-bakery-2.8.1-debug-internal
           path: bakery-app/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -213,17 +214,17 @@ jobs:
           apk="app/build/outputs/apk/release/app-release-unsigned.apk"
           test -s "$apk"
           build_tools="$ANDROID_HOME/build-tools/36.0.0"
-          "$build_tools/zipalign" -f -v 4 "$apk" release/AlMizan-Bakery-2.8.0-aligned.apk
-          "$build_tools/apksigner" sign --ks signing/release.jks --ks-key-alias "$alias" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEYSTORE_PASSWORD" --out release/AlMizan-Bakery-2.8.0-review.apk release/AlMizan-Bakery-2.8.0-aligned.apk
-          "$build_tools/apksigner" verify --verbose --print-certs release/AlMizan-Bakery-2.8.0-review.apk | tee release/SIGNING-CERTIFICATE.txt
+          "$build_tools/zipalign" -f -v 4 "$apk" release/AlMizan-Bakery-2.8.1-aligned.apk
+          "$build_tools/apksigner" sign --ks signing/release.jks --ks-key-alias "$alias" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEYSTORE_PASSWORD" --out release/AlMizan-Bakery-2.8.1-review.apk release/AlMizan-Bakery-2.8.1-aligned.apk
+          "$build_tools/apksigner" verify --verbose --print-certs release/AlMizan-Bakery-2.8.1-review.apk | tee release/SIGNING-CERTIFICATE.txt
           cert_sha="$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2); exit}' release/SIGNING-CERTIFICATE.txt | tr -d ':[:space:]')"
           expected="159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
           test "$cert_sha" = "$expected" || { echo "::error::Signing certificate fingerprint mismatch; do not distribute this APK"; exit 1; }
-          badging="$("$build_tools/aapt" dump badging release/AlMizan-Bakery-2.8.0-review.apk)"
-          echo "$badging" | grep -F "package: name='com.mohammedmustafa.almizan.bakery' versionCode='280000' versionName='2.8.0'"
+          badging="$("$build_tools/aapt" dump badging release/AlMizan-Bakery-2.8.1-review.apk)"
+          echo "$badging" | grep -F "package: name='com.mohammedmustafa.almizan.bakery' versionCode='280001' versionName='2.8.1'"
           echo "$badging" | grep -F "application-label:'المحاسب الميزان للمخابز'"
-          sha256sum release/AlMizan-Bakery-2.8.0-review.apk > release/SHA256SUMS.txt
-          rm -f release/AlMizan-Bakery-2.8.0-aligned.apk signing/release.jks
+          sha256sum release/AlMizan-Bakery-2.8.1-review.apk > release/SHA256SUMS.txt
+          rm -f release/AlMizan-Bakery-2.8.1-aligned.apk signing/release.jks
 
       - name: Smoke test signed APK on minimum Android API 23
         uses: reactivecircus/android-emulator-runner@v2
@@ -235,12 +236,12 @@ jobs:
           script: |
             (cd bakery-app && gradle connectedDebugAndroidTest)
             adb uninstall com.mohammedmustafa.almizan.bakery || true
-            adb install -r bakery-app/release/AlMizan-Bakery-2.8.0-review.apk
+            adb install -r bakery-app/release/AlMizan-Bakery-2.8.1-review.apk
             adb logcat -c
             adb shell monkey -p com.mohammedmustafa.almizan.bakery 1
             sleep 8
             if adb logcat -d -t 3000 | grep -E 'FATAL EXCEPTION|Process: com.mohammedmustafa.almizan.bakery'; then echo "Application crash detected"; exit 1; fi
-            adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.8.0"
+            adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.8.1"
 
       - name: Smoke test signed APK on modern Android API 35
         # The hosted API 35 emulator intermittently loses Android system services after boot
@@ -256,39 +257,39 @@ jobs:
           # Avoid the runner's flaky input keyevent 82 setup on API 35.
           disable-animations: false
           script: |
-            adb install -r bakery-app/release/AlMizan-Bakery-2.8.0-review.apk
+            adb install -r bakery-app/release/AlMizan-Bakery-2.8.1-review.apk
             adb logcat -c
             adb shell monkey -p com.mohammedmustafa.almizan.bakery 1
             sleep 8
             if adb logcat -d -t 3000 | grep -E 'FATAL EXCEPTION|Process: com.mohammedmustafa.almizan.bakery'; then echo "Application crash detected"; exit 1; fi
-            adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.8.0"
+            adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.8.1"
 
       - name: Upload signed review APK and verification records
         uses: actions/upload-artifact@v4
         with:
-          name: al-mizan-bakery-2.8.0-signed-review
+          name: al-mizan-bakery-2.8.1-signed-review
           path: |
-            bakery-app/release/AlMizan-Bakery-2.8.0-review.apk
+            bakery-app/release/AlMizan-Bakery-2.8.1-review.apk
             bakery-app/release/SHA256SUMS.txt
             bakery-app/release/SIGNING-CERTIFICATE.txt
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish approved commercial GitHub Release
-        if: github.ref == 'refs/heads/release/bakery-2.8.0-financial-integrity'
+        if: github.ref == 'refs/heads/release/bakery-2.8.1-financial-integrity'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: al-mizan-bakery-2.8.0
-          name: المحاسب الميزان للمخابز والمصنع 2.8.0 — إصدار تجاري معتمد
+          tag_name: al-mizan-bakery-2.8.1
+          name: المحاسب الميزان للمخابز والمصنع 2.8.1 — إصدار تجاري معتمد
           prerelease: false
           make_latest: true
           generate_release_notes: false
           overwrite_files: true
           body: |
-            الإصدار التجاري المعتمد 2.8.0 من المحاسب الميزان للمخابز والمصنع.
+            الإصدار التجاري المعتمد 2.8.1 من المحاسب الميزان للمخابز والمصنع.
             اعتمد مالك المنتج هذا الإصدار بعد اختباره على جهاز فعلي، وإتمام التحديث فوق النسخة السابقة، وإجراء عمليات تشغيل يومية للمخبز والمصنع ومراجعة النتائج.
             - معرّف الحزمة: com.mohammedmustafa.almizan.bakery
-            - versionCode: 280000
+            - versionCode: 280001
             - Android minimum API: 23
             - يحافظ التحديث على معرّف الحزمة وقاعدة بيانات المخبز؛ لا تحذف الإصدار السابق عند التحديث.
             - يحتوي على حسابات المخبز اليومية ووحدة المصنع ودفاتر المواد والإنتاج والمبيعات والمردودات والتشغيل تحت التنفيذ والقيود وسجل التدقيق.
@@ -297,6 +298,6 @@ jobs:
             - احتفظ بنسخة احتياطية دورية. ملف النسخة الاحتياطية الحالي غير مشفر؛ احفظه في مكان آمن.
             - تم اختبار الإصدار من مالك المنتج على جهاز فعلي. لا يعني ذلك ضمان التوافق مع كل طراز هاتف؛ راجع متطلبات Android قبل التثبيت.
           files: |
-            bakery-app/release/AlMizan-Bakery-2.8.0-review.apk
+            bakery-app/release/AlMizan-Bakery-2.8.1-review.apk
             bakery-app/release/SHA256SUMS.txt
             bakery-app/release/SIGNING-CERTIFICATE.txt
