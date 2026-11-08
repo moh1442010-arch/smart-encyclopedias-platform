@@ -10,6 +10,19 @@ const PLAN_SECONDS = { monthly: 30 * 86400, annual: 365 * 86400, lifetime: 0 };
 function licensePrice(currency, plan) {
   return PRICE_MATRIX[currency] && PLAN_SECONDS[plan] !== undefined ? PRICE_MATRIX[currency][plan] : null;
 }
+async function ensureCurrencyColumns(env) {
+  const statement = env.DB.prepare("PRAGMA table_info(license_orders)");
+  if (typeof statement.all !== "function") return;
+  const result = await statement.all();
+  const columns = new Set((result.results || []).map(column => column.name));
+  if (!columns.has("currency_code")) {
+    await env.DB.prepare("ALTER TABLE license_orders ADD COLUMN currency_code TEXT NOT NULL DEFAULT 'SDG'").run();
+  }
+  if (!columns.has("amount_minor")) {
+    await env.DB.prepare("ALTER TABLE license_orders ADD COLUMN amount_minor INTEGER NOT NULL DEFAULT 0").run();
+    await env.DB.prepare("UPDATE license_orders SET amount_minor=amount_sdg WHERE amount_minor=0").run();
+  }
+}
 const encoder = new TextEncoder();
 const ADMIN_PRODUCT_REGISTRY = [
   { id: "accounting-android", name: "المحاسب الميزان", platform: "Android", category: "محاسبة", scope: "التطبيق المحاسبي العام" },
@@ -474,6 +487,7 @@ async function handle(request, env) {
   }
 
   if (url.pathname === "/api/orders" && request.method === "POST") {
+    await ensureCurrencyColumns(env);
     let body;
     try { body = await request.json(); } catch { return json({ error: "INVALID_JSON" }, 400); }
     const customer = cleanText(body.customerName, 100);
@@ -510,6 +524,7 @@ async function handle(request, env) {
 
   const statusMatch = url.pathname.match(/^\/api\/orders\/([0-9a-f-]{36})$/i);
   if (statusMatch && request.method === "GET") {
+    await ensureCurrencyColumns(env);
     const row = await env.DB.prepare(
       "SELECT id,created_at,plan,amount_sdg,status,app_version,currency_code,amount_minor FROM license_orders WHERE id=?"
     ).bind(statusMatch[1]).first();
@@ -535,6 +550,7 @@ async function handle(request, env) {
   }
 
   if (url.pathname === "/admin/orders" && request.method === "GET") {
+    await ensureCurrencyColumns(env);
     if (!await verifyAdminSession(request,env)) {
       return json({ error: "UNAUTHORIZED" }, 401);
     }
