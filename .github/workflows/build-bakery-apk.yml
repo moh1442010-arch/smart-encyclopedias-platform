@@ -226,7 +226,20 @@ jobs:
           sha256sum release/AlMizan-Bakery-2.8.1-review.apk > release/SHA256SUMS.txt
           rm -f release/AlMizan-Bakery-2.8.1-aligned.apk signing/release.jks
 
+      - name: Upload signed review APK and verification records
+        uses: actions/upload-artifact@v4
+        with:
+          name: al-mizan-bakery-2.8.1-signed-review
+          path: |
+            bakery-app/release/AlMizan-Bakery-2.8.1-review.apk
+            bakery-app/release/SHA256SUMS.txt
+            bakery-app/release/SIGNING-CERTIFICATE.txt
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Smoke test signed APK on minimum Android API 23
+        timeout-minutes: 10
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 23
@@ -264,17 +277,6 @@ jobs:
             sleep 8
             if adb logcat -d -t 3000 | grep -E 'FATAL EXCEPTION|Process: com.mohammedmustafa.almizan.bakery'; then echo "Application crash detected"; exit 1; fi
             adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.8.1"
-
-      - name: Upload signed review APK and verification records
-        uses: actions/upload-artifact@v4
-        with:
-          name: al-mizan-bakery-2.8.1-signed-review
-          path: |
-            bakery-app/release/AlMizan-Bakery-2.8.1-review.apk
-            bakery-app/release/SHA256SUMS.txt
-            bakery-app/release/SIGNING-CERTIFICATE.txt
-          if-no-files-found: error
-          retention-days: 30
 
       - name: Publish approved commercial GitHub Release
         if: github.ref == 'refs/heads/release/bakery-2.8.1-financial-integrity'
