@@ -93,3 +93,47 @@ These are competitor benchmarks, not Al-Mizan pricing recommendations. Do not co
 - Signed 2.8.1 device-review APK was built and the certificate verification step passed.
 - API 23 and API 35 signed-APK smoke tests both passed in review workflow run `42521770523`.
 - Full English UI, production licensing acceptance, full accounting integration, and owner device acceptance remain open.
+
+## Country tax profiles — 2026-11-08 research and implementation contract
+
+The first-run setup now stores both `base_currency` and `country_code`; for currencies with one mapped issuing jurisdiction, the country is preselected. A country remains selectable because a currency code is not universally unique (for example USD and EUR are used by multiple jurisdictions). The selected country determines `tax_profile`, not a global tax rate.
+
+The additive schema seeds these verified baseline profiles:
+- Sudan: 17% VAT baseline; tax authority confirms the statutory rate. Registration threshold and item-level treatment require a separately verified rule before automatic tax charging.
+- UAE: 5% VAT; mandatory AED 375,000 and voluntary AED 187,500 registration thresholds.
+- Saudi Arabia: 15% standard VAT; registration, zero-rating and e-invoicing requirements remain distinct controls.
+- Egypt: 14% standard VAT; mandatory registration threshold EGP 500,000; statutory exemptions and schedule goods remain distinct.
+- Bahrain: 10% VAT; mandatory threshold BHD 37,500.
+- Oman: 5% VAT; mandatory OMR 38,500 and voluntary OMR 19,250.
+- Kenya: 16% general VAT; zero-rated and exempt categories remain distinct.
+- South Africa: 15% VAT; SARS 2026 guidance states compulsory threshold ZAR 2.3 million and voluntary threshold ZAR 120,000.
+- Qatar: no VAT currently applied per the General Tax Authority; excise and income tax may still apply.
+- Kuwait: no VAT currently; other entity-based taxes may still apply.
+- United States: no federal VAT/sales tax; state and local sales-tax rules require location/nexus configuration and are not inferred from USD.
+
+Other currencies are mapped to their issuer country only as a jurisdiction identity; their tax profile is marked `REVIEW_REQUIRED` and no tax rate is seeded. The app must not interpret an empty tax rule set as a zero-tax jurisdiction.
+
+### Calculation safeguards
+
+- Tax rules are effective-dated and stored as integer numerator/denominator values.
+- The tax engine returns an explicit status and does not invent a rate for unverified or local-only regimes.
+- VAT is calculated only after the business confirms tax registration; inclusive/exclusive calculation uses integer arithmetic and exact rounding.
+- A standard rate is not a complete tax code. Reduced rates, zero-rated supplies, exemptions, reverse charge, withholding, excise, local sales tax, registration thresholds, filing periods and e-invoicing need jurisdiction- and item-specific configuration before compliance claims.
+- Existing financial records are not rescaled or rewritten when country/currency settings are initialized.
+
+### Primary references
+
+- OECD, Consumption Tax Trends 2024, global VAT/GST landscape and United States subnational sales tax: https://www.oecd.org/en/publications/consumption-tax-trends-2024_dcd4dd36-en/full-report/component-9.html
+- Sudan Tax Authority, VAT: https://tax.gov.sd/en/value-added-tax-vat/
+- UAE Federal Tax Authority, VAT registration and thresholds: https://www.tax.gov.ae/en/services/vat.registration.aspx
+- Saudi ZATCA, VAT law: https://www.zatca.gov.sa/ar/RulesRegulations/Taxes/Pages/VATLaw.aspx
+- Egypt Tax Authority, VAT registration threshold: https://www.eta.gov.eg/ar/node/1379
+- Bahrain government, VAT rate and threshold: https://www.bahrain.bh/wps/portal/en/BNP/HomeNationalPortal/ContentDetailsPage/
+- Oman Tax Authority, registration and thresholds: https://tms.taxoman.gov.om/portal/registration
+- Kenya Revenue Authority, VAT rates and input/output treatment: https://www.kra.go.ke/individual/filing-paying/types-of-taxes/value-added-tax
+- South African Revenue Service, 2026 tax rates and thresholds: https://www.sars.gov.za/tax-rates/other-taxes/
+- Qatar General Tax Authority, investor guide: https://www.gta.gov.qa/en/investors-guide
+- Kuwait government tax guide: https://www.gov.uk/government/publications/exporting-to-kuwait/exporting-to-kuwait
+- United States sales tax overview: https://taxsummaries.pwc.com/united-states/corporate/other-taxes
+
+This is an initial configurable tax foundation, not a certification that the app is compliant in every country. Country packs must be reviewed against official law before activation for live filing.
