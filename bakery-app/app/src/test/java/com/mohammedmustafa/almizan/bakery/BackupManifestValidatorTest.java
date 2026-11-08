@@ -32,4 +32,27 @@ public class BackupManifestValidatorTest {
     @Test public void preservesLegacyBackupCompatibility() {
         BackupManifestValidator.validate(false,null,-1,false,false);
     }
+
+    @Test public void acceptsBakeryOnlyBackup() {
+        BackupManifestValidator.validate(true,APP,1,"bakery",true,false);
+    }
+
+    @Test public void acceptsFactoryOnlyBackup() {
+        BackupManifestValidator.validate(true,APP,1,"factory",false,true);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void rejectsBakeryBackupContainingFactoryData() {
+        BackupManifestValidator.validate(true,APP,1,"bakery",true,true);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void rejectsFactoryBackupContainingBakeryPartyData() {
+        BackupManifestValidator.validate(true,APP,1,"factory",true,true);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void rejectsUnknownBackupSystem() {
+        BackupManifestValidator.validate(true,APP,1,"both",true,true);
+    }
 }
