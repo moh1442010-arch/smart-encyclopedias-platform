@@ -29,6 +29,41 @@ final class TaxJurisdictionProfiles {
         seed(db,"QA","قطر","Qatar","QA_NO_VAT","NO_VAT","NO_VAT_CONFIRMED","الهيئة العامة للضرائب تؤكد أن ضريبة القيمة المضافة غير مطبقة حالياً؛ تبقى ضرائب أخرى مثل الانتقائية وضريبة الدخل بحسب الحالة.","Qatar GTA states VAT is not applied; other taxes may still apply.","https://www.gta.gov.qa/en/investors-guide","2026-11-08",0,1,"2026-11-08");
         seed(db,"KW","الكويت","Kuwait","KW_NO_VAT","NO_VAT","NO_VAT_CONFIRMED","لا توجد ضريبة قيمة مضافة مطبقة حالياً؛ قد تنطبق ضريبة دخل الشركات والزكاة بحسب الكيان والنشاط.","No VAT currently; corporate income tax and zakat may apply by entity/activity.","https://www.gov.uk/government/publications/exporting-to-kuwait/exporting-to-kuwait","2026-11-08",0,1,"2026-11-08");
         seed(db,"US","الولايات المتحدة","United States","US_LOCAL_SALES_TAX","SALES_TAX_LOCAL","LOCAL_RULES_REQUIRED","لا توجد ضريبة مبيعات اتحادية عامة؛ تختلف ضريبة المبيعات والاستعمال حسب الولاية والمقاطعة والمدينة وموقع الترابط الضريبي.","No federal VAT/sales tax; state and local nexus/rates must be configured by address.","https://taxsummaries.pwc.com/united-states/corporate/other-taxes","2026-11-08",0,1,"2026-11-08");
+        seedReview(db,"LY","ليبيا","Libya","LYD");
+        seedReview(db,"JO","الأردن","Jordan","JOD");
+        seedReview(db,"IQ","العراق","Iraq","IQD");
+        seedReview(db,"YE","اليمن","Yemen","YER");
+        seedReview(db,"MA","المغرب","Morocco","MAD");
+        seedReview(db,"DZ","الجزائر","Algeria","DZD");
+        seedReview(db,"TN","تونس","Tunisia","TND");
+        seedReview(db,"MR","موريتانيا","Mauritania","MRU");
+        seedReview(db,"SO","الصومال","Somalia","SOS");
+        seedReview(db,"DJ","جيبوتي","Djibouti","DJF");
+        seedReview(db,"KM","جزر القمر","Comoros","KMF");
+        seedReview(db,"ET","إثيوبيا","Ethiopia","ETB");
+        seedReview(db,"ER","إريتريا","Eritrea","ERN");
+        seedReview(db,"SS","جنوب السودان","South Sudan","SSP");
+        seedReview(db,"GB","المملكة المتحدة","United Kingdom","GBP");
+        seedReview(db,"CH","سويسرا","Switzerland","CHF");
+        seedReview(db,"CA","كندا","Canada","CAD");
+        seedReview(db,"AU","أستراليا","Australia","AUD");
+        seedReview(db,"NZ","نيوزيلندا","New Zealand","NZD");
+        seedReview(db,"JP","اليابان","Japan","JPY");
+        seedReview(db,"CN","الصين","China","CNY");
+        seedReview(db,"IN","الهند","India","INR");
+        seedReview(db,"PK","باكستان","Pakistan","PKR");
+        seedReview(db,"TR","تركيا","Türkiye","TRY");
+        seedReview(db,"NG","نيجيريا","Nigeria","NGN");
+        seedReview(db,"GH","غانا","Ghana","GHS");
+        seedReview(db,"UG","أوغندا","Uganda","UGX");
+        seedReview(db,"TZ","تنزانيا","Tanzania","TZS");
+        seedReview(db,"RW","رواندا","Rwanda","RWF");
+        seedReview(db,"BR","البرازيل","Brazil","BRL");
+        seedReview(db,"MX","المكسيك","Mexico","MXN");
+        seedReview(db,"SG","سنغافورة","Singapore","SGD");
+        seedReview(db,"HK","هونغ كونغ","Hong Kong","HKD");
+        seedReview(db,"KR","كوريا الجنوبية","South Korea","KRW");
+        seedReview(db,"TH","تايلاند","Thailand","THB");
         db.execSQL("UPDATE company_settings SET tax_profile='SD_VAT_17' WHERE country_code='SD' AND tax_profile='SD_DEFAULT'");
         db.execSQL("INSERT OR IGNORE INTO tax_rules(country_code,tax_code,name,rate_num,rate_den,inclusive,exempt_category,effective_from,active) VALUES"+
             "('SD','VAT_STANDARD','ضريبة القيمة المضافة العامة',17,100,0,'حسب القانون واللوائح','2026-01-01',1),"+
@@ -39,6 +74,11 @@ final class TaxJurisdictionProfiles {
             "('OM','VAT_STANDARD','Standard VAT',5,100,0,'Zero-rated and exempt supplies','2021-04-16',1),"+
             "('KE','VAT_STANDARD','General VAT',16,100,0,'Zero-rated and exempt supplies','2013-09-02',1),"+
             "('ZA','VAT_STANDARD','Standard VAT',15,100,0,'Zero-rated and exempt supplies','2018-04-01',1)");
+    }
+
+    private static void seedReview(SQLiteDatabase db,String code,String ar,String en,String currency) {
+        db.execSQL("INSERT OR IGNORE INTO countries(code,name_ar,name_en,tax_profile,active) VALUES(?,?,?,'CUSTOM_REVIEW_REQUIRED',1)",new Object[]{code,ar,en});
+        db.execSQL("INSERT OR IGNORE INTO tax_jurisdiction_profiles(country_code,indirect_tax_type,profile_status,registration_threshold,notes,source_url,verified_on,profile_version) VALUES(?,'UNVERIFIED','REVIEW_REQUIRED','','No tax rate has been preloaded. Confirm current national and subnational rules before enabling tax calculation.','','2026-11-08',1)",new Object[]{code});
     }
 
     private static void seed(SQLiteDatabase db,String code,String ar,String en,String profile,String type,String status,String notes,String source,String checked,int num,int den,String effective) {
