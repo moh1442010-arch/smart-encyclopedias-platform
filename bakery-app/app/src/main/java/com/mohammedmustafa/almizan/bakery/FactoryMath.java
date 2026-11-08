@@ -42,6 +42,10 @@ public final class FactoryMath {
             throw new IllegalArgumentException("invalid return valuation");
         return prorate(originalValue,returnedQty,soldQty);
     }
+    public static void validateReturnJournal(long refund,long cash,long bank,long credit){
+        if(refund<=0||cash<0||bank<0||credit<0||add(add(cash,bank),credit)!=refund)
+            throw new IllegalArgumentException("return journal settlement does not balance");
+    }
     public static void validateReturnSettlement(long saleCash,long saleBank,long saleDebt,long previousCash,long previousBank,long previousCredit,long returnCash,long returnBank,long returnCredit){
         long[] values={saleCash,saleBank,saleDebt,previousCash,previousBank,previousCredit,returnCash,returnBank,returnCredit};
         for(long value:values)if(value<0)throw new IllegalArgumentException("negative return settlement");

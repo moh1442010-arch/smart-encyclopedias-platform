@@ -78,7 +78,9 @@ final class GeneralLedger {
         try {
             String prior=findIdempotentResult(db,entry.idempotencyKey);
             if (prior!=null) {
-                if (!prior.equals(entry.reference)) throw new IllegalStateException("مفتاح العملية استُخدم لقيد مختلف");
+                Entry existing=loadPostedEntry(db,prior);
+                if (!prior.equals(entry.reference) || existing==null || !samePostingPayload(entry,existing))
+                    throw new IllegalStateException("مفتاح العملية استُخدم سابقًا ببيانات قيد مختلفة؛ لم تُعتمد إعادة الإرسال");
                 if (ownTransaction) db.setTransactionSuccessful();
                 return new Result(prior,true);
             }
@@ -142,6 +144,51 @@ final class GeneralLedger {
         }
     }
 
+    static boolean samePostingPayload(Entry a,Entry b) {
+        if(a==null||b==null||!eq(a.reference,b.reference)||!eq(a.description,b.description)||
+           !eq(a.date,b.date)||!eq(a.sourceType,b.sourceType)||!eq(a.sourceId,b.sourceId)||
+           a.lines.size()!=b.lines.size()) return false;
+        boolean[] matched=new boolean[b.lines.size()];
+        for(Line left:a.lines) {
+            boolean found=false;
+            for(int i=0;i<b.lines.size();i++) {
+                if(!matched[i]&&sameLine(left,b.lines.get(i))) { matched[i]=true;found=true;break; }
+            }
+            if(!found)return false;
+        }
+        return true;
+    }
+
+    private static boolean sameLine(Line a,Line b) {
+        return a!=null&&b!=null&&eq(a.accountCode,b.accountCode)&&eq(a.branchCode,b.branchCode)&&
+            eq(a.currencyCode,b.currencyCode)&&a.debitMinor==b.debitMinor&&a.creditMinor==b.creditMinor&&
+            a.fxNumerator==b.fxNumerator&&a.fxDenominator==b.fxDenominator;
+    }
+
+    private static boolean eq(String a,String b) { return a==null?b==null:a.equals(b); }
+
+    private static Entry loadPostedEntry(SQLiteDatabase db,String reference) {
+        long id;String description,date,sourceType,sourceId;
+        Cursor head=db.rawQuery("SELECT id,description,transaction_date,source_type,source_id FROM gl_journal_entries WHERE entry_ref=? AND status='POSTED'",
+            new String[]{reference});
+        try {
+            if(!head.moveToFirst())return null;
+            id=head.getLong(0);description=head.getString(1);date=head.getString(2);
+            sourceType=head.getString(3);sourceId=head.getString(4);
+            if(head.moveToNext())return null;
+        } finally {head.close();}
+        List<Line> lines=new ArrayList<>();
+        Cursor rows=db.rawQuery("SELECT a.account_code,b.branch_code,l.transaction_currency_code,"+
+            "l.transaction_debit_minor,l.transaction_credit_minor,l.fx_rate_num,l.fx_rate_den "+
+            "FROM gl_journal_lines l JOIN chart_of_accounts a ON a.id=l.account_id "+
+            "JOIN branches b ON b.id=l.branch_id WHERE l.entry_id=?",
+            new String[]{String.valueOf(id)});
+        try {
+            while(rows.moveToNext()) lines.add(new Line(rows.getString(0),rows.getString(1),rows.getString(2),
+                rows.getLong(3),rows.getLong(4),rows.getLong(5),rows.getLong(6)));
+        } finally {rows.close();}
+        return new Entry(reference,description,date,sourceType,sourceId,"","SYSTEM",lines);
+    }
     private static void validateEntry(Entry e) {
         if(e==null || blank(e.reference)||blank(e.description)||!validDate(e.date)||blank(e.sourceType)||
            blank(e.sourceId)||blank(e.idempotencyKey)||e.lines==null||e.lines.size()<2)

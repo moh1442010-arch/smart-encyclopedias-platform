@@ -35,6 +35,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.webkit.WebView;
 import org.json.JSONObject;
 import org.json.JSONArray;
 import java.io.InputStream;
@@ -390,20 +391,21 @@ public class MainActivity extends Activity {
     private void showActivationDialog() {
         LinearLayout activationBox = new LinearLayout(this);
         activationBox.setOrientation(LinearLayout.VERTICAL);
-        activationBox.setPadding(24, 12, 24, 8);
+        activationBox.setPadding(20, 8, 20, 8);
 
         TextView instructions = text(
             "انسخ رمز التفعيل كاملًا كما وصلك من إدارة الميزان، من أول حرف إلى آخر حرف. " +
-            "يتكوّن الرمز من جزأين بينهما نقطة (.). لا تنسخ رقم الطلب أو اسم الباقة، ولا تحذف النقطة أو أي جزء من الرمز. " +
-            "الصق الرمز كاملًا في الحقل أدناه، ثم اضغط «تفعيل».", 14);
+            "يتكوّن الرمز من جزأين بينهما نقطة (.). يمكنك لصق الرمز بين القوسين كما وصلك؛ " +
+            "سيزيل التطبيق القوسين الخارجيين تلقائيًا. لا تنسخ رقم الطلب أو اسم الباقة، ولا تحذف النقطة أو أي جزء من الرمز.", 14);
         activationBox.addView(instructions);
 
         EditText code = new EditText(this);
         code.setHint("الصق رمز التفعيل كاملًا هنا");
         code.setMinLines(3);
+        code.setMaxLines(6);
         code.setGravity(Gravity.TOP | Gravity.START);
         code.setTextDirection(View.TEXT_DIRECTION_LTR);
-        code.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        code.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         activationBox.addView(code);
 
         Button paste = button("لصق الرمز من الحافظة");
@@ -429,12 +431,44 @@ public class MainActivity extends Activity {
         });
         activationBox.addView(paste);
 
-        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("🔑 تفعيل الاشتراك")
-            .setMessage("أدخل الرمز الذي صدر بعد اعتماد طلبك. الرمز مخصص لهذا الجهاز والباقة.")
-            .setView(activationBox).setNegativeButton("إلغاء", null)
-            .setPositiveButton("تفعيل", null).create();
-        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            String token = code.getText().toString().replaceAll("\\s+", "");
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(false);
+        scroll.setClipToPadding(false);
+        scroll.addView(activationBox);
+
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.VERTICAL);
+        header.setPadding(24, 16, 24, 8);
+        TextView title = text("🔑 تفعيل الاشتراك", 22);
+        title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+        header.addView(title);
+
+        Button activate = button("تفعيل");
+        activate.setAllCaps(false);
+        LinearLayout.LayoutParams activateParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        activateParams.topMargin = 10;
+        header.addView(activate, activateParams);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+            .setCustomTitle(header)
+            .setView(scroll)
+            .setNegativeButton("إلغاء", null)
+            .create();
+
+        activate.setOnClickListener(v -> {
+            String token = code.getText().toString().trim();
+            boolean opens = token.startsWith("(");
+            boolean closes = token.endsWith(")");
+            if (opens != closes) {
+                code.setError("تأكد من وجود القوسين معًا حول الرمز أو احذفهما معًا.");
+                return;
+            }
+            if (opens && closes && token.length() >= 2) {
+                token = token.substring(1, token.length() - 1).trim();
+            }
+            token = token.replaceAll("\\s+", "");
             if (!verifyLicenseToken(token)) {
                 code.setError("الرمز غير صحيح أو غير مكتمل أو لا يخص هذا الجهاز أو انتهت صلاحيته. انسخه كاملًا دون تعديل.");
                 return;
@@ -450,7 +484,16 @@ public class MainActivity extends Activity {
             dialog.dismiss();
             toast("تم تفعيل الاشتراك والتحقق من الرمز. سجّل الدخول للمتابعة.");
             showPinGate();
-        }));
+        });
+
+        dialog.setOnShowListener(ignored -> {
+            android.view.Window window = dialog.getWindow();
+            if (window != null) {
+                window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+                int width = (int) (getResources().getDisplayMetrics().widthPixels * 0.94f);
+                window.setLayout(width, android.view.WindowManager.LayoutParams.WRAP_CONTENT);
+            }
+        });
         dialog.show();
     }
 
@@ -1768,8 +1811,7 @@ public class MainActivity extends Activity {
                 records.put(row);
             }
         }
-        if(manifest!=null&&(!"com.mohammedmustafa.almizan.bakery".equals(manifest.optString("app_id"))||manifest.optInt("schema_version")!=1))
-            throw new IllegalArgumentException("Unsupported backup app identity or schema version");
+        BackupManifestValidator.validate(manifest!=null,manifest==null?null:manifest.optString("app_id"),manifest==null?-1:manifest.optInt("schema_version",-1),partySnapshot!=null,factorySnapshot!=null);
         if(factorySnapshot!=null)FactoryBackup.validate(factorySnapshot);
         if(partySnapshot!=null)PartyDirectoryBackup.validate(partySnapshot);
         final JSONArray bakeryRecords=records;final JSONObject factoryData=factorySnapshot;final JSONObject partyData=partySnapshot;
@@ -1830,28 +1872,28 @@ public class MainActivity extends Activity {
     }
 
     private void showGuide() {
-        String guide="الدليل الشامل — المحاسب الميزان للمخابز " + BuildConfig.VERSION_NAME + "\n\n"+
-            "أولًا: تسلسل دورة العمل\nابدأ بتاريخ اليوم، راجع المخزن، سجل استهلاك وشغل الدقيق والقطعيات، ثم يومية العمال، مبيعات الشباك، التوزيع، التالف والمنصرفات، وأخيرًا راجع التسوية وحساب التشغيل وهامش الربح. أدخل كل عملية في مكانها مرة واحدة.\n\n"+
-            "1) التاريخ: يعتمد التطبيق تاريخ اليوم تلقائيًا، ويمكنك فتح سجل يوم آخر للمراجعة. لا تعدل يومًا سابقًا بعد تسجيل أيام لاحقة إلا بعد مراجعة أثر التعديل على المخزون.\n\n"+
-            "2) المخزن: كل مادة لها أربعة حقول: الصنف؛ الرصيد الحالي مع وحدة القياس؛ كمية استهلاك المادة مع جوال دقيق واحد؛ سعر وحدة الاستهلاك بالجنيه. أمثلة الوحدات: الدقيق جوال، الخميرة باكو، الزيت رطل، الأكياس لفة، الملح كيلو، الجاز جالون، الغاز أسطوانة، الحطب قنطار. أدخل معدل الاستهلاك الحقيقي لكل جوال شغل؛ لا تضع سعر شراء الكمية كلها في خانة الاستهلاك. أضف أي مادة أخرى في صف مستقل.\n\n"+
-            "مثال المخزون: دقيق | 50 جوال | 1 | 60000. إذا كان استهلاك الخميرة 0.5 باكو لكل جوال دقيق، فلا تدخل نصف باكو في خانة عدد صحيح؛ هذا الإصدار يستخدم كميات صحيحة، لذا سجل الاستهلاك بوحدة أصغر مناسبة أو لا تعتمد قيمة كسرية حتى يدعمها النظام. سعر الوحدة هو سعر الباكو/الرطل/الكيلو/الجالون/الأسطوانة/القنطار بحسب الصنف.\n\n"+
-            "3) الخصم الآلي: عند حفظ شغل اليوم، يضرب التطبيق استهلاك كل مادة لكل جوال في عدد جوالات الشغل، ثم يخصم الناتج من رصيدها. مثال: رصيد 45 باكو خميرة، واستهلاك باكو واحد لكل جوال، وشغل 7 جوالات؛ المتبقي 38 باكو. إذا لم يكف الرصيد يرفض التطبيق الحفظ بدل إظهار رصيد سالب. راجع الوحدات ومعدلات الاستهلاك قبل اعتماد الحساب.\n\n"+
-            "4) القطعيات والإنتاج: أدخل عدد جوالات الدقيق المستخدمة، ثم سجل كل جوال في سطر مستقل: رقم الجوال | عدد الأرغفة، مثل 1 | 700 و2 | 800 و3 | 650. أدخل عدد الأرغفة التي تساوي 1000 جنيه حسب سعر مخبزك (3 أو 4 أو 5 أو أي رقم صحيح معتمد). قيمة الإنتاج = مجموع الأرغفة ÷ عدد الأرغفة لكل 1000 × 1000. مثال: 4000 ÷ 4 × 1000 = 1,000,000 جنيه.\n\n"+
-            "5) تكلفة التشغيل: تُحسب من معدل استهلاك المادة لكل جوال × سعر وحدة المادة × عدد جوالات الشغل. مثال: استهلاك 1 باكو خميرة لكل جوال، وسعر الباكو 6000، وشغل 7 جوالات؛ تكلفة الخميرة 42,000 جنيه. سعر المخزون ليس تكلفة يومية إلا بقدر ما استُهلك بالفعل.\n\n"+
-            "6) يومية العمال: سطر لكل عامل بالصيغة: الاسم | الوظيفة | عدد الشغل | أجر الوحدة. مثال: أحمد | خباز | 7 | 2000؛ أجره = 7 × 2000 = 14,000 جنيه. اجمع أجور العمال كلهم، ولا تدخل إجمالي أجرة العامل في خانة سعر الوحدة.\n\n"+
-            "7) بيع الشباك: سجل النقد والديون، ثم أضف كل تحويل بنكك في صف مستقل يحتوي المبلغ ورقم العملية. يجمع التطبيق التحويلات تلقائيًا. لا تسجل مبيعات التوزيع مرة أخرى ضمن الشباك.\n\n"+
-            "8) التوزيع: سطر لكل عميل: اسم العميل | عدد الأرغفة | نقدًا | مبلغ بنكك | رقم العملية | ديون | فرق السعر. احفظ أسماء الدكاكين والبقالات والمطاعم في قائمة العملاء الثابتين. مثال توضيحي: بقالة النيل | 100 | 22000 | 3000 | رقم العملية | 0 | 0. تأكد من أن مجموع المبالغ المسجلة يطابق البيع الفعلي المتفق عليه.\n\n"+
-            "9) التالف: أدخل عدد الأرغفة التالفة وسبب التلف. تُحوّل الكمية إلى قيمة بحسب معيار سعر الأرغفة، وتدخل تكلفة التالف في حساب الربح وفق سعر التكلفة. لا تخصم قيمة التالف مرة أخرى كمنصرف إذا كانت محسوبة في بند التالف.\n\n"+
-            "10) المنصرفات: سجل وجبات العمال والصيانة والمشتريات والمنصرفات الأخرى مع البيان والمبلغ. لا تسجل استهلاك مادة مخزنية كمنصرف نقدي مرة أخرى؛ تكلفة المادة تُحسب من المخزون ومعدل استهلاكها.\n\n"+
-            "11) التسوية والمحاسب: راجع الإنتاج، مبيعات الشباك، التوزيع، النقد، بنكك، الديون، فرق السعر، الأجور، التالف والمنصرفات. فرق التسوية غير الصفري إشارة للمراجعة وليس شيئًا ينبغي إخفاؤه. ابحث عن عملية مكررة أو مبلغ ناقص أو وسيلة تحصيل مسجلة في الخانة الخطأ قبل إغلاق اليوم.\n\n"+
-            "12) معادلة هامش الربح المعتمدة: مجموع نقدي الشباك + بنكك الشباك + ديون الشباك + نقدي التوزيع + بنكك التوزيع + ديون التوزيع، ثم اطرح تكلفة تشغيل اليوم المستهلكة من الدقيق والخميرة والزيت والأكياس والملح والحطب والغاز والجاز. الناتج هو هامش الربح الحقيقي. لا تكرر التحويل أو تكلفة المادة.\n\n"+
-            "13) الحفظ والنسخ الاحتياطي: البيانات تحفظ محليًا ويعمل التطبيق دون إنترنت في الوظائف الأساسية. صدّر نسخة احتياطية إلى مكان آمن، واختبر الاستعادة قبل تحديث التطبيق أو تغيير الهاتف. لا تشارك النسخة الاحتياطية مع غير المخولين لأنها قد تحتوي بيانات العملاء.\n\n"+
-            "14) الاشتراك والدعم: التجربة 7 أيام. الباقات: شهري 55,000 جنيه لمدة 30 يومًا، سنوي 550,000 جنيه لمدة 365 يومًا، وشراء مرة واحدة 1,050,000 جنيه لترخيص دائم للإصدار المرخّص، ولا يشمل التحديثات المستقبلية أو الإضافات الجديدة إلا باتفاق منفصل. اختر الباقة وافتح بوابة الترخيص، وسجّل بيانات العميل ومرجع التحويل. بعد تسجيل الطلب اضغط إرسال إشعار واتساب للمالك. لن تصدر أي موافقة أو رخصة قبل أن يراجع المالك حساب بنكك ويتأكد من وصول المبلغ ثم يضغط موافقة في لوحة الإدارة. عند الموافقة يصدر الرمز تلقائيًا وفق الباقة المدفوعة، ويمكن إرساله للعميل عبر واتساب. لا ترسل الرقم السري أو رمز التحقق البنكي.\n\n"+
-            "15) حدود النسخة: هذه نسخة مراجعة. اختبر دورة يوم كاملة، ودقة المخزون والتسوية، والنسخ الاحتياطي والاستعادة على جهاز حقيقي قبل الاعتماد المالي أو الضريبي أو البيع التجاري.";
-        ScrollView sc=new ScrollView(this);
-        TextView body=text(guide,15); body.setPadding(16,12,16,12); body.setTextIsSelectable(true); sc.addView(body);
-        new AlertDialog.Builder(this).setTitle("📘 الدليل الإرشادي الشامل").setView(sc).setNegativeButton("الرئيسية",(d,w)->buildHome()).setPositiveButton("فهمت",null)
-            .setNeutralButton("الأسئلة الشائعة",(d,w)->showFaq()).show();
+        WebView guideView=new WebView(this);
+        guideView.setBackgroundColor(Color.rgb(246,248,251));
+        guideView.setVerticalScrollBarEnabled(true);
+        guideView.getSettings().setJavaScriptEnabled(false);
+        guideView.getSettings().setAllowFileAccess(true);
+        guideView.getSettings().setAllowContentAccess(false);
+        guideView.loadUrl("file:///android_asset/bakery-guide.html");
+        AlertDialog dialog=new AlertDialog.Builder(this)
+            .setTitle("📘 الدليل الإرشادي الشامل — "+BuildConfig.VERSION_NAME)
+            .setView(guideView)
+            .setNegativeButton("الرئيسية",(d,w)->buildHome())
+            .setPositiveButton("إغلاق",null)
+            .setNeutralButton("الأسئلة الشائعة",(d,w)->showFaq())
+            .create();
+        dialog.setOnShowListener(ignored->{
+            android.view.Window window=dialog.getWindow();
+            if(window!=null){
+                android.util.DisplayMetrics metrics=getResources().getDisplayMetrics();
+                window.setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT,(int)(metrics.heightPixels*0.82f));
+            }
+        });
+        dialog.show();
     }
 
     private void showFaq() {

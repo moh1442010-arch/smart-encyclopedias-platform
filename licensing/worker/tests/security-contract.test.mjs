@@ -19,6 +19,35 @@ test("new order rejects a client app version that differs from the deployed rele
   assert.equal((await response.json()).error, "APP_VERSION_UNSUPPORTED");
 });
 
+test("new order accepts the immediately previous supported app version", async () => {
+  const inserted = [];
+  const DB = {
+    prepare(sql) {
+      return {
+        bind(...args) {
+          return {
+            first: async () => {
+              if (sql.includes("license_order_rate_limits")) return { attempts: 1 };
+              if (sql.includes("SELECT id FROM license_orders")) return null;
+              return null;
+            },
+            run: async () => { if (sql.includes("INSERT INTO license_orders")) inserted.push(args); return { success: true }; }
+          };
+        }
+      };
+    }
+  };
+  const response = await worker.fetch(new Request("https://bakery-test.local/api/orders", {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: "https://moh1442010-arch.github.io" },
+    body: JSON.stringify({ customerName: "Test Bakery", contact: "+249123456789", deviceId: "DEVICE-12345678",
+      plan: "monthly", receiptReference: "BANKAK-OLD-1234", appVersion: "2.8.0" })
+  }), { DB, APP_VERSION: "2.8.1", PREVIOUS_APP_VERSION: "2.8.0", STORE_ORIGIN: "https://moh1442010-arch.github.io" });
+  assert.equal(response.status, 201);
+  assert.equal(inserted.length, 1);
+  assert.equal(inserted[0][10], "2.8.0");
+});
+
 test("public order status never returns customer details or activation token", async () => {
   const db = {
     prepare() {
