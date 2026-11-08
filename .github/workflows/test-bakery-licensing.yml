@@ -94,6 +94,7 @@ jobs:
           grep -Fq "Run licensing source, security and schema gates before production changes" .github/workflows/deploy-bakery-licensing.yml
           grep -Fq "Verify production signing key configuration and live key pair" .github/workflows/deploy-bakery-licensing.yml
           grep -Fq "Verify deployed bakery app version" .github/workflows/deploy-bakery-licensing.yml
+          ! grep -Fq '      - ".github/workflows/deploy-bakery-licensing.yml"' .github/workflows/deploy-bakery-licensing.yml
           echo "PASS: deployment is main-only and preflight/live-signing gates are present."
 
       - name: Syntax-check storefront and admin browser scripts
