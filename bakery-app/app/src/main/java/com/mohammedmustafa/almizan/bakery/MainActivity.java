@@ -208,6 +208,7 @@ public class MainActivity extends Activity {
             @Override public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
                 if(position<0||position>=currencyCodes.size())return;
                 java.util.List<String> mapped=TaxJurisdictionProfiles.countriesForCurrency(currencyCodes.get(position));
+                jurisdictionSpinner.setEnabled(mapped.size()!=1);
                 if(mapped.size()==1){int countryIndex=jurisdictionCodes.indexOf(mapped.get(0));if(countryIndex>=0)jurisdictionSpinner.setSelection(countryIndex);}
                 taxProfileHint.setText(AppLanguage.tr(MainActivity.this,mapped.size()==1?"تم تحديد الدولة تلقائياً من العملة. راجع الملف الضريبي قبل بدء التسجيلات.":"هذه العملة قد تستخدمها أكثر من دولة أو لم تُعتمد لها مطابقة تلقائية. اختر دولة التسجيل الفعلية."));
             }
