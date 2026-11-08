@@ -120,8 +120,7 @@ document.getElementById("requestForm").addEventListener("submit",async event=>{
    "مرجع التحويل: "+receipt,
    "",
    "تم تسجيل الطلب في النظام. أرفق صورة الإيصال هنا. لا يصدر رمز التفعيل إلا بعد تحقق المالك وموافقته."
-  ].join("
-");
+  ].join("\n");
   result.textContent="تم تسجيل طلبك بنجاح. رقم الطلب: "+data.orderId+" — الحالة: قيد مراجعة الدفع. أرفق صورة الإيصال عبر واتساب.";
   const link=document.createElement("a");link.href="https://wa.me/249121851285?text="+encodeURIComponent(message);link.target="_blank";link.rel="noopener noreferrer";link.textContent="فتح واتساب وإرسال إشعار الطلب والإيصال";link.style.display="inline-block";link.style.marginTop="10px";link.style.fontWeight="800";
   result.appendChild(document.createElement("br"));result.appendChild(link);
