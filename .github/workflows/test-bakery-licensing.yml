@@ -6,6 +6,7 @@ on:
       - "store/license.html"
       - "store/license-admin.html"
       - ".github/workflows/test-bakery-licensing.yml"
+      - ".github/workflows/deploy-bakery-licensing.yml"
   pull_request:
     paths:
       - "licensing/**"
@@ -83,6 +84,16 @@ jobs:
           test "$MAIN_APP_KEY" = "$MAIN_ISSUER_KEY"
           echo "PASS: Worker candidate 2.8.1 and previous 2.8.0 versions and all reviewed public keys are consistent."
           echo "NOTE: main remains on its legacy 2.6.17 app baseline; it is not the 2.8.1 release source."
+
+      - name: Verify deployment safety gates are present
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "if: github.ref == 'refs/heads/main'" .github/workflows/deploy-bakery-licensing.yml
+          grep -Fq "Run licensing source, security and schema gates before production changes" .github/workflows/deploy-bakery-licensing.yml
+          grep -Fq "Verify production signing key configuration and live key pair" .github/workflows/deploy-bakery-licensing.yml
+          grep -Fq "Verify deployed bakery app version" .github/workflows/deploy-bakery-licensing.yml
+          echo "PASS: deployment is main-only and preflight/live-signing gates are present."
 
       - name: Syntax-check storefront and admin browser scripts
         run: |
