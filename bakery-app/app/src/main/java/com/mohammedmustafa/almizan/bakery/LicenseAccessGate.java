@@ -102,6 +102,15 @@ public final class LicenseAccessGate {
             return now<=expires;
         } catch(Exception ex) { return false; }
     }
+    /** Single source of truth for signed-token verification across every Activity. */
+    public static boolean verifyToken(Context c,String token) {
+        return token!=null&&!token.trim().isEmpty()&&validToken(c,token);
+    }
+    /** True only for a valid paid token; a running trial is not reported as a subscription. */
+    public static boolean hasValidLicense(Context c) {
+        String token=prefs(c).getString("license_token",null);
+        return verifyToken(c,token);
+    }
     public static boolean isAccessAllowed(Context c) {
         SharedPreferences p=prefs(c);
         String token=p.getString("license_token",null);
