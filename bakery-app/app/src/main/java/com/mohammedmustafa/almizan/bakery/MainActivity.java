@@ -184,11 +184,11 @@ public class MainActivity extends Activity {
         box.setOrientation(LinearLayout.VERTICAL);
         TextView instructions = text("ابدأ إعداد منشأتك. أدخل اسم المخبز أو المصنع كما سيظهر في الشاشات والفواتير والتقارير، ثم اختر عملة الدفاتر الأساسية وأنشئ كلمة المرور.", 15);
         box.addView(instructions);
-        EditText businessName=new EditText(this);businessName.setSingleLine(true);businessName.setHint("اسم المخبز أو المصنع");businessName.setTextSize(17);box.addView(businessName);
+        EditText businessName=new EditText(this);businessName.setSingleLine(true);businessName.setHint(AppLanguage.tr(this,"اسم المخبز أو المصنع"));businessName.setTextSize(17);box.addView(businessName);
         box.addView(text("عملة المشروع الأساسية",15));
         ArrayList<String> currencyCodes=new ArrayList<>(),currencyLabels=new ArrayList<>();
-        Cursor currencyCursor=store.getReadableDatabase().rawQuery("SELECT code,name_ar FROM currencies WHERE active=1 ORDER BY CASE code WHEN 'SDG' THEN 0 ELSE 1 END,name_ar",null);
-        try {while(currencyCursor.moveToNext()){currencyCodes.add(currencyCursor.getString(0));currencyLabels.add(currencyCursor.getString(1)+" ("+currencyCursor.getString(0)+")");}} finally {currencyCursor.close();}
+        Cursor currencyCursor=store.getReadableDatabase().rawQuery("SELECT code,name_ar,name_en FROM currencies WHERE active=1 ORDER BY CASE code WHEN 'SDG' THEN 0 ELSE 1 END,name_ar",null);
+        try {while(currencyCursor.moveToNext()){currencyCodes.add(currencyCursor.getString(0));currencyLabels.add((AppLanguage.isEnglish(this)?currencyCursor.getString(2):currencyCursor.getString(1))+" ("+currencyCursor.getString(0)+")");}} finally {currencyCursor.close();}
         Spinner projectCurrency=new Spinner(this);
         ArrayAdapter<String> currencyAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,currencyLabels);
         currencyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);projectCurrency.setAdapter(currencyAdapter);
@@ -197,7 +197,7 @@ public class MainActivity extends Activity {
         box.addView(text("الدولة صاحبة العملة والملف الضريبي",15));
         ArrayList<String> jurisdictionCodes=new ArrayList<>(),jurisdictionLabels=new ArrayList<>();
         Cursor jurisdictionCursor=store.getReadableDatabase().rawQuery("SELECT code,name_ar,name_en FROM countries WHERE active=1 ORDER BY name_ar",null);
-        try {while(jurisdictionCursor.moveToNext()){jurisdictionCodes.add(jurisdictionCursor.getString(0));jurisdictionLabels.add(jurisdictionCursor.getString(1)+" / "+jurisdictionCursor.getString(2));}} finally {jurisdictionCursor.close();}
+        try {while(jurisdictionCursor.moveToNext()){jurisdictionCodes.add(jurisdictionCursor.getString(0));jurisdictionLabels.add(AppLanguage.isEnglish(this)?jurisdictionCursor.getString(2):jurisdictionCursor.getString(1));}} finally {jurisdictionCursor.close();}
         Spinner jurisdictionSpinner=new Spinner(this);
         ArrayAdapter<String> jurisdictionAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,jurisdictionLabels);
         jurisdictionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);jurisdictionSpinner.setAdapter(jurisdictionAdapter);
@@ -209,18 +209,18 @@ public class MainActivity extends Activity {
                 if(position<0||position>=currencyCodes.size())return;
                 java.util.List<String> mapped=TaxJurisdictionProfiles.countriesForCurrency(currencyCodes.get(position));
                 if(mapped.size()==1){int countryIndex=jurisdictionCodes.indexOf(mapped.get(0));if(countryIndex>=0)jurisdictionSpinner.setSelection(countryIndex);}
-                taxProfileHint.setText(mapped.size()==1?"تم تحديد الدولة تلقائياً من العملة. راجع الملف الضريبي قبل بدء التسجيلات.":"هذه العملة قد تستخدمها أكثر من دولة أو لم تُعتمد لها مطابقة تلقائية. اختر دولة التسجيل الفعلية.");
+                taxProfileHint.setText(AppLanguage.tr(this,mapped.size()==1?"تم تحديد الدولة تلقائياً من العملة. راجع الملف الضريبي قبل بدء التسجيلات.":"هذه العملة قد تستخدمها أكثر من دولة أو لم تُعتمد لها مطابقة تلقائية. اختر دولة التسجيل الفعلية."));
             }
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
         });
         if(sdgIndex>=0){int sd=jurisdictionCodes.indexOf("SD");if(sd>=0)jurisdictionSpinner.setSelection(sd);}
         EditText pin = new EditText(this);
-        pin.setHint("كلمة المرور الجديدة — 6 أرقام على الأقل");
+        pin.setHint(AppLanguage.tr(this,"كلمة المرور الجديدة — 6 أرقام على الأقل"));
         pin.setSingleLine(true);
         pin.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
         box.addView(pin);
         EditText confirm = new EditText(this);
-        confirm.setHint("تأكيد كلمة المرور");
+        confirm.setHint(AppLanguage.tr(this,"تأكيد كلمة المرور"));
         confirm.setSingleLine(true);
         confirm.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
         box.addView(confirm);
