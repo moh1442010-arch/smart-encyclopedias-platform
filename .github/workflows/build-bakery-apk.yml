@@ -23,6 +23,8 @@ concurrency:
 
 jobs:
   build:
+    # Feature/foundation branches must never produce APKs; release branch is opened only after all gates pass.
+    if: github.ref == 'refs/heads/release/bakery-2.8.1-financial-integrity'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
