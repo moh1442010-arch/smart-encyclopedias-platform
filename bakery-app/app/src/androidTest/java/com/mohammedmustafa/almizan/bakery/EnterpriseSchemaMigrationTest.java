@@ -29,12 +29,24 @@ public class EnterpriseSchemaMigrationTest {
             Cursor old=db.rawQuery("SELECT payload FROM records WHERE day='2026-11-06' AND module='stock'",null);
             try { assertTrue(old.moveToFirst()); assertEquals("KEEP_EXISTING_STOCK",old.getString(0)); }
             finally { old.close(); }
-            String[] required={"company_settings","countries","currencies","exchange_rates","branches","users","roles","permissions","suppliers","customers","company_bank_accounts","party_opening_payments","party_payments","supplier_quick_invoices","purchase_invoices","purchase_lines","supplier_payments","employees","payroll_periods","payroll_items","fixed_assets","depreciation_entries","sync_outbox","tax_rules","financial_periods","chart_of_accounts","gl_journal_entries","gl_journal_lines","idempotency_keys"};
+            String[] required={"company_settings","countries","currencies","exchange_rates","branches","users","roles","permissions","suppliers","customers","company_bank_accounts","party_opening_payments","party_payments","supplier_quick_invoices","purchase_invoices","purchase_lines","supplier_payments","employees","payroll_periods","payroll_items","fixed_assets","depreciation_entries","sync_outbox","tax_rules","tax_jurisdiction_profiles","financial_periods","chart_of_accounts","gl_journal_entries","gl_journal_lines","idempotency_keys"};
             for(String table:required) {
                 Cursor exists=db.rawQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",new String[]{table});
                 try { assertTrue("Missing table "+table,exists.moveToFirst()&&exists.getInt(0)==1); }
                 finally { exists.close(); }
             }
+            Cursor sdTax=db.rawQuery("SELECT rate_num,rate_den FROM tax_rules WHERE country_code='SD' AND tax_code='VAT_STANDARD'",null);
+            try { assertTrue("Sudan VAT baseline missing",sdTax.moveToFirst());assertEquals(17,sdTax.getInt(0));assertEquals(100,sdTax.getInt(1)); }
+            finally { sdTax.close(); }
+            Cursor uaeTax=db.rawQuery("SELECT rate_num,rate_den FROM tax_rules WHERE country_code='AE' AND tax_code='VAT_STANDARD'",null);
+            try { assertTrue("UAE VAT baseline missing",uaeTax.moveToFirst());assertEquals(5,uaeTax.getInt(0));assertEquals(100,uaeTax.getInt(1)); }
+            finally { uaeTax.close(); }
+            Cursor noVat=db.rawQuery("SELECT profile_status,indirect_tax_type FROM tax_jurisdiction_profiles WHERE country_code='QA'",null);
+            try { assertTrue(noVat.moveToFirst());assertEquals("NO_VAT_CONFIRMED",noVat.getString(0));assertEquals("NO_VAT",noVat.getString(1)); }
+            finally { noVat.close(); }
+            Cursor unknownTax=db.rawQuery("SELECT profile_status FROM tax_jurisdiction_profiles WHERE country_code='LY'",null);
+            try { assertTrue(unknownTax.moveToFirst());assertEquals("REVIEW_REQUIRED",unknownTax.getString(0)); }
+            finally { unknownTax.close(); }
             Cursor profileColumn=db.rawQuery("PRAGMA table_info(company_settings)",null);boolean hasBusinessName=false;
             try { while(profileColumn.moveToNext())if("business_name".equals(profileColumn.getString(1)))hasBusinessName=true; } finally { profileColumn.close(); }
             assertTrue("Company name must be persisted in encrypted company settings",hasBusinessName);
