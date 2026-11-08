@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "feature/**"
+      - "integration/**"
     paths:
       - "bakery-app/app/src/**"
       - "bakery-app/app/build.gradle"
