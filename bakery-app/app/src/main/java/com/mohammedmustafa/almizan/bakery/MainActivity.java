@@ -1810,7 +1810,7 @@ public class MainActivity extends Activity {
                 records.put(row);
             }
         }
-        BackupManifestValidator.validate(manifest,partySnapshot,factorySnapshot);
+        BackupManifestValidator.validate(manifest!=null,manifest==null?null:manifest.optString("app_id"),manifest==null?-1:manifest.optInt("schema_version",-1),partySnapshot!=null,factorySnapshot!=null);
         if(factorySnapshot!=null)FactoryBackup.validate(factorySnapshot);
         if(partySnapshot!=null)PartyDirectoryBackup.validate(partySnapshot);
         final JSONArray bakeryRecords=records;final JSONObject factoryData=factorySnapshot;final JSONObject partyData=partySnapshot;
