@@ -109,7 +109,7 @@ jobs:
 
       - name: Validate factory module schema and requested screens
         run: |
-          grep -Fq 'DB(Context c){super(c,"almizan_factory_1.db",SecureDatabase.passphrase(c,"almizan_factory_1.db"),null,9,0,null,null,false);}' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'DB(Context c){super(c,"almizan_factory_1.db",SecureDatabase.passphrase(c,"almizan_factory_1.db"),null,11,0,null,null,false);}' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'CREATE TABLE daily_usage' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'دقيق' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'مواد تغليف' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
@@ -128,7 +128,7 @@ jobs:
           grep -Fq 'CREATE TABLE IF NOT EXISTS sales_returns' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS work_orders' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS journal_entries' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'root.put("schema_version", 7)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
+          grep -Fq 'root.put("schema_version", 9)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
           grep -Fq 'net.zetetic:sqlcipher-android:4.19.1@aar' bakery-app/app/build.gradle
           grep -Fq 'System.loadLibrary("sqlcipher")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/SecureDatabase.java
           grep -Fq 'AndroidKeyStore' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/SecureDatabase.java
