@@ -89,6 +89,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          grep -Fq "name: Confirm production deployment branch" .github/workflows/deploy-bakery-licensing.yml
           grep -Fq "if: github.ref == 'refs/heads/main'" .github/workflows/deploy-bakery-licensing.yml
           grep -Fq "Run licensing source, security and schema gates before production changes" .github/workflows/deploy-bakery-licensing.yml
           grep -Fq "Verify production signing key configuration and live key pair" .github/workflows/deploy-bakery-licensing.yml
