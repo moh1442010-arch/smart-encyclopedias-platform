@@ -65,7 +65,7 @@ const params=new URLSearchParams(location.search);
 const validPlans=["monthly","annual","lifetime"];
 const initialPlan=params.get("plan");
 if(params.get("deviceId"))document.getElementById("device").value=params.get("deviceId");
-if(validPlans.includes(initialPlan))document.getElementById("plan").value=initialPlan;
+if(validPlans.includes(initialPlan))document.getElementById("plan").value=initialPlan;\nconst initialCurrency=params.get("currency");if(["SDG","SAR","AED","USD"].includes(initialCurrency))currency.value=initialCurrency;
 const version=params.get("appVersion")||"2.8.0";
 
 const labels={monthly:"شهري — 55,000 جنيه — 30 يوماً",annual:"سنوي — 550,000 جنيه — 365 يوماً",lifetime:"شراء مرة واحدة — 1,050,000 جنيه — دائم لهذا الإصدار فقط"};
