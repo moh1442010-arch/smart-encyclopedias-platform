@@ -1979,11 +1979,7 @@ public class MainActivity extends Activity {
     }
 
     private void showPaywall() {
-        // Keep backup and restore available after trial expiry; operational screens remain gated.
-        if (store == null) {
-            try { store = new Store(); }
-            catch (RuntimeException ex) { android.util.Log.e("AlMizanBakery","Backup database unavailable on paywall",ex); }
-        }
+        // Expired users see licensing controls only. No operational, backup or restore screen is exposed.
         base("🔐 اشتراك المحاسب الميزان للمخابز");
         boolean licensed = hasActiveLicense();
         boolean expired = !LicenseAccessGate.isAccessAllowed(this);
@@ -2030,9 +2026,11 @@ public class MainActivity extends Activity {
         Button logoRequest=button("🌾 إرسال شعار المخبز لتخصيص الفواتير عبر واتساب");
         logoRequest.setOnClickListener(v->chooseCompanyLogo());
         content.addView(logoRequest);
-        Button backup=button("🗂️ تصدير / استعادة بياناتك");
-        backup.setOnClickListener(v->backupRestoreMenu());
-        content.addView(backup);
+        if (!expired) {
+            Button backup=button("🗂️ تصدير / استعادة بياناتك");
+            backup.setOnClickListener(v->backupRestoreMenu());
+            content.addView(backup);
+        }
         if (LicenseAccessGate.isAccessAllowed(this)) { Button back=button("العودة إلى التطبيق"); back.setOnClickListener(v->buildHome()); content.addView(back); }
     }
 
