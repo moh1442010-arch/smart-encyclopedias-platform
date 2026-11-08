@@ -1841,7 +1841,7 @@ public class MainActivity extends Activity {
 
     private void restoreBackupSystem(String system,JSONArray bakeryRecords,JSONObject partyData,JSONObject factoryData) throws Exception {
         if("bakery".equals(system)){
-            if(bakeryRecords==null||bakeryRecords.length()==0)throw new IllegalArgumentException("الملف لا يحتوي على سجلات المخبز");
+            if(bakeryRecords==null||(bakeryRecords.length()==0&&partyData==null))throw new IllegalArgumentException("الملف لا يحتوي على بيانات المخبز");
             if(partyData!=null)PartyDirectoryBackup.validate(partyData);
             JSONArray previousBakery=null;JSONObject previousParties=null;boolean bakeryRestored=false,partiesRestored=false;
             try{
