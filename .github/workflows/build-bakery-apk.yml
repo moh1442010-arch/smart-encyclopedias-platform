@@ -153,8 +153,8 @@ jobs:
           grep -Fq 'CREATE TABLE IF NOT EXISTS customers' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS company_bank_accounts' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
           grep -Fq "('EUR','اليورو','Euro'" bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
-          grep -Fq 'PartyDirectory.showCustomerPicker' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'PartyDirectory.showSupplierPicker' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'showFactoryPartyPicker("customer"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'showFactoryPartyPicker("supplier"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'supplier_purchase_records' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'PartyDirectoryBackup.export' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq 'PartyDirectoryBackup.restore' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
@@ -170,7 +170,7 @@ jobs:
           grep -Fq '"0 جوال"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq 'MIZANBK1' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/PortableBackupCrypto.java
           grep -Fq 'encryptsAndDecryptsPortableBackup' bakery-app/app/src/test/java/com/mohammedmustafa/almizan/bakery/PortableBackupCryptoTest.java
-          grep -Fq 'سيتم دمج ' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'كل نسخة تخص نظاماً واحداً فقط' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq '7L * 24L * 60L * 60L * 1000L' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq '27. التجربة المجانية والاشتراك' bakery-app/app/src/main/assets/bakery-guide.html
           grep -Fq '28. حالة حماية قاعدة البيانات' bakery-app/app/src/main/assets/bakery-guide.html
