@@ -95,10 +95,7 @@ License rules:
 - Keep existing Sudan SDG prices on a separate schedule. Do not calculate them automatically from foreign currency prices.
 - Do not enable checkout until currency display, rounding, tax disclosure, receipt review, entitlement enforcement, expiry, signed license issuance and renewal tests pass.
 
-Bank transfer details supplied by product owner (must be verified against the bank/account owner before public display):
-- Account number: 1019380025245419000
-- Local account: 0252 4541 9000 01
-- IBAN shown in source image: SD46 0252 4541 9000 01
+Payment destination details must be configured only in a private, access-controlled admin environment after independent verification. Do not commit bank account numbers, IBANs, receipts, or other payment credentials to this public repository.
 
 Manual receipt review remains mandatory. Monthly and annual licenses must expire on schedule. Permanent access is issued only after admin approval. License verification must work offline for an already issued signed token, while online checks are reserved for order submission, renewal, revocation and update discovery.
 
