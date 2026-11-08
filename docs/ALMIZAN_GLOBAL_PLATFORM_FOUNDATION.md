@@ -81,14 +81,19 @@ All user-facing text must be resource-backed in Arabic and English, including di
 
 Operational currencies: SDG, USD, EUR, SAR, AED. Store transaction currency and minor-unit amounts with an immutable rate snapshot. Never revalue old entries when exchange rates change.
 
-Commercial proposal (not activated in checkout yet):
-| Tier | Monthly | Annual |
-|---|---:|---:|
-| Starter | USD 9 / EUR 9 / SAR 35 / AED 35 | USD 90 / EUR 90 / SAR 350 / AED 350 |
-| Professional | USD 19 / EUR 18 / SAR 69 / AED 69 | USD 190 / EUR 180 / SAR 690 / AED 690 |
-| Factory & Enterprise | USD 39 / EUR 36 / SAR 145 / AED 145 | USD 390 / EUR 360 / SAR 1,450 / AED 1,450 |
+Approved commercial price baseline (owner approval recorded 2026-11-08; implementation target, not yet live):
+| Term | USD | EUR | SAR | AED |
+|---|---:|---:|---:|---:|
+| Monthly | 12 | 11 | 45 | 45 |
+| Annual | 120 | 110 | 450 | 450 |
+| One-time / perpetual | 299 | 279 | 1,125 | 1,125 |
 
-Keep existing Sudan SDG prices unchanged pending local-market and FX review. Annual pricing is approximately ten monthly payments. These proposed prices must remain inactive until payment currency, tax display, rounding, entitlements, cancellation/expiry and admin review have tests.
+License rules:
+- Monthly term is 30 days; annual term is 365 days. Both expire at the end of the paid term.
+- Annual pricing is approximately ten monthly payments.
+- One-time license is perpetual for one licensed business and one registered primary device. It includes the purchased major version and 12 months of updates/support. Continued use of that purchased version remains valid; future major-version upgrades and extended support may be separately priced.
+- Keep existing Sudan SDG prices on a separate schedule. Do not calculate them automatically from foreign currency prices.
+- Do not enable checkout until currency display, rounding, tax disclosure, receipt review, entitlement enforcement, expiry, signed license issuance and renewal tests pass.
 
 Bank transfer details supplied by product owner (must be verified against the bank/account owner before public display):
 - Account number: 1019380025245419000
