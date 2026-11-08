@@ -108,7 +108,7 @@ test("2.8.0 customer order is accepted and recorded as pending without issuing a
   assert.equal(response.status, 201);
   const body = await response.json();
   assert.equal(body.status, "pending");
-  assert.equal(body.amountSdg, 55000);
+  assert.equal(body.amount, 55000);\n  assert.equal(body.currencyCode, "SDG");
   assert.ok(body.orderId);
   assert.equal("activationToken" in body, false);
   assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_orders")));
@@ -179,4 +179,32 @@ test("2.8.1 candidate order is accepted as pending without issuing an activation
   assert.equal("activationToken" in body, false);
   assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_orders") && x.values.includes("2.8.1")));
   assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_audit") && x.values.includes("order_created")));
+});
+
+test("international license prices accept SAR, AED and USD and reject EUR", async () => {
+  async function submit(currencyCode, receiptReference) {
+    const writes=[];
+    const db={prepare(sql){return{bind(...values){return{
+      first:async()=>sql.includes("license_order_rate_limits")?{attempts:1}:null,
+      run:async()=>{writes.push({sql,values});return{meta:{changes:1}};}
+    };}};}};
+    const response=await worker.fetch(new Request("https://bakery-test.local/api/orders",{
+      method:"POST",headers:{"content-type":"application/json",origin:"https://bakery-test.local","CF-Connecting-IP":"192.0.2.90"},
+      body:JSON.stringify({customerName:"International Bakery",contact:"+249123456789",deviceId:"DEVICE-INT-123456",plan:"annual",currencyCode,receiptReference,appVersion:"2.8.1"})
+    }),{DB:db,APP_VERSION:"2.8.1",STORE_ORIGIN:"https://bakery-test.local"});
+    return {response,writes};
+  }
+  for (const [currencyCode,amount] of [["SAR",290],["AED",290],["USD",80]]) {
+    const {response,writes}=await submit(currencyCode,"REF-"+currencyCode);
+    assert.equal(response.status,201);
+    const body=await response.json();
+    assert.equal(body.amount,amount);
+    assert.equal(body.currencyCode,currencyCode);
+    const insert=writes.find(x=>x.sql.includes("INSERT INTO license_orders"));
+    assert.ok(insert);
+    assert.ok(insert.values.includes(currencyCode));
+    assert.ok(insert.values.includes(amount));
+  }
+  const invalid=await submit("EUR","REF-EUR");
+  assert.equal(invalid.response.status,400);
 });
