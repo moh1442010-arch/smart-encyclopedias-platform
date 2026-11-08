@@ -54,8 +54,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin develop/bakery-2.9-enterprise-completion --depth=1
-          git fetch origin feature/almizan-global-platform-foundation --depth=1
+          git fetch origin develop/bakery-2.9-enterprise-completion:refs/remotes/origin/develop/bakery-2.9-enterprise-completion --depth=1
+          git fetch origin feature/almizan-global-platform-foundation:refs/remotes/origin/feature/almizan-global-platform-foundation --depth=1
 
           PREVIOUS_GRADLE="$(git show origin/develop/bakery-2.9-enterprise-completion:bakery-app/app/build.gradle)"
           CANDIDATE_GRADLE="$(git show origin/feature/almizan-global-platform-foundation:bakery-app/app/build.gradle)"
