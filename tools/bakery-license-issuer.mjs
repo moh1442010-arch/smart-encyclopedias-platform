@@ -10,7 +10,7 @@
  *   node tools/bakery-license-issuer.mjs --key /secure/path/bakery-license-private.pem --device DEVICE_ID --plan lifetime
  *
  * Monthly/annual tokens expire after 30/365 days. New lifetime tokens are bound to
- * the current app version; the app still accepts legacy 2.6.15 lifetime tokens.
+ * the current app version; the app still accepts legacy 2.6.15 and 2.6.17 lifetime tokens.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -18,7 +18,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const APP_ID = "com.mohammedmustafa.almizan.bakery";
-const CURRENT_APP_VERSION = "2.6.17";
+const CURRENT_APP_VERSION = "2.8.0";
 const EXPECTED_PUBLIC_KEY_DER_B64 = "MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAnWLF2Y4nmN7MWU1q9tzTVJCCacOf7iaGiRYrA21Ej7Xp7vV2/BgMu7N3OmcB0UJyIn1A22z34fKf3YEEDTjBz4pHHEtXeB+bjH+jn7VOcwQS9mZhTUR1+/2gYJxIKUEz9233Ab1eupGcCzuziQck362qiRBdjlHEViW0koE87TmPKRkkqzKtkOm0MzIfYr7tM/DmqncZ9RKUnctvoJd05kDxg0PXdNZ539Ip7tT6y11nmakYg5lJv9XOqNWnQbPRUDjOO9jWIPFnUvaPVofYrBOENPTu8S7414Twb7/0zmhFgNuizHbZQEOYD3ZNK0GfNDYH8Tk1ZEe9H7WHE3+B0UYkCBEfJCdXkHxRIJLb1KSyxpLw7iiGxAJdCQ95SNkcYfl6KTsZFPtt4pssXRH9XvJsvQEmP7OmqtPSJy0ZFSL/KgS5T3EIeuG2DyJom5WJ8lya4zy3noU9hL8gSjpzOdzR87KqiOYSy890nwtvHIi73qxvNpPGxPghG3JIEEBFAgMBAAE=";
 
 function fail(message) {
