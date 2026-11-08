@@ -248,6 +248,7 @@ jobs:
         # (ADB Broken pipe) even though the signed APK builds and API 23 smoke test passes.
         # Keep this compatibility probe visible but do not block artifact publication on runner instability.
         continue-on-error: true
+        timeout-minutes: 8
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
