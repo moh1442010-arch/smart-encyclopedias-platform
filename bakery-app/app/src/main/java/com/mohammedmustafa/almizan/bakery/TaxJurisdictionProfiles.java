@@ -64,6 +64,12 @@ final class TaxJurisdictionProfiles {
         seedReview(db,"HK","هونغ كونغ","Hong Kong","HKD");
         seedReview(db,"KR","كوريا الجنوبية","South Korea","KRW");
         seedReview(db,"TH","تايلاند","Thailand","THB");
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='AED 375000 mandatory; AED 187500 voluntary' WHERE country_code='AE'");
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='SAR 375000 mandatory; SAR 187500 voluntary' WHERE country_code='SA'");
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='EGP 500000 mandatory' WHERE country_code='EG'");
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='BHD 37500 mandatory' WHERE country_code='BH'");
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='OMR 38500 mandatory; OMR 19250 voluntary' WHERE country_code='OM'");
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='ZAR 2300000 mandatory; ZAR 120000 voluntary' WHERE country_code='ZA'");
         db.execSQL("UPDATE company_settings SET tax_profile='SD_VAT_17' WHERE country_code='SD' AND tax_profile='SD_DEFAULT'");
         db.execSQL("INSERT OR IGNORE INTO tax_rules(country_code,tax_code,name,rate_num,rate_den,inclusive,exempt_category,effective_from,active) VALUES"+
             "('SD','VAT_STANDARD','ضريبة القيمة المضافة العامة',17,100,0,'حسب القانون واللوائح','2026-01-01',1),"+
