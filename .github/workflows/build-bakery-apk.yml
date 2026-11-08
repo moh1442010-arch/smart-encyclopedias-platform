@@ -81,13 +81,18 @@ jobs:
             if (!gradle.includes(`${key} '${value}'`)) throw new Error(`Release identity mismatch: ${key}`);
           }
           if (!gradle.includes("versionCode 280001")) throw new Error("Release identity mismatch: versionCode");
-          for (const price of ["55,000 جنيه سوداني", "550,000 جنيه سوداني", "1,050,000 جنيه سوداني"]) {
-            if (!app.includes(price)) throw new Error(`App is missing approved price: ${price}`);
+          if (!app.includes("return new long[]{55000,550000,1050000}")) throw new Error("App SDG license prices mismatch.");
+          if (!app.includes("return new long[]{29,290,725}")) throw new Error("App SAR/AED license prices mismatch.");
+          if (!app.includes("return new long[]{8,80,199}")) throw new Error("App USD license prices mismatch.");
+          for (const [currency, expected] of Object.entries({
+            SDG: "monthly: 55000, annual: 550000, lifetime: 1050000",
+            SAR: "monthly: 29, annual: 290, lifetime: 725",
+            AED: "monthly: 29, annual: 290, lifetime: 725",
+            USD: "monthly: 8, annual: 80, lifetime: 199"
+          })) {
+            if (!worker.includes(currency + ": { " + expected)) throw new Error(`Licensing service price mismatch for ${currency}`);
           }
-          for (const [plan, amount] of Object.entries({monthly:55000, annual:550000, lifetime:1050000})) {
-            if (!worker.includes(`${plan}: { amount: ${amount}`)) throw new Error(`Licensing service amount mismatch for ${plan}`);
-          }
-          console.log("Release identity and all three approved bakery prices verified.");
+          console.log("Release identity and all approved SDG/SAR/AED/USD license prices verified.");
           NODE
 
       - name: Set up Java 17
