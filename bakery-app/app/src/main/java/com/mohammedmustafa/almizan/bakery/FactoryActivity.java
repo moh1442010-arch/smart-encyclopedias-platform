@@ -250,6 +250,7 @@ public class FactoryActivity extends Activity {
         list("SELECT s.customer||' | دين متبقٍ: '||(SUM(s.debt)-COALESCE((SELECT SUM(c.cash+c.bank) FROM collections c WHERE c.customer=s.customer),0)-COALESCE((SELECT SUM(r.credit_adjustment) FROM sales_returns r JOIN sales rs ON rs.id=r.sale_id WHERE rs.customer=s.customer),0)) FROM sales s GROUP BY s.customer HAVING SUM(s.debt)>COALESCE((SELECT SUM(c.cash+c.bank) FROM collections c WHERE c.customer=s.customer),0)+COALESCE((SELECT SUM(r.credit_adjustment) FROM sales_returns r JOIN sales rs ON rs.id=r.sale_id WHERE rs.customer=s.customer),0) ORDER BY s.customer");
     }
     private void list(String sql){Cursor c=null;try{c=db.getReadableDatabase().rawQuery(sql,null);if(!c.moveToFirst()){body.addView(label("لا توجد سجلات بعد.",13));return;}do{TextView row=label("│ "+c.getString(0),14);row.setBackgroundColor(Color.WHITE);body.addView(row);View line=new View(this);line.setBackgroundColor(GOLD);body.addView(line,new LinearLayout.LayoutParams(-1,1));}while(c.moveToNext());}catch(Exception e){body.addView(label("تعذر قراءة السجلات: "+e.getMessage(),13));}finally{if(c!=null)c.close();}}
+    // Factory party masters and all their identifiers live only in almizan_factory_1.db.
     private interface FactoryPartySelected { void onSelect(long id,String name); }
     private void addFactoryPartyDialog(String type,FactoryPartySelected selected){
         String title="customer".equals(type)?"إضافة عميل للمصنع":"إضافة مورد للمصنع";
@@ -314,6 +315,8 @@ public class FactoryActivity extends Activity {
             d.execSQL("CREATE TABLE factory_suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,phone TEXT NOT NULL DEFAULT '',iban TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
             d.execSQL("CREATE INDEX idx_factory_customers_phone ON factory_customers(phone)");
             d.execSQL("CREATE INDEX idx_factory_suppliers_phone ON factory_suppliers(phone)");
+            d.execSQL("CREATE UNIQUE INDEX idx_factory_customers_phone_unique ON factory_customers(phone) WHERE phone<>''");
+            d.execSQL("CREATE UNIQUE INDEX idx_factory_suppliers_phone_unique ON factory_suppliers(phone) WHERE phone<>''");
             d.execSQL("CREATE TABLE daily_usage(id INTEGER PRIMARY KEY,date TEXT,material_id INTEGER,qty INTEGER,cost INTEGER,note TEXT,kind TEXT NOT NULL DEFAULT 'MANUAL')");
             d.execSQL("CREATE TABLE sales_returns(id INTEGER PRIMARY KEY,sale_id INTEGER NOT NULL,product_id INTEGER NOT NULL,qty INTEGER NOT NULL,refund_value INTEGER NOT NULL,refund_cash INTEGER NOT NULL,refund_bank INTEGER NOT NULL,credit_adjustment INTEGER NOT NULL,restored_cogs INTEGER NOT NULL,bank_ref TEXT,reason TEXT,date TEXT)");
             d.execSQL("CREATE TABLE work_orders(id INTEGER PRIMARY KEY,work_ref TEXT UNIQUE,product_id INTEGER NOT NULL,batches INTEGER NOT NULL,planned_qty INTEGER NOT NULL,actual_qty INTEGER NOT NULL DEFAULT 0,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL DEFAULT 0,overhead INTEGER NOT NULL DEFAULT 0,total_cost INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL,date TEXT)");
@@ -328,6 +331,8 @@ public class FactoryActivity extends Activity {
             d.execSQL("CREATE TABLE IF NOT EXISTS factory_suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,phone TEXT NOT NULL DEFAULT '',iban TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
             d.execSQL("CREATE INDEX IF NOT EXISTS idx_factory_customers_phone ON factory_customers(phone)");
             d.execSQL("CREATE INDEX IF NOT EXISTS idx_factory_suppliers_phone ON factory_suppliers(phone)");
+            d.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_factory_customers_phone_unique ON factory_customers(phone) WHERE phone<>''");
+            d.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_factory_suppliers_phone_unique ON factory_suppliers(phone) WHERE phone<>''");
             d.execSQL("INSERT OR IGNORE INTO factory_customers(name) SELECT DISTINCT TRIM(customer) FROM sales WHERE customer IS NOT NULL AND TRIM(customer)<>''");
             d.execSQL("INSERT OR IGNORE INTO factory_customers(name) SELECT DISTINCT TRIM(customer) FROM collections WHERE customer IS NOT NULL AND TRIM(customer)<>''");
             d.execSQL("UPDATE sales SET customer_master_id=COALESCE((SELECT id FROM factory_customers p WHERE p.name=TRIM(sales.customer)),0)");
