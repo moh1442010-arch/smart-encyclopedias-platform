@@ -24,7 +24,7 @@ concurrency:
 jobs:
   build:
     # Only the dedicated device-review branch may build an APK; this workflow never publishes a commercial release.
-    if: github.ref == 'refs/heads/review/bakery-2.8.1-device-acceptance'
+    if: github.ref == 'refs/heads/review/bakery-2.8.1-device-acceptance' || github.event.pull_request.head.ref == 'review/bakery-2.8.1-device-acceptance'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
