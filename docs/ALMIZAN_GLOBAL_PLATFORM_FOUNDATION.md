@@ -169,3 +169,12 @@ The current bakery workflow is triggered by changes under `bakery-app/**`. The f
 - Issue #115 tracks the corrective work: factory-owned party masters inside `almizan_factory_1.db`, migration of existing factory names/IDs, removal of bakery directory calls from factory, and independent encrypted backups/restores. Factory backup export also needs schema parity for the product sale-unit field added in database version 10.
 - Until issue #115 passes its migration, isolation and backup tests, the factory and bakery are not considered fully independent even though they already use separate SQLCipher database files.
 - No APK build or release is authorized before all infrastructure release gates are met.
+
+
+### Complete Arabic/English localization audit — 2026-11-08
+- Owner approved full English integration across every application screen and the offline guide.
+- Audit found extensive hard-coded Arabic user-facing strings in the programmatic Android screens, including MainActivity, FactoryActivity, FactoryLedgerActivity and PartyDirectoryActivity. No Android `values/strings.xml` or `values-en/strings.xml` resources were found in the inspected development source.
+- The offline HTML guide is Arabic-only (`lang="ar"`, `dir="rtl"`). English guide content, a language switch, and LTR rendering have not been implemented.
+- Localization must include field labels/hints, dialogs, validation/errors, toasts, menus, reports, receipts, printing, subscription/licensing, backup metadata, and support messages. Add tests for persistence, RTL/LTR, translation coverage and core flows in both languages.
+- Tracked in issue #117. Do not describe English integration as complete until every screen and the guide pass coverage tests and device checks.
+- Language switching must not change or share bakery/factory databases, parties, ledgers, backups or accounting calculations.
