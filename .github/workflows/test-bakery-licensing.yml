@@ -6,6 +6,7 @@ on:
       - "store/license.html"
       - "store/license-admin.html"
       - ".github/workflows/test-bakery-licensing.yml"
+      - ".github/workflows/deploy-bakery-licensing.yml"
   pull_request:
     paths:
       - "licensing/**"
@@ -50,26 +51,52 @@ jobs:
           ! grep -q 'LICENSE_PRIVATE_KEY_PKCS8_B64\|ADMIN_PASSWORD\|API_BASE' store/license.html
           echo "No private/admin secrets embedded; storefront uses the owner-approved WhatsApp flow without a Cloudflare dependency."
 
-      - name: Check deployed release, main offline issuer, and signing keys
+      - name: Check 2.8.1 candidate, 2.8.0 compatibility, and signing-key continuity
+        shell: bash
         run: |
           set -euo pipefail
-          git fetch origin develop/bakery-2.9-enterprise-completion --depth=1
-          RELEASE_GRADLE="$(git show FETCH_HEAD:bakery-app/app/build.gradle)"
-          RELEASE_VERSION="$(printf '%s\\n' "$RELEASE_GRADLE" | grep -oE "versionName '[^']+'" | head -1 | cut -d "'" -f2)"
-          RELEASE_VERSION_CODE="$(printf '%s\\n' "$RELEASE_GRADLE" | grep -oE 'versionCode [0-9]+' | awk '{print $2}')"
-          MAIN_APP_VERSION="$(grep -oE "versionName '[^']+'" bakery-app/app/build.gradle | head -1 | cut -d "'" -f2)"
-          ISSUER_VERSION="$(grep -oE 'CURRENT_APP_VERSION = "[^"]+"' tools/bakery-license-issuer.mjs | cut -d '"' -f2)"
-          WORKER_VERSION="$(grep -oE 'APP_VERSION = "[^"]+"' licensing/worker/wrangler.toml | cut -d '"' -f2)"
-          test "$RELEASE_VERSION" = "2.8.0"
-          test "$RELEASE_VERSION_CODE" = "280000"
-          test "$RELEASE_VERSION" = "$WORKER_VERSION"
-          test "$MAIN_APP_VERSION" = "$ISSUER_VERSION"
-          RELEASE_KEY="$(git show FETCH_HEAD:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | grep -oE 'private static final String LICENSE_PUBLIC_KEY_B64 = "[^"]+"' | cut -d '"' -f2)"
+          git fetch origin develop/bakery-2.9-enterprise-completion:refs/remotes/origin/develop/bakery-2.9-enterprise-completion --depth=1
+          git fetch origin feature/almizan-global-platform-foundation:refs/remotes/origin/feature/almizan-global-platform-foundation --depth=1
+
+          PREVIOUS_GRADLE="$(git show origin/develop/bakery-2.9-enterprise-completion:bakery-app/app/build.gradle)"
+          CANDIDATE_GRADLE="$(git show origin/feature/almizan-global-platform-foundation:bakery-app/app/build.gradle)"
+          PREVIOUS_VERSION="$(printf '%s\n' "$PREVIOUS_GRADLE" | grep -oE "versionName '[^']+'" | head -1 | cut -d "'" -f2)"
+          PREVIOUS_CODE="$(printf '%s\n' "$PREVIOUS_GRADLE" | grep -oE 'versionCode [0-9]+' | awk '{print $2}')"
+          CANDIDATE_VERSION="$(printf '%s\n' "$CANDIDATE_GRADLE" | grep -oE "versionName '[^']+'" | head -1 | cut -d "'" -f2)"
+          CANDIDATE_CODE="$(printf '%s\n' "$CANDIDATE_GRADLE" | grep -oE 'versionCode [0-9]+' | awk '{print $2}')"
+          WORKER_VERSION="$(grep -oE '^APP_VERSION = "[^"]+"' licensing/worker/wrangler.toml | cut -d '"' -f2)"
+          WORKER_PREVIOUS="$(grep -oE '^PREVIOUS_APP_VERSION = "[^"]+"' licensing/worker/wrangler.toml | cut -d '"' -f2)"
+          printf 'Release versions: previous=%s (%s), candidate=%s (%s), Worker=%s, Worker previous=%s\n' "$PREVIOUS_VERSION" "$PREVIOUS_CODE" "$CANDIDATE_VERSION" "$CANDIDATE_CODE" "$WORKER_VERSION" "$WORKER_PREVIOUS"
+          test "$PREVIOUS_VERSION" = "2.8.0" || { echo "::error::Expected previous app version 2.8.0"; exit 1; }
+          test "$PREVIOUS_CODE" = "280000" || { echo "::error::Expected previous versionCode 280000"; exit 1; }
+          test "$CANDIDATE_VERSION" = "2.8.1" || { echo "::error::Expected candidate app version 2.8.1"; exit 1; }
+          test "$CANDIDATE_CODE" = "280001" || { echo "::error::Expected candidate versionCode 280001"; exit 1; }
+          test "$WORKER_VERSION" = "$CANDIDATE_VERSION" || { echo "::error::Worker APP_VERSION does not match candidate"; exit 1; }
+          test "$WORKER_PREVIOUS" = "$PREVIOUS_VERSION" || { echo "::error::Worker PREVIOUS_APP_VERSION does not match previous app"; exit 1; }
+
+          PREVIOUS_KEY="$(git show origin/develop/bakery-2.9-enterprise-completion:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | grep -oE 'private static final String LICENSE_PUBLIC_KEY_B64 = "[^"]+"' | cut -d '"' -f2)"
+          CANDIDATE_KEY="$(git show origin/feature/almizan-global-platform-foundation:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | grep -oE 'private static final String LICENSE_PUBLIC_KEY_B64 = "[^"]+"' | cut -d '"' -f2)"
           WORKER_KEY="$(grep -oE 'EXPECTED_APP_PUBLIC_KEY_DER_B64 = "[^"]+"' licensing/worker/src/index.js | cut -d '"' -f2)"
-          ISSUER_KEY="$(grep -oE 'EXPECTED_PUBLIC_KEY_DER_B64 = "[^"]+"' tools/bakery-license-issuer.mjs | cut -d '"' -f2)"
-          test -n "$RELEASE_KEY" && test "$RELEASE_KEY" = "$WORKER_KEY"
-          test "$ISSUER_KEY" = "$WORKER_KEY"
-          echo "Current 2.8.0 release matches Worker; main-branch offline issuer matches its source; all signing public keys match."
+          MAIN_APP_KEY="$(grep -oE 'private static final String LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | cut -d '"' -f2)"
+          MAIN_ISSUER_KEY="$(grep -oE 'EXPECTED_PUBLIC_KEY_DER_B64 = "[^"]+"' tools/bakery-license-issuer.mjs | cut -d '"' -f2)"
+          test -n "$PREVIOUS_KEY" && test "$PREVIOUS_KEY" = "$WORKER_KEY"
+          test "$CANDIDATE_KEY" = "$WORKER_KEY"
+          test "$MAIN_APP_KEY" = "$MAIN_ISSUER_KEY"
+          echo "PASS: Worker candidate 2.8.1 and previous 2.8.0 versions and all reviewed public keys are consistent."
+          echo "NOTE: main remains on its legacy 2.6.17 app baseline; it is not the 2.8.1 release source."
+
+      - name: Verify deployment safety gates are present
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "name: Confirm production deployment branch" .github/workflows/deploy-bakery-licensing.yml
+          grep -Fq "if: github.ref == 'refs/heads/main'" .github/workflows/deploy-bakery-licensing.yml
+          grep -Fq "Run licensing source, security and schema gates before production changes" .github/workflows/deploy-bakery-licensing.yml
+          grep -Fq "Verify production signing key configuration and live key pair" .github/workflows/deploy-bakery-licensing.yml
+          grep -Fq "Verify deployed bakery app version" .github/workflows/deploy-bakery-licensing.yml
+          ! grep -Fq '      - ".github/workflows/deploy-bakery-licensing.yml"' .github/workflows/deploy-bakery-licensing.yml
+          echo "PASS: deployment is main-only and preflight/live-signing gates are present."
+
       - name: Syntax-check storefront and admin browser scripts
         run: |
           python3 - <<'PY'

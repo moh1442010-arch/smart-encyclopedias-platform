@@ -126,3 +126,57 @@ test("admin login page is served without exposing dashboard data", async () => {
   assert.doesNotMatch(html, /activationToken|LICENSE_PRIVATE_KEY_PKCS8_B64/);
 });
 
+
+
+test("2.8.1 candidate order is accepted as pending without issuing an activation token", async () => {
+  const writes = [];
+  const db = {
+    prepare(sql) {
+      return {
+        bind(...values) {
+          return {
+            first: async () => {
+              if (sql.includes("license_order_rate_limits")) return { attempts: 1 };
+              if (sql.includes("SELECT id FROM license_orders")) return null;
+              return null;
+            },
+            run: async () => {
+              writes.push({ sql, values });
+              return { meta: { changes: 1 } };
+            }
+          };
+        }
+      };
+    }
+  };
+  const response = await worker.fetch(new Request("https://bakery-test.local/api/orders", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      origin: "https://bakery-test.local",
+      "CF-Connecting-IP": "192.0.2.45"
+    },
+    body: JSON.stringify({
+      customerName: "Candidate 2.8.1 Bakery",
+      contact: "+249123456789",
+      deviceId: "DEVICE-281-123456",
+      plan: "monthly",
+      receiptReference: "TEST-ONLY-281",
+      appVersion: "2.8.1"
+    })
+  }), {
+    DB: db,
+    APP_VERSION: "2.8.1",
+    PREVIOUS_APP_VERSION: "2.8.0",
+    STORE_ORIGIN: "https://bakery-test.local"
+  });
+
+  assert.equal(response.status, 201);
+  const body = await response.json();
+  assert.equal(body.status, "pending");
+  assert.equal(body.amountSdg, 55000);
+  assert.ok(body.orderId);
+  assert.equal("activationToken" in body, false);
+  assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_orders") && x.values.includes("2.8.1")));
+  assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_audit") && x.values.includes("order_created")));
+});
