@@ -91,20 +91,20 @@ public class FactoryActivity extends Activity {
         body.addView(btn("9. مرتجعات المبيعات والأعمال تحت التشغيل وعكس القيود",()->startActivity(new Intent(this,FactoryLedgerActivity.class))));
     }
     private EditText field(String hint,boolean decimal){EditText e=cell(hint,decimal);body.addView(e,new LinearLayout.LayoutParams(-1,(int)(58*getResources().getDisplayMetrics().density+0.5f)));return e;}
-    private EditText cell(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setTextSize(17);e.setPadding(14,8,14,8);e.setMinHeight((int)(56*getResources().getDisplayMetrics().density+0.5f));e.setFocusable(true);e.setFocusableInTouchMode(true);e.setClickable(true);e.setInputType(decimal?android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:android.text.InputType.TYPE_CLASS_TEXT);e.setBackgroundColor(Color.WHITE);return e;}
+    private EditText cell(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setTextSize(17);e.setPadding(14,8,14,8);e.setMinHeight((int)(56*getResources().getDisplayMetrics().density+0.5f));e.setFocusable(true);e.setFocusableInTouchMode(true);e.setClickable(true);boolean numeric=decimal||hint.contains("سعر")||hint.contains("تكلفة")||hint.contains("قيمة")||hint.contains("مبلغ")||hint.contains("سداد")||hint.contains("أجور")||hint.contains("مصروف")||hint.contains("الرصيد");e.setInputType(numeric?(android.text.InputType.TYPE_CLASS_NUMBER|(decimal?android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:0)):android.text.InputType.TYPE_CLASS_TEXT);e.setBackgroundColor(Color.WHITE);return e;}
     private void horizontalFields(View... views){LinearLayout column=new LinearLayout(this);column.setOrientation(1);for(View v:views){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,(int)(58*getResources().getDisplayMetrics().density+0.5f));p.setMargins(2,3,2,3);column.addView(v,p);}body.addView(column,new LinearLayout.LayoutParams(-1,-2));}
     private long num(EditText e){try{java.math.BigDecimal x=new java.math.BigDecimal(e.getText().toString().trim());return x.movePointRight(3).longValueExact();}catch(Exception ex){return 0;}}
     private long money(EditText e){try{return new java.math.BigDecimal(e.getText().toString().trim()).longValueExact();}catch(Exception ex){return 0;}}
     private void warehouse(){
         frame("مخزن الخامات");
-        body.addView(label("كشف مخطط للمخزن. الكمية وسعر الوحدة واستهلاك اليوم لكل خامة. يمكنك إضافة أي خامة أخرى دون حذف الأصناف الأساسية.",14));
+        body.addView(label("ملخص أرصدة المخزن للعرض والمراجعة فقط. لإدخال البيانات استخدم حقول الوارد وإضافة الخامة أسفل الجدول. كل خانة إدخال مستقلة وقابلة للكتابة.",14));
         tableHeader("الصنف","الكمية المتاحة","سعر الوحدة","استهلاك اليوم");
         Cursor rows=null;
         try{
             rows=db.getReadableDatabase().rawQuery("SELECT m.name,m.qty,m.unit,CASE WHEN m.qty=0 THEN 0 ELSE m.value*1000/m.qty END,COALESCE((SELECT SUM(u.qty) FROM daily_usage u WHERE u.material_id=m.id AND u.date=?),0) FROM materials m ORDER BY CASE m.name WHEN 'دقيق' THEN 1 WHEN 'سكر' THEN 2 WHEN 'زيت' THEN 3 WHEN 'خميرة' THEN 4 WHEN 'سمن' THEN 5 WHEN 'بيض' THEN 6 WHEN 'لبن' THEN 7 WHEN 'مواد تغليف' THEN 8 ELSE 9 END,m.name",new String[]{today()});
             while(rows.moveToNext()) tableRow(rows.getString(0),String.format(Locale.US,"%.3f %s",rows.getLong(1)/1000.0,rows.getString(2)),String.format(Locale.US,"%.2f",rows.getLong(3)/1000.0),String.format(Locale.US,"%.3f",rows.getLong(4)/1000.0));
         }catch(Exception ex){body.addView(label("تعذر عرض المخزن: "+ex.getMessage(),13));}finally{if(rows!=null)rows.close();}
-        body.addView(label("إضافة وارد مخزني",16));
+        body.addView(label("إضافة وارد مخزني — اكتب الكمية وسعر الوحدة في الحقول أدناه",18));
         EditText supplier=cell("المورد المختار",false);supplier.setFocusable(false);final long[] supplierId={0};
         horizontalFields(supplier);
         body.addView(btn("بحث واختيار المورد",()->PartyDirectory.showSupplierPicker(this,(id,name)->{supplierId[0]=id;supplier.setText(name);} )));
@@ -125,7 +125,7 @@ public class FactoryActivity extends Activity {
         body.addView(label("تسجيل استهلاك خامة خلال اليوم",16));
         EditText useName=field("اسم الصنف",false),useQty=field("كمية الاستهلاك اليومي",true),useNote=field("بيان الاستهلاك",false);
         body.addView(btn("تسجيل الاستهلاك وخصمه من رصيد المخزن",()->{String name=useName.getText().toString().trim();long qty=num(useQty);if(name.isEmpty()||qty<=0){toast("حدد الصنف وكمية الاستهلاك");return;}try{db.consumeRaw(name,qty,useNote.getText().toString());toast("تم تسجيل الاستهلاك وخصمه من المخزون");warehouse();}catch(Exception ex){toast("تعذر تسجيل الاستهلاك: "+ex.getMessage());}}));
-        body.addView(label("إضافة خامة جديدة أو تعديل الاسم والوحدة",15));
+        body.addView(label("إضافة صنف جديد ورصيد افتتاحي — وحدات الوزن والقياس قابلة للكتابة",17));
         EditText newName=field("اسم الخامة الجديدة",false),newUnit=field("الوحدة: كجم، جرام، لتر، مل، قطعة، طبق، كيس، جوال، صندوق أو وحدة أخرى",false),openingQty=field("الرصيد الافتتاحي — اكتب الكمية",true),openingPrice=field("تكلفة الوحدة بالجنيه السوداني",false);
         body.addView(btn("إضافة خامة مع الرصيد الافتتاحي والتكلفة",()->{String name=newName.getText().toString().trim(),unit=newUnit.getText().toString().trim();long qty=num(openingQty),price=money(openingPrice);if(name.isEmpty()||unit.isEmpty()||qty<0||price<0||(qty>0&&price<=0)){toast("أدخل اسم الخامة ووحدتها والكمية والتكلفة بصورة صحيحة");return;}try{db.createMaterial(name,unit,qty,price);toast("تمت إضافة الخامة ورصيدها الافتتاحي");warehouse();}catch(Exception ex){toast("تعذر إضافة الخامة: "+ex.getMessage());}}));
         EditText oldName=field("اسم الخامة الحالي",false),rename=field("الاسم الجديد",false),renameUnit=field("الوحدة الجديدة",false);
