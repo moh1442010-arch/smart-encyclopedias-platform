@@ -184,7 +184,7 @@ The current bakery workflow is triggered by changes under `bakery-app/**`. The f
 
 ### Identity and credentials
 - The bakery app first-run setup currently includes an establishment-name field, a numeric PIN (minimum six digits), and confirmation. It derives a salted hash; it does not intentionally persist the PIN as plaintext.
-- The factory must have its own business name, independent from the bakery. FactoryActivity was reading bakery_profile; source commit 38ecdfae6135b1e69be5972e10744ce23fcba9b0 changes it to factory_profile and adds a factory-name edit action.
+- The factory must have its own business name, independent from the bakery. FactoryActivity was reading bakery_profile; source commits 38ecdfae6135b1e69be5972e10744ce23fcba9b0 and 39df469e150304eeee4bc486ac9bed223d2f64f6 change it to factory_profile, add a factory-name edit action, and copy the legacy display name once on first access if no factory name exists. After that one-time migration, edits remain independent.
 - This change is source-only. CI, APK build, and phone verification have not yet been confirmed.
 - The app-level PIN flow needs a security review for show/hide control, rate limiting/lockout, change/reset/recovery, and protection of sensitive screens. Do not create a second independent PIN until access-control architecture is designed and tested.
 
