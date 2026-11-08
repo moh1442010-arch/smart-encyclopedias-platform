@@ -71,7 +71,6 @@ final class AppLanguage {
         put("نسخ رقم IBAN","Copy IBAN");
         put("نسخ رقم حساب بنكك","Copy Bankak account");
         put("الدفع المحلي عبر بنكك — رقم الحساب: 1882224","Local payment via Bankak — account: 1882224");
-        put("التحويل المصرفي الدولي — IBAN: SD8504018822240001","International bank transfer — IBAN: SD8504018822240001");
         put("الاشتراك الشهري — 55,000 جنيه سوداني","Monthly subscription — 55,000 SDG");
         put("الاشتراك السنوي — 550,000 جنيه سوداني","Annual subscription — 550,000 SDG");
         put("الترخيص الدائم — 1,050,000 جنيه سوداني","Permanent license — 1,050,000 SDG");
