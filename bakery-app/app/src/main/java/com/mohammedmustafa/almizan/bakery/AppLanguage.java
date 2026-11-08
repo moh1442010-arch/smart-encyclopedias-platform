@@ -16,7 +16,7 @@ final class AppLanguage {
     private static final String KEY_LANGUAGE="language";
     private static final Map<String,String> ENGLISH=new HashMap<>();
     static {
-        put("🌐 اللغة / Language","🌐 Language / اللغة");
+        put("🌐 اللغة / Language","🌐 Language");
         put("اختيار اللغة","Choose language");
         put("العربية","Arabic");
         put("الرئيسية","Home");
