@@ -32,7 +32,7 @@ Required common fields: source type, source ID, business date, created timestamp
 
 ### 2. Canonical accounting core
 
-Use one posting service and one canonical general ledger. No screen may calculate or post its own profit formula.
+Each accounting system has its own posting service, database, general ledger and reports. A stateless calculation helper may be reused as source code, but it must receive only that system's records. No shared ledger, cross-system posting, or consolidation is permitted.
 
 - Revenue = cash + Bankak + customer receivables.
 - Include both counter and distribution sales. Preserve channel dimensions for reports; do not deduct distribution from revenue.
@@ -46,13 +46,13 @@ Use one posting service and one canonical general ledger. No screen may calculat
 
 ### 3. Database migration strategy
 
-1. Freeze a copy of both current databases and capture schema versions and record counts.
-2. Define a canonical database schema and source-document mapping.
-3. Additive migrations only; never drop customer tables or reset balances.
-4. Migrate/import source records with deterministic source keys and duplicate detection.
-5. Reconcile opening balances, stock quantities/values, customer debts, supplier balances, cash, Bankak and historical sales before enabling the unified posting path.
-6. Keep compatibility readers and backup restore for older backups until a migration has passed on copies of real customer data.
-7. Enable dual-read/controlled cutover only after parity tests; do not run two independent posting engines indefinitely.
+1. Treat the bakery and factory as permanently separate accounting systems, not two sources to merge into a canonical shared database.
+2. Freeze and inspect each database independently; capture its schema version, record counts and balances.
+3. Apply additive migrations within that database only; never drop tables or reset balances.
+4. Give each system its own party master, posting service, ledger and reports. No foreign-system IDs or picker calls.
+5. Reconcile opening balances, stock, debts, cash, Bankak and historical sales separately within each system.
+6. Maintain separate encrypted backup/restore flows. A legacy combined archive may be imported only through an explicit system-specific selection and must never couple the resulting databases.
+7. Test each migration on copied data before enabling it for customers.
 
 ### 4. Navigation and screen contract
 
@@ -142,8 +142,8 @@ Sources:
 
 ### Still open — do not treat as complete
 - Factory reports still calculate results directly from factory SQL tables; they have not yet been migrated to the shared calculation service.
-- Main bakery and factory operational databases remain separate. A safe canonical migration and reconciliation of real customer data has not been implemented.
-- GeneralLedger exists but operational sales, production, inventory, payroll, expense and distribution documents are not all posting through it.
+- Bakery and factory databases must remain separate by design. Source review found factory screens still use the bakery PartyDirectory and combined backup/restore; issue #115 tracks removal of those cross-system dependencies. No cross-system data migration is authorized.
+- Each system must have its own GeneralLedger instance. Operational sales, production, inventory, payroll, expense and distribution documents are not all posting through their own system ledger yet.
 - Independent icon dashboard, full English resources, complete screen localization, all navigation tests, and live four-currency licensing checkout remain incomplete.
 - IBAN/account ownership and format must be verified before the payment details are publicly enabled.
 - No customer-facing APK or commercial release is approved from this workstream.
@@ -159,4 +159,13 @@ The current bakery workflow is triggered by changes under `bakery-app/**`. The f
 - Added a product sale-unit column with a version-10 database migration defaulting existing products to "قطعة". Product screens now allow a free-text sale unit (piece, kg, tray, box, etc.) and show it beside finished stock. Production price updates preserve the saved unit.
 - Expanded the default factory materials catalogue for bakery and confectionery inputs (butter, cream, cheese, chocolate, cocoa, vanilla, baking powder, dates, sesame, coconut, honey/syrup, nuts, spices, packaging, gas and fuel) and the starter products catalogue (cake, biscuit, maamoul, kunafa, doughnuts, samosa, bread and rolls).
 - Existing stock valuation is preserved; changing an item's unit while stock exists remains blocked. Incoming stock should use a supplier receipt with the same unit. Units are free-text but quantities are stored to 3 decimal places; automatic conversion between kg/g or L/ml is not yet implemented.
-- The existing CI run on the previous commit was cancelled during Android SDK setup by a subsequent push; the latest no-APK unit-test workflow for the current source commit is queued/pending. Do not mark the UI or migration accepted until that run passes and a physical-device typing/migration test is completed.
+- The no-APK unit-test workflow run `42508545860` passed on commit `1ea7bc716c409689c9942cecd10e4d58a6cc00aa`; the factory/bakery unit-test job and API 23 arithmetic compatibility check passed. This does not prove physical-device typing, database upgrade against real customer data, or backup/restore isolation. Those remain release gates.
+
+
+### Strict bakery/factory isolation requirement — 2026-11-08
+- Owner instruction: the bakery account and factory account are independent systems, each with its own database, customer/supplier records, ledger, balances, reports and backup/restore. Do not connect, merge, consolidate or automatically post between them.
+- A pure stateless math helper may be shared as code only. Runtime records, database handles, identifiers and journal entries must never cross the system boundary.
+- Source review found the current factory screens still invoke the bakery `PartyDirectory` / `PartyDirectoryActivity`, and factory rows persist IDs selected from that bakery directory. The current top-level encrypted backup also bundles bakery records, bakery parties and factory data into one restore transaction. These are confirmed architecture violations, not accepted behavior.
+- Issue #115 tracks the corrective work: factory-owned party masters inside `almizan_factory_1.db`, migration of existing factory names/IDs, removal of bakery directory calls from factory, and independent encrypted backups/restores. Factory backup export also needs schema parity for the product sale-unit field added in database version 10.
+- Until issue #115 passes its migration, isolation and backup tests, the factory and bakery are not considered fully independent even though they already use separate SQLCipher database files.
+- No APK build or release is authorized before all infrastructure release gates are met.
