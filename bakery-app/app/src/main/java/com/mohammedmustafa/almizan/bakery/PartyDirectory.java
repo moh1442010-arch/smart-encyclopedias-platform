@@ -107,7 +107,12 @@ final class PartyDirectory {
     }
 
     static long saveSupplier(SQLiteDatabase db,String name,String phone,String item,String unit,long quantityMilli,long invoiceTotal,long paidCash,long paidBank,String bankRef,String currency) {
+        return saveSupplier(db,name,phone,item,unit,quantityMilli,invoiceTotal,paidCash,paidBank,bankRef,currency,new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new java.util.Date()));
+    }
+
+    static long saveSupplier(SQLiteDatabase db,String name,String phone,String item,String unit,long quantityMilli,long invoiceTotal,long paidCash,long paidBank,String bankRef,String currency,String invoiceDate) {
         requireParty(name,invoiceTotal,currency);
+        if(blank(invoiceDate)||!invoiceDate.matches("\\d{4}-\\d{2}-\\d{2}"))throw new IllegalArgumentException("حدد تاريخ الفاتورة بصيغة YYYY-MM-DD.");
         if(quantityMilli<0||paidCash<0||paidBank<0||paidCash>invoiceTotal||paidBank>invoiceTotal-paidCash||
            (paidBank>0&&blank(bankRef))||(paidBank==0&&!blank(bankRef))||
            (quantityMilli>0&&(invoiceTotal==0||blank(item))))
@@ -127,7 +132,7 @@ final class PartyDirectory {
                 invoice.put("quantity_milli",quantityMilli);invoice.put("invoice_total_minor",invoiceTotal);
                 invoice.put("paid_cash_minor",paidCash);invoice.put("paid_bank_minor",paidBank);
                 invoice.put("bank_reference",safe(bankRef));invoice.put("debt_minor",debt);
-                invoice.put("currency_code",currency);invoice.put("invoice_date",new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new java.util.Date()));
+                invoice.put("currency_code",currency);invoice.put("invoice_date",invoiceDate);
                 invoice.put("created_at",System.currentTimeMillis());db.insertOrThrow("supplier_quick_invoices",null,invoice);
             }
             db.setTransactionSuccessful();return id;
