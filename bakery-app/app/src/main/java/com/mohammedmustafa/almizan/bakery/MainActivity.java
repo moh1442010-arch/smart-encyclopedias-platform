@@ -2019,10 +2019,8 @@ public class MainActivity extends Activity {
         content.addView(text("الدفع المحلي عبر بنكك — رقم الحساب: 1882224",16));
         Button copy=button("نسخ رقم حساب بنكك");
         copy.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("Bankak",BANKAK));toast("تم نسخ رقم بنكك");});
-        content.addView(text("التحويل المصرفي الدولي — IBAN: SD8504018822240001",16));
-        Button copyIban=button("نسخ رقم IBAN");
-        copyIban.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("IBAN","SD8504018822240001"));toast("تم نسخ رقم IBAN");});
         content.addView(copy);
+        content.addView(text("بيانات التحويل الدولي بعملات SAR وAED وUSD ستظهر بعد إدخال بيانات الحسابات البنكية المعتمدة والتحقق منها. لا تستخدم أي رقم IBAN غير موثق.",14));
         content.addView(text("سجّل طلب الترخيص في البوابة وأدخل مرجع التحويل. أرسل إشعار واتساب للمالك. لن يصدر الترخيص إلا بعد تأكيد وصول المبلغ إلى حساب بنكك وموافقة المالك. لا ترسل الرقم السري أو رمز التحقق البنكي.",14));
         Button logoRequest=button("🌾 إرسال شعار المخبز لتخصيص الفواتير عبر واتساب");
         logoRequest.setOnClickListener(v->chooseCompanyLogo());
