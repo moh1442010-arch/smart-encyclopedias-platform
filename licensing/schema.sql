@@ -8,7 +8,9 @@ CREATE TABLE IF NOT EXISTS license_orders (
   contact TEXT NOT NULL,
   device_id TEXT NOT NULL,
   plan TEXT NOT NULL CHECK (plan IN ('monthly','annual','lifetime')),
-  amount_sdg INTEGER NOT NULL CHECK (amount_sdg > 0),
+  amount_sdg INTEGER NOT NULL DEFAULT 0 CHECK (amount_sdg >= 0),
+  currency_code TEXT NOT NULL DEFAULT 'SDG' CHECK (currency_code IN ('SDG','SAR','AED','USD')),
+  amount_minor INTEGER NOT NULL CHECK (amount_minor > 0),
   receipt_reference TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('pending','approved','rejected')),
   reviewed_at TEXT,
@@ -17,6 +19,9 @@ CREATE TABLE IF NOT EXISTS license_orders (
   token_expires INTEGER,
   app_version TEXT NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_license_orders_currency_created
+  ON license_orders(currency_code, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_license_orders_status_created
   ON license_orders(status, created_at DESC);
