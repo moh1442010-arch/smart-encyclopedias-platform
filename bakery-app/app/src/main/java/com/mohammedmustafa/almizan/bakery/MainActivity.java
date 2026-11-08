@@ -1831,11 +1831,13 @@ public class MainActivity extends Activity {
             restoreBackupSystem(system,records,partySnapshot,factorySnapshot);
             return;
         }
+        final JSONArray legacyRecords=records;
+        final JSONObject legacyPartySnapshot=partySnapshot,legacyFactorySnapshot=factorySnapshot;
         new AlertDialog.Builder(this).setTitle("اختيار نظام الاستعادة")
             .setMessage("هذه نسخة قديمة أو لا تحدد النظام. اختر نظاماً واحداً فقط. لن تتغير بيانات النظام الآخر.")
             .setNegativeButton("إلغاء",null)
-            .setNeutralButton("المصنع",(d,w)->{try{restoreBackupSystem("factory",records,partySnapshot,factorySnapshot);}catch(Exception ex){toast("تعذرت استعادة المصنع: "+ex.getMessage());}})
-            .setPositiveButton("المخبز",(d,w)->{try{restoreBackupSystem("bakery",records,partySnapshot,factorySnapshot);}catch(Exception ex){toast("تعذرت استعادة المخبز: "+ex.getMessage());}})
+            .setNeutralButton("المصنع",(d,w)->{try{restoreBackupSystem("factory",legacyRecords,legacyPartySnapshot,legacyFactorySnapshot);}catch(Exception ex){toast("تعذرت استعادة المصنع: "+ex.getMessage());}})
+            .setPositiveButton("المخبز",(d,w)->{try{restoreBackupSystem("bakery",legacyRecords,legacyPartySnapshot,legacyFactorySnapshot);}catch(Exception ex){toast("تعذرت استعادة المخبز: "+ex.getMessage());}})
             .show();
     }
 
