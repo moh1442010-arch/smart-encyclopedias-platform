@@ -24,7 +24,7 @@ concurrency:
 jobs:
   build:
     # Only the dedicated device-review branch may build an APK; this workflow never publishes a commercial release.
-    if: github.ref == 'refs/heads/review/bakery-2.8.1-device-acceptance' || github.event.pull_request.head.ref == 'review/bakery-2.8.1-device-acceptance'
+    if: github.ref == 'refs/heads/review/bakery-2.8.1-device-acceptance' || github.ref == 'refs/heads/feature/almizan-2.9-competitive-localization' || github.event.pull_request.head.ref == 'review/bakery-2.8.1-device-acceptance' || github.event.pull_request.head.ref == 'feature/almizan-2.9-competitive-localization'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -44,11 +44,11 @@ jobs:
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           const app = fs.readFileSync('bakery-app/app/build.gradle', 'utf8');
-          const main = fs.readFileSync('bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java', 'utf8');
+          const gate = fs.readFileSync('bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java', 'utf8');
           const issuer = fs.readFileSync('tools/bakery-license-issuer.mjs', 'utf8');
           const appVersion = app.match(/versionName '([^']+)'/)?.[1];
           const issuerVersion = issuer.match(/CURRENT_APP_VERSION = "([^"]+)"/)?.[1];
-          const appKey = main.match(/LICENSE_PUBLIC_KEY_B64 = "([^"]+)"/)?.[1];
+          const appKey = gate.match(/"([A-Za-z0-9+/=]{100,})"/)?.[1];
           const issuerKey = issuer.match(/EXPECTED_PUBLIC_KEY_DER_B64 = "([^"]+)"/)?.[1];
           if (!appVersion || !issuerVersion || appVersion !== issuerVersion) {
             throw new Error(`Offline issuer version mismatch: app=${appVersion}, issuer=${issuerVersion}`);
