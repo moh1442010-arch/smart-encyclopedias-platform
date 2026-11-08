@@ -46,7 +46,8 @@ final class TaxEngine {
             return new Result("CALCULATED",net,amountMinor-net,amountMinor,numerator,denominator);
         }
         long tax=roundedRatio(amountMinor,numerator,denominator);
-        return new Result("CALCULATED",amountMinor,tax,Math.addExact(amountMinor,tax),numerator,denominator);
+        if(amountMinor>Long.MAX_VALUE-tax)throw new ArithmeticException("Tax-inclusive total exceeds supported amount");
+        return new Result("CALCULATED",amountMinor,tax,amountMinor+tax,numerator,denominator);
     }
 
     static long roundedRatio(long amount,long numerator,long denominator) {
