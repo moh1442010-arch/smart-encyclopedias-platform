@@ -123,6 +123,8 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
+    @Override protected void attachBaseContext(android.content.Context newBase) { super.attachBaseContext(AppLanguage.wrap(newBase)); }
+
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
@@ -535,7 +537,7 @@ public class MainActivity extends Activity {
     private void base(String title) {
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        root.setLayoutDirection(AppLanguage.isEnglish(this)?View.LAYOUT_DIRECTION_LTR:View.LAYOUT_DIRECTION_RTL);
         root.setBackgroundColor(BG);
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.HORIZONTAL);
@@ -551,12 +553,12 @@ public class MainActivity extends Activity {
         LinearLayout titles = new LinearLayout(this);
         titles.setOrientation(LinearLayout.VERTICAL);
         TextView name = new TextView(this);
-        name.setText(title);
+        name.setText(AppLanguage.tr(this,title));
         name.setTextSize(19);
         name.setTextColor(Color.WHITE);
         name.setTypeface(null,1);
         TextView subtitle = new TextView(this);
-        subtitle.setText(businessName()+"  •  إدارة المخبز والمخزون والتشغيل");
+        subtitle.setText(AppLanguage.tr(this,businessName()+"  •  إدارة المخبز والمخزون والتشغيل"));
         subtitle.setTextSize(12);
         subtitle.setTextColor(Color.rgb(236,226,190));
         titles.addView(name);
@@ -578,7 +580,7 @@ public class MainActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        content.setLayoutDirection(AppLanguage.isEnglish(this)?View.LAYOUT_DIRECTION_LTR:View.LAYOUT_DIRECTION_RTL);
         content.setPadding(14,14,14,20);
         scroll.addView(content);
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
@@ -653,6 +655,7 @@ public class MainActivity extends Activity {
         }
         addBakeryHero();
         Button profile=button("🏷️ بيانات المنشأة: "+businessName());profile.setOnClickListener(v->editBusinessName());content.addView(profile);
+        Button language=button("🌐 اللغة / Language");language.setOnClickListener(v->showLanguagePicker());content.addView(language);
         Button printer=button("🖨️ إعداد الطابعة والطباعة");printer.setOnClickListener(v->showPrinterSettings());content.addView(printer);
         Button printDaily=button("🖨️ طباعة شغل اليوم");printDaily.setOnClickListener(v->printDailyWork());content.addView(printDaily);
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -801,12 +804,12 @@ public class MainActivity extends Activity {
     }
 
     private TextView text(String value, int size) {
-        TextView v = new TextView(this); v.setText(value); v.setTextSize(size); v.setTextColor(Color.rgb(31,41,55));
+        TextView v = new TextView(this); v.setText(AppLanguage.tr(this,value)); v.setTextSize(size); v.setTextColor(Color.rgb(31,41,55));
         v.setPadding(7,8,7,8); return v;
     }
     private Button button(String value) {
         Button b = new Button(this);
-        b.setText(value);
+        b.setText(AppLanguage.tr(this,value));
         b.setAllCaps(false);
         b.setTextColor(NAVY);
         b.setTextSize(15);
@@ -815,6 +818,15 @@ public class MainActivity extends Activity {
         b.setBackground(rounded(GOLD,14));
         b.setElevation(2f);
         return b;
+    }
+
+    private void showLanguagePicker() {
+        String[] choices={"العربية","English"};
+        new AlertDialog.Builder(this).setTitle(getString(R.string.language_picker_title))
+            .setItems(choices,(dialog,which)->{
+                AppLanguage.setLanguage(this,which==1?"en":"ar");
+                recreate();
+            }).show();
     }
 
     private void chooseDate() {
@@ -2140,7 +2152,7 @@ public class MainActivity extends Activity {
         try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/"+SUPPORT+"?text="+Uri.encode(message)))); }
         catch(Exception e) { toast("تعذر فتح واتساب. الرقم: +249 121 851 285"); }
     }
-    private void toast(String s) { Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
+    private void toast(String s) { Toast.makeText(this,AppLanguage.tr(this,s),Toast.LENGTH_LONG).show(); }
 
     private class Store extends SQLiteOpenHelper {
         Store(){super(MainActivity.this,"almizan_bakery_250.db",SecureDatabase.passphrase(MainActivity.this,"almizan_bakery_250.db"),null,7,0,null,null,false);}
