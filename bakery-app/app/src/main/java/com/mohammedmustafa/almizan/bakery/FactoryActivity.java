@@ -25,7 +25,7 @@ public class FactoryActivity extends Activity {
         if (LicenseAccessGate.isAccessAllowed(this)) return true;
         entitlementHandler.removeCallbacks(entitlementWatchdog);
         if (db != null) { db.close(); db=null; }
-        Toast.makeText(this,"انتهت التجربة أو لا يوجد ترخيص ساري. بياناتك محفوظة؛ يرجى التفعيل للمتابعة.",Toast.LENGTH_LONG).show();
+        Toast.makeText(this,AppLanguage.tr(this,"انتهت التجربة أو لا يوجد ترخيص ساري. بياناتك محفوظة؛ يرجى التفعيل للمتابعة."),Toast.LENGTH_LONG).show();
         finish();
         startActivity(new Intent(this,MainActivity.class));
         return false;
@@ -96,7 +96,7 @@ public class FactoryActivity extends Activity {
         body.addView(btn("9. مرتجعات المبيعات والأعمال تحت التشغيل وعكس القيود",()->startActivity(new Intent(this,FactoryLedgerActivity.class))));
     }
     private EditText field(String hint,boolean decimal){EditText e=cell(hint,decimal);body.addView(e,new LinearLayout.LayoutParams(-1,(int)(58*getResources().getDisplayMetrics().density+0.5f)));return e;}
-    private EditText cell(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setTextSize(17);e.setPadding(14,8,14,8);e.setMinHeight((int)(56*getResources().getDisplayMetrics().density+0.5f));e.setFocusable(true);e.setFocusableInTouchMode(true);e.setClickable(true);boolean numeric=decimal||hint.contains("سعر")||hint.contains("تكلفة")||hint.contains("قيمة")||hint.contains("مبلغ")||hint.contains("سداد")||hint.contains("أجور")||hint.contains("مصروف")||hint.contains("الرصيد");e.setInputType(numeric?(android.text.InputType.TYPE_CLASS_NUMBER|(decimal?android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:0)):android.text.InputType.TYPE_CLASS_TEXT);e.setBackgroundColor(Color.WHITE);return e;}
+    private EditText cell(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(AppLanguage.tr(this,hint));e.setTextSize(17);e.setPadding(14,8,14,8);e.setMinHeight((int)(56*getResources().getDisplayMetrics().density+0.5f));e.setFocusable(true);e.setFocusableInTouchMode(true);e.setClickable(true);boolean numeric=decimal||hint.contains("سعر")||hint.contains("تكلفة")||hint.contains("قيمة")||hint.contains("مبلغ")||hint.contains("سداد")||hint.contains("أجور")||hint.contains("مصروف")||hint.contains("الرصيد");e.setInputType(numeric?(android.text.InputType.TYPE_CLASS_NUMBER|(decimal?android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:0)):android.text.InputType.TYPE_CLASS_TEXT);e.setBackgroundColor(Color.WHITE);return e;}
     private void horizontalFields(View... views){LinearLayout column=new LinearLayout(this);column.setOrientation(1);for(View v:views){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,(int)(58*getResources().getDisplayMetrics().density+0.5f));p.setMargins(2,3,2,3);column.addView(v,p);}body.addView(column,new LinearLayout.LayoutParams(-1,-2));}
     private long num(EditText e){try{java.math.BigDecimal x=new java.math.BigDecimal(e.getText().toString().trim());return x.movePointRight(3).longValueExact();}catch(Exception ex){return 0;}}
     private long money(EditText e){try{return new java.math.BigDecimal(e.getText().toString().trim()).longValueExact();}catch(Exception ex){return 0;}}
