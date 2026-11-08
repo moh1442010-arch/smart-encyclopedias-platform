@@ -18,8 +18,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  guard:
+    name: Confirm production deployment branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Allow production changes only from main
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Deployment is restricted to main. No production changes will run."
+          else
+            echo "Main branch deployment gate passed."
+          fi
+
   deploy:
     name: Deploy al-mizan-bakery-licensing
+    needs: guard
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
