@@ -1991,18 +1991,30 @@ public class MainActivity extends Activity {
                 ? "انتهت فترة التجربة المجانية (7 أيام)، وتم إيقاف الوصول إلى الدفاتر حتى التفعيل. بياناتك المحلية محفوظة ولن تُحذف. اختر الباقة وحوّل المبلغ عبر بنكك ثم أرسل الإيصال عبر واتساب لطلب التفعيل."
                 : "أهلًا بك في المحاسب الميزان للمخابز. بقي نحو " + trialDaysRemaining() + " يومًا من التجربة المجانية. يمكنك اختيار باقة مسبقًا؛ ستظل بياناتك محفوظة على الهاتف.";
         content.addView(text(trialMessage,16));
-        content.addView(text("الاشتراك الشهري — 55,000 جنيه سوداني",18));
-        Button monthly=button("اختيار الباقة الشهرية");
-        monthly.setOnClickListener(v->requestActivation("شهرية","55,000 جنيه سوداني"));
-        content.addView(monthly);
-        content.addView(text("الاشتراك السنوي — 550,000 جنيه سوداني",18));
-        Button annual=button("اختيار الباقة السنوية");
-        annual.setOnClickListener(v->requestActivation("سنوية","550,000 جنيه سوداني"));
-        content.addView(annual);
-        content.addView(text("شراء مرة واحدة — 1,050,000 جنيه سوداني",18));
-        Button lifetime=button("اختيار باقة الشراء مرة واحدة");
-        lifetime.setOnClickListener(v->requestActivation("شراء مرة واحدة","1,050,000 جنيه سوداني"));
-        content.addView(lifetime);
+        content.addView(text("اختر عملة الترخيص",16));
+        String[] licenseCurrencies={"SDG — جنيه سوداني","SAR — ريال سعودي","AED — درهم إماراتي","USD — دولار أمريكي"};
+        String[] licenseCodes={"SDG","SAR","AED","USD"};
+        Spinner licenseCurrency=new Spinner(this);
+        ArrayAdapter<String> licenseCurrencyAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,licenseCurrencies);
+        licenseCurrencyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        licenseCurrency.setAdapter(licenseCurrencyAdapter);content.addView(licenseCurrency);
+        Button monthly=button("شهري — 55,000 SDG");content.addView(monthly);
+        Button annual=button("سنوي — 550,000 SDG");content.addView(annual);
+        Button lifetime=button("دائم — 1,050,000 SDG");content.addView(lifetime);
+        android.widget.AdapterView.OnItemSelectedListener currencyListener=new android.widget.AdapterView.OnItemSelectedListener(){
+            public void onNothingSelected(android.widget.AdapterView<?> p){}
+            public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id){
+                String code=licenseCodes[position];
+                long[] amounts=licenseAmounts(code);
+                monthly.setText("شهري — "+amounts[0]+" "+code);
+                annual.setText("سنوي — "+amounts[1]+" "+code);
+                lifetime.setText("دائم — "+amounts[2]+" "+code);
+            }
+        };
+        licenseCurrency.setOnItemSelectedListener(currencyListener);
+        monthly.setOnClickListener(v->{String code=licenseCodes[licenseCurrency.getSelectedItemPosition()];requestActivation("شهرية",licenseAmounts(code)[0]+" "+code,code);});
+        annual.setOnClickListener(v->{String code=licenseCodes[licenseCurrency.getSelectedItemPosition()];requestActivation("سنوية",licenseAmounts(code)[1]+" "+code,code);});
+        lifetime.setOnClickListener(v->{String code=licenseCodes[licenseCurrency.getSelectedItemPosition()];requestActivation("شراء مرة واحدة",licenseAmounts(code)[2]+" "+code,code);});
         content.addView(text("تنبيه قبل الدفع: الشراء لمرة واحدة يفعّل هذا الإصدار فقط ولا يشمل التحديثات المستقبلية. الباقات الشهرية والسنوية تشمل التحديثات طوال فترة الاشتراك.",13));
         content.addView(text("معرّف هذا الجهاز لربط الاشتراك به:",14));
         content.addView(text(deviceId(),13));
@@ -2020,7 +2032,7 @@ public class MainActivity extends Activity {
         Button copy=button("نسخ رقم حساب بنكك");
         copy.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("Bankak",BANKAK));toast("تم نسخ رقم بنكك");});
         content.addView(copy);
-        content.addView(text("بيانات التحويل الدولي بعملات SAR وAED وUSD ستظهر بعد إدخال بيانات الحسابات البنكية المعتمدة والتحقق منها. لا تستخدم أي رقم IBAN غير موثق.",14));
+        content.addView(text("التحويل الدولي — IBAN: SD46 0252 4541 9000 01 — الحساب: 1019380025245419000 — فوري. تحقق من اسم المستفيد قبل التحويل.",14));
         content.addView(text("سجّل طلب الترخيص في البوابة وأدخل مرجع التحويل. أرسل إشعار واتساب للمالك. لن يصدر الترخيص إلا بعد تأكيد وصول المبلغ إلى حساب بنكك وموافقة المالك. لا ترسل الرقم السري أو رمز التحقق البنكي.",14));
         Button logoRequest=button("🌾 إرسال شعار المخبز لتخصيص الفواتير عبر واتساب");
         logoRequest.setOnClickListener(v->chooseCompanyLogo());
@@ -2033,7 +2045,7 @@ public class MainActivity extends Activity {
         if (LicenseAccessGate.isAccessAllowed(this)) { Button back=button("العودة إلى التطبيق"); back.setOnClickListener(v->buildHome()); content.addView(back); }
     }
 
-    private void requestActivation(String plan,String amount) {
+    private long[] licenseAmounts(String currency) {\n        if("SAR".equals(currency)||"AED".equals(currency))return new long[]{29,290,725};\n        if("USD".equals(currency))return new long[]{8,80,199};\n        return new long[]{55000,550000,1050000};\n    }\n\n    private void requestActivation(String plan,String amount,String currencyCode) {
         String planCode = "شهرية".equals(plan) ? "monthly" :
             "سنوية".equals(plan) ? "annual" : "lifetime";
         android.net.Uri portal = android.net.Uri.parse(
