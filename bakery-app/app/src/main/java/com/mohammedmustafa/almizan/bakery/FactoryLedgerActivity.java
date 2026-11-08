@@ -100,13 +100,18 @@ public class FactoryLedgerActivity extends Activity {
             if(credit>outstanding)throw new IllegalArgumentException("قيمة تخفيض الآجل أكبر من مديونية العميل المتبقية: "+outstanding);
             Cursor f=db.rawQuery("SELECT qty,value FROM finished WHERE product_id=?",new String[]{""+pid});long stock=0,value=0;if(f.moveToFirst()){stock=f.getLong(0);value=f.getLong(1);}f.close();
             ContentValues v=new ContentValues();v.put("product_id",pid);v.put("qty",FactoryMath.add(stock,q));v.put("value",FactoryMath.add(value,restore));v.put("unit_cost",FactoryMath.weightedAverageUnitCost(stock,value,q,restore));db.insertWithOnConflict("finished",null,v,SQLiteDatabase.CONFLICT_REPLACE);
-            db.execSQL("INSERT INTO sales_returns(sale_id,product_id,qty,refund_value,refund_cash,refund_bank,credit_adjustment,restored_cogs,bank_ref,reason,date) VALUES(?,?,?,?,?,?,?,?,?,?,?)",new Object[]{saleId,pid,q,refund,cash,bank,credit,restore,bankRef,reason,today()});
+            ContentValues returnValues=new ContentValues();
+            returnValues.put("sale_id",saleId);returnValues.put("product_id",pid);returnValues.put("qty",q);
+            returnValues.put("refund_value",refund);returnValues.put("refund_cash",cash);returnValues.put("refund_bank",bank);
+            returnValues.put("credit_adjustment",credit);returnValues.put("restored_cogs",restore);
+            returnValues.put("bank_ref",bankRef);returnValues.put("reason",reason);returnValues.put("date",today());
+            long returnId=db.insertOrThrow("sales_returns",null,returnValues);
             if(cash>0)db.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('CASH','SALE_RETURN',?,?,?)",new Object[]{cash,"return-"+saleId,today()});
             if(bank>0)db.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('BANKAK','SALE_RETURN',?,?,?)",new Object[]{bank,bankRef,today()});
             db.execSQL("INSERT INTO movements(kind,item_id,qty,value,ref,date) VALUES('SALE_RETURN',?,?,?,?,?)",new Object[]{pid,q,restore,"sale-"+saleId,today()});
             db.execSQL("INSERT INTO audit(action,detail,date) VALUES('SALE_RETURN',?,date('now'))",new Object[]{saleId+":"+q+":"+refund});
-            journal("RETURN-"+saleId+"-"+System.currentTimeMillis(),"مرتجع مبيعات "+saleId,"مرتجعات المبيعات","النقدية/بنكك/العملاء",refund);
-            if(restore>0)journal("RETURN-STOCK-"+saleId+"-"+System.currentTimeMillis(),"إعادة تكلفة مخزون المرتجع للفاتورة "+saleId,"مخزون الإنتاج التام","تكلفة البضاعة المباعة",restore);
+            journalReturn(returnId,saleId,refund,cash,bank,credit);
+            if(restore>0)journal("RETURN-STOCK-"+returnId,"إعادة تكلفة مخزون المرتجع رقم "+returnId,"مخزون الإنتاج التام","تكلفة البضاعة المباعة",restore);
             db.setTransactionSuccessful();return refund;
         }finally{db.endTransaction();}
     }
@@ -196,6 +201,27 @@ public class FactoryLedgerActivity extends Activity {
         rows("SELECT 'قيد '||id||' — '||entry_ref||' — '||description||' — '||status FROM journal_entries ORDER BY id DESC");
         EditText id=field("رقم القيد المطلوب عكسه",false);
         body.addView(button("إنشاء القيد العكسي",()->{try{long n=reverse(amount(id));say("تم إنشاء القيد العكسي رقم "+n);journals();}catch(Exception x){say("تعذر العكس: "+x.getMessage());}}));
+    }
+    private void journalReturn(long returnId,long saleId,long refund,long cash,long bank,long credit){
+        FactoryMath.validateReturnJournal(refund,cash,bank,credit);
+        String ref="RETURN-"+returnId;
+        ContentValues head=new ContentValues();head.put("entry_ref",ref);
+        head.put("description","مرتجع مبيعات "+saleId+" — مستند "+returnId);
+        head.put("status","POSTED");head.put("date",today());
+        long entryId=db.insertOrThrow("journal_entries",null,head);
+        ContentValues debitLine=new ContentValues();debitLine.put("entry_id",entryId);
+        debitLine.put("account","مرتجعات المبيعات");debitLine.put("debit",refund);debitLine.put("credit",0);
+        db.insertOrThrow("journal_lines",null,debitLine);
+        if(cash>0)insertReturnCreditLine(entryId,"الصندوق",cash);
+        if(bank>0)insertReturnCreditLine(entryId,"بنكك",bank);
+        if(credit>0)insertReturnCreditLine(entryId,"العملاء",credit);
+        ContentValues audit=new ContentValues();audit.put("action","JOURNAL_POSTED");
+        audit.put("detail",ref+":"+refund+":"+cash+":"+bank+":"+credit);audit.put("date",today());
+        db.insertOrThrow("audit",null,audit);
+    }
+    private void insertReturnCreditLine(long entryId,String account,long amount){
+        ContentValues line=new ContentValues();line.put("entry_id",entryId);line.put("account",account);
+        line.put("debit",0);line.put("credit",amount);db.insertOrThrow("journal_lines",null,line);
     }
     private void journal(String ref,String desc,String debit,String credit,long value){
         if(ref==null||ref.trim().isEmpty()||debit==null||debit.trim().isEmpty()||credit==null||credit.trim().isEmpty()||value<=0)throw new IllegalArgumentException("بيانات القيد غير صحيحة");
