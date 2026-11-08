@@ -131,3 +131,22 @@ Sources:
 - https://www.zoho.com/ae/books/pricing/
 - https://sif.xrero.com/en/guides/accounting-software-prices-saudi-arabia/
 - https://sif.xrero.com/en/pricing/
+
+## Implementation progress — 2026-11-08
+
+### Completed in the foundation branch
+- Added `UnifiedAccountingMath`, a shared pure calculation contract for counter and distribution revenue, cash/Bankak/receivables, sales returns, operating cost, duplicate cost-source rejection, and capital-asset exclusion.
+- Added unit tests for channel totals, receivables-vs-cash separation, returns, cost aggregation, duplicate source prevention and capital asset treatment.
+- Routed the bakery dashboard's existing `salesLessOperatingCost` helper through the shared calculation contract.
+- Recorded the owner-approved four-currency subscription price list and license-term rules above.
+
+### Still open — do not treat as complete
+- Factory reports still calculate results directly from factory SQL tables; they have not yet been migrated to the shared calculation service.
+- Main bakery and factory operational databases remain separate. A safe canonical migration and reconciliation of real customer data has not been implemented.
+- GeneralLedger exists but operational sales, production, inventory, payroll, expense and distribution documents are not all posting through it.
+- Independent icon dashboard, full English resources, complete screen localization, all navigation tests, and live four-currency licensing checkout remain incomplete.
+- IBAN/account ownership and format must be verified before the payment details are publicly enabled.
+- No customer-facing APK or commercial release is approved from this workstream.
+
+### CI guardrail observation
+The current bakery workflow is triggered by changes under `bakery-app/**`. The first automatic run stopped at its API 23 compatibility static check because the new shared class used `Math.*Exact` methods. Those calls were replaced with local checked-arithmetic helpers. The subsequent workflow run is being used only to verify the source/test gate; any generated APK artifact is not to be distributed or treated as a release.
