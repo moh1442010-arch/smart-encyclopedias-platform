@@ -33,7 +33,8 @@ public class FactoryActivity extends Activity {
     private static final String[][] DEFAULT_MATERIALS={{"دقيق","كجم"},{"سكر","كجم"},{"زيت","لتر"},{"خميرة","كجم"},{"سمن","كجم"},{"بيض","طبق"},{"لبن","لتر"},{"زبدة","كجم"},{"قشطة","كجم"},{"كريمة","لتر"},{"جبن","كجم"},{"شوكولاتة","كجم"},{"كاكاو","كجم"},{"فانيليا","جرام"},{"بيكنج باودر","جرام"},{"ملح","كجم"},{"تمر","كجم"},{"سمسم","كجم"},{"جوز هند","كجم"},{"عسل","كجم"},{"شيرة / قطر","لتر"},{"مكسرات","كجم"},{"هيل","جرام"},{"قرفة","جرام"},{"مواد تغليف","قطعة"},{"علب حلويات","قطعة"},{"أكياس","قطعة"},{"غاز","أسطوانة"},{"حطب","ربطة"},{"وقود","لتر"}};
     private static final String[][] DEFAULT_PRODUCTS={{"باسطة","باسطة"},{"فطائر","فطائر"},{"خبائز","خبائز"},{"حلويات","حلويات"},{"بلح شام","بلح شام"},{"كيك","مخبوزات"},{"بسكويت","مخبوزات"},{"معمول","حلويات"},{"كنافة","حلويات"},{"دونات","مخبوزات"},{"سمبوسة","فطائر"},{"خبز","خبائز"},{"صامولي","خبائز"},{"بيتزا","فطائر"}};
     private String today(){return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());}
-    private String businessName(){String n=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","");return n==null||n.trim().isEmpty()?"المخبز":n.trim();}
+    private String businessName(){android.content.SharedPreferences factory=getSharedPreferences("factory_profile",MODE_PRIVATE);String n=factory.getString("business_name",null);if(n==null){String legacy=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","");n=legacy==null?"":legacy.trim();if(!n.isEmpty())factory.edit().putString("business_name",n).apply();}return n==null||n.trim().isEmpty()?"المصنع":n.trim();}
+    private void editFactoryName(){EditText name=cell("اسم المصنع");name.setText(businessName().equals("المصنع")?"":businessName());new AlertDialog.Builder(this).setTitle("بيانات المصنع").setMessage("اسم مستقل للمصنع، لا يغيّر اسم المخبز ولا يربط دفاترهما.").setView(name).setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{String value=name.getText().toString().trim();if(value.length()<2){toast("أدخل اسم المصنع بصورة صحيحة");return;}getSharedPreferences("factory_profile",MODE_PRIVATE).edit().putString("business_name",value).apply();toast("تم حفظ اسم المصنع بصورة مستقلة");home();}).show();}
     private void printVisibleScreen(String title){
         StringBuilder out=new StringBuilder("المنشأة: ").append(businessName()).append("\\nالمصنع: مصنع الخبائز والحلويات والباسطة\\nالشاشة: ").append(title).append("\\nالتاريخ: ").append(today()).append("\\n\\n");
         appendPrintable(body,out);if(out.length()<100){toast("لا توجد بيانات ظاهرة للطباعة.");return;}
@@ -77,6 +78,7 @@ public class FactoryActivity extends Activity {
     private void home(){
         frame("الرئيسية");
         body.addView(label("المنشأة: "+businessName()+"\\nنظام مستقل عن دفاتر المخبز. كل المخزون والحركات والتكاليف هنا محفوظة في قاعدة بيانات منفصلة.",15));
+        body.addView(btn("تعديل اسم المصنع",()->editFactoryName()));
         body.addView(btn("🖨️ إعداد الطابعة / طباعة تقرير المصنع",()->{new AlertDialog.Builder(this).setTitle("الطباعة").setMessage("ستظهر طابعات Android المتاحة. يمكن استخدام طابعة Bluetooth أو Wi-Fi أو USB إذا كان نظام الجهاز يوفر خدمتها.").setNegativeButton("إغلاق",null).setPositiveButton("طباعة تقرير المصنع",(d,w)->printFactoryDaily()).show();}));
         body.addView(btn("سجل عملاء وموردي المصنع",()->factoryParties()));
         body.addView(btn("1. مخزن المواد الخام ومستلزمات المصنع",()->warehouse()));
@@ -84,6 +86,7 @@ public class FactoryActivity extends Activity {
         body.addView(btn("3. الوصفات ومكونات الإنتاج",()->recipes()));
         body.addView(btn("4. الإنتاج والتشغيل اليومي",()->production()));
         body.addView(btn("5. نقطة البيع",()->pointOfSale()));
+        body.addView(btn("5.1 مبيعات التوزيع",()->distributionSales()));
         body.addView(btn("6. المصروفات والتالف",()->expenses()));
         body.addView(btn("7. حساب التشغيل والتكلفة",()->costing()));
         body.addView(btn("8. الحسابات والأرصدة والتقارير",()->accounts()));
@@ -163,11 +166,12 @@ public class FactoryActivity extends Activity {
     }
     // All legacy sales entry points are redirected to this single accounting screen.
     private void pointOfSale(){sales("نقطة البيع");}
+    private void distributionSales(){sales("التوزيع");}
     private void sales(){pointOfSale();}
     private void cashWindow(){pointOfSale();}
     private void sales(String channel){
-        frame("نقطة البيع");
-        body.addView(label("شاشة بيع موحدة لمنتجات المصنع. تختار المنتج وتحدد الكمية وسعر الوحدة، ويحسب النظام الإجمالي ثم يوزع التحصيل إلى نقد وبنكك وآجل.",14));
+        frame(channel);
+        body.addView(label("شاشة مبيعات "+channel+" لمنتجات المصنع. تسجل الكمية وسعر الوحدة، ثم توزع قيمة الفاتورة إلى نقد وبنكك وآجل. تظهر مبيعات هذا المسار منفصلة في التقارير ويجمعها المركز المحاسبي دون خصم.",14));
         EditText customer=field("العميل المختار من السجل",false);customer.setFocusable(false);final long[] customerId={0};
         body.addView(btn("بحث واختيار العميل",()->showFactoryPartyPicker("customer",(id,name)->{customerId[0]=id;customer.setText(name);})));
         EditText product=field("اسم المنتج",false),qty=field("الكمية المباعة",true),unitPrice=field("سعر بيع الوحدة بالجنيه",false),cash=field("المبلغ النقدي المستلم",false),bank=field("المبلغ المحول عبر بنكك",false),ref=field("رقم عملية بنكك عند التحويل",false);
@@ -178,7 +182,7 @@ public class FactoryActivity extends Activity {
             try{
                 long total=FactoryMath.saleTotal(q,p);
                 if(total<=0||c>total||bk>total-c||(bk>0&&br.isEmpty())){toast("راجع الإجمالي والتحصيل ورقم بنكك");return;}
-                db.sell(pid,customerId[0],q,total,c,bk,cust,br,"نقطة البيع");
+                db.sell(pid,customerId[0],q,total,c,bk,cust,br,channel);
                 String invoice="رقم المستند: POS-"+System.currentTimeMillis()+"\\nالتاريخ: "+today()+"\\nالعميل: "+cust+"\\nالمنتج: "+product.getText()+"\\nالكمية: "+(q/1000.0)+"\\nسعر الوحدة: "+p+" جنيه\\nالإجمالي: "+total+" جنيه\\nنقدي: "+c+" جنيه\\nبنكك: "+bk+" جنيه\\nرقم العملية: "+br+"\\nالآجل: "+(total-c-bk)+" جنيه";
                 new AlertDialog.Builder(this).setTitle("تم حفظ فاتورة البيع").setMessage("الإجمالي "+total+" جنيه. هل تريد طباعة الفاتورة الآن؟").setNegativeButton("لاحقاً",(d,w)->pointOfSale()).setPositiveButton("🖨️ طباعة الفاتورة",(d,w)->{try{PrinterService.print(this,businessName(),"فاتورة بيع",invoice);}catch(Exception ex){toast("تعذر الطباعة: "+ex.getMessage());}pointOfSale();}).show();
             }catch(Exception ex){toast("لم يتم البيع: "+ex.getMessage());}
@@ -203,31 +207,43 @@ public class FactoryActivity extends Activity {
     }
     private void financialReports(){
         frame("التقارير المالية والتحليل");
-        body.addView(label("تقارير تشغيلية مبنية على المستندات المسجلة في المصنع. الأرقام تراكمية منذ بداية قاعدة البيانات، وليست ميزان مراجعة قانونياً؛ راجع القيود والمستندات قبل اعتماد القوائم.",14));
-        body.addView(label("أولاً — قائمة الدخل التشغيلية",18));
-        list("SELECT 'إجمالي المبيعات: '||COALESCE(SUM(total),0)||' جنيه' FROM sales");
-        list("SELECT 'مرتجعات المبيعات: '||COALESCE(SUM(refund_value),0)||' جنيه' FROM sales_returns");
-        list("SELECT 'صافي المبيعات: '||(COALESCE((SELECT SUM(total) FROM sales),0)-COALESCE((SELECT SUM(refund_value) FROM sales_returns),0))||' جنيه'");
-        list("SELECT 'تكلفة المبيعات بعد المرتجعات: '||(COALESCE((SELECT SUM(cogs) FROM sales),0)-COALESCE((SELECT SUM(restored_cogs) FROM sales_returns),0))||' جنيه'");
-        list("SELECT 'مجمل الربح: '||((COALESCE((SELECT SUM(total) FROM sales),0)-COALESCE((SELECT SUM(refund_value) FROM sales_returns),0))-(COALESCE((SELECT SUM(cogs) FROM sales),0)-COALESCE((SELECT SUM(restored_cogs) FROM sales_returns),0)))||' جنيه'");
-        list("SELECT 'مصروفات التشغيل المسجلة: '||COALESCE(SUM(amount),0)||' جنيه' FROM expenses");
-        list("SELECT 'تكلفة التالف: '||COALESCE(SUM(cost),0)||' جنيه' FROM waste");
-        list("SELECT 'صافي نتيجة التشغيل قبل البنود غير المسجلة: '||((COALESCE((SELECT SUM(total) FROM sales),0)-COALESCE((SELECT SUM(refund_value) FROM sales_returns),0))-(COALESCE((SELECT SUM(cogs) FROM sales),0)-COALESCE((SELECT SUM(restored_cogs) FROM sales_returns),0))-COALESCE((SELECT SUM(amount) FROM expenses),0)-COALESCE((SELECT SUM(cost) FROM waste),0))||' جنيه'");
-        body.addView(label("ثانياً — المركز التشغيلي للأرصدة",18));
+        body.addView(label("تقارير المصنع من ملخص محاسبي موحد. المبيعات تشمل النقد وبنكك والآجل في المخبز والتوزيع. التحصيل النقدي منفصل عن الإيراد.",14));
+        body.addView(label("أولاً — قائمة الدخل التشغيلية الموحدة",18));
+        FactoryAccountingSummary s=accountingSummary();
+        summaryLine("إجمالي مبيعات نقطة البيع",s.counterCash+s.counterBankak+s.counterReceivables);
+        summaryLine("إجمالي مبيعات التوزيع",s.distributionCash+s.distributionBankak+s.distributionReceivables);
+        summaryLine("إجمالي المبيعات قبل المرتجعات",s.grossSales);
+        summaryLine("مرتجعات المبيعات",s.salesReturns);
+        summaryLine("صافي المبيعات",s.netSales);
+        summaryLine("تكلفة البضاعة المباعة بعد عكس تكلفة المرتجعات",s.costOfGoodsSold);
+        summaryLine("المصروفات التشغيلية المسجلة",s.otherExpenses);
+        summaryLine("تكلفة التالف",s.spoilage);
+        summaryLine("استهلاك الخامات اليدوي غير المرتبط بأوامر الإنتاج",s.manualRawConsumption);
+        summaryLine("إجمالي تكلفة التشغيل المحتسبة",s.totalOperatingCost);
+        summaryLine("صافي الربح أو الخسارة التشغيلية",s.operatingProfit);
+        body.addView(label("ثانياً — التحصيلات والذمم",18));
+        summaryLine("النقد وبنكك عند تسجيل البيع",s.cashAndBankakAtSale);
+        summaryLine("الآجل المسجل عند البيع",s.receivablesAtSale);
+        list("SELECT 'تحصيلات ديون سابقة نقداً وبنكك: '||COALESCE(SUM(cash+bank),0)||' جنيه' FROM collections");
+        list("SELECT 'الديون المتبقية للعملاء: '||(COALESCE((SELECT SUM(debt) FROM sales),0)-COALESCE((SELECT SUM(cash+bank) FROM collections),0)-COALESCE((SELECT SUM(credit_adjustment) FROM sales_returns),0))||' جنيه'");
+        body.addView(label("ثالثاً — الأرصدة والمخزون",18));
         list("SELECT 'رصيد النقدية: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('EXPENSE','SALE_RETURN','PURCHASE')),0))||' جنيه'");
         list("SELECT 'رصيد بنكك: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('EXPENSE','SALE_RETURN','PURCHASE')),0))||' جنيه'");
-        list("SELECT 'مديونيات العملاء المتبقية: '||(COALESCE((SELECT SUM(debt) FROM sales),0)-COALESCE((SELECT SUM(cash+bank) FROM collections),0)-COALESCE((SELECT SUM(credit_adjustment) FROM sales_returns),0))||' جنيه'");
         list("SELECT 'قيمة مخزون المواد الخام: '||COALESCE(SUM(value),0)||' جنيه' FROM materials");
         list("SELECT 'قيمة مخزون الإنتاج التام: '||COALESCE(SUM(value),0)||' جنيه' FROM finished");
-        list("SELECT 'قيمة الأعمال المتبقية تحت التشغيل (خامات وأجور وتكاليف صناعية): '||COALESCE(SUM(material_cost+labor+overhead-total_cost),0)||' جنيه' FROM work_orders WHERE status IN ('IN_PROGRESS','PARTIAL')");
-        body.addView(label("ثالثاً — تفاصيل الإنتاج والمخزون",18));
+        list("SELECT 'قيمة الأعمال المتبقية تحت التشغيل: '||COALESCE(SUM(material_cost+labor+overhead-total_cost),0)||' جنيه' FROM work_orders WHERE status IN ('IN_PROGRESS','PARTIAL')");
+        body.addView(label("رابعاً — تفاصيل الإنتاج",18));
         list("SELECT 'عدد أوامر التشغيل المكتملة: '||COUNT(*) FROM work_orders WHERE status='COMPLETED'");
         list("SELECT 'عدد أوامر التشغيل الجارية: '||COUNT(*) FROM work_orders WHERE status='IN_PROGRESS'");
-        list("SELECT 'قيمة مشتريات/وارد الخامات لا تظهر كإيراد؛ راجع حركة المخزون وسجل الوارد.'");
-        body.addView(label("ملاحظة محاسبية: هذه تقارير تشغيلية من حركات البيع والشراء والمخزون والمصروفات والتالف. لا تمثل حتى الآن قائمة مركز مالي مكتملة أو تدفقات نقدية معيارية أو ميزان مراجعة شاملاً لكل حسابات المنشأة. لا تُدخل قيوداً يدوية لتعديل هذه النتائج دون تسوية المصدر الأصلي.",13));
+        body.addView(label("منع الازدواج: تكلفة المواد وأجور التشغيل المحملة على الإنتاج تدخل في تكلفة المنتج التام، ثم تظهر ضمن تكلفة البضاعة المباعة عند البيع. لذلك لا نضيف صرف الإنتاج المسجل في daily_usage مرة ثانية. أضفنا الاستهلاك اليدوي فقط كبند مستقل. قيمة المشتريات الواردة للمخزن أصل مخزون وليست مصروفاً فورياً. المشتريات الرأسمالية لا تُعامل كمصروف تشغيل بمجرد شرائها.",13));
+        body.addView(label("هذه تقارير تشغيلية وليست حتى الآن ميزان مراجعة شاملاً أو قوائم مالية معيارية مكتملة. يجب استكمال ربط كل مصادر المخبز والتوزيع بالمركز المحاسبي قبل اعتماد تقارير المنشأة الموحدة.",13));
     }
     private void costing(){
         frame("حساب التشغيل والتكلفة");
+        FactoryAccountingSummary summary=accountingSummary();
+        summaryLine("إجمالي المبيعات بعد المرتجعات",summary.netSales);
+        summaryLine("إجمالي تكلفة التشغيل",summary.totalOperatingCost);
+        summaryLine("صافي الربح أو الخسارة التشغيلية",summary.operatingProfit);
         list("SELECT p.name||' | رصيد المنتج: '||printf('%.3f',f.qty/1000.0)||' | تكلفة الوحدة بالجنيه: '||printf('%.2f',f.unit_cost/1000.0) FROM finished f JOIN products p ON p.id=f.product_id");
         list("SELECT m.name||' | رصيد الخام: '||printf('%.3f',m.qty/1000.0)||' '||m.unit||' | قيمة المخزون: '||m.value FROM materials m ORDER BY m.name");
         list("SELECT 'إجمالي المصروفات: '||COALESCE(SUM(amount),0)||' جنيه' FROM expenses");
@@ -235,22 +251,44 @@ public class FactoryActivity extends Activity {
     }
     private void accounts(){
         frame("الحسابات والأرصدة");
-        list("SELECT 'إجمالي المبيعات بعد المرتجعات: '||(COALESCE(SUM(total),0)-COALESCE((SELECT SUM(refund_value) FROM sales_returns),0))||' جنيه' FROM sales");
+        FactoryAccountingSummary s=accountingSummary();
+        summaryLine("إجمالي المبيعات بعد المرتجعات",s.netSales);
+        summaryLine("نقد البيع",s.counterCash+s.distributionCash);
+        summaryLine("بنكك البيع",s.counterBankak+s.distributionBankak);
+        summaryLine("الآجل عند البيع",s.receivablesAtSale);
+        list("SELECT 'تحصيلات الديون السابقة: '||COALESCE(SUM(cash+bank),0)||' جنيه' FROM collections");
+        list("SELECT 'الديون المتبقية للعملاء: '||(COALESCE((SELECT SUM(debt) FROM sales),0)-COALESCE((SELECT SUM(cash+bank) FROM collections),0)-COALESCE((SELECT SUM(credit_adjustment) FROM sales_returns),0))||' جنيه'");
         list("SELECT 'صافي رصيد الصندوق النقدي: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='CASH' AND kind IN ('EXPENSE','SALE_RETURN','PURCHASE')),0))||' جنيه'");
         list("SELECT 'صافي رصيد بنكك: '||(COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('SALE','COLLECTION')),0)-COALESCE((SELECT SUM(amount) FROM cashbook WHERE account='BANKAK' AND kind IN ('EXPENSE','SALE_RETURN','PURCHASE')),0))||' جنيه'");
-        list("SELECT 'النقد المحصل من المبيعات: '||COALESCE(SUM(cash),0)||' جنيه' FROM sales");
-        list("SELECT 'تحويلات بنكك: '||COALESCE(SUM(bank),0)||' جنيه' FROM sales");
-        list("SELECT 'ديون العملاء المتبقية: '||(COALESCE((SELECT SUM(debt) FROM sales),0)-COALESCE((SELECT SUM(cash+bank) FROM collections),0)-COALESCE((SELECT SUM(credit_adjustment) FROM sales_returns),0))||' جنيه'");
-        list("SELECT 'تحصيلات العملاء: '||COALESCE(SUM(cash+bank),0)||' جنيه' FROM collections");
-        list("SELECT 'المصروفات: '||COALESCE(SUM(amount),0)||' جنيه' FROM expenses");
-        list("SELECT 'تكلفة البضاعة المباعة بعد المرتجعات: '||(COALESCE(SUM(cogs),0)-COALESCE((SELECT SUM(restored_cogs) FROM sales_returns),0))||' جنيه' FROM sales");
-        list("SELECT 'خسائر التالف: '||COALESCE(SUM(cost),0)||' جنيه' FROM waste");
-        list("SELECT 'استهلاك الخامات المسجل: '||COALESCE(SUM(cost),0)||' جنيه' FROM daily_usage WHERE kind='MANUAL'");
-        list("SELECT 'صافي نتيجة التشغيل: '||(COALESCE((SELECT SUM(total-cogs) FROM sales),0)-COALESCE((SELECT SUM(refund_value-restored_cogs) FROM sales_returns),0)-COALESCE((SELECT SUM(cost) FROM waste),0)-COALESCE((SELECT SUM(amount) FROM expenses),0)-COALESCE((SELECT SUM(cost) FROM daily_usage WHERE kind='MANUAL'),0))||' جنيه'");
+        summaryLine("تكلفة التشغيل المحتسبة",s.totalOperatingCost);
+        summaryLine("صافي الربح أو الخسارة التشغيلية",s.operatingProfit);
         list("SELECT s.customer||' | دين متبقٍ: '||(SUM(s.debt)-COALESCE((SELECT SUM(c.cash+c.bank) FROM collections c WHERE c.customer=s.customer),0)-COALESCE((SELECT SUM(r.credit_adjustment) FROM sales_returns r JOIN sales rs ON rs.id=r.sale_id WHERE rs.customer=s.customer),0)) FROM sales s GROUP BY s.customer HAVING SUM(s.debt)>COALESCE((SELECT SUM(c.cash+c.bank) FROM collections c WHERE c.customer=s.customer),0)+COALESCE((SELECT SUM(r.credit_adjustment) FROM sales_returns r JOIN sales rs ON rs.id=r.sale_id WHERE rs.customer=s.customer),0) ORDER BY s.customer");
     }
+    private void summaryLine(String title,long value){TextView row=label(title+": "+String.format(Locale.US,"%,d",value)+" جنيه",14);row.setBackgroundColor(Color.WHITE);body.addView(row);View line=new View(this);line.setBackgroundColor(GOLD);body.addView(line,new LinearLayout.LayoutParams(-1,1));}
+    private FactoryAccountingSummary accountingSummary(){
+        Cursor c=null;
+        try{
+            c=db.getReadableDatabase().rawQuery("SELECT "+
+                "COALESCE(SUM(CASE WHEN LOWER(COALESCE(channel,'')) LIKE '%distribution%' OR COALESCE(channel,'') LIKE '%توزيع%' THEN 0 ELSE cash END),0),"+
+                "COALESCE(SUM(CASE WHEN LOWER(COALESCE(channel,'')) LIKE '%distribution%' OR COALESCE(channel,'') LIKE '%توزيع%' THEN 0 ELSE bank END),0),"+
+                "COALESCE(SUM(CASE WHEN LOWER(COALESCE(channel,'')) LIKE '%distribution%' OR COALESCE(channel,'') LIKE '%توزيع%' THEN 0 ELSE debt END),0),"+
+                "COALESCE(SUM(CASE WHEN LOWER(COALESCE(channel,'')) LIKE '%distribution%' OR COALESCE(channel,'') LIKE '%توزيع%' THEN cash ELSE 0 END),0),"+
+                "COALESCE(SUM(CASE WHEN LOWER(COALESCE(channel,'')) LIKE '%distribution%' OR COALESCE(channel,'') LIKE '%توزيع%' THEN bank ELSE 0 END),0),"+
+                "COALESCE(SUM(CASE WHEN LOWER(COALESCE(channel,'')) LIKE '%distribution%' OR COALESCE(channel,'') LIKE '%توزيع%' THEN debt ELSE 0 END),0) FROM sales",null);
+            c.moveToFirst();long cc=c.getLong(0),cb=c.getLong(1),cd=c.getLong(2),dc=c.getLong(3),dbank=c.getLong(4),dd=c.getLong(5);c.close();c=null;
+            long returns=queryTotal("SELECT COALESCE(SUM(refund_value),0) FROM sales_returns");
+            long cogs=queryTotal("SELECT COALESCE(SUM(cogs),0) FROM sales");
+            long restored=queryTotal("SELECT COALESCE(SUM(restored_cogs),0) FROM sales_returns");
+            if(restored>cogs)throw new IllegalStateException("تكلفة المرتجعات أكبر من تكلفة المبيعات؛ راجع مستندات المرتجع");
+            return FactoryAccountingSummary.of(cc,cb,cd,dc,dbank,dd,returns,cogs-restored,
+                queryTotal("SELECT COALESCE(SUM(amount),0) FROM expenses"),
+                queryTotal("SELECT COALESCE(SUM(cost),0) FROM waste"),
+                queryTotal("SELECT COALESCE(SUM(cost),0) FROM daily_usage WHERE kind='MANUAL'"));
+        }finally{if(c!=null)c.close();}
+    }
+    private long queryTotal(String sql){Cursor c=null;try{c=db.getReadableDatabase().rawQuery(sql,null);return c.moveToFirst()?c.getLong(0):0;}finally{if(c!=null)c.close();}}
     private void list(String sql){Cursor c=null;try{c=db.getReadableDatabase().rawQuery(sql,null);if(!c.moveToFirst()){body.addView(label("لا توجد سجلات بعد.",13));return;}do{TextView row=label("│ "+c.getString(0),14);row.setBackgroundColor(Color.WHITE);body.addView(row);View line=new View(this);line.setBackgroundColor(GOLD);body.addView(line,new LinearLayout.LayoutParams(-1,1));}while(c.moveToNext());}catch(Exception e){body.addView(label("تعذر قراءة السجلات: "+e.getMessage(),13));}finally{if(c!=null)c.close();}}
-    // Factory party masters and all their identifiers live only in almizan_factory_1.db.
+    // Factory party masters and their identifiers are isolated inside almizan_factory_1.db.
     private interface FactoryPartySelected { void onSelect(long id,String name); }
     private void addFactoryPartyDialog(String type,FactoryPartySelected selected){
         String title="customer".equals(type)?"إضافة عميل للمصنع":"إضافة مورد للمصنع";
