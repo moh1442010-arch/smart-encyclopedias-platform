@@ -33,7 +33,7 @@ public final class UnifiedAccountingMath {
             return add(counterCash,counterBankak,counterReceivables,
                 distributionCash,distributionBankak,distributionReceivables);
         }
-        public long netRevenue() { return Math.subtractExact(grossRevenue(),salesReturns); }
+        public long netRevenue() { return checkedSubtract(grossRevenue(),salesReturns); }
         public long cashAndBankakCollections() {
             return add(counterCash,counterBankak,distributionCash,distributionBankak);
         }
@@ -48,7 +48,7 @@ public final class UnifiedAccountingMath {
         }
         private static long grossRevenue(long[] values) {
             long result=0;
-            for(int i=0;i<6;i++) result=Math.addExact(result,values[i]);
+            for(int i=0;i<6;i++) result=checkedAdd(result,values[i]);
             return result;
         }
     }
@@ -76,7 +76,7 @@ public final class UnifiedAccountingMath {
         for(CostItem item:items) {
             if(item==null) throw new IllegalArgumentException("Null cost item");
             if(!seen.add(item.sourceKey)) throw new IllegalArgumentException("Duplicate cost source: "+item.sourceKey);
-            if(!item.capitalAsset) total=Math.addExact(total,item.amount);
+            if(!item.capitalAsset) total=checkedAdd(total,item.amount);
         }
         return total;
     }
@@ -84,13 +84,24 @@ public final class UnifiedAccountingMath {
     /** Profit = counter and distribution revenue (cash + Bankak + receivables) less returns and operating costs. */
     public static long profit(Sales sales, List<CostItem> costs) {
         if(sales==null) throw new IllegalArgumentException("Sales breakdown is required");
-        return Math.subtractExact(sales.netRevenue(),operatingCost(costs));
+        return checkedSubtract(sales.netRevenue(),operatingCost(costs));
     }
 
     private static long add(long... values) {
         long total=0;
-        for(long value:values) total=Math.addExact(total,value);
+        for(long value:values) total=checkedAdd(total,value);
         return total;
+    }
+    // Keep checked arithmetic compatible with Android API 23 (avoid Math.*Exact APIs).
+    private static long checkedAdd(long a,long b) {
+        if ((b>0 && a>Long.MAX_VALUE-b) || (b<0 && a<Long.MIN_VALUE-b))
+            throw new ArithmeticException("long overflow");
+        return a+b;
+    }
+    private static long checkedSubtract(long a,long b) {
+        if ((b<0 && a>Long.MAX_VALUE+b) || (b>0 && a<Long.MIN_VALUE+b))
+            throw new ArithmeticException("long overflow");
+        return a-b;
     }
     private static void requireNonNegative(long value,String label) {
         if(value<0) throw new IllegalArgumentException("Negative "+label);
