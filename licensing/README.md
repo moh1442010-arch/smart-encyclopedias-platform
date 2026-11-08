@@ -1,89 +1,68 @@
 # Al-Mizan Bakery — licensing and activation
 
-## Current release state
+## Source-of-truth version state
 
-- App: **2.6.15** (com.mohammedmustafa.almizan.bakery).
-- Worker: **al-mizan-bakery-licensing**.
-- Worker URL: https://al-mizan-bakery-licensing.moh1442010.workers.dev.
-- Database: Cloudflare D1, binding DB, database al-mizan-bakery-licenses.
-- Payment review: manual Bankak verification by the owner.
-- Activation: not ready for customer issuance until the live signing-pair diagnostic returns signingReady: true.
+- Android package: com.mohammedmustafa.almizan.bakery.
+- Licensing Worker: al-mizan-bakery-licensing.
+- Production Worker URL: https://al-mizan-bakery-licensing.mohammedmustafa.workers.dev.
+- D1 database: al-mizan-bakery-licenses, binding DB.
+- Worker configuration on this branch: APP_VERSION = "2.8.1", PREVIOUS_APP_VERSION = "2.8.0".
+- The current main Android Gradle/build workflow still describes 2.6.17. Do not infer that the 2.8.1 app source, build, and signing identity are aligned from the Worker version alone. Resolve that source mismatch in the integration work before any APK build.
+- The production state of the signing pair and admin password is not verified by this repository document. Check live diagnostic endpoints and deployment workflow results; never infer readiness from a configured secret or a passing local unit test.
 
-The Worker is deployed and its health/admin configuration checks have passed. The last production signing diagnostic returned privateKeyFormat: invalid-encoding. Therefore do not approve or issue a customer license yet. A configured secret is not proof that the key can be imported or that the pair matches.
+## Five workstreams required before release
 
-## Approved customer flow
+1. Live licensing and activation — health, admin configuration, signing-pair diagnostics, 2.8.1 and 2.8.0 compatibility, pending order creation, authenticated review, token issuance only after verified payment, app-side signature/device/version/expiry checks.
+2. Independent data and migration — independent bakery/factory data, party masters, ledgers, exports, restores, and migration tests. Licensing data must not be coupled to operational bakery/factory databases.
+3. Accounting integrity — operational source documents post idempotently to each system's own balanced ledger; sales, returns, inventory consumption, spoilage, payroll, expenses and cash collection reconcile without double counting.
+4. Security, identity and localization — salted PIN hash, rate limiting and safe recovery; independent bakery/factory names; Arabic and English across all screens, receipts, reports and offline guide.
+5. Release engineering and acceptance — version and certificate consistency, API 23+ tests, migration/backup/restore tests, low-end Android and physical-device acceptance, checksums, and a documented rollback path.
 
-1. Customer installs the 2.6.15 APK and copies the device UUID displayed by the app.
-2. Customer submits name, contact, plan, device UUID, and Bankak transfer reference at store/license.html.
-3. Worker stores the order as pending. A reference is not proof of payment.
-4. Owner checks the actual incoming transfer in Bankak.
-5. Owner signs in through the Worker admin login, reviews the order, and explicitly approves or rejects it.
-6. Only an approved order receives a token. The customer pastes that token into the app's activation dialog.
+Detailed acceptance gates: licensing/RELEASE_ACCEPTANCE.md. The licensing CI checks both the 2.8.1 candidate and 2.8.0 compatibility branch, including exact active-key extraction that excludes legacy verification keys, plus deployment branch-guard checks and a no-redeploy rule for workflow-only changes.
 
-There is no payment gateway and no automatic payment confirmation. The owner must verify receipt of funds before approval. Never approve a pending order just to test the system.
+## Customer licensing flow
 
-## Fixed plans and prices
+1. Customer submits business name, contact, plan, device ID and transfer reference through the public licensing page.
+2. Worker validates fields, supported app version, rate limits and request origin. It creates a pending order only; it does not issue a token.
+3. The owner verifies the actual incoming payment independently in the bank/Bankak account.
+4. An authenticated administrator approves or rejects the pending order.
+5. Only an approved order receives a signed activation token.
+6. The customer enters the token into the matching app/device. The app validates signature, device, version and expiry constraints.
 
-| Plan | Price | Token validity |
+A transfer reference or uploaded receipt is not proof that money arrived. Never approve an order merely to test the flow. Use a dedicated test plan and controlled test device; do not expose real customer tokens in logs, issues or screenshots.
+
+## Current SDG plan rules
+
+| Plan | Amount | Validity |
 |---|---:|---|
 | Monthly | 55,000 SDG | 30 days |
 | Annual | 550,000 SDG | 365 days |
-| Lifetime | 1,050,000 SDG | Current app version only; no future-version entitlement |
+| Lifetime | 1,050,000 SDG | Per configured version/device entitlement; confirm exact Worker policy before sale |
 
-The Worker enforces these amounts. Lifetime tokens use expires=0 and max_version=2.6.15. Monthly and annual tokens use max_version=any.
+The Worker source is authoritative for accepted plan amounts and entitlement fields. Do not copy old pricing or entitlement claims into the storefront without checking the Worker and app implementation together.
 
-## Signing architecture — one official issuer
+## Signing architecture and secret handling
 
-The Cloudflare Worker is the only official online issuer. Its private key is held only in the Worker secret LICENSE_PRIVATE_KEY_PKCS8_B64. The public SPKI DER Base64 value is LICENSE_PUBLIC_KEY_DER_B64 and must remain identical to the public key embedded in the APK.
+- The Cloudflare Worker is the online signing authority. Its private key must exist only as a protected Worker secret.
+- The app embeds the corresponding public key. The public key must remain byte-for-byte consistent between app, Worker diagnostics and any local recovery verifier.
+- Do not commit private keys, admin passwords, activation tokens, customer receipts or bank account details.
+- The local offline issuer is a controlled recovery utility, not a second public issuer. Use it only on a trusted device with the matching private key stored outside the repository.
+- Never generate a replacement key pair as a shortcut for a mismatch; that would invalidate tokens signed by the existing key.
 
-GitHub Actions no longer stores a second private-key copy or issues customer tokens. The retired public Actions issuer was removed to avoid exposing activation tokens in public workflow summaries. The local offline issuer tool remains a controlled recovery utility and must only be used on a trusted device with the matching private key stored outside the repository.
+## Required live checks
 
-Never put a private key, activation token, admin password, or customer payment evidence in source files, public issues, or chat.
+- GET /health: Worker is reachable and reports the expected service and manual-payment mode.
+- GET /diagnostics/admin-config: admin password is configured.
+- GET /diagnostics/signing-config: key configuration and encoding metadata are valid.
+- GET /diagnostics/signing-pair: Worker imports its private key, signs a fixed probe and verifies it against the app public key; expected signingReady: true and signingPairMatches: true.
+- Admin login works, and all admin endpoints reject unauthenticated requests.
+- A controlled test order appears as pending in the admin panel; public status never reveals customer details or activation tokens.
+- Approval is impossible without an authenticated administrator and explicit review. Rejection never issues a token.
+- A token is accepted only by the intended device and allowed app version; tampered, expired, wrong-device and unsupported-version tokens are rejected.
+- Monthly and annual expiry, lifetime entitlement, offline validation and renewal behavior are verified on a physical test device.
 
-## Worker secrets and settings
+The current GitHub Actions licensing workflow validates source syntax, unit contracts, SQL schema, storefront secret hygiene, and version/public-key consistency. These automated checks do not prove live Cloudflare secret configuration, successful deployment, or physical-device activation.
 
-Required Worker secrets:
-- ADMIN_PASSWORD: at least 32 characters. The admin login uses a secure HttpOnly session cookie.
-- LICENSE_PRIVATE_KEY_PKCS8_B64: Base64 of the binary PKCS#8 DER private key. It must be one-line Base64.
-- LICENSE_PUBLIC_KEY_DER_B64: Base64 of the DER SubjectPublicKeyInfo public key embedded in the APK.
+## No-build release gate
 
-Worker variables in licensing/worker/wrangler.toml:
-- APP_VERSION = "2.6.15"
-- STORE_ORIGIN = "https://moh1442010-arch.github.io"
-
-Do not change the public key or generate a replacement key pair for this repair. Convert the existing matching PEM private key to PKCS#8 DER Base64 and update only the Cloudflare private-key secret.
-
-## Safe diagnostics
-
-- GET /health — confirms Worker availability only.
-- GET /diagnostics/admin-config — confirms that the admin password secret is configured.
-- GET /diagnostics/signing-config — reports safe key configuration and encoding metadata.
-- GET /diagnostics/signing-pair — imports the private key, signs a fixed test message, and verifies it against the app public key. It never returns key material or issues a customer token.
-- GET /admin/signing-check — same signing-pair check, but requires an authenticated admin session.
-
-A successful health check or privateKeyConfigured: true is not sufficient. Release gate is signingReady: true and signingPairMatches: true.
-
-## Database
-
-The Worker uses the existing D1 database configured in licensing/worker/wrangler.toml. Do not create a replacement database or change the database ID during key repair. Before any schema migration, inspect the live database and back it up.
-
-Tables:
-- license_orders — customer orders and activation status.
-- license_audit — order creation, review, rejection, and issuance events.
-
-## Acceptance checklist before sales
-
-- [ ] Worker health returns ok: true.
-- [ ] Admin login succeeds and admin endpoints reject unauthenticated requests.
-- [ ] Live signing-pair diagnostic returns signingReady: true.
-- [ ] Public key consistency passes across app, Worker, and local issuer.
-- [ ] Test order can be created and appears as pending.
-- [ ] Pending order status exposes no activation token.
-- [ ] Owner can reject a test order without issuing a token.
-- [ ] Owner can approve only a verified test payment; token verifies on the exact test device.
-- [ ] Wrong-device and modified tokens are rejected by the APK.
-- [ ] Monthly/annual expiry and lifetime version restriction are verified on a real device.
-- [ ] Backup/restore and offline behavior are checked.
-- [ ] Public product page and download link are checked on Android.
-
-Until the complete checklist is passed, keep paid advertising and claims of commercial activation readiness on hold.
+Do not build or publish an APK until the five workstreams in licensing/RELEASE_ACCEPTANCE.md have evidence and the owner authorizes the release. A green licensing unit-test workflow alone is not a release approval.
