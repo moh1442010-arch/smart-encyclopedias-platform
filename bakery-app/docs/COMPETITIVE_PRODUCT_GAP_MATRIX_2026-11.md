@@ -91,5 +91,5 @@ These are competitor benchmarks, not Al-Mizan pricing recommendations. Do not co
 - Merged commit: `81b8dbf536f6174269c8e4c3382a837349501e38`.
 - Unit, static-site, and security checks passed on the final PR line.
 - Signed 2.8.1 device-review APK was built and the certificate verification step passed.
-- API 23 instrumentation/smoke test was still running at the time of this document update.
+- API 23 and API 35 signed-APK smoke tests both passed in review workflow run `42521770523`.
 - Full English UI, production licensing acceptance, full accounting integration, and owner device acceptance remain open.
