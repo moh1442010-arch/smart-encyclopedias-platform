@@ -108,7 +108,8 @@ test("2.8.0 customer order is accepted and recorded as pending without issuing a
   assert.equal(response.status, 201);
   const body = await response.json();
   assert.equal(body.status, "pending");
-  assert.equal(body.amount, 55000);\n  assert.equal(body.currencyCode, "SDG");
+  assert.equal(body.amount, 55000);
+  assert.equal(body.currencyCode, "SDG");
   assert.ok(body.orderId);
   assert.equal("activationToken" in body, false);
   assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_orders")));
@@ -174,7 +175,7 @@ test("2.8.1 candidate order is accepted as pending without issuing an activation
   assert.equal(response.status, 201);
   const body = await response.json();
   assert.equal(body.status, "pending");
-  assert.equal(body.amountSdg, 55000);
+  assert.equal(body.amount, 55000);
   assert.ok(body.orderId);
   assert.equal("activationToken" in body, false);
   assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_orders") && x.values.includes("2.8.1")));
