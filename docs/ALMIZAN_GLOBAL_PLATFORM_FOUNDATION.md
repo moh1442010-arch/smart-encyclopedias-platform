@@ -150,3 +150,13 @@ Sources:
 
 ### CI guardrail observation
 The current bakery workflow is triggered by changes under `bakery-app/**`. The first automatic run stopped at its API 23 compatibility static check because the new shared class used `Math.*Exact` methods. Those calls were replaced with local checked-arithmetic helpers. The subsequent workflow run is being used only to verify the source/test gate; any generated APK artifact is not to be distributed or treated as a release.
+
+### Factory warehouse input remediation — 2026-11-08
+- Replaced narrow horizontal-scrolling input rows with full-width vertical input controls across the factory forms; increased field height/text size and enabled focus/touch editing.
+- Configured the factory window to resize for the Android keyboard, and numeric fields now request numeric keyboards.
+- Clarified that the stock table is a read-only balance summary and that entry happens in the forms below it.
+- Added a new-material flow with a custom free-text unit, opening quantity and unit cost. Opening stock is stored as a movement and audit event; duplicate names are rejected so the opening balance cannot be added twice.
+- Added a product sale-unit column with a version-10 database migration defaulting existing products to "قطعة". Product screens now allow a free-text sale unit (piece, kg, tray, box, etc.) and show it beside finished stock. Production price updates preserve the saved unit.
+- Expanded the default factory materials catalogue for bakery and confectionery inputs (butter, cream, cheese, chocolate, cocoa, vanilla, baking powder, dates, sesame, coconut, honey/syrup, nuts, spices, packaging, gas and fuel) and the starter products catalogue (cake, biscuit, maamoul, kunafa, doughnuts, samosa, bread and rolls).
+- Existing stock valuation is preserved; changing an item's unit while stock exists remains blocked. Incoming stock should use a supplier receipt with the same unit. Units are free-text but quantities are stored to 3 decimal places; automatic conversion between kg/g or L/ml is not yet implemented.
+- The existing CI run on the previous commit was cancelled during Android SDK setup by a subsequent push; the latest no-APK unit-test workflow for the current source commit is queued/pending. Do not mark the UI or migration accepted until that run passes and a physical-device typing/migration test is completed.
