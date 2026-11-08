@@ -566,6 +566,7 @@ public class MainActivity extends Activity {
         head.addView(titles,new LinearLayout.LayoutParams(0,-2,1f));
         head.setElevation(5f);
         root.addView(head);
+        Button languageButton=button("🌐 اللغة / Language");languageButton.setOnClickListener(v->AppLanguage.showPicker(this));root.addView(languageButton);
         if (!title.startsWith("🥖 المحاسب الميزان للمخابز")) {
             LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);actions.setPadding(8,4,8,4);
             Button home = button("⌂ الرئيسية");
@@ -655,7 +656,6 @@ public class MainActivity extends Activity {
         }
         addBakeryHero();
         Button profile=button("🏷️ بيانات المنشأة: "+businessName());profile.setOnClickListener(v->editBusinessName());content.addView(profile);
-        Button language=button("🌐 اللغة / Language");language.setOnClickListener(v->showLanguagePicker());content.addView(language);
         Button printer=button("🖨️ إعداد الطابعة والطباعة");printer.setOnClickListener(v->showPrinterSettings());content.addView(printer);
         Button printDaily=button("🖨️ طباعة شغل اليوم");printDaily.setOnClickListener(v->printDailyWork());content.addView(printDaily);
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
