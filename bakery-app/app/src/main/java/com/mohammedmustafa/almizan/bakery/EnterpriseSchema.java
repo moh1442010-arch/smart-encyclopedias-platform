@@ -126,6 +126,7 @@ final class EnterpriseSchema {
         db.execSQL("CREATE TABLE IF NOT EXISTS depreciation_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, asset_id INTEGER NOT NULL REFERENCES fixed_assets(id), period_code TEXT NOT NULL, amount_minor INTEGER NOT NULL CHECK(amount_minor>=0), accumulated_minor INTEGER NOT NULL CHECK(accumulated_minor>=0), journal_ref TEXT NOT NULL UNIQUE, posted_at INTEGER NOT NULL, UNIQUE(asset_id,period_code))");
         db.execSQL("CREATE TABLE IF NOT EXISTS sync_outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, event_uuid TEXT NOT NULL UNIQUE, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, operation TEXT NOT NULL CHECK(operation IN ('UPSERT','DELETE')), payload TEXT NOT NULL, created_at INTEGER NOT NULL, attempt_count INTEGER NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT '', synced_at INTEGER)");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_sync_outbox_pending ON sync_outbox(synced_at,created_at)");
+        TaxJurisdictionProfiles.ensure(db);
         db.execSQL("INSERT OR REPLACE INTO enterprise_meta(key,value) VALUES('schema_version','" + VERSION + "')");
     }
 
