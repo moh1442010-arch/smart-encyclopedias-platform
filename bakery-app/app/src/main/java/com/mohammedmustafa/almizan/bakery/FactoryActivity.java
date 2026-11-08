@@ -33,7 +33,8 @@ public class FactoryActivity extends Activity {
     private static final String[][] DEFAULT_MATERIALS={{"دقيق","كجم"},{"سكر","كجم"},{"زيت","لتر"},{"خميرة","كجم"},{"سمن","كجم"},{"بيض","طبق"},{"لبن","لتر"},{"زبدة","كجم"},{"قشطة","كجم"},{"كريمة","لتر"},{"جبن","كجم"},{"شوكولاتة","كجم"},{"كاكاو","كجم"},{"فانيليا","جرام"},{"بيكنج باودر","جرام"},{"ملح","كجم"},{"تمر","كجم"},{"سمسم","كجم"},{"جوز هند","كجم"},{"عسل","كجم"},{"شيرة / قطر","لتر"},{"مكسرات","كجم"},{"هيل","جرام"},{"قرفة","جرام"},{"مواد تغليف","قطعة"},{"علب حلويات","قطعة"},{"أكياس","قطعة"},{"غاز","أسطوانة"},{"حطب","ربطة"},{"وقود","لتر"}};
     private static final String[][] DEFAULT_PRODUCTS={{"باسطة","باسطة"},{"فطائر","فطائر"},{"خبائز","خبائز"},{"حلويات","حلويات"},{"بلح شام","بلح شام"},{"كيك","مخبوزات"},{"بسكويت","مخبوزات"},{"معمول","حلويات"},{"كنافة","حلويات"},{"دونات","مخبوزات"},{"سمبوسة","فطائر"},{"خبز","خبائز"},{"صامولي","خبائز"},{"بيتزا","فطائر"}};
     private String today(){return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());}
-    private String businessName(){String n=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","");return n==null||n.trim().isEmpty()?"المخبز":n.trim();}
+    private String businessName(){String n=getSharedPreferences("factory_profile",MODE_PRIVATE).getString("business_name","");return n==null||n.trim().isEmpty()?"المصنع":n.trim();}
+    private void editFactoryName(){EditText name=cell("اسم المصنع");name.setText(businessName().equals("المصنع")?"":businessName());new AlertDialog.Builder(this).setTitle("بيانات المصنع").setMessage("اسم مستقل للمصنع، لا يغيّر اسم المخبز ولا يربط دفاترهما.").setView(name).setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{String value=name.getText().toString().trim();if(value.length()<2){toast("أدخل اسم المصنع بصورة صحيحة");return;}getSharedPreferences("factory_profile",MODE_PRIVATE).edit().putString("business_name",value).apply();toast("تم حفظ اسم المصنع بصورة مستقلة");home();}).show();}
     private void printVisibleScreen(String title){
         StringBuilder out=new StringBuilder("المنشأة: ").append(businessName()).append("\\nالمصنع: مصنع الخبائز والحلويات والباسطة\\nالشاشة: ").append(title).append("\\nالتاريخ: ").append(today()).append("\\n\\n");
         appendPrintable(body,out);if(out.length()<100){toast("لا توجد بيانات ظاهرة للطباعة.");return;}
@@ -77,6 +78,7 @@ public class FactoryActivity extends Activity {
     private void home(){
         frame("الرئيسية");
         body.addView(label("المنشأة: "+businessName()+"\\nنظام مستقل عن دفاتر المخبز. كل المخزون والحركات والتكاليف هنا محفوظة في قاعدة بيانات منفصلة.",15));
+        body.addView(btn("تعديل اسم المصنع",()->editFactoryName()));
         body.addView(btn("🖨️ إعداد الطابعة / طباعة تقرير المصنع",()->{new AlertDialog.Builder(this).setTitle("الطباعة").setMessage("ستظهر طابعات Android المتاحة. يمكن استخدام طابعة Bluetooth أو Wi-Fi أو USB إذا كان نظام الجهاز يوفر خدمتها.").setNegativeButton("إغلاق",null).setPositiveButton("طباعة تقرير المصنع",(d,w)->printFactoryDaily()).show();}));
         body.addView(btn("سجل العملاء والموردين وحسابات IBAN",()->startActivity(new Intent(this,PartyDirectoryActivity.class))));
         body.addView(btn("1. مخزن المواد الخام ومستلزمات المصنع",()->warehouse()));
