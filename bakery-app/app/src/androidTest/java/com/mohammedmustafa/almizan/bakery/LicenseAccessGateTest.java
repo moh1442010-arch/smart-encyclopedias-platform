@@ -87,4 +87,11 @@ public class LicenseAccessGateTest {
         assertEquals("Trial start must remain unset",0L,canonical.getLong("trial_start",0L));
     }
 
+
+    @Test public void centralizedLicenseVerifierRejectsMissingAndMalformedTokens() {
+        assertFalse(LicenseAccessGate.hasValidLicense(context));
+        assertFalse(LicenseAccessGate.verifyToken(context,"not-a-signed-token"));
+        canonical.edit().putString("license_token","not-a-signed-token").commit();
+        assertFalse(LicenseAccessGate.hasValidLicense(context));
+    }
 }
