@@ -1,5 +1,7 @@
 package com.mohammedmustafa.almizan.bakery;
 
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
@@ -106,6 +108,14 @@ final class AppLanguage {
         for(Map.Entry<String,String> entry:ENGLISH.entrySet())
             if(entry.getKey().length()>2)translated=translated.replace(entry.getKey(),entry.getValue());
         return translated;
+    }
+    static void showPicker(Activity activity){
+        String[] choices={"العربية","English"};
+        new AlertDialog.Builder(activity).setTitle(activity.getString(R.string.language_picker_title))
+            .setItems(choices,(dialog,which)->{
+                setLanguage(activity,which==1?"en":"ar");
+                activity.recreate();
+            }).show();
     }
     static String languageLabel(Context context){return isEnglish(context)?"Language: English":"اللغة: العربية";}
 }
