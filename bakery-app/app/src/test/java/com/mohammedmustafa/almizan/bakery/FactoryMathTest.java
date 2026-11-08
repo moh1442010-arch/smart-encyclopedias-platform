@@ -44,6 +44,9 @@ public class FactoryMathTest {
 
  @Test public void calculatesPosTotalFromFractionalQuantityAndUnitPrice(){assertEquals(3750L,FactoryMath.saleTotal(2500L,1500L));}
  @Test(expected=IllegalArgumentException.class) public void rejectsZeroSaleUnitPrice(){FactoryMath.saleTotal(1000L,0L);}
+ @Test public void validatesSplitReturnJournalSettlement(){FactoryMath.validateReturnJournal(10000,4000,3000,3000);}
+ @Test(expected=IllegalArgumentException.class) public void rejectsUnbalancedSplitReturnJournal(){FactoryMath.validateReturnJournal(10000,4000,3000,2999);}
+ @Test(expected=IllegalArgumentException.class) public void rejectsNegativeSplitReturnJournalLine(){FactoryMath.validateReturnJournal(10000,4000,-1,6001);}
  @Test public void acceptsReturnWithinOriginalInvoiceSettlement(){FactoryMath.validateReturnSettlement(2000,3000,5000,500,1000,500,500,1000,500);}
  @Test(expected=IllegalArgumentException.class) public void rejectsCashRefundAboveOriginalCashCollected(){FactoryMath.validateReturnSettlement(2000,3000,5000,1500,0,0,600,0,0);}
  @Test(expected=IllegalArgumentException.class) public void rejectsBankRefundAboveOriginalBankakCollected(){FactoryMath.validateReturnSettlement(2000,3000,5000,0,2500,0,0,600,0);}
