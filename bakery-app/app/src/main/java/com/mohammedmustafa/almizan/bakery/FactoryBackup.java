@@ -278,7 +278,7 @@ final class FactoryBackup {
         d.execSQL("UPDATE supplier_purchase_records SET supplier_master_id=COALESCE((SELECT id FROM factory_suppliers p WHERE p.name=TRIM(supplier_purchase_records.supplier_name)),0)");
         d.execSQL("UPDATE supplier_payment_records SET supplier_master_id=COALESCE((SELECT id FROM factory_suppliers p WHERE p.name=TRIM(supplier_payment_records.supplier_name)),0)");
         d.execSQL("UPDATE movements SET supplier_master_id=0");
-        d.execSQL("UPDATE movements SET ref=COALESCE((SELECT sp.supplier_name FROM supplier_purchase_records sp JOIN materials m ON m.id=movements.item_id WHERE movements.kind='RAW_IN' AND sp.item_name=m.name AND sp.quantity_milli=movements.qty AND sp.invoice_total=movements.value AND sp.date=movements.date LIMIT 1),ref) WHERE kind='RAW_IN'");
+        d.execSQL("UPDATE movements SET ref=COALESCE((SELECT sp.supplier_name FROM supplier_purchase_records sp WHERE substr(movements.ref,1,length(sp.supplier_name)+1)=sp.supplier_name||':' ORDER BY length(sp.supplier_name) DESC LIMIT 1),ref) WHERE kind='RAW_IN' AND instr(ref,':')>0");
         d.execSQL("UPDATE movements SET supplier_master_id=COALESCE((SELECT id FROM factory_suppliers p WHERE p.name=movements.ref),0) WHERE kind='RAW_IN'");
     }
 
