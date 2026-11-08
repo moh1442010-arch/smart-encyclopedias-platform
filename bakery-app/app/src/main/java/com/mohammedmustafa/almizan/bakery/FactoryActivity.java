@@ -268,11 +268,11 @@ public class FactoryActivity extends Activity {
         String title="customer".equals(type)?"اختيار عميل المصنع":"اختيار مورد المصنع";
         Dialog dialog=new Dialog(this);LinearLayout layout=new LinearLayout(this);layout.setOrientation(1);layout.setPadding(16,12,16,12);
         EditText search=new EditText(this);search.setSingleLine(true);search.setHint("ابحث بالاسم أو رقم الهاتف");
-        ListView list=new ListView(this);ArrayList<String> labels=new ArrayList<>();ArrayList<Long> ids=new ArrayList<>();
+        ListView list=new ListView(this);ArrayList<String> labels=new ArrayList<>(),names=new ArrayList<>();ArrayList<Long> ids=new ArrayList<>();
         ArrayAdapter<String> adapter=new ArrayAdapter<>(this,android.R.layout.simple_list_item_1,labels);list.setAdapter(adapter);
-        Runnable refresh=()->{Cursor cur=null;ids.clear();labels.clear();try{cur=db.searchFactoryParties(type,search.getText().toString());while(cur.moveToNext()){ids.add(cur.getLong(0));String phone=cur.getString(2);labels.add(cur.getString(1)+(phone==null||phone.isEmpty()?"":" — "+phone));}}finally{if(cur!=null)cur.close();}adapter.notifyDataSetChanged();};
+        Runnable refresh=()->{Cursor cur=null;ids.clear();labels.clear();names.clear();try{cur=db.searchFactoryParties(type,search.getText().toString());while(cur.moveToNext()){ids.add(cur.getLong(0));String name=cur.getString(1),phone=cur.getString(2);names.add(name);labels.add(name+(phone==null||phone.isEmpty()?"":" — "+phone));}}finally{if(cur!=null)cur.close();}adapter.notifyDataSetChanged();};
         search.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){refresh.run();}public void afterTextChanged(android.text.Editable e){}});
-        list.setOnItemClickListener((parent,view,position,id)->{if(position>=0&&position<ids.size()){long partyId=ids.get(position);String value=labels.get(position).split(" — ",2)[0];dialog.dismiss();if(selected!=null)selected.onSelect(partyId,value);}});
+        list.setOnItemClickListener((parent,view,position,id)->{if(position>=0&&position<ids.size()){long partyId=ids.get(position);String value=names.get(position);dialog.dismiss();if(selected!=null)selected.onSelect(partyId,value);}});
         layout.addView(search,new LinearLayout.LayoutParams(-1,(int)(56*getResources().getDisplayMetrics().density)));
         layout.addView(list,new LinearLayout.LayoutParams(-1,0,1));
         layout.addView(btn("إضافة "+("customer".equals(type)?"عميل":"مورد")+" جديد",()->addFactoryPartyDialog(type,(id,name)->{dialog.dismiss();if(selected!=null)selected.onSelect(id,name);})));
