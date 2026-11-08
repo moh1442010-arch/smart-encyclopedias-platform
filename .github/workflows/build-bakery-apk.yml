@@ -1,4 +1,4 @@
-name: Build Al-Mizan Bakery 2.8.1 Review APK
+name: Build Al-Mizan Bakery 2.8.1 Device-Review APK (no commercial release)
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ on:
       - ".github/workflows/build-bakery-apk.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   # Push and pull_request events for the same PR must not cancel each other's verification.
@@ -24,7 +24,7 @@ concurrency:
 jobs:
   build:
     # Feature/foundation branches must never produce APKs; release branch is opened only after all gates pass.
-    if: github.ref == 'refs/heads/release/bakery-2.8.1-financial-integrity'
+    if: github.ref == 'refs/heads/review/bakery-2.8.1-device-acceptance'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -178,7 +178,7 @@ jobs:
             exit 1
           fi
           grep -Fq 'root.optInt("schema_version")<6 && "work_order_stages".equals(TABLES[i])' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
-          echo "Factory modules, schema v7 backup compatibility and Android API 23 declarations verified."
+          echo "Factory modules, schema v9 backup compatibility and Android API 23 declarations verified."
 
       - name: Run arithmetic unit tests
         working-directory: bakery-app
@@ -279,30 +279,3 @@ jobs:
             sleep 8
             if adb logcat -d -t 3000 | grep -E 'FATAL EXCEPTION|Process: com.mohammedmustafa.almizan.bakery'; then echo "Application crash detected"; exit 1; fi
             adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.8.1"
-
-      - name: Publish approved commercial GitHub Release
-        if: github.ref == 'refs/heads/release/bakery-2.8.1-financial-integrity'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: al-mizan-bakery-2.8.1
-          name: المحاسب الميزان للمخابز والمصنع 2.8.1 — إصدار تجاري معتمد
-          prerelease: false
-          make_latest: true
-          generate_release_notes: false
-          overwrite_files: true
-          body: |
-            الإصدار التجاري المعتمد 2.8.1 من المحاسب الميزان للمخابز والمصنع.
-            اعتمد مالك المنتج هذا الإصدار بعد اختباره على جهاز فعلي، وإتمام التحديث فوق النسخة السابقة، وإجراء عمليات تشغيل يومية للمخبز والمصنع ومراجعة النتائج.
-            - معرّف الحزمة: com.mohammedmustafa.almizan.bakery
-            - versionCode: 280001
-            - Android minimum API: 23
-            - يحافظ التحديث على معرّف الحزمة وقاعدة بيانات المخبز؛ لا تحذف الإصدار السابق عند التحديث.
-            - يحتوي على حسابات المخبز اليومية ووحدة المصنع ودفاتر المواد والإنتاج والمبيعات والمردودات والتشغيل تحت التنفيذ والقيود وسجل التدقيق.
-            - الأسعار المعتمدة: الشهري 55,000 جنيه سوداني؛ السنوي 550,000 جنيه سوداني؛ الدائم 1,050,000 جنيه سوداني.
-            - الاشتراكات الشهرية والسنوية محددة المدة. الترخيص الدائم لا يصدر إلا بعد مراجعة الدفع وموافقة الإدارة.
-            - احتفظ بنسخة احتياطية دورية. ملف النسخة الاحتياطية الحالي غير مشفر؛ احفظه في مكان آمن.
-            - تم اختبار الإصدار من مالك المنتج على جهاز فعلي. لا يعني ذلك ضمان التوافق مع كل طراز هاتف؛ راجع متطلبات Android قبل التثبيت.
-          files: |
-            bakery-app/release/AlMizan-Bakery-2.8.1-review.apk
-            bakery-app/release/SHA256SUMS.txt
-            bakery-app/release/SIGNING-CERTIFICATE.txt
