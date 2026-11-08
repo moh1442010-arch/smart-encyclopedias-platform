@@ -81,7 +81,7 @@ final class FactoryBackup {
             ensureSchema(db);
             JSONObject root = new JSONObject();
             root.put("_type", TYPE);
-            root.put("schema_version", 8);
+            root.put("schema_version", 9);
             JSONObject tables = new JSONObject();
             for (int i=0;i<TABLES.length;i++) {
                 JSONArray rows = new JSONArray();
@@ -102,16 +102,23 @@ final class FactoryBackup {
                 } finally { c.close(); }
                 tables.put(TABLES[i], rows);
             }
+            JSONObject profile=new JSONObject();
+            profile.put("business_name",context.getSharedPreferences("factory_profile",Context.MODE_PRIVATE).getString("business_name",""));
+            root.put("profile",profile);
             root.put("tables", tables);
             return root;
         } finally { db.close(); }
     }
 
     static void validate(JSONObject root) throws Exception {
-        if (root == null || !TYPE.equals(root.optString("_type")) || (root.optInt("schema_version") < 3 || root.optInt("schema_version") > 8))
+        if (root == null || !TYPE.equals(root.optString("_type")) || (root.optInt("schema_version") < 3 || root.optInt("schema_version") > 9))
             throw new IllegalArgumentException("Unsupported factory backup format");
         JSONObject tables = root.optJSONObject("tables");
         if (tables == null) throw new IllegalArgumentException("Factory backup tables are missing");
+        if(root.optInt("schema_version")>=9){
+            JSONObject profile=root.optJSONObject("profile");
+            if(profile==null||!profile.has("business_name"))throw new IllegalArgumentException("Factory backup identity is missing");
+        }
         for (int i=0;i<TABLES.length;i++) {
             JSONArray rows = tables.optJSONArray(TABLES[i]);
             if (rows == null && root.optInt("schema_version")<5 && Arrays.asList("sales_returns","work_orders","work_order_materials","journal_entries","journal_lines").contains(TABLES[i])) continue;
@@ -251,6 +258,11 @@ final class FactoryBackup {
                 ensureFactoryPartyMasters(db);
                 db.setTransactionSuccessful();
             } finally { db.endTransaction(); }
+            if(root.optInt("schema_version")>=9){
+                JSONObject profile=root.getJSONObject("profile");
+                context.getSharedPreferences("factory_profile",Context.MODE_PRIVATE).edit()
+                    .putString("business_name",profile.optString("business_name","")).apply();
+            }
         } finally { db.close(); }
     }
 
