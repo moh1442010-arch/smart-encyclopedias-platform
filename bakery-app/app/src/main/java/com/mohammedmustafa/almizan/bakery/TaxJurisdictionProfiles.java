@@ -87,11 +87,11 @@ final class TaxJurisdictionProfiles {
         db.execSQL("INSERT OR IGNORE INTO tax_jurisdiction_profiles(country_code,indirect_tax_type,profile_status,registration_threshold,notes,source_url,verified_on,profile_version) VALUES(?,'UNVERIFIED','REVIEW_REQUIRED','','No tax rate has been preloaded. Confirm current national and subnational rules before enabling tax calculation.','','2026-11-08',1)",new Object[]{code});
     }
 
-    private static void seed(SQLiteDatabase db,String code,String ar,String en,String profile,String type,String status,String notes,String source,String checked,int num,int den,String effective) {
+    private static void seed(SQLiteDatabase db,String code,String ar,String en,String profile,String type,String status,String notesAr,String notesEn,String source,String checked,int num,int den,String effective) {
         db.execSQL("INSERT OR IGNORE INTO countries(code,name_ar,name_en,tax_profile,active) VALUES(?,?,?,?,1)",new Object[]{code,ar,en,profile});
         db.execSQL("UPDATE countries SET tax_profile=?,active=1 WHERE code=?",new Object[]{profile,code});
         db.execSQL("INSERT OR REPLACE INTO tax_jurisdiction_profiles(country_code,indirect_tax_type,profile_status,registration_threshold,notes,source_url,verified_on,profile_version) VALUES(?,?,?,?,?,?,?,1)",
-            new Object[]{code,type,status,"",notes+" "+source,source,checked});
+            new Object[]{code,type,status,"",notesAr+" "+notesEn,source,checked});
     }
 
     static List<String> countriesForCurrency(String currency) {
