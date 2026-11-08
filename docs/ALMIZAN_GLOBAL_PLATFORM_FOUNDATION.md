@@ -178,3 +178,28 @@ The current bakery workflow is triggered by changes under `bakery-app/**`. The f
 - Localization must include field labels/hints, dialogs, validation/errors, toasts, menus, reports, receipts, printing, subscription/licensing, backup metadata, and support messages. Add tests for persistence, RTL/LTR, translation coverage and core flows in both languages.
 - Tracked in issue #117. Do not describe English integration as complete until every screen and the guide pass coverage tests and device checks.
 - Language switching must not change or share bakery/factory databases, parties, ledgers, backups or accounting calculations.
+
+
+## Owner approvals and competitive gap analysis — 2026-11-08
+
+### Identity and credentials
+- The bakery app first-run setup currently includes an establishment-name field, a numeric PIN (minimum six digits), and confirmation. It derives a salted hash; it does not intentionally persist the PIN as plaintext.
+- The factory must have its own business name, independent from the bakery. FactoryActivity was reading bakery_profile; source commit 38ecdfae6135b1e69be5972e10744ce23fcba9b0 changes it to factory_profile and adds a factory-name edit action.
+- This change is source-only. CI, APK build, and phone verification have not yet been confirmed.
+- The app-level PIN flow needs a security review for show/hide control, rate limiting/lockout, change/reset/recovery, and protection of sensitive screens. Do not create a second independent PIN until access-control architecture is designed and tested.
+
+### International product gap analysis
+Benchmark references reviewed on 2026-11-08:
+- Odoo manufacturing documentation covers work orders, multi-level bills of materials, routing, production scheduling, quality checks, maintenance, lot traceability, and cost analysis.
+- Bakery-specific systems advertise recipe-level ingredient tracking, batch status, expiry/reorder alerts, waste tracking, order/return workflows, and product profitability.
+- Sage accounting references include P&L, balance sheet, trial balance, aged receivables/payables, cash flow, audit trail, bank reconciliation, tax reports, and multi-currency capabilities.
+
+Required completion matrix:
+1. Accounting integrity: chart of accounts; journal entries; general ledger; trial balance; P&L; balance sheet; cash flow; AR/AP aging; period close/reopen; reversals; audit trail; bank/cash reconciliation.
+2. Bakery/factory operations: recipe/BOM versioning; batch/lot traceability; expiry dates; production planning/work orders; quality checks; wastage/returns; reorder alerts; safe unit conversions; product-level cost and margin.
+3. Commercial: quotations/orders; delivery notes; purchase orders; customer/supplier statements; partial payments; refunds/credit notes; discounts; multi-outlet/channel reporting.
+4. Security/resilience: role permissions; PIN recovery/lockout; verified encrypted database and backup; restore drills; migration rollback; tamper-evident audit records.
+5. Regionalization: complete Arabic/English UI, guide, receipts and printouts; RTL/LTR; configurable country/tax rules; currency minor units and dated exchange rates; locale-aware dates/numbers.
+6. Platform quality: offline workflows; low-end Android compatibility; accessible touch targets; import/export; diagnostics; automated regression tests.
+
+Each capability must be implemented and evidenced by tests, or explicitly declared out of scope. Do not describe the product as internationally complete until this matrix is closed with reproducible tests and device acceptance.
