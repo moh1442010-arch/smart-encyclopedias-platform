@@ -76,7 +76,7 @@ jobs:
           PREVIOUS_KEY="$(git show origin/develop/bakery-2.9-enterprise-completion:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | grep -oE 'private static final String LICENSE_PUBLIC_KEY_B64 = "[^"]+"' | cut -d '"' -f2)"
           CANDIDATE_KEY="$(git show origin/feature/almizan-global-platform-foundation:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | grep -oE 'private static final String LICENSE_PUBLIC_KEY_B64 = "[^"]+"' | cut -d '"' -f2)"
           WORKER_KEY="$(grep -oE 'EXPECTED_APP_PUBLIC_KEY_DER_B64 = "[^"]+"' licensing/worker/src/index.js | cut -d '"' -f2)"
-          MAIN_APP_KEY="$(grep -oE 'LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | cut -d '"' -f2)"
+          MAIN_APP_KEY="$(grep -oE 'private static final String LICENSE_PUBLIC_KEY_B64 = "[^"]+"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java | cut -d '"' -f2)"
           MAIN_ISSUER_KEY="$(grep -oE 'EXPECTED_PUBLIC_KEY_DER_B64 = "[^"]+"' tools/bakery-license-issuer.mjs | cut -d '"' -f2)"
           test -n "$PREVIOUS_KEY" && test "$PREVIOUS_KEY" = "$WORKER_KEY"
           test "$CANDIDATE_KEY" = "$WORKER_KEY"
