@@ -28,7 +28,7 @@ public class FactoryLedgerActivity extends Activity {
         if (LicenseAccessGate.isAccessAllowed(this)) return true;
         entitlementHandler.removeCallbacks(entitlementWatchdog);
         if (db != null && db.isOpen()) { db.close(); db=null; }
-        Toast.makeText(this,"انتهت التجربة أو لا يوجد ترخيص ساري. بياناتك محفوظة؛ يرجى التفعيل للمتابعة.",Toast.LENGTH_LONG).show();
+        Toast.makeText(this,AppLanguage.tr(this,"انتهت التجربة أو لا يوجد ترخيص ساري. بياناتك محفوظة؛ يرجى التفعيل للمتابعة."),Toast.LENGTH_LONG).show();
         finish();
         startActivity(new Intent(this,MainActivity.class));
         return false;
