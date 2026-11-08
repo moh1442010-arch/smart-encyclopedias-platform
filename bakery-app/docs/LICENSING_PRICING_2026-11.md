@@ -1,6 +1,6 @@
 # Al-Mizan Bakery — licensing price decision (2026-11-08)
 
-Status: approved pricing direction for implementation; NOT yet active in the app, Worker, storefront, or admin panel.
+Status: owner-approved pricing and payment details are being implemented on the review branch. Production activation remains blocked until migration, deployment and end-to-end payment tests pass.
 
 ## Market references reviewed
 
@@ -38,7 +38,9 @@ The monthly entry point is intentionally below the specialist bakery SaaS refere
 
 ## Banking data gate
 
-No international IBAN is configured by this change. The previous hard-coded value was not verified against a bank-issued account and has been removed from the Android activation screen and English dictionary. Do not publish a receiving IBAN until the account holder, bank, country, currency, IBAN and SWIFT/BIC are confirmed from the bank's official account document. Do not fabricate bank details.
+Owner-provided Fawry details approved for display: account number `1019380025245419000`, basic account `0252 4541 9000 01`, IBAN `SD46 0252 4541 9000 01`, beneficiary `محمد مصطفى بابكر`. The IBAN passed the ISO 13616 MOD-97 checksum. The screenshot does not show a SWIFT/BIC or receiving-bank name; do not invent either. Customers must verify the beneficiary name in their banking app before confirming an international transfer.
+- Local Bankak: account `1882224`, beneficiary `محمد مصطفى بابكر`, as explicitly approved by the owner. Manual payment review remains in place.
+- The owner approved SAR 29/290/725, AED 29/290/725, USD 8/80/199 for monthly/annual/lifetime. EUR is excluded from licensing. SDG prices remain 55,000/550,000/1,050,000.
 
 ## Release blockers before charging customers
 
