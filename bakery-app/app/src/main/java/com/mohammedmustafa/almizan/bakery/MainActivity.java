@@ -2037,9 +2037,12 @@ public class MainActivity extends Activity {
         Button activate=button("🔑 أدخل رمز التفعيل بعد موافقة الدعم");
         activate.setOnClickListener(v->showActivationDialog());
         content.addView(activate);
-        content.addView(text("الدفع عبر بنكك — رقم الحساب: 1882224",16));
+        content.addView(text("الدفع المحلي عبر بنكك — رقم الحساب: 1882224",16));
         Button copy=button("نسخ رقم حساب بنكك");
         copy.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("Bankak",BANKAK));toast("تم نسخ رقم بنكك");});
+        content.addView(text("التحويل المصرفي الدولي — IBAN: SD8504018822240001",16));
+        Button copyIban=button("نسخ رقم IBAN");
+        copyIban.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("IBAN","SD8504018822240001"));toast("تم نسخ رقم IBAN");});
         content.addView(copy);
         content.addView(text("سجّل طلب الترخيص في البوابة وأدخل مرجع التحويل. أرسل إشعار واتساب للمالك. لن يصدر الترخيص إلا بعد تأكيد وصول المبلغ إلى حساب بنكك وموافقة المالك. لا ترسل الرقم السري أو رمز التحقق البنكي.",14));
         Button logoRequest=button("🌾 إرسال شعار المخبز لتخصيص الفواتير عبر واتساب");
