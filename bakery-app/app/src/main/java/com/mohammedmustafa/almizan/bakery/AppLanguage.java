@@ -265,6 +265,22 @@ final class AppLanguage {
         put("اختيار التاريخ","Choose date");
         put("العودة إلى الرئيسية","Back to Home");
         put("تأكيد","Confirm");
+        put("الدولة صاحبة العملة والملف الضريبي","Issuing country and tax profile");
+        put("سيُحمّل ملف الدولة الضريبي. العملات المشتركة أو غير المدعومة تتطلب تأكيد الدولة ومراجعة القواعد المحلية.","The country's tax profile will load. Shared or unsupported currencies require country confirmation and local tax review.");
+        put("تم تحديد الدولة تلقائياً من العملة. راجع الملف الضريبي قبل بدء التسجيلات.","Country selected automatically from currency. Review the tax profile before recording transactions.");
+        put("هذه العملة قد تستخدمها أكثر من دولة أو لم تُعتمد لها مطابقة تلقائية. اختر دولة التسجيل الفعلية.","This currency may be used by multiple countries or has no automatic mapping. Select the actual country of registration.");
+        put("ضريبة القيمة المضافة العامة","Standard VAT");
+        put("ضريبة القيمة المضافة الأساسية","Standard VAT");
+        put("ضريبة القيمة المضافة","VAT");
+        put("الملف الضريبي","Tax profile");
+        put("الدولة","Country");
+        put("لا توجد ضريبة قيمة مضافة مطبقة حالياً","No VAT currently applied");
+        put("مراجعة القواعد المحلية مطلوبة","Local tax rules review required");
+        put("حالة التسجيل الضريبي مطلوبة","Tax registration status required");
+        put("نسبة الضريبة","Tax rate");
+        put("الضريبة المستحقة","Tax due");
+        put("شامل الضريبة","Tax inclusive");
+        put("غير شامل الضريبة","Tax exclusive");
         put("إغلاق","Close");
     }
     private AppLanguage() {}
