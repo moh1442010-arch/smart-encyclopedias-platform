@@ -487,7 +487,6 @@ async function handle(request, env) {
   }
 
   if (url.pathname === "/api/orders" && request.method === "POST") {
-    await ensureCurrencyColumns(env);
     let body;
     try { body = await request.json(); } catch { return json({ error: "INVALID_JSON" }, 400); }
     const customer = cleanText(body.customerName, 100);
@@ -508,6 +507,7 @@ async function handle(request, env) {
         (requestedVersion && requestedVersion !== appVersion && requestedVersion !== previousAppVersion)) {
       return json({ error: requestedVersion && requestedVersion !== appVersion && requestedVersion !== previousAppVersion ? "APP_VERSION_UNSUPPORTED" : "INVALID_FIELDS" }, 400);
     }
+    await ensureCurrencyColumns(env);
     if (!await allowOrderSubmission(request, env)) return json({ error: "ORDER_RATE_LIMITED" }, 429);
     const duplicate = await env.DB.prepare(
       "SELECT id FROM license_orders WHERE receipt_reference=? AND status IN ('pending','approved') LIMIT 1"
