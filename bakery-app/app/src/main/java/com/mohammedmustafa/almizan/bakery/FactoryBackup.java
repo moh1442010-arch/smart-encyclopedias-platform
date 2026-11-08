@@ -172,6 +172,7 @@ final class FactoryBackup {
         else if ("work_order_stages".equals(table)) numeric=new String[]{"id","work_order_id","stage_no","output_qty","material_cost","labor","overhead","total_cost"};
         else if ("supplier_purchase_records".equals(table)) numeric=new String[]{"id","supplier_master_id","quantity_milli","invoice_total","paid_cash","paid_bank","debt"};
         else if ("supplier_payment_records".equals(table)) numeric=new String[]{"id","supplier_master_id","cash","bank"};
+        else if ("factory_customers".equals(table) || "factory_suppliers".equals(table)) numeric=new String[]{"id"};
         else if ("recipe".equals(table)) numeric=new String[]{"id","product_id","material_id","qty"};
         else if ("batches".equals(table)) numeric=new String[]{"id","product_id","batches","output","labor","overhead","cost","unit_cost"};
         else if ("finished".equals(table)) numeric=new String[]{"product_id","qty","value","unit_cost"};
@@ -303,6 +304,8 @@ final class FactoryBackup {
         d.execSQL("CREATE TABLE IF NOT EXISTS supplier_payment_records(id INTEGER PRIMARY KEY,supplier_master_id INTEGER NOT NULL,supplier_name TEXT NOT NULL,cash INTEGER NOT NULL,bank INTEGER NOT NULL,bank_ref TEXT NOT NULL DEFAULT '',date TEXT NOT NULL)");
          d.execSQL("CREATE TABLE IF NOT EXISTS factory_customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,phone TEXT NOT NULL DEFAULT '',iban TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
          d.execSQL("CREATE TABLE IF NOT EXISTS factory_suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,phone TEXT NOT NULL DEFAULT '',iban TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+         d.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_factory_customers_phone_unique ON factory_customers(phone) WHERE phone<>''");
+         d.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_factory_suppliers_phone_unique ON factory_suppliers(phone) WHERE phone<>''");
         ensureColumn(d,"sales","customer_master_id","INTEGER NOT NULL DEFAULT 0");
         ensureColumn(d,"collections","customer_master_id","INTEGER NOT NULL DEFAULT 0");
         ensureColumn(d,"movements","supplier_master_id","INTEGER NOT NULL DEFAULT 0");
