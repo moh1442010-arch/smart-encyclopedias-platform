@@ -2,8 +2,8 @@
   "schema_version": 1,
   "product": "Al-Mizan Bakery",
   "baseline": "2.8.0",
-  "candidate": "2.8.2",
-  "policy": "No defect is closed without a source commit, reproducible passing test, result, and evidence reference. No commercial release until all 90 defects and device acceptance gates pass.",
+  "candidate": "2.8.3",
+  "policy": "No defect is closed without a source commit, reproducible passing test, result, and evidence reference. Android 9 (API 28) is the minimum supported platform. No commercial release until all 90 defects and device acceptance gates pass.",
   "phases": {
     "P1": "Core accounting, unified posting, subledger reconciliation and financial statements",
     "P2": "Bakery/factory operations, costing, inventory, tax, payroll, assets and currencies",
