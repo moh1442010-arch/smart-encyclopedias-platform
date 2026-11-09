@@ -148,6 +148,39 @@ public class EnterpriseSchemaMigrationTest {
             db.close();context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
         }
     }
+    @Test public void generalLedgerReversalPostsOnceAndKeepsBothSidesInTrialBalance() throws Exception {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="ledger_reversal_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase db=SecureDatabase.open(context,name);
+        try {
+            EnterpriseSchema.ensure(db);
+            db.execSQL("INSERT INTO financial_periods(period_code,start_date,end_date,status) VALUES('FY26-11','2026-11-01','2026-11-30','OPEN')");
+            java.util.List<GeneralLedger.Line> lines=new java.util.ArrayList<>();
+            lines.add(new GeneralLedger.Line("1000","MAIN","SDG",12500,0,1,1));
+            lines.add(new GeneralLedger.Line("4000","MAIN","SDG",0,12500,1,1));
+            GeneralLedger.Entry original=new GeneralLedger.Entry("TEST-ORIGINAL","اختبار بيع نقدي","2026-11-09",
+                "TEST_SALE","TEST-ORIGINAL","test-sale:original","tester",lines);
+            GeneralLedger.post(db,original);
+            GeneralLedger.Result first=GeneralLedger.reverse(db,"TEST-ORIGINAL","2026-11-09","tester");
+            assertFalse("First reversal must create a new journal",first.alreadyPosted);
+            GeneralLedger.Result retry=GeneralLedger.reverse(db,"TEST-ORIGINAL","2026-11-09","tester");
+            assertTrue("Repeated reversal must be idempotent",retry.alreadyPosted);
+            assertEquals(first.reference,retry.reference);
+            Cursor count=db.rawQuery("SELECT COUNT(*) FROM gl_journal_entries WHERE source_type='REVERSAL' AND source_id='TEST-ORIGINAL'",null);
+            try { assertTrue(count.moveToFirst());assertEquals(1,count.getInt(0)); } finally { count.close(); }
+            Cursor relation=db.rawQuery("SELECT reversal_of FROM gl_journal_entries WHERE entry_ref=?",new String[]{first.reference});
+            try { assertTrue(relation.moveToFirst());assertTrue("Reversal must reference original journal id",relation.getLong(0)>0); } finally { relation.close(); }
+            GeneralLedgerReports.TrialBalance trial=GeneralLedgerReports.trialBalance(db,"2026-11-01","2026-11-30",null);
+            assertTrue("Original and reversal must both remain in the posted trial balance",trial.isBalanced());
+            for(GeneralLedgerReports.Line line:trial.lines) {
+                if("1000".equals(line.code)||"4000".equals(line.code))
+                    assertEquals("Reversed account must net to zero",0L,line.balanceMinor);
+            }
+        } finally {
+            db.close();context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
+        }
+    }
+
     @Test public void permissionMatrixIsBranchScopedAndLeastPrivilege() throws Exception {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String name="permission_matrix_"+System.currentTimeMillis()+".db";
