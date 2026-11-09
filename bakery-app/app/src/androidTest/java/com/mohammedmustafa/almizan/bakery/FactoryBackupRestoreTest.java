@@ -67,8 +67,8 @@ public class FactoryBackupRestoreTest {
             Cursor party=db.rawQuery("SELECT phone,iban FROM factory_customers WHERE name='Factory Test Customer'",null);
             try { assertTrue(party.moveToFirst());assertEquals("249900000010",party.getString(0));assertEquals("SD00000000000000000001",party.getString(1)); }
             finally { party.close(); }
-            Cursor outbox=db.rawQuery("SELECT source_entry_ref,status FROM factory_gl_outbox",null);
-            try { assertTrue(outbox.moveToFirst());assertEquals("BACKUP-OUTBOX-1",outbox.getString(0));assertEquals("PENDING",outbox.getString(1)); }
+            Cursor outbox=db.rawQuery("SELECT source_entry_ref,status,payload_version FROM factory_gl_outbox",null);
+            try { assertTrue(outbox.moveToFirst());assertEquals("BACKUP-OUTBOX-1",outbox.getString(0));assertEquals("PENDING",outbox.getString(1));assertEquals(1,outbox.getInt(2)); }
             finally { outbox.close(); }
             Cursor outboxLines=db.rawQuery("SELECT COUNT(*) FROM factory_gl_outbox_lines",null);
             try { assertTrue(outboxLines.moveToFirst());assertEquals(2,outboxLines.getInt(0)); }
