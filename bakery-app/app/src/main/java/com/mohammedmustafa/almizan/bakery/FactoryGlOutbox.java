@@ -146,39 +146,49 @@ final class FactoryGlOutbox {
         int retry=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='RETRY'");
         int dead=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='DEAD_LETTER'");
         int missingOutbox=count(source,"SELECT COUNT(*) FROM journal_entries j LEFT JOIN factory_gl_outbox o ON o.source_entry_id=j.id WHERE j.status='POSTED' AND o.id IS NULL");
-        int missingDestination=count(source,"SELECT COUNT(*) FROM factory_gl_outbox o LEFT JOIN gl_journal_entries g ON g.source_type='FACTORY_LEDGER' AND g.source_id=o.source_entry_ref AND g.status='POSTED' WHERE o.status='POSTED' AND g.id IS NULL",destination);
-        int orphanDestination=count(destination,"SELECT COUNT(*) FROM gl_journal_entries g LEFT JOIN factory_gl_outbox o ON o.source_entry_ref=g.source_id WHERE g.source_type='FACTORY_LEDGER' AND g.status='POSTED' AND o.id IS NULL");
-        int unacknowledged=count(destination,"SELECT COUNT(*) FROM gl_journal_entries g JOIN factory_gl_outbox o ON o.source_entry_ref=g.source_id WHERE g.source_type='FACTORY_LEDGER' AND g.status='POSTED' AND o.status<>'POSTED'");
-        int mismatches=0;
-        Cursor events=source.rawQuery("SELECT id,source_entry_ref,status FROM factory_gl_outbox WHERE status='POSTED' ORDER BY id",null);
+        int missingDestination=0,orphanDestination=0,unacknowledged=0,mismatches=0;
+        Cursor events=source.rawQuery("SELECT id,source_entry_ref,status FROM factory_gl_outbox ORDER BY id",null);
         try {
             while(events.moveToNext()) {
-                String sourceRef=events.getString(1);
-                Cursor sourceTotals=source.rawQuery("SELECT COALESCE(SUM(debit_minor),0),COALESCE(SUM(credit_minor),0) FROM factory_gl_outbox_lines WHERE outbox_id=?",
-                    new String[]{String.valueOf(events.getLong(0))});
-                long sourceDebit,sourceCredit;
-                try{sourceTotals.moveToFirst();sourceDebit=sourceTotals.getLong(0);sourceCredit=sourceTotals.getLong(1);}finally{sourceTotals.close();}
-                Cursor glTotals=destination.rawQuery("SELECT COALESCE(SUM(l.transaction_debit_minor),0),"+
-                    "COALESCE(SUM(l.transaction_credit_minor),0),COUNT(DISTINCT l.transaction_currency_code),"+
-                    "COALESCE(SUM(CASE WHEN l.transaction_currency_code='SDG' THEN 0 ELSE 1 END),0) "+
-                    "FROM gl_journal_entries e JOIN gl_journal_lines l ON l.entry_id=e.id "+
-                    "WHERE e.source_type=? AND e.source_id=? AND e.status='POSTED'",
+                long outboxId=events.getLong(0);String sourceRef=events.getString(1),status=events.getString(2);
+                Cursor glHead=destination.rawQuery("SELECT id FROM gl_journal_entries WHERE source_type=? AND source_id=? AND status='POSTED'",
                     new String[]{SOURCE_TYPE,sourceRef});
-                try {
-                    if(!glTotals.moveToFirst()||glTotals.getInt(2)!=1||glTotals.getInt(3)!=0||
-                       glTotals.getLong(0)!=sourceDebit||glTotals.getLong(1)!=sourceCredit)mismatches++;
-                } finally {glTotals.close();}
+                boolean hasGl;try{hasGl=glHead.moveToFirst();}finally{glHead.close();}
+                if("POSTED".equals(status)&&!hasGl)missingDestination++;
+                if(!"POSTED".equals(status)&&hasGl)unacknowledged++;
+                if("POSTED".equals(status)&&hasGl) {
+                    Cursor sourceTotals=source.rawQuery("SELECT COALESCE(SUM(debit_minor),0),COALESCE(SUM(credit_minor),0) FROM factory_gl_outbox_lines WHERE outbox_id=?",
+                        new String[]{String.valueOf(outboxId)});
+                    long sourceDebit,sourceCredit;
+                    try{sourceTotals.moveToFirst();sourceDebit=sourceTotals.getLong(0);sourceCredit=sourceTotals.getLong(1);}finally{sourceTotals.close();}
+                    Cursor glTotals=destination.rawQuery("SELECT COALESCE(SUM(l.transaction_debit_minor),0),"+
+                        "COALESCE(SUM(l.transaction_credit_minor),0),COUNT(DISTINCT l.transaction_currency_code),"+
+                        "COALESCE(SUM(CASE WHEN l.transaction_currency_code='SDG' THEN 0 ELSE 1 END),0) "+
+                        "FROM gl_journal_entries e JOIN gl_journal_lines l ON l.entry_id=e.id "+
+                        "WHERE e.source_type=? AND e.source_id=? AND e.status='POSTED'",
+                        new String[]{SOURCE_TYPE,sourceRef});
+                    try {
+                        if(!glTotals.moveToFirst()||glTotals.getInt(2)!=1||glTotals.getInt(3)!=0||
+                           glTotals.getLong(0)!=sourceDebit||glTotals.getLong(1)!=sourceCredit)mismatches++;
+                    } finally {glTotals.close();}
+                }
             }
         } finally {events.close();}
+        Cursor glEvents=destination.rawQuery("SELECT source_id FROM gl_journal_entries WHERE source_type=? AND status='POSTED'",
+            new String[]{SOURCE_TYPE});
+        try {
+            while(glEvents.moveToNext()) {
+                Cursor sourceEvent=source.rawQuery("SELECT COUNT(*) FROM factory_gl_outbox WHERE source_entry_ref=?",
+                    new String[]{glEvents.getString(0)});
+                try{sourceEvent.moveToFirst();if(sourceEvent.getInt(0)==0)orphanDestination++;}finally{sourceEvent.close();}
+            }
+        } finally {glEvents.close();}
         return new ReconciliationReport(sourceCount,eventCount,posted,pending,processing,retry,dead,
             missingOutbox,missingDestination,orphanDestination,unacknowledged,mismatches);
     }
 
     private static int count(SQLiteDatabase db,String sql) {
         Cursor c=db.rawQuery(sql,null);try{c.moveToFirst();return c.getInt(0);}finally{c.close();}
-    }
-    private static int count(SQLiteDatabase db,String sql,SQLiteDatabase destination) {
-        Cursor c=destination.rawQuery(sql,null);try{c.moveToFirst();return c.getInt(0);}finally{c.close();}
     }
 
     /** Creates a balanced source journal and its outbox snapshot in the caller's existing transaction. */
