@@ -176,6 +176,43 @@ final class FactoryGlOutbox {
         } finally {if(destination!=null&&destination.isOpen())destination.close();}
     }
 
+    /** Reopens dead-letter events only after checking that destination posting did not commit. */
+    static int requeueDeadLetters(Context context,SQLiteDatabase source) {
+        SQLiteDatabase destination=null;
+        try {
+            destination=SecureDatabase.open(context,"almizan_bakery_250.db");
+            EnterpriseSchema.ensure(destination);
+            int requeued=0;
+            source.beginTransaction();
+            try {
+                Cursor events=source.rawQuery("SELECT id,source_entry_ref FROM factory_gl_outbox WHERE status='DEAD_LETTER' ORDER BY id",null);
+                List<long[]> ids=new ArrayList<>();List<String> refs=new ArrayList<>();
+                try{while(events.moveToNext()){ids.add(new long[]{events.getLong(0)});refs.add(events.getString(1));}}finally{events.close();}
+                for(int i=0;i<ids.size();i++) {
+                    long id=ids.get(i)[0];String sourceRef=refs.get(i);
+                    Cursor posted=destination.rawQuery("SELECT entry_ref FROM gl_journal_entries WHERE source_type=? AND source_id=? AND status='POSTED'",
+                        new String[]{SOURCE_TYPE,sourceRef});
+                    String destinationRef=null;try{if(posted.moveToFirst())destinationRef=posted.getString(0);}finally{posted.close();}
+                    ContentValues event=new ContentValues();event.put("updated_at",System.currentTimeMillis());
+                    if(destinationRef!=null) {
+                        event.put("status","POSTED");event.put("destination_ref",destinationRef);
+                        event.put("posted_at",System.currentTimeMillis());event.put("last_error","");
+                    } else {
+                        ContentValues clear=new ContentValues();clear.putNull("target_account_code");clear.putNull("branch_code");
+                        clear.putNull("currency_code");clear.putNull("fx_rate_num");clear.putNull("fx_rate_den");
+                        source.update("factory_gl_outbox_lines",clear,"outbox_id=?",new String[]{String.valueOf(id)});
+                        event.put("status","PENDING");event.put("attempt_count",0);
+                        event.put("next_attempt_at",0L);event.put("last_error","");
+                        requeued++;
+                    }
+                    source.update("factory_gl_outbox",event,"id=?",new String[]{String.valueOf(id)});
+                }
+                source.setTransactionSuccessful();
+            } finally {source.endTransaction();}
+            return requeued;
+        } finally {if(destination!=null&&destination.isOpen())destination.close();}
+    }
+
     static ProcessResult processPending(Context context,SQLiteDatabase source) {
         if(source==null||!source.isOpen())throw new IllegalStateException("قاعدة المصنع غير متاحة");
         ensureSchema(source);
