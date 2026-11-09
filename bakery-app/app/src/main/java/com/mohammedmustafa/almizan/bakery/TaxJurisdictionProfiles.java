@@ -117,6 +117,21 @@ final class TaxJurisdictionProfiles {
             new Object[]{currency,country,primary?1:0});
     }
 
+    // Pure catalog helper retained for deterministic local unit tests; the app UI reads the persisted table.
+    @Deprecated
+    static List<String> countriesForCurrency(String currency) {
+        switch(currency) {
+            case "SDG": return Collections.singletonList("SD");
+            case "SAR": return Collections.singletonList("SA");
+            case "AED": return Collections.singletonList("AE");
+            case "EGP": return Collections.singletonList("EG");
+            case "QAR": return Collections.singletonList("QA");
+            case "KWD": return Collections.singletonList("KW");
+            case "USD": return Arrays.asList("US","LB","PS");
+            default: return Collections.emptyList();
+        }
+    }
+
     static List<String> countriesForCurrency(SQLiteDatabase db,String currency) {
         java.util.ArrayList<String> countries=new java.util.ArrayList<>();
         android.database.Cursor c=db.rawQuery(
