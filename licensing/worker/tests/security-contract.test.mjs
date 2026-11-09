@@ -75,6 +75,7 @@ test("2.8.0 customer order is accepted and recorded as pending without issuing a
         bind(...values) {
           return {
             first: async () => {
+              if (sql.includes("license_price_catalog")) return { amount_minor: 55000 };
               if (sql.includes("license_order_rate_limits")) return { attempts: 1 };
               if (sql.includes("SELECT id FROM license_orders")) return null;
               return null;
@@ -186,7 +187,7 @@ test("international license prices accept SAR, AED and USD and reject EUR", asyn
   async function submit(currencyCode, receiptReference) {
     const writes=[];
     const db={prepare(sql){return{bind(...values){return{
-      first:async()=>sql.includes("license_order_rate_limits")?{attempts:1}:null,
+      first:async()=>sql.includes("license_price_catalog")?({amount_minor:({SDG:{monthly:55000,annual:550000,lifetime:1050000},SAR:{monthly:29,annual:290,lifetime:725},AED:{monthly:29,annual:290,lifetime:725},USD:{monthly:8,annual:80,lifetime:199}}[currencyCode][plan])}):sql.includes("license_order_rate_limits")?{attempts:1}:null,
       run:async()=>{writes.push({sql,values});return{meta:{changes:1}};}
     };}};}};
     const response=await worker.fetch(new Request("https://bakery-test.local/api/orders",{
