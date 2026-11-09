@@ -57,13 +57,13 @@ public class FactoryLedgerActivity extends Activity {
         ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));root.addView(button("🖨️ طباعة الشاشة الحالية",()->printVisibleScreen(title)));setContentView(root);
     }
     private void printVisibleScreen(String title){
-        String business=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","المخبز");
-        StringBuilder out=new StringBuilder("المنشأة: ").append(business).append("\\nدفتر المصنع: ").append(title).append("\\nالتاريخ: ").append(today()).append("\\n\\n");
+        String business=getSharedPreferences("factory_profile",MODE_PRIVATE).getString("business_name","المصنع");
+        StringBuilder out=new StringBuilder("اسم المصنع: ").append(business).append("\nدفتر المصنع: ").append(title).append("\nالتاريخ: ").append(today()).append("\n\n");
         appendPrintable(body,out);if(out.length()<80){say("لا توجد بيانات ظاهرة للطباعة.");return;}
         try{PrinterService.print(this,business,title+" - "+business,out.toString());}catch(Exception e){say("تعذر فتح الطباعة: "+e.getMessage());}
     }
     private void appendPrintable(View view,StringBuilder out){
-        if(view instanceof EditText){String value=((EditText)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");return;}
+        if(view instanceof EditText){String value=((EditText)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\n");return;}
         if(view instanceof TextView){String value=((TextView)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");}
         if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++)appendPrintable(group.getChildAt(i),out);}
     }
