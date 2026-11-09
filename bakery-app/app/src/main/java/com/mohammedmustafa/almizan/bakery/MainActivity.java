@@ -178,6 +178,23 @@ public class MainActivity extends Activity {
         content.addView(retry);
     }
 
+    private String taxProfileSummary(String countryCode) {
+        Cursor profile=store.getReadableDatabase().rawQuery(
+            "SELECT c.name_ar,c.tax_profile,p.profile_status,p.indirect_tax_type FROM countries c LEFT JOIN tax_jurisdiction_profiles p ON p.country_code=c.code WHERE c.code=?",
+            new String[]{countryCode});
+        String name=countryCode,status="REVIEW_REQUIRED",type="UNVERIFIED",code="CUSTOM_REVIEW_REQUIRED";
+        try { if(profile.moveToFirst()){name=profile.getString(0);code=profile.getString(1);status=profile.isNull(2)?"REVIEW_REQUIRED":profile.getString(2);type=profile.isNull(3)?"UNVERIFIED":profile.getString(3);} }
+        finally { profile.close(); }
+        if("NO_VAT_CONFIRMED".equals(status))return name+" — لا توجد ضريبة قيمة مضافة مؤكدة حالياً. راجع الضرائب الأخرى حسب النشاط.";
+        if(!"VERIFIED_BASELINE".equals(status))return name+" — "+code+" — مراجعة النظام الضريبي المحلي مطلوبة. لن يطبق التطبيق نسبة تلقائية غير معتمدة.";
+        Cursor rate=store.getReadableDatabase().rawQuery(
+            "SELECT name,rate_num,rate_den FROM tax_rules WHERE country_code=? AND active=1 AND effective_from<=date('now') AND (effective_to IS NULL OR effective_to='' OR effective_to>=date('now')) ORDER BY effective_from DESC LIMIT 1",
+            new String[]{countryCode});
+        try { if(rate.moveToFirst())return name+" — "+rate.getString(0)+": "+(100.0*rate.getLong(1)/rate.getLong(2))+"%"; }
+        finally { rate.close(); }
+        return name+" — الملف الأساسي معتمد، لكن لا توجد قاعدة ضريبية سارية؛ يلزم استكمال إعدادها.";
+    }
+
     private void showPinSetup() {
         LinearLayout box = new LinearLayout(this);
         box.setPadding(24, 12, 24, 4);
@@ -210,7 +227,7 @@ public class MainActivity extends Activity {
                 java.util.List<String> mapped=TaxJurisdictionProfiles.countriesForCurrency(store.getReadableDatabase(),currencyCodes.get(position));
                 jurisdictionSpinner.setEnabled(mapped.size()!=1);
                 if(mapped.size()==1){int countryIndex=jurisdictionCodes.indexOf(mapped.get(0));if(countryIndex>=0)jurisdictionSpinner.setSelection(countryIndex);}
-                taxProfileHint.setText(AppLanguage.tr(MainActivity.this,mapped.size()==1?"تم تحديد الدولة تلقائياً من العملة. راجع الملف الضريبي قبل بدء التسجيلات.":"هذه العملة قد تستخدمها أكثر من دولة أو لم تُعتمد لها مطابقة تلقائية. اختر دولة التسجيل الفعلية."));
+                taxProfileHint.setText(mapped.size()==1?taxProfileSummary(mapped.get(0)):AppLanguage.tr(MainActivity.this,mapped.isEmpty()?"هذه العملة لا تملك مطابقة تلقائية. اختر دولة التسجيل الفعلية.":"هذه العملة مرتبطة بأكثر من دولة. اختر دولة التسجيل الفعلية لعرض ملفها الضريبي."));
             }
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
         });
@@ -249,6 +266,8 @@ public class MainActivity extends Activity {
                 String selectedCurrency=currencyCodes.get(projectCurrency.getSelectedItemPosition());
                 if(jurisdictionCodes.isEmpty()||jurisdictionSpinner.getSelectedItemPosition()<0)throw new IllegalStateException("قائمة الدول غير مهيأة");
                 String selectedCountry=jurisdictionCodes.get(jurisdictionSpinner.getSelectedItemPosition());
+                java.util.List<String> permittedCountries=TaxJurisdictionProfiles.countriesForCurrency(store.getReadableDatabase(),selectedCurrency);
+                if(!permittedCountries.isEmpty()&&!permittedCountries.contains(selectedCountry))throw new IllegalArgumentException("العملة المختارة لا تطابق دولة التسجيل؛ اختر دولة مرتبطة بهذه العملة.");
                 Cursor profileCursor=store.getReadableDatabase().rawQuery("SELECT tax_profile FROM countries WHERE code=?",new String[]{selectedCountry});
                 String selectedTaxProfile="CUSTOM_REVIEW_REQUIRED";try{if(profileCursor.moveToFirst())selectedTaxProfile=profileCursor.getString(0);}finally{profileCursor.close();}
                 ContentValues projectSettings=new ContentValues();projectSettings.put("base_currency",selectedCurrency);
