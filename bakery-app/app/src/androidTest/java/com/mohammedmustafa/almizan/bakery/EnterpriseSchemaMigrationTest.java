@@ -29,7 +29,7 @@ public class EnterpriseSchemaMigrationTest {
             Cursor old=db.rawQuery("SELECT payload FROM records WHERE day='2026-11-06' AND module='stock'",null);
             try { assertTrue(old.moveToFirst()); assertEquals("KEEP_EXISTING_STOCK",old.getString(0)); }
             finally { old.close(); }
-            String[] required={"company_settings","countries","currencies","exchange_rates","branches","users","roles","permissions","suppliers","customers","company_bank_accounts","party_opening_payments","party_payments","supplier_quick_invoices","purchase_invoices","purchase_lines","supplier_payments","employees","payroll_periods","payroll_items","fixed_assets","depreciation_entries","sync_outbox","tax_rules","tax_jurisdiction_profiles","financial_periods","chart_of_accounts","gl_journal_entries","gl_journal_lines","idempotency_keys"};
+            String[] required={"company_settings","countries","currencies","exchange_rates","branches","users","roles","permissions","suppliers","customers","company_bank_accounts","party_opening_payments","party_payments","supplier_quick_invoices","purchase_invoices","purchase_lines","supplier_payments","employees","payroll_periods","payroll_items","fixed_assets","depreciation_entries","sync_outbox","tax_rules","tax_jurisdiction_profiles","currency_country_map","financial_periods","chart_of_accounts","gl_journal_entries","gl_journal_lines","idempotency_keys"};
             for(String table:required) {
                 Cursor exists=db.rawQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",new String[]{table});
                 try { assertTrue("Missing table "+table,exists.moveToFirst()&&exists.getInt(0)==1); }
@@ -53,14 +53,20 @@ public class EnterpriseSchemaMigrationTest {
             Cursor currency=db.rawQuery("SELECT base_currency,country_code FROM company_settings WHERE id=1",null);
             try { assertTrue(currency.moveToFirst());assertEquals("SDG",currency.getString(0));assertEquals("SD",currency.getString(1)); }
             finally { currency.close(); }
-            Cursor subscriptionOnly=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE code IN ('USD','EUR') AND active=0",null);
-            try { assertTrue(subscriptionOnly.moveToFirst());assertEquals("USD and EUR must be inactive for in-app operations",2,subscriptionOnly.getInt(0)); } finally { subscriptionOnly.close(); }
+            Cursor subscriptionOnly=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE code='EUR' AND active=0",null);
+            try { assertTrue(subscriptionOnly.moveToFirst());assertEquals("EUR must remain disabled for new selections",1,subscriptionOnly.getInt(0)); } finally { subscriptionOnly.close(); }
             Cursor currencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE code IN ('USD','EUR','SAR','AED')",null);
             try { assertTrue(currencies.moveToFirst());assertEquals(4,currencies.getInt(0)); } finally { currencies.close(); }
-            Cursor operationalCurrencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE active=1 AND code IN ('USD','EUR')",null);
-            try { assertTrue(operationalCurrencies.moveToFirst());assertEquals("USD/EUR must never appear in operational currency pickers",0,operationalCurrencies.getInt(0)); } finally { operationalCurrencies.close(); }
+            Cursor operationalCurrencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE active=1 AND code='USD'",null);
+            try { assertTrue(operationalCurrencies.moveToFirst());assertEquals("USD must be available as an operational currency",1,operationalCurrencies.getInt(0)); } finally { operationalCurrencies.close(); }
             Cursor regionalCurrencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE active=1 AND code IN ('SDG','EGP','LYD','SAR','AED')",null);
             try { assertTrue(regionalCurrencies.moveToFirst());assertEquals("Required regional operating currencies missing",5,regionalCurrencies.getInt(0)); } finally { regionalCurrencies.close(); }
+            Cursor arabMappings=db.rawQuery("SELECT COUNT(DISTINCT country_code) FROM currency_country_map WHERE country_code IN ('DZ','BH','KM','DJ','EG','IQ','JO','KW','LB','LY','MR','MA','OM','PS','QA','SA','SO','SD','SY','TN','AE','YE')",null);
+            try { assertTrue(arabMappings.moveToFirst());assertEquals("All 22 Arab League country currency mappings must be seeded",22,arabMappings.getInt(0)); } finally { arabMappings.close(); }
+            Cursor usdMappings=db.rawQuery("SELECT COUNT(*) FROM currency_country_map WHERE currency_code='USD'",null);
+            try { assertTrue(usdMappings.moveToFirst());assertEquals("Shared USD must require country selection",3,usdMappings.getInt(0)); } finally { usdMappings.close(); }
+            Cursor ils=db.rawQuery("SELECT active FROM currencies WHERE code='ILS'",null);
+            try { assertTrue(ils.moveToFirst());assertEquals(1,ils.getInt(0)); } finally { ils.close(); }
             Cursor sdgPrecision=db.rawQuery("SELECT minor_units FROM currencies WHERE code='SDG'",null);
             try { assertTrue(sdgPrecision.moveToFirst());assertEquals("SDG preserves the existing bakery ledger whole-pound precision",0,sdgPrecision.getInt(0)); } finally { sdgPrecision.close(); }
             Cursor supplierColumns=db.rawQuery("PRAGMA table_info(suppliers)",null);
