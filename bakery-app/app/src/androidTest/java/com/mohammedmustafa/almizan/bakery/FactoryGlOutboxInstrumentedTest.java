@@ -117,7 +117,7 @@ public class FactoryGlOutboxInstrumentedTest {
             assertEquals(1,result.captured);assertEquals(1,result.failed);
             assertEquals(1,count(db,"factory_gl_outbox"));
             assertEquals(2,count(db,"journal_entries"));
-            assertEquals(1,count(db,"factory_gl_outbox_lines"));
+            assertEquals(2,count(db,"factory_gl_outbox_lines"));
             Cursor missing=db.rawQuery("SELECT COUNT(*) FROM journal_entries j LEFT JOIN factory_gl_outbox o ON o.source_entry_id=j.id WHERE j.id=? AND o.id IS NULL",
                 new String[]{String.valueOf(invalid)});
             try{assertTrue(missing.moveToFirst());assertEquals(1,missing.getInt(0));}finally{missing.close();}
