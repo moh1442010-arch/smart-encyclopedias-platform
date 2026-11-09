@@ -214,6 +214,10 @@ public class FactoryLedgerActivity extends Activity {
                 long numerator=amount(fxNum),denominator=amount(fxDen);
                 destination=SecureDatabase.open(this,"almizan_bakery_250.db");
                 EnterpriseSchema.ensure(destination);
+                Cursor baseCurrencyCursor=destination.rawQuery("SELECT base_currency FROM company_settings WHERE id=1",null);
+                String baseCurrency;try{if(!baseCurrencyCursor.moveToFirst())throw new IllegalStateException("عملة المنشأة الأساسية غير معرفة");baseCurrency=baseCurrencyCursor.getString(0);}finally{baseCurrencyCursor.close();}
+                if("SDG".equals(baseCurrency)&&numerator!=denominator)throw new IllegalArgumentException("عملة الأساس SDG؛ يجب أن يكون سعر التحويل 1/1");
+                if(!"SDG".equals(baseCurrency)&&numerator==denominator)throw new IllegalArgumentException("أدخل سعر تحويل SDG الحقيقي إلى "+baseCurrency+" ولا تستخدم 1/1");
                 requireMappingValue(destination,"SELECT COUNT(*) FROM chart_of_accounts WHERE account_code=? AND active=1",code,"كود الحساب غير موجود أو غير نشط");
                 requireMappingValue(destination,"SELECT COUNT(*) FROM branches WHERE branch_code=? AND active=1",branchCode,"الفرع غير موجود أو غير نشط");
                 requireMappingValue(destination,"SELECT COUNT(*) FROM currencies WHERE code=? AND active=1",currencyCode,"العملة غير موجودة أو غير نشطة");
