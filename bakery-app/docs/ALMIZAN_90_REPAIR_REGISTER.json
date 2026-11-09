@@ -21,6 +21,7 @@
       "acceptance_criteria": [
         "Outbox event and source journal either both commit or both roll back",
         "Event identity is deterministic and unique per source journal",
+        "Each event stores an explicit payload_version and rejects unsupported versions",
         "Payload snapshot is immutable and includes every source line",
         "Worker can resume PENDING and PROCESSING events after process termination",
         "Destination success is recorded only after GeneralLedger.post commits",
