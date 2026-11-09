@@ -117,14 +117,14 @@ final class TaxJurisdictionProfiles {
     }
 
     private static void seedReference(SQLiteDatabase db,String country,String type,String taxCode,String name,int rateNum,int rateDen,String effective,String source) {
-        db.execSQL("UPDATE tax_jurisdiction_profiles SET indirect_tax_type=?,profile_status='REVIEW_REQUIRED',notes=?,source_url=?,verified_on='2026-11-09',profile_version=profile_version+1 WHERE country_code=?",
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET indirect_tax_type=?,profile_status='REVIEW_REQUIRED',notes=?,source_url=?,verified_on='2026-11-09',profile_version=2 WHERE country_code=?",
             new Object[]{type,name,source,country});
         db.execSQL("INSERT OR IGNORE INTO tax_rules(country_code,tax_code,name,rate_num,rate_den,inclusive,exempt_category,effective_from,active) VALUES(?,?,?,?,?,0,?,?,0)",
             new Object[]{country,taxCode,name,rateNum,rateDen,"راجع الاستثناءات والتصنيفات المحلية قبل التفعيل",effective});
     }
 
     private static void markLocalTaxOnly(SQLiteDatabase db,String country,String type,String notes) {
-        db.execSQL("UPDATE tax_jurisdiction_profiles SET indirect_tax_type=?,profile_status='REVIEW_REQUIRED',notes=?,verified_on='2026-11-09',profile_version=profile_version+1 WHERE country_code=?",
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET indirect_tax_type=?,profile_status='REVIEW_REQUIRED',notes=?,verified_on='2026-11-09',profile_version=2 WHERE country_code=?",
             new Object[]{type,notes,country});
     }
 
