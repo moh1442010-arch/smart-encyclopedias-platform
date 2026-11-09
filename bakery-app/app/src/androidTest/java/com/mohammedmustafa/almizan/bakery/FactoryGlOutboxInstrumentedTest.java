@@ -106,7 +106,15 @@ public class FactoryGlOutboxInstrumentedTest {
         SQLiteDatabase db=openSource(context,name);
         try {
             db.beginTransaction();
-            long valid=insertBalancedJournal(db,"LEGACY-VALID",9000);
+            insertBalancedJournal(db,"LEGACY-VALID",9000);
+            long reversedOriginal=insertBalancedJournal(db,"LEGACY-REVERSED",4000);
+            db.execSQL("UPDATE journal_entries SET status='REVERSED' WHERE id=?",new Object[]{reversedOriginal});
+            db.execSQL("INSERT INTO journal_entries(entry_ref,description,status,reversal_of,date) VALUES('LEGACY-REVERSAL','عكس قيد قديم','POSTED',?,'2026-11-09')",
+                new Object[]{reversedOriginal});
+            long reversalId;Cursor reversalCursor=db.rawQuery("SELECT last_insert_rowid()",null);
+            try{assertTrue(reversalCursor.moveToFirst());reversalId=reversalCursor.getLong(0);}finally{reversalCursor.close();}
+            db.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,'المبيعات',4000,0)",new Object[]{reversalId});
+            db.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,'الصندوق',0,4000)",new Object[]{reversalId});
             db.execSQL("INSERT INTO journal_entries(entry_ref,description,status,date) VALUES('LEGACY-BAD','قديم غير متوازن','POSTED','2026-11-09')");
             long invalid;Cursor id=db.rawQuery("SELECT last_insert_rowid()",null);
             try{assertTrue(id.moveToFirst());invalid=id.getLong(0);}finally{id.close();}
@@ -114,16 +122,18 @@ public class FactoryGlOutboxInstrumentedTest {
             db.setTransactionSuccessful();db.endTransaction();
 
             FactoryGlOutbox.BackfillResult result=FactoryGlOutbox.backfillPostedJournals(db,100);
-            assertEquals(1,result.captured);assertEquals(1,result.failed);
-            assertEquals(1,count(db,"factory_gl_outbox"));
-            assertEquals(2,count(db,"journal_entries"));
-            assertEquals(2,count(db,"factory_gl_outbox_lines"));
+            assertEquals(3,result.captured);assertEquals(1,result.failed);
+            assertEquals(3,count(db,"factory_gl_outbox"));
+            assertEquals(4,count(db,"journal_entries"));
+            assertEquals(6,count(db,"factory_gl_outbox_lines"));
+            Cursor capturedReversed=db.rawQuery("SELECT COUNT(*) FROM factory_gl_outbox WHERE source_entry_ref IN ('LEGACY-REVERSED','LEGACY-REVERSAL')",null);
+            try{assertTrue(capturedReversed.moveToFirst());assertEquals(2,capturedReversed.getInt(0));}finally{capturedReversed.close();}
             Cursor missing=db.rawQuery("SELECT COUNT(*) FROM journal_entries j LEFT JOIN factory_gl_outbox o ON o.source_entry_id=j.id WHERE j.id=? AND o.id IS NULL",
                 new String[]{String.valueOf(invalid)});
             try{assertTrue(missing.moveToFirst());assertEquals(1,missing.getInt(0));}finally{missing.close();}
             FactoryGlOutbox.BackfillResult replay=FactoryGlOutbox.backfillPostedJournals(db,100);
             assertEquals(0,replay.captured);assertEquals(1,replay.failed);
-            assertEquals(1,count(db,"factory_gl_outbox"));
+            assertEquals(3,count(db,"factory_gl_outbox"));
         } finally {
             if(db.isOpen())db.close();
             context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
