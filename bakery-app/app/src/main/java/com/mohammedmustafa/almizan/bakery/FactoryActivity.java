@@ -337,7 +337,7 @@ public class FactoryActivity extends Activity {
     private void toast(String s){Toast.makeText(this,AppLanguage.tr(this,s),Toast.LENGTH_LONG).show();}
 
     private static class DB extends SQLiteOpenHelper {
-        DB(Context c){super(c,"almizan_factory_1.db",SecureDatabase.passphrase(c,"almizan_factory_1.db"),null,12,0,null,null,false);}
+        DB(Context c){super(c,"almizan_factory_1.db",SecureDatabase.passphrase(c,"almizan_factory_1.db"),null,13,0,null,null,false);}
         public void onCreate(SQLiteDatabase d){
             d.execSQL("CREATE TABLE materials(id INTEGER PRIMARY KEY,name TEXT UNIQUE,unit TEXT,qty INTEGER NOT NULL DEFAULT 0,value INTEGER NOT NULL DEFAULT 0)");
             d.execSQL("CREATE TABLE products(id INTEGER PRIMARY KEY,name TEXT UNIQUE,category TEXT NOT NULL DEFAULT 'منتج إضافي',unit_price INTEGER NOT NULL DEFAULT 0,unit TEXT NOT NULL DEFAULT 'قطعة')");
@@ -389,8 +389,8 @@ public class FactoryActivity extends Activity {
             d.execSQL("UPDATE movements SET supplier_master_id=COALESCE((SELECT id FROM factory_suppliers p WHERE p.name=movements.ref),0) WHERE kind='RAW_IN'");
         }
         d.setVersion(11);}
-        if(old<12)FactoryGlOutbox.ensureSchema(d);
-        d.setVersion(12);}
+        if(old<13)FactoryGlOutbox.ensureSchema(d);
+        d.setVersion(13);}
         void seedProducts(String[][] items){SQLiteDatabase d=w();d.beginTransaction();try{for(String[] item:items)d.execSQL("INSERT OR IGNORE INTO products(name,category,unit_price) VALUES(?,?,0)",new Object[]{item[0],item[1]});d.setTransactionSuccessful();}finally{d.endTransaction();}}
         void saveProduct(String name,String category,long price){if(name==null||name.trim().isEmpty()||price<0)throw new IllegalArgumentException("بيانات المنتج غير صحيحة");Cursor c=getReadableDatabase().rawQuery("SELECT unit FROM products WHERE name=?",new String[]{name.trim()});String existing=c.moveToFirst()?c.getString(0):"قطعة";c.close();saveProduct(name,category,price,existing);}
         void saveProduct(String name,String category,long price,String unit){if(name==null||name.trim().isEmpty()||unit==null||unit.trim().isEmpty()||price<0)throw new IllegalArgumentException("بيانات المنتج غير صحيحة");SQLiteDatabase d=w();d.beginTransaction();try{Cursor c=d.rawQuery("SELECT id FROM products WHERE name=?",new String[]{name.trim()});long id=c.moveToFirst()?c.getLong(0):0;c.close();ContentValues v=new ContentValues();v.put("category",category);v.put("unit_price",price);v.put("unit",unit.trim());if(id==0){v.put("name",name.trim());d.insertOrThrow("products",null,v);}else d.update("products",v,"id=?",new String[]{""+id});d.execSQL("INSERT INTO audit(action,detail,date) VALUES('PRODUCT_SAVED',?,date('now'))",new Object[]{name+":"+price+":"+unit});d.setTransactionSuccessful();}finally{d.endTransaction();}}
