@@ -165,7 +165,7 @@ jobs:
                       raise SystemExit(f"Missing required implementation marker: {filename}: {needle}")
           print("Factory outbox, backfill, reconciliation, backup migration and API declarations verified.")
           PY
-          if grep -R -E 'Math\\.(addExact|subtractExact|multiplyExact)\\(' bakery-app/app/src/main/java; then
+          if grep -R -E 'Math\.(addExact|subtractExact|multiplyExact)\(' bakery-app/app/src/main/java; then
             echo "Checked arithmetic must remain compatible with Android API 28."
             exit 1
           fi
