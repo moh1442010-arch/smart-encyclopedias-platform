@@ -415,6 +415,16 @@ public class FactoryActivity extends Activity {
              return getReadableDatabase().rawQuery("SELECT id,name,phone,iban FROM "+table+" WHERE name LIKE ? OR phone LIKE ? ORDER BY name",new String[]{"%"+q+"%","%"+q+"%"});
          }
         SQLiteDatabase w(){return getWritableDatabase();}
+        private long lastId(SQLiteDatabase d){Cursor c=d.rawQuery("SELECT last_insert_rowid()",null);try{if(!c.moveToFirst())throw new IllegalStateException("تعذر قراءة رقم المستند");return c.getLong(0);}finally{c.close();}}
+        private void addJournalLine(ArrayList<String> accounts,ArrayList<Long> debits,ArrayList<Long> credits,String account,long debit,long credit){
+            if(debit==0&&credit==0)return;
+            accounts.add(account);debits.add(debit);credits.add(credit);
+        }
+        private void postJournal(SQLiteDatabase d,String ref,String description,String date,ArrayList<String> accounts,ArrayList<Long> debits,ArrayList<Long> credits){
+            String[] a=accounts.toArray(new String[0]);long[] dr=new long[debits.size()],cr=new long[credits.size()];
+            for(int i=0;i<dr.length;i++){dr[i]=debits.get(i);cr[i]=credits.get(i);}
+            FactoryGlOutbox.postSourceJournal(d,ref,description,date,a,dr,cr);
+        }
         void seedMaterials(String[][] items){SQLiteDatabase d=w();d.beginTransaction();try{for(String[] item:items)d.execSQL("INSERT OR IGNORE INTO materials(name,unit,qty,value) VALUES(?,?,0,0)",new Object[]{item[0],item[1]});d.setTransactionSuccessful();}finally{d.endTransaction();}}
         void createMaterial(String name,String unit,long qty,long unitPrice){if(name==null||name.trim().isEmpty()||unit==null||unit.trim().isEmpty()||qty<0||unitPrice<0||(qty>0&&unitPrice<=0))throw new IllegalArgumentException("بيانات الخامة غير صحيحة");SQLiteDatabase d=w();d.beginTransaction();try{Cursor exists=d.rawQuery("SELECT COUNT(*) FROM materials WHERE name=?",new String[]{name.trim()});exists.moveToFirst();boolean duplicate=exists.getLong(0)>0;exists.close();if(duplicate)throw new IllegalArgumentException("الخامة موجودة بالفعل؛ استخدم فاتورة وارد لإضافة كمية جديدة");long value=java.math.BigDecimal.valueOf(qty).multiply(java.math.BigDecimal.valueOf(unitPrice)).divide(java.math.BigDecimal.valueOf(1000),0,java.math.RoundingMode.HALF_UP).longValueExact();ContentValues v=new ContentValues();v.put("name",name.trim());v.put("unit",unit.trim());v.put("qty",qty);v.put("value",value);long id=d.insertOrThrow("materials",null,v);if(qty>0)d.execSQL("INSERT INTO movements(kind,item_id,qty,value,ref,date) VALUES('RAW_OPENING',?,?,?,'opening-stock',date('now'))",new Object[]{id,qty,value});d.execSQL("INSERT INTO audit(action,detail,date) VALUES('MATERIAL_CREATED',?,date('now'))",new Object[]{name+":"+unit+":"+qty+":"+unitPrice});d.setTransactionSuccessful();}finally{d.endTransaction();}}
         void exec(String sql,String[] args){w().execSQL(sql,args);}
