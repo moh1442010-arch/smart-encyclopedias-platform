@@ -806,22 +806,47 @@ public class MainActivity extends Activity {
         row.addView(tile,lp);
     }
 
+    /**
+     * Screen-specific navigation tile. Each operational module gets its own
+     * visible icon and direct action; no generic legacy menu is inserted.
+     */
     private void addCard(String title, String description, Runnable action) {
+        int firstCodePoint=title.codePointAt(0);
+        String icon=title.substring(0,Character.charCount(firstCodePoint));
+        String caption=title.substring(Character.charCount(firstCodePoint)).trim();
         LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(16,14,16,14);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setLayoutDirection(AppLanguage.isEnglish(this)?View.LAYOUT_DIRECTION_LTR:View.LAYOUT_DIRECTION_RTL);
+        card.setPadding(12,12,12,12);
         card.setBackground(rounded(Color.WHITE,18));
         card.setElevation(3f);
-        TextView h = text(title,18);
+
+        TextView emblem=text(icon,30);
+        emblem.setGravity(Gravity.CENTER);
+        emblem.setTextColor(NAVY);
+        emblem.setBackground(rounded(Color.rgb(239,243,248),14));
+        LinearLayout.LayoutParams emblemLp=new LinearLayout.LayoutParams(64,64);
+        emblemLp.setMargins(2,2,10,2);
+        card.addView(emblem,emblemLp);
+
+        LinearLayout details=new LinearLayout(this);
+        details.setOrientation(LinearLayout.VERTICAL);
+        TextView h=text(caption,16);
         h.setTextColor(NAVY);
         h.setTypeface(null,1);
-        card.addView(h);
-        TextView desc = text(description,14);
+        details.addView(h);
+        TextView desc=text(description,12);
         desc.setTextColor(Color.rgb(78,89,105));
-        card.addView(desc);
-        Button open = button("فتح القسم  ←");
+        details.addView(desc);
+        Button open=button("فتح الشاشة  ←");
         open.setOnClickListener(v->action.run());
-        card.addView(open);
+        details.addView(open);
+        card.addView(details,new LinearLayout.LayoutParams(0,-2,1f));
+
+        card.setFocusable(true);
+        card.setClickable(true);
+        card.setOnClickListener(v->action.run());
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1,-2);
         lp.setMargins(0,7,0,7);
         content.addView(card,lp);
