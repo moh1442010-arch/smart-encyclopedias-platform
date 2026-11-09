@@ -144,6 +144,59 @@ final class GeneralLedger {
         }
     }
 
+    /**
+     * Posts a full reversing journal without deleting or hiding the original posted entry.
+     * The stable source/idempotency key makes retries safe if the process stops after posting
+     * but before the reversal_of link is persisted.
+     */
+    static Result reverse(SQLiteDatabase db,String originalReference,String reversalDate,String actor) {
+        if(blank(originalReference)||!validDate(reversalDate))
+            throw new IllegalArgumentException("مرجع القيد وتاريخ العكس مطلوبان");
+        long originalId;
+        String description,sourceType,sourceId;
+        Cursor head=db.rawQuery("SELECT id,description,source_type,source_id,reversal_of FROM gl_journal_entries WHERE entry_ref=? AND status='POSTED'",
+            new String[]{originalReference});
+        try {
+            if(!head.moveToFirst())throw new IllegalArgumentException("القيد الأصلي غير موجود أو غير مرحل");
+            originalId=head.getLong(0);description=head.getString(1);
+            sourceType=head.getString(2);sourceId=head.getString(3);
+            if(!head.isNull(4))throw new IllegalArgumentException("لا يمكن عكس قيد عكسي");
+        } finally {head.close();}
+        Cursor prior=db.rawQuery("SELECT entry_ref FROM gl_journal_entries WHERE source_type='REVERSAL' AND source_id=? AND status='POSTED'",
+            new String[]{originalReference});
+        try {
+            if(prior.moveToFirst()) {
+                String priorRef=prior.getString(0);
+                if(prior.moveToNext())throw new IllegalStateException("يوجد أكثر من قيد عكسي للقيد الأصلي");
+                return new Result(priorRef,true);
+            }
+        } finally {prior.close();}
+        List<Line> reversedLines=new ArrayList<>();
+        Cursor rows=db.rawQuery("SELECT a.account_code,b.branch_code,l.transaction_currency_code,"+
+            "l.transaction_debit_minor,l.transaction_credit_minor,l.fx_rate_num,l.fx_rate_den "+
+            "FROM gl_journal_lines l JOIN chart_of_accounts a ON a.id=l.account_id "+
+            "JOIN branches b ON b.id=l.branch_id WHERE l.entry_id=? ORDER BY l.id",
+            new String[]{String.valueOf(originalId)});
+        try {
+            while(rows.moveToNext()) reversedLines.add(new Line(rows.getString(0),rows.getString(1),rows.getString(2),
+                rows.getLong(4),rows.getLong(3),rows.getLong(5),rows.getLong(6)));
+        } finally {rows.close();}
+        if(reversedLines.size()<2)throw new IllegalStateException("القيد الأصلي لا يحتوي على سطور قابلة للعكس");
+        String reversalReference="REV-"+originalReference;
+        Entry reversal=new Entry(reversalReference,"عكس القيد "+originalReference+" — "+description,
+            reversalDate,"REVERSAL",originalReference,"reverse:"+originalReference,actor,reversedLines);
+        Result result=post(db,reversal);
+        db.beginTransaction();
+        try {
+            long reversalId=requiredId(db,"SELECT id FROM gl_journal_entries WHERE entry_ref=? AND status='POSTED'",
+                reversalReference,"القيد العكسي غير موجود بعد الترحيل");
+            ContentValues link=new ContentValues();link.put("reversal_of",originalId);
+            db.update("gl_journal_entries",link,"id=?",new String[]{String.valueOf(reversalId)});
+            db.setTransactionSuccessful();
+        } finally {db.endTransaction();}
+        return result;
+    }
+
     static boolean samePostingPayload(Entry a,Entry b) {
         if(a==null||b==null||!eq(a.reference,b.reference)||!eq(a.description,b.description)||
            !eq(a.date,b.date)||!eq(a.sourceType,b.sourceType)||!eq(a.sourceId,b.sourceId)||
