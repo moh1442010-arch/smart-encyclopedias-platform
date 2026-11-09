@@ -143,6 +143,8 @@ jobs:
           grep -Fq 'DEAD_LETTER' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
           test -s bakery-app/app/src/test/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxTest.java
           test -s bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxInstrumentedTest.java
+          grep -Fq 'assertEquals(10,snapshot.getInt("schema_version"))' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryBackupRestoreTest.java
+          grep -Fq 'factory_gl_outbox_lines' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryBackupRestoreTest.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS sales_returns' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS work_orders' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS journal_entries' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
