@@ -199,6 +199,7 @@ public class FactoryLedgerActivity extends Activity {
     private void glBridge(){
         frame("ربط دفتر المصنع بالأستاذ العام");
         body.addView(label("تُحفظ قيود المصنع أولاً في Outbox داخل معاملة القيد الأصلي. لا ينتقل أي قيد قبل ربط كل حساب مصدر صراحةً بحساب نشط في الأستاذ العام، مع تحديد الفرع والعملة. لا توجد مطابقة تلقائية بأسماء العرض.",14));
+        body.addView(label("معدل التحويل = البسط ÷ المقام، بوحدة عملة الأساس مقابل وحدة واحدة من SDG. لا تستخدم قيمة تقديرية.",12));
         EditText source=field("اسم الحساب كما يظهر حرفياً في دفتر المصنع",false);
         EditText target=field("كود الحساب في الأستاذ العام",false);
         EditText branch=field("كود الفرع",false);branch.setText("MAIN");
