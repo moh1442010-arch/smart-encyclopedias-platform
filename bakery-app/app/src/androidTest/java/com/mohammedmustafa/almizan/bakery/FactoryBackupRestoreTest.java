@@ -45,7 +45,8 @@ public class FactoryBackupRestoreTest {
         } finally { db.close(); }
 
         JSONObject snapshot=FactoryBackup.export(context);
-        assertEquals(11,snapshot.getInt("schema_version"));
+        assertEquals(13,snapshot.getInt("schema_version"));
+        assertEquals(1,snapshot.getJSONObject("tables").getJSONArray("factory_gl_outbox").getJSONObject(0).getInt("payload_version"));
         assertEquals(1,snapshot.getJSONObject("tables").getJSONArray("factory_gl_outbox").length());
         assertEquals(2,snapshot.getJSONObject("tables").getJSONArray("factory_gl_outbox_lines").length());
         FactoryBackup.validate(snapshot);
