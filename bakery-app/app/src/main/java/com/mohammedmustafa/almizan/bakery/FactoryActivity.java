@@ -367,30 +367,59 @@ public class FactoryActivity extends Activity {
             d.execSQL("CREATE TABLE journal_lines(id INTEGER PRIMARY KEY,entry_id INTEGER NOT NULL,account TEXT NOT NULL,debit INTEGER NOT NULL DEFAULT 0,credit INTEGER NOT NULL DEFAULT 0)");
             d.execSQL("CREATE TABLE work_order_stages(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,stage_no INTEGER NOT NULL,output_qty INTEGER NOT NULL,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL,overhead INTEGER NOT NULL,total_cost INTEGER NOT NULL,date TEXT,UNIQUE(work_order_id,stage_no))");
             FactoryGlOutbox.ensureSchema(d);
-            d.setVersion(12);
         }
-        public void onUpgrade(SQLiteDatabase d,int old,int now){if(old<2){d.execSQL("ALTER TABLE batches ADD COLUMN batch_ref TEXT");d.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_factory_batch_ref ON batches(batch_ref)");d.execSQL("CREATE TABLE IF NOT EXISTS collections(id INTEGER PRIMARY KEY,customer TEXT,cash INTEGER NOT NULL,bank INTEGER NOT NULL,bank_ref TEXT,date TEXT)");d.execSQL("CREATE TABLE IF NOT EXISTS cashbook(id INTEGER PRIMARY KEY,account TEXT,kind TEXT,amount INTEGER NOT NULL,ref TEXT,date TEXT)");}if(old<3)d.execSQL("ALTER TABLE sales ADD COLUMN channel TEXT NOT NULL DEFAULT 'التوزيع'");if(old<4){d.execSQL("ALTER TABLE products ADD COLUMN category TEXT NOT NULL DEFAULT 'منتج إضافي'");d.execSQL("ALTER TABLE products ADD COLUMN unit_price INTEGER NOT NULL DEFAULT 0");d.execSQL("CREATE TABLE IF NOT EXISTS daily_usage(id INTEGER PRIMARY KEY,date TEXT,material_id INTEGER,qty INTEGER,cost INTEGER,note TEXT,kind TEXT NOT NULL DEFAULT 'MANUAL')");}if(old<5){d.execSQL("CREATE TABLE IF NOT EXISTS sales_returns(id INTEGER PRIMARY KEY,sale_id INTEGER NOT NULL,product_id INTEGER NOT NULL,qty INTEGER NOT NULL,refund_value INTEGER NOT NULL,refund_cash INTEGER NOT NULL,refund_bank INTEGER NOT NULL,credit_adjustment INTEGER NOT NULL,restored_cogs INTEGER NOT NULL,bank_ref TEXT,reason TEXT,date TEXT)");d.execSQL("CREATE TABLE IF NOT EXISTS work_orders(id INTEGER PRIMARY KEY,work_ref TEXT UNIQUE,product_id INTEGER NOT NULL,batches INTEGER NOT NULL,planned_qty INTEGER NOT NULL,actual_qty INTEGER NOT NULL DEFAULT 0,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL DEFAULT 0,overhead INTEGER NOT NULL DEFAULT 0,total_cost INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL,date TEXT)");d.execSQL("CREATE TABLE IF NOT EXISTS work_order_materials(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,material_id INTEGER NOT NULL,qty INTEGER NOT NULL,cost INTEGER NOT NULL)");d.execSQL("CREATE TABLE IF NOT EXISTS journal_entries(id INTEGER PRIMARY KEY,entry_ref TEXT UNIQUE,description TEXT,status TEXT NOT NULL,reversal_of INTEGER,date TEXT)");d.execSQL("CREATE TABLE IF NOT EXISTS journal_lines(id INTEGER PRIMARY KEY,entry_id INTEGER NOT NULL,account TEXT NOT NULL,debit INTEGER NOT NULL DEFAULT 0,credit INTEGER NOT NULL DEFAULT 0)");}if(old<6)d.execSQL("CREATE TABLE IF NOT EXISTS work_order_stages(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,stage_no INTEGER NOT NULL,output_qty INTEGER NOT NULL,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL,overhead INTEGER NOT NULL,total_cost INTEGER NOT NULL,date TEXT,UNIQUE(work_order_id,stage_no))");if(old<7){try{d.execSQL("ALTER TABLE sales ADD COLUMN customer_master_id INTEGER NOT NULL DEFAULT 0");}catch(Exception ignored){}try{d.execSQL("ALTER TABLE collections ADD COLUMN customer_master_id INTEGER NOT NULL DEFAULT 0");}catch(Exception ignored){}}if(old<8){try{d.execSQL("ALTER TABLE movements ADD COLUMN supplier_master_id INTEGER NOT NULL DEFAULT 0");}catch(Exception ignored){}d.execSQL("CREATE TABLE IF NOT EXISTS supplier_purchase_records(id INTEGER PRIMARY KEY,supplier_master_id INTEGER NOT NULL,supplier_name TEXT NOT NULL,item_name TEXT NOT NULL,quantity_milli INTEGER NOT NULL,invoice_total INTEGER NOT NULL,paid_cash INTEGER NOT NULL,paid_bank INTEGER NOT NULL,bank_ref TEXT NOT NULL DEFAULT '',debt INTEGER NOT NULL,currency_code TEXT NOT NULL DEFAULT 'SDG',date TEXT NOT NULL)");}if(old<9)d.execSQL("CREATE TABLE IF NOT EXISTS supplier_payment_records(id INTEGER PRIMARY KEY,supplier_master_id INTEGER NOT NULL,supplier_name TEXT NOT NULL,cash INTEGER NOT NULL,bank INTEGER NOT NULL,bank_ref TEXT NOT NULL DEFAULT '',date TEXT NOT NULL)");if(old<10)d.execSQL("ALTER TABLE products ADD COLUMN unit TEXT NOT NULL DEFAULT 'قطعة'");if(old<11){
-            d.execSQL("CREATE TABLE IF NOT EXISTS factory_customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,phone TEXT NOT NULL DEFAULT '',iban TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
-            d.execSQL("CREATE TABLE IF NOT EXISTS factory_suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,phone TEXT NOT NULL DEFAULT '',iban TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
-            d.execSQL("CREATE INDEX IF NOT EXISTS idx_factory_customers_phone ON factory_customers(phone)");
-            d.execSQL("CREATE INDEX IF NOT EXISTS idx_factory_suppliers_phone ON factory_suppliers(phone)");
-            d.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_factory_customers_phone_unique ON factory_customers(phone) WHERE phone<>''");
-            d.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_factory_suppliers_phone_unique ON factory_suppliers(phone) WHERE phone<>''");
-            d.execSQL("INSERT OR IGNORE INTO factory_customers(name) SELECT DISTINCT TRIM(customer) FROM sales WHERE customer IS NOT NULL AND TRIM(customer)<>''");
-            d.execSQL("INSERT OR IGNORE INTO factory_customers(name) SELECT DISTINCT TRIM(customer) FROM collections WHERE customer IS NOT NULL AND TRIM(customer)<>''");
-            d.execSQL("UPDATE sales SET customer_master_id=COALESCE((SELECT id FROM factory_customers p WHERE p.name=TRIM(sales.customer)),0)");
-            d.execSQL("UPDATE collections SET customer_master_id=COALESCE((SELECT id FROM factory_customers p WHERE p.name=TRIM(collections.customer)),0)");
-            d.execSQL("INSERT OR IGNORE INTO factory_suppliers(name) SELECT DISTINCT TRIM(supplier_name) FROM supplier_purchase_records WHERE supplier_name IS NOT NULL AND TRIM(supplier_name)<>''");
-            d.execSQL("INSERT OR IGNORE INTO factory_suppliers(name) SELECT DISTINCT TRIM(supplier_name) FROM supplier_payment_records WHERE supplier_name IS NOT NULL AND TRIM(supplier_name)<>''");
-            d.execSQL("UPDATE supplier_purchase_records SET supplier_master_id=COALESCE((SELECT id FROM factory_suppliers p WHERE p.name=TRIM(supplier_purchase_records.supplier_name)),0)");
-            d.execSQL("UPDATE supplier_payment_records SET supplier_master_id=COALESCE((SELECT id FROM factory_suppliers p WHERE p.name=TRIM(supplier_payment_records.supplier_name)),0)");
-            d.execSQL("UPDATE movements SET supplier_master_id=0");
-            d.execSQL("UPDATE movements SET ref=COALESCE((SELECT sp.supplier_name FROM supplier_purchase_records sp WHERE substr(movements.ref,1,length(sp.supplier_name)+1)=sp.supplier_name||':' ORDER BY length(sp.supplier_name) DESC LIMIT 1),ref) WHERE kind='RAW_IN' AND instr(ref,':')>0");
-            d.execSQL("UPDATE movements SET supplier_master_id=COALESCE((SELECT id FROM factory_suppliers p WHERE p.name=movements.ref),0) WHERE kind='RAW_IN'");
+        public void onUpgrade(SQLiteDatabase d,int old,int now) {
+            if(old<2) {
+                d.execSQL("ALTER TABLE batches ADD COLUMN batch_ref TEXT");
+                d.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_factory_batch_ref ON batches(batch_ref)");
+                d.execSQL("CREATE TABLE IF NOT EXISTS collections(id INTEGER PRIMARY KEY,customer TEXT,cash INTEGER NOT NULL,bank INTEGER NOT NULL,bank_ref TEXT,date TEXT)");
+                d.execSQL("CREATE TABLE IF NOT EXISTS cashbook(id INTEGER PRIMARY KEY,account TEXT,kind TEXT,amount INTEGER NOT NULL,ref TEXT,date TEXT)");
+            }
+            if(old<3) d.execSQL("ALTER TABLE sales ADD COLUMN channel TEXT NOT NULL DEFAULT 'التوزيع'");
+            if(old<4) {
+                d.execSQL("ALTER TABLE products ADD COLUMN category TEXT NOT NULL DEFAULT 'منتج إضافي'");
+                d.execSQL("ALTER TABLE products ADD COLUMN unit_price INTEGER NOT NULL DEFAULT 0");
+                d.execSQL("CREATE TABLE IF NOT EXISTS daily_usage(id INTEGER PRIMARY KEY,date TEXT,material_id INTEGER,qty INTEGER,cost INTEGER,note TEXT,kind TEXT NOT NULL DEFAULT 'MANUAL')");
+            }
+            if(old<5) {
+                d.execSQL("CREATE TABLE IF NOT EXISTS sales_returns(id INTEGER PRIMARY KEY,sale_id INTEGER NOT NULL,product_id INTEGER NOT NULL,qty INTEGER NOT NULL,refund_value INTEGER NOT NULL,refund_cash INTEGER NOT NULL,refund_bank INTEGER NOT NULL,credit_adjustment INTEGER NOT NULL,restored_cogs INTEGER NOT NULL,bank_ref TEXT,reason TEXT,date TEXT)");
+                d.execSQL("CREATE TABLE IF NOT EXISTS work_orders(id INTEGER PRIMARY KEY,work_ref TEXT UNIQUE,product_id INTEGER NOT NULL,batches INTEGER NOT NULL,planned_qty INTEGER NOT NULL,actual_qty INTEGER NOT NULL DEFAULT 0,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL DEFAULT 0,overhead INTEGER NOT NULL DEFAULT 0,total_cost INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL,date TEXT)");
+                d.execSQL("CREATE TABLE IF NOT EXISTS work_order_materials(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,material_id INTEGER NOT NULL,qty INTEGER NOT NULL,cost INTEGER NOT NULL)");
+                d.execSQL("CREATE TABLE IF NOT EXISTS journal_entries(id INTEGER PRIMARY KEY,entry_ref TEXT UNIQUE,description TEXT,status TEXT NOT NULL,reversal_of INTEGER,date TEXT)");
+                d.execSQL("CREATE TABLE IF NOT EXISTS journal_lines(id INTEGER PRIMARY KEY,entry_id INTEGER NOT NULL,account TEXT NOT NULL,debit INTEGER NOT NULL DEFAULT 0,credit INTEGER NOT NULL DEFAULT 0)");
+            }
+            if(old<6) d.execSQL("CREATE TABLE IF NOT EXISTS work_order_stages(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,stage_no INTEGER NOT NULL,output_qty INTEGER NOT NULL,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL,overhead INTEGER NOT NULL,total_cost INTEGER NOT NULL,date TEXT,UNIQUE(work_order_id,stage_no))");
+            if(old<7) {
+                try { d.execSQL("ALTER TABLE sales ADD COLUMN customer_master_id INTEGER NOT NULL DEFAULT 0"); } catch(Exception ignored) {}
+                try { d.execSQL("ALTER TABLE collections ADD COLUMN customer_master_id INTEGER NOT NULL DEFAULT 0"); } catch(Exception ignored) {}
+            }
+            if(old<8) {
+                try { d.execSQL("ALTER TABLE movements ADD COLUMN supplier_master_id INTEGER NOT NULL DEFAULT 0"); } catch(Exception ignored) {}
+                d.execSQL("CREATE TABLE IF NOT EXISTS supplier_purchase_records(id INTEGER PRIMARY KEY,supplier_master_id INTEGER NOT NULL,supplier_name TEXT NOT NULL,item_name TEXT NOT NULL,quantity_milli INTEGER NOT NULL,invoice_total INTEGER NOT NULL,paid_cash INTEGER NOT NULL,paid_bank INTEGER NOT NULL,bank_ref TEXT NOT NULL DEFAULT '',debt INTEGER NOT NULL,currency_code TEXT NOT NULL DEFAULT 'SDG',date TEXT NOT NULL)");
+            }
+            if(old<9) d.execSQL("CREATE TABLE IF NOT EXISTS supplier_payment_records(id INTEGER PRIMARY KEY,supplier_master_id INTEGER NOT NULL,supplier_name TEXT NOT NULL,cash INTEGER NOT NULL,bank INTEGER NOT NULL,bank_ref TEXT NOT NULL DEFAULT '',date TEXT NOT NULL)");
+            if(old<10) d.execSQL("ALTER TABLE products ADD COLUMN unit TEXT NOT NULL DEFAULT 'قطعة'");
+            if(old<11) {
+                d.execSQL("CREATE TABLE IF NOT EXISTS factory_customers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,phone TEXT NOT NULL DEFAULT '',iban TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+                d.execSQL("CREATE TABLE IF NOT EXISTS factory_suppliers(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL UNIQUE,phone TEXT NOT NULL DEFAULT '',iban TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+                d.execSQL("CREATE INDEX IF NOT EXISTS idx_factory_customers_phone ON factory_customers(phone)");
+                d.execSQL("CREATE INDEX IF NOT EXISTS idx_factory_suppliers_phone ON factory_suppliers(phone)");
+                d.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_factory_customers_phone_unique ON factory_customers(phone) WHERE phone<>''");
+                d.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_factory_suppliers_phone_unique ON factory_suppliers(phone) WHERE phone<>''");
+                d.execSQL("INSERT OR IGNORE INTO factory_customers(name) SELECT DISTINCT TRIM(customer) FROM sales WHERE customer IS NOT NULL AND TRIM(customer)<>''");
+                d.execSQL("INSERT OR IGNORE INTO factory_customers(name) SELECT DISTINCT TRIM(customer) FROM collections WHERE customer IS NOT NULL AND TRIM(customer)<>''");
+                d.execSQL("UPDATE sales SET customer_master_id=COALESCE((SELECT id FROM factory_customers p WHERE p.name=TRIM(sales.customer)),0)");
+                d.execSQL("UPDATE collections SET customer_master_id=COALESCE((SELECT id FROM factory_customers p WHERE p.name=TRIM(collections.customer)),0)");
+                d.execSQL("INSERT OR IGNORE INTO factory_suppliers(name) SELECT DISTINCT TRIM(supplier_name) FROM supplier_purchase_records WHERE supplier_name IS NOT NULL AND TRIM(supplier_name)<>''");
+                d.execSQL("INSERT OR IGNORE INTO factory_suppliers(name) SELECT DISTINCT TRIM(supplier_name) FROM supplier_payment_records WHERE supplier_name IS NOT NULL AND TRIM(supplier_name)<>''");
+                d.execSQL("UPDATE supplier_purchase_records SET supplier_master_id=COALESCE((SELECT id FROM factory_suppliers p WHERE p.name=TRIM(supplier_purchase_records.supplier_name)),0)");
+                d.execSQL("UPDATE supplier_payment_records SET supplier_master_id=COALESCE((SELECT id FROM factory_suppliers p WHERE p.name=TRIM(supplier_payment_records.supplier_name)),0)");
+                d.execSQL("UPDATE movements SET supplier_master_id=0");
+                d.execSQL("UPDATE movements SET ref=COALESCE((SELECT sp.supplier_name FROM supplier_purchase_records sp WHERE substr(movements.ref,1,length(sp.supplier_name)+1)=sp.supplier_name||':' ORDER BY length(sp.supplier_name) DESC LIMIT 1),ref) WHERE kind='RAW_IN' AND instr(ref,':')>0");
+                d.execSQL("UPDATE movements SET supplier_master_id=COALESCE((SELECT id FROM factory_suppliers p WHERE p.name=movements.ref),0) WHERE kind='RAW_IN'");
+            }
+            if(old<13) FactoryGlOutbox.ensureSchema(d);
         }
-        d.setVersion(11);}
-        if(old<13)FactoryGlOutbox.ensureSchema(d);
-        d.setVersion(13);}
         void seedProducts(String[][] items){SQLiteDatabase d=w();d.beginTransaction();try{for(String[] item:items)d.execSQL("INSERT OR IGNORE INTO products(name,category,unit_price) VALUES(?,?,0)",new Object[]{item[0],item[1]});d.setTransactionSuccessful();}finally{d.endTransaction();}}
         void saveProduct(String name,String category,long price){if(name==null||name.trim().isEmpty()||price<0)throw new IllegalArgumentException("بيانات المنتج غير صحيحة");Cursor c=getReadableDatabase().rawQuery("SELECT unit FROM products WHERE name=?",new String[]{name.trim()});String existing=c.moveToFirst()?c.getString(0):"قطعة";c.close();saveProduct(name,category,price,existing);}
         void saveProduct(String name,String category,long price,String unit){if(name==null||name.trim().isEmpty()||unit==null||unit.trim().isEmpty()||price<0)throw new IllegalArgumentException("بيانات المنتج غير صحيحة");SQLiteDatabase d=w();d.beginTransaction();try{Cursor c=d.rawQuery("SELECT id FROM products WHERE name=?",new String[]{name.trim()});long id=c.moveToFirst()?c.getLong(0):0;c.close();ContentValues v=new ContentValues();v.put("category",category);v.put("unit_price",price);v.put("unit",unit.trim());if(id==0){v.put("name",name.trim());d.insertOrThrow("products",null,v);}else d.update("products",v,"id=?",new String[]{""+id});d.execSQL("INSERT INTO audit(action,detail,date) VALUES('PRODUCT_SAVED',?,date('now'))",new Object[]{name+":"+price+":"+unit});d.setTransactionSuccessful();}finally{d.endTransaction();}}
