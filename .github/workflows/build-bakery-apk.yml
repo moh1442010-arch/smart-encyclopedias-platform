@@ -67,6 +67,7 @@ jobs:
           const app = fs.readFileSync('bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java', 'utf8');
           const worker = fs.readFileSync('licensing/worker/src/index.js', 'utf8');
           const workerConfig = fs.readFileSync('licensing/worker/wrangler.toml', 'utf8');
+          const licenseSchema = fs.readFileSync('licensing/schema.sql', 'utf8');
           const licenseGate = fs.readFileSync('bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java', 'utf8');
           const appKey = licenseGate.match(/"([A-Za-z0-9+/=]{100,})"/)?.[1];
           const workerKey = worker.match(/EXPECTED_APP_PUBLIC_KEY_DER_B64 = "([^"]+)"/)?.[1];
@@ -84,14 +85,16 @@ jobs:
           if (!app.includes("return new long[]{55000,550000,1050000}")) throw new Error("App SDG license prices mismatch.");
           if (!app.includes("return new long[]{29,290,725}")) throw new Error("App SAR/AED license prices mismatch.");
           if (!app.includes("return new long[]{8,80,199}")) throw new Error("App USD license prices mismatch.");
-          for (const [currency, expected] of Object.entries({
-            SDG: "monthly: 55000, annual: 550000, lifetime: 1050000",
-            SAR: "monthly: 29, annual: 290, lifetime: 725",
-            AED: "monthly: 29, annual: 290, lifetime: 725",
-            USD: "monthly: 8, annual: 80, lifetime: 199"
-          })) {
-            if (!worker.includes(currency + ": { " + expected)) throw new Error(`Licensing service price mismatch for ${currency}`);
+          for (const row of [
+            "('SDG','monthly',55000", "('SDG','annual',550000", "('SDG','lifetime',1050000",
+            "('SAR','monthly',29", "('SAR','annual',290", "('SAR','lifetime',725",
+            "('AED','monthly',29", "('AED','annual',290", "('AED','lifetime',725",
+            "('USD','monthly',8", "('USD','annual',80", "('USD','lifetime',199"
+          ]) {
+            if (!licenseSchema.includes(row)) throw new Error(`D1 licensing price catalog is missing approved row ${row}`);
           }
+          if (!worker.includes("FROM license_price_catalog")) throw new Error("Worker must read license prices from D1.");
+          if (!worker.includes("CURRENCY_NOT_ALLOWED_FOR_COUNTRY")) throw new Error("Server country/currency policy is missing.");
           console.log("Release identity and all approved SDG/SAR/AED/USD license prices verified.");
           NODE
 
