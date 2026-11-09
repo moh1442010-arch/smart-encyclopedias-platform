@@ -104,6 +104,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        AppUpdatePolicy.check(this);
         entitlementHandler.removeCallbacks(entitlementWatchdog);
         entitlementHandler.post(entitlementWatchdog);
     }
@@ -123,6 +124,7 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        AppUpdatePolicy.enforceCached(this);
         day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
         // Check entitlement before opening the operational database.
         if (!LicenseAccessGate.isAccessAllowed(this)) {
