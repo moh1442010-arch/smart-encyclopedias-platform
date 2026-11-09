@@ -68,6 +68,22 @@ final class TaxJurisdictionProfiles {
         seedReview(db,"HK","هونغ كونغ","Hong Kong","HKD");
         seedReview(db,"KR","كوريا الجنوبية","South Korea","KRW");
         seedReview(db,"TH","تايلاند","Thailand","THB");
+        // Reference-only rates for Arab jurisdictions not yet approved for automatic posting.
+        // These records remain inactive until local product exemptions, registration and invoicing rules are verified.
+        seedReference(db,"DZ","VAT","VAT_STANDARD","النسبة العامة المرجعية لضريبة القيمة المضافة",19,100,"2026-01-01","https://www.imf.org/en/Publications/Books/Issues/2026/04/16/Taxing-in-the-MENA-Region");
+        seedReference(db,"JO","GENERAL_SALES_TAX","GST_STANDARD","ضريبة المبيعات العامة المرجعية — بعض الأغذية والخبز معفاة",16,100,"2026-01-01","https://taxsummaries.pwc.com/jordan/corporate/other-taxes");
+        seedReference(db,"LB","VAT","VAT_STANDARD","نسبة مرجعية 11%؛ توجد صفحة حكومية منشورة بنسبة 10% لذلك يلزم حسم آخر تعديل تشريعي قبل التفعيل",11,100,"2026-01-01","https://taxsummaries.pwc.com/lebanon/corporate/other-taxes");
+        seedReference(db,"MA","VAT","VAT_STANDARD","النسبة العامة المرجعية 20% مع معدلات مخفضة وإعفاءات حسب السلعة والخدمة",20,100,"2026-01-01","https://taxsummaries.pwc.com/morocco/corporate/significant-developments");
+        seedReference(db,"TN","VAT","VAT_STANDARD","النسبة العامة المرجعية 19% مع معدلات مخفضة",19,100,"2026-01-01","https://www.imf.org/en/Publications/Books/Issues/2026/04/16/Taxing-in-the-MENA-Region");
+        seedReference(db,"MR","VAT","VAT_STANDARD","النسبة العامة المرجعية 16%",16,100,"2026-01-01","https://taxsummaries.pwc.com/quick-charts/value-added-tax-vat-rates");
+        seedReference(db,"DJ","VAT","VAT_STANDARD","النسبة العامة المرجعية 10%",10,100,"2026-01-01","https://www.imf.org/en/Publications/Books/Issues/2026/04/16/Taxing-in-the-MENA-Region");
+        seedReference(db,"KM","CONSUMPTION_TAX","CT_STANDARD","ضريبة استهلاك مرجعية 10% وليست VAT؛ يلزم التحقق من نطاق السلع",10,100,"2026-01-01","https://www.ehsebly.app/tools/vat-calculator?lang=en");
+        markLocalTaxOnly(db,"IQ","SELECTIVE_SALES_TAX","العراق: ضرائب مبيعات انتقائية على قطاعات وسلع محددة؛ لا توجد نسبة VAT عامة موحدة.");
+        markLocalTaxOnly(db,"LY","SELECTIVE_SALES_TAX","ليبيا: لا تعتمد نسبة VAT عامة في هذا الملف؛ توجد رسوم وضرائب قطاعية ويجب التحقق من التشريعات السارية.");
+        markLocalTaxOnly(db,"YE","SELECTIVE_SALES_TAX","اليمن: ضرائب مبيعات انتقائية ورسوم قطاعية؛ لا تعامل كضريبة VAT عامة.");
+        markLocalTaxOnly(db,"SY","CONSUMPTION_TAX","سوريا: توجد رسوم وضرائب استهلاك؛ يلزم توثيق النظام الساري ومعدلاته حسب السلعة.");
+        markLocalTaxOnly(db,"SO","LOCAL_SALES_TAX","الصومال: تختلف الضرائب والرسوم بحسب المستوى الاتحادي والولاية؛ لا توجد نسبة VAT موحدة معتمدة هنا.");
+        markLocalTaxOnly(db,"PS","VAT","فلسطين: توجد ضريبة قيمة مضافة؛ يجب تأكيد النسبة والمعاملة حسب المنطقة والتوريد قبل التفعيل.");
         db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='AED 375000 mandatory; AED 187500 voluntary' WHERE country_code='AE'");
         db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='SAR 375000 mandatory; SAR 187500 voluntary' WHERE country_code='SA'");
         db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='EGP 500000 mandatory' WHERE country_code='EG'");
@@ -98,6 +114,18 @@ final class TaxJurisdictionProfiles {
             "('OM','VAT_STANDARD','Standard VAT',5,100,0,'Zero-rated and exempt supplies','2021-04-16',1),"+
             "('KE','VAT_STANDARD','General VAT',16,100,0,'Zero-rated and exempt supplies','2013-09-02',1),"+
             "('ZA','VAT_STANDARD','Standard VAT',15,100,0,'Zero-rated and exempt supplies','2018-04-01',1)");
+    }
+
+    private static void seedReference(SQLiteDatabase db,String country,String type,String taxCode,String name,int rateNum,int rateDen,String effective,String source) {
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET indirect_tax_type=?,profile_status='REVIEW_REQUIRED',notes=?,source_url=?,verified_on='2026-11-09',profile_version=profile_version+1 WHERE country_code=?",
+            new Object[]{type,name,source,country});
+        db.execSQL("INSERT OR IGNORE INTO tax_rules(country_code,tax_code,name,rate_num,rate_den,inclusive,exempt_category,effective_from,active) VALUES(?,?,?,?,?,0,?,?,0)",
+            new Object[]{country,taxCode,name,rateNum,rateDen,"راجع الاستثناءات والتصنيفات المحلية قبل التفعيل",effective});
+    }
+
+    private static void markLocalTaxOnly(SQLiteDatabase db,String country,String type,String notes) {
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET indirect_tax_type=?,profile_status='REVIEW_REQUIRED',notes=?,verified_on='2026-11-09',profile_version=profile_version+1 WHERE country_code=?",
+            new Object[]{type,notes,country});
     }
 
     private static void seedReview(SQLiteDatabase db,String code,String ar,String en,String currency) {
