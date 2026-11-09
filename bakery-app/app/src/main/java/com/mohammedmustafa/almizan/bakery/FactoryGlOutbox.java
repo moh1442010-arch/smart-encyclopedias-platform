@@ -386,6 +386,12 @@ final class FactoryGlOutbox {
         } finally {if(destination!=null&&destination.isOpen())destination.close();}
     }
 
+    static int makeRetriesDueNow(SQLiteDatabase source) {
+        ensureSchema(source);
+        ContentValues v=new ContentValues();v.put("next_attempt_at",0L);v.put("updated_at",System.currentTimeMillis());
+        return source.update("factory_gl_outbox",v,"status='RETRY'",null);
+    }
+
     static ProcessResult processPending(Context context,SQLiteDatabase source) {
         SQLiteDatabase destination=null;
         try {
