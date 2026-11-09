@@ -61,8 +61,8 @@ public class FactoryActivity extends Activity {
         finally{if(c!=null)c.close();}
     }
     @Override protected void attachBaseContext(Context newBase){super.attachBaseContext(AppLanguage.wrap(newBase));}
-    @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE|WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);if(!enforceEntitlement())return;db=new DB(this);db.seedMaterials(DEFAULT_MATERIALS);db.seedProducts(DEFAULT_PRODUCTS);home();}
-    @Override protected void onResume(){super.onResume();if(db!=null&&!enforceEntitlement())return;entitlementHandler.removeCallbacks(entitlementWatchdog);entitlementHandler.post(entitlementWatchdog);}
+    @Override public void onCreate(Bundle b){super.onCreate(b);AppUpdatePolicy.enforceCached(this);getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE|WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);if(!enforceEntitlement())return;db=new DB(this);db.seedMaterials(DEFAULT_MATERIALS);db.seedProducts(DEFAULT_PRODUCTS);home();}
+    @Override protected void onResume(){super.onResume();AppUpdatePolicy.check(this);if(db!=null&&!enforceEntitlement())return;entitlementHandler.removeCallbacks(entitlementWatchdog);entitlementHandler.post(entitlementWatchdog);}
     @Override protected void onPause(){entitlementHandler.removeCallbacks(entitlementWatchdog);super.onPause();}
     @Override protected void onDestroy(){entitlementHandler.removeCallbacks(entitlementWatchdog);if(db!=null){db.close();db=null;}super.onDestroy();}
     @Override public void onBackPressed(){if(!enforceEntitlement())return;if("home".equals(screen))super.onBackPressed();else home();}
