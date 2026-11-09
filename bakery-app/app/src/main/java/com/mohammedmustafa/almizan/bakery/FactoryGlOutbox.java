@@ -22,6 +22,22 @@ final class FactoryGlOutbox {
     private static final String SOURCE_TYPE = "FACTORY_LEDGER";
     private FactoryGlOutbox() {}
 
+    static final class ReconciliationReport {
+        final int sourceJournals,outboxEvents,posted,pending,processing,retry,deadLetter;
+        final int missingOutbox,missingDestination,orphanDestination,unacknowledgedDestination,amountMismatches;
+        ReconciliationReport(int sourceJournals,int outboxEvents,int posted,int pending,int processing,int retry,int deadLetter,
+                             int missingOutbox,int missingDestination,int orphanDestination,int unacknowledgedDestination,int amountMismatches) {
+            this.sourceJournals=sourceJournals;this.outboxEvents=outboxEvents;this.posted=posted;this.pending=pending;
+            this.processing=processing;this.retry=retry;this.deadLetter=deadLetter;this.missingOutbox=missingOutbox;
+            this.missingDestination=missingDestination;this.orphanDestination=orphanDestination;
+            this.unacknowledgedDestination=unacknowledgedDestination;this.amountMismatches=amountMismatches;
+        }
+        boolean clean() {
+            return missingOutbox==0&&pending==0&&processing==0&&retry==0&&deadLetter==0&&
+                missingDestination==0&&orphanDestination==0&&unacknowledgedDestination==0&&amountMismatches==0;
+        }
+    }
+
     static final class ProcessResult {
         final int posted, retried, deadLetter, skipped;
         ProcessResult(int posted, int retried, int deadLetter, int skipped) {
@@ -116,6 +132,53 @@ final class FactoryGlOutbox {
             v.put("source_account",line.sourceAccount);v.put("debit_minor",line.debit);v.put("credit_minor",line.credit);
             source.insertOrThrow("factory_gl_outbox_lines",null,v);
         }
+    }
+
+    static ReconciliationReport reconcile(SQLiteDatabase source,SQLiteDatabase destination) {
+        if(source==null||!source.isOpen()||destination==null||!destination.isOpen())
+            throw new IllegalStateException("قاعدتا المصنع والأستاذ العام مطلوبتان للمطابقة");
+        ensureSchema(source);EnterpriseSchema.ensure(destination);
+        int sourceCount=count(source,"SELECT COUNT(*) FROM journal_entries WHERE status='POSTED'");
+        int eventCount=count(source,"SELECT COUNT(*) FROM factory_gl_outbox");
+        int posted=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='POSTED'");
+        int pending=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='PENDING'");
+        int processing=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='PROCESSING'");
+        int retry=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='RETRY'");
+        int dead=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='DEAD_LETTER'");
+        int missingOutbox=count(source,"SELECT COUNT(*) FROM journal_entries j LEFT JOIN factory_gl_outbox o ON o.source_entry_id=j.id WHERE j.status='POSTED' AND o.id IS NULL");
+        int missingDestination=count(source,"SELECT COUNT(*) FROM factory_gl_outbox o LEFT JOIN gl_journal_entries g ON g.source_type='FACTORY_LEDGER' AND g.source_id=o.source_entry_ref AND g.status='POSTED' WHERE o.status='POSTED' AND g.id IS NULL",destination);
+        int orphanDestination=count(destination,"SELECT COUNT(*) FROM gl_journal_entries g LEFT JOIN factory_gl_outbox o ON o.source_entry_ref=g.source_id WHERE g.source_type='FACTORY_LEDGER' AND g.status='POSTED' AND o.id IS NULL");
+        int unacknowledged=count(destination,"SELECT COUNT(*) FROM gl_journal_entries g JOIN factory_gl_outbox o ON o.source_entry_ref=g.source_id WHERE g.source_type='FACTORY_LEDGER' AND g.status='POSTED' AND o.status<>'POSTED'");
+        int mismatches=0;
+        Cursor events=source.rawQuery("SELECT id,source_entry_ref,status FROM factory_gl_outbox WHERE status='POSTED' ORDER BY id",null);
+        try {
+            while(events.moveToNext()) {
+                String sourceRef=events.getString(1);
+                Cursor sourceTotals=source.rawQuery("SELECT COALESCE(SUM(debit_minor),0),COALESCE(SUM(credit_minor),0) FROM factory_gl_outbox_lines WHERE outbox_id=?",
+                    new String[]{String.valueOf(events.getLong(0))});
+                long sourceDebit,sourceCredit;
+                try{sourceTotals.moveToFirst();sourceDebit=sourceTotals.getLong(0);sourceCredit=sourceTotals.getLong(1);}finally{sourceTotals.close();}
+                Cursor glTotals=destination.rawQuery("SELECT COALESCE(SUM(l.transaction_debit_minor),0),"+
+                    "COALESCE(SUM(l.transaction_credit_minor),0),COUNT(DISTINCT l.transaction_currency_code),"+
+                    "COALESCE(SUM(CASE WHEN l.transaction_currency_code='SDG' THEN 0 ELSE 1 END),0) "+
+                    "FROM gl_journal_entries e JOIN gl_journal_lines l ON l.entry_id=e.id "+
+                    "WHERE e.source_type=? AND e.source_id=? AND e.status='POSTED'",
+                    new String[]{SOURCE_TYPE,sourceRef});
+                try {
+                    if(!glTotals.moveToFirst()||glTotals.getInt(2)!=1||glTotals.getInt(3)!=0||
+                       glTotals.getLong(0)!=sourceDebit||glTotals.getLong(1)!=sourceCredit)mismatches++;
+                } finally {glTotals.close();}
+            }
+        } finally {events.close();}
+        return new ReconciliationReport(sourceCount,eventCount,posted,pending,processing,retry,dead,
+            missingOutbox,missingDestination,orphanDestination,unacknowledged,mismatches);
+    }
+
+    private static int count(SQLiteDatabase db,String sql) {
+        Cursor c=db.rawQuery(sql,null);try{c.moveToFirst();return c.getInt(0);}finally{c.close();}
+    }
+    private static int count(SQLiteDatabase db,String sql,SQLiteDatabase destination) {
+        Cursor c=destination.rawQuery(sql,null);try{c.moveToFirst();return c.getInt(0);}finally{c.close();}
     }
 
     /** Creates a balanced source journal and its outbox snapshot in the caller's existing transaction. */
