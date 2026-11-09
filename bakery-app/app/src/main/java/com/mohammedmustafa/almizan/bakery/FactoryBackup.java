@@ -75,7 +75,7 @@ final class FactoryBackup {
 
     private FactoryBackup() {}
 
-    // Keep backup validation compatible with the declared Android API 23 minimum.
+    // Keep backup validation compatible with the declared Android API 28 minimum.
     private static long safeAdd(long a,long b) {
         if (a<0 || b<0 || Long.MAX_VALUE-a<b) throw new IllegalArgumentException("Invalid or overflowing backup total");
         return a+b;
