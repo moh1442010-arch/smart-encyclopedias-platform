@@ -146,7 +146,7 @@ final class FactoryGlOutbox {
         int retry=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='RETRY'");
         int dead=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='DEAD_LETTER'");
         int missingOutbox=count(source,"SELECT COUNT(*) FROM journal_entries j LEFT JOIN factory_gl_outbox o ON o.source_entry_id=j.id WHERE j.status='POSTED' AND o.id IS NULL");
-        int orphanOutbox=count(source,"SELECT COUNT(*) FROM factory_gl_outbox o LEFT JOIN journal_entries j ON j.id=o.source_entry_id WHERE j.id IS NULL OR j.entry_ref<>o.source_entry_ref");
+        int orphanOutbox=count(source,"SELECT COUNT(*) FROM factory_gl_outbox o LEFT JOIN journal_entries j ON j.id=o.source_entry_id WHERE j.id IS NULL OR j.entry_ref<>o.source_entry_ref OR j.status<>'POSTED'");
         int missingDestination=0,orphanDestination=0,unacknowledged=0,mismatches=0;
         Cursor events=source.rawQuery("SELECT id,source_entry_ref,status FROM factory_gl_outbox ORDER BY id",null);
         try {
