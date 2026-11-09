@@ -425,6 +425,12 @@ public class FactoryActivity extends Activity {
             for(int i=0;i<dr.length;i++){dr[i]=debits.get(i);cr[i]=credits.get(i);}
             FactoryGlOutbox.postSourceJournal(d,ref,description,date,a,dr,cr);
         }
+        private void postPairJournal(SQLiteDatabase d,String ref,String description,String date,String debitAccount,String creditAccount,long value){
+            if(value<=0)return;
+            ArrayList<String> a=new ArrayList<>();ArrayList<Long> dr=new ArrayList<>(),cr=new ArrayList<>();
+            addJournalLine(a,dr,cr,debitAccount,value,0);addJournalLine(a,dr,cr,creditAccount,0,value);
+            postJournal(d,ref,description,date,a,dr,cr);
+        }
         void seedMaterials(String[][] items){SQLiteDatabase d=w();d.beginTransaction();try{for(String[] item:items)d.execSQL("INSERT OR IGNORE INTO materials(name,unit,qty,value) VALUES(?,?,0,0)",new Object[]{item[0],item[1]});d.setTransactionSuccessful();}finally{d.endTransaction();}}
         void createMaterial(String name,String unit,long qty,long unitPrice){if(name==null||name.trim().isEmpty()||unit==null||unit.trim().isEmpty()||qty<0||unitPrice<0||(qty>0&&unitPrice<=0))throw new IllegalArgumentException("بيانات الخامة غير صحيحة");SQLiteDatabase d=w();d.beginTransaction();try{Cursor exists=d.rawQuery("SELECT COUNT(*) FROM materials WHERE name=?",new String[]{name.trim()});exists.moveToFirst();boolean duplicate=exists.getLong(0)>0;exists.close();if(duplicate)throw new IllegalArgumentException("الخامة موجودة بالفعل؛ استخدم فاتورة وارد لإضافة كمية جديدة");long value=java.math.BigDecimal.valueOf(qty).multiply(java.math.BigDecimal.valueOf(unitPrice)).divide(java.math.BigDecimal.valueOf(1000),0,java.math.RoundingMode.HALF_UP).longValueExact();ContentValues v=new ContentValues();v.put("name",name.trim());v.put("unit",unit.trim());v.put("qty",qty);v.put("value",value);long id=d.insertOrThrow("materials",null,v);if(qty>0)d.execSQL("INSERT INTO movements(kind,item_id,qty,value,ref,date) VALUES('RAW_OPENING',?,?,?,'opening-stock',date('now'))",new Object[]{id,qty,value});d.execSQL("INSERT INTO audit(action,detail,date) VALUES('MATERIAL_CREATED',?,date('now'))",new Object[]{name+":"+unit+":"+qty+":"+unitPrice});if(value>0){String date=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());ArrayList<String> a=new ArrayList<>();ArrayList<Long> dr=new ArrayList<>(),cr=new ArrayList<>();addJournalLine(a,dr,cr,"مخزون المواد الخام",value,0);addJournalLine(a,dr,cr,"رأس المال",0,value);postJournal(d,"RAW-OPEN-"+id,"رصيد افتتاحي للخامة "+name,date,a,dr,cr);}d.setTransactionSuccessful();}finally{d.endTransaction();}}
         void exec(String sql,String[] args){w().execSQL(sql,args);}
@@ -467,7 +473,13 @@ public class FactoryActivity extends Activity {
                 for(long[] x:lines){ContentValues v=new ContentValues();v.put("qty",x[1]);v.put("value",x[2]);d.update("materials",v,"id=?",new String[]{""+x[0]});d.execSQL("INSERT INTO movements(kind,item_id,qty,value,ref,date) VALUES('RAW_OUT',?,?,?,'production',date('now'))",new Object[]{x[0],x[3],x[4]});d.execSQL("INSERT INTO daily_usage(date,material_id,qty,cost,note,kind) VALUES(date('now'),?,?,?,'صرف خامات لوصفة الإنتاج','PRODUCTION')",new Object[]{x[0],x[3],x[4]});}
                 Cursor f=d.rawQuery("SELECT qty,value FROM finished WHERE product_id=?",new String[]{""+pid});long oldq=0,oldv=0;if(f.moveToFirst()){oldq=f.getLong(0);oldv=f.getLong(1);}f.close();long newq=FactoryMath.add(oldq,output),newv=FactoryMath.add(oldv,total),avg=FactoryMath.weightedAverageUnitCost(oldq,oldv,output,total);
                 ContentValues fv=new ContentValues();fv.put("product_id",pid);fv.put("qty",newq);fv.put("value",newv);fv.put("unit_cost",avg);d.insertWithOnConflict("finished",null,fv,SQLiteDatabase.CONFLICT_REPLACE);
-                d.execSQL("INSERT INTO batches(batch_ref,product_id,batches,output,labor,overhead,cost,unit_cost,status,date) VALUES(?,?,?,?,?,?,?,?,'FINALIZED',?)",new Object[]{batchRef,pid,batches,output,labor,overhead,total,unit,new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date())});
+                String date=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
+                d.execSQL("INSERT INTO batches(batch_ref,product_id,batches,output,labor,overhead,cost,unit_cost,status,date) VALUES(?,?,?,?,?,?,?,?,'FINALIZED',?)",new Object[]{batchRef,pid,batches,output,labor,overhead,total,unit,date});
+                long batchId=lastId(d);
+                postPairJournal(d,"BATCH-"+batchId+"-RAW-WIP","تحويل خامات إلى أعمال تحت التشغيل للدفعة "+batchRef,date,"أعمال تحت التشغيل","مخزون المواد الخام",materialsCost);
+                postPairJournal(d,"BATCH-"+batchId+"-LABOR-WIP","إثبات أجور إنتاج مستحقة للدفعة "+batchRef,date,"أعمال تحت التشغيل","أجور مستحقة",labor);
+                postPairJournal(d,"BATCH-"+batchId+"-OVERHEAD-WIP","إثبات تكاليف صناعية مستحقة للدفعة "+batchRef,date,"أعمال تحت التشغيل","تكاليف صناعية مستحقة",overhead);
+                postPairJournal(d,"BATCH-"+batchId+"-FINISHED","تحويل تكلفة الدفعة إلى مخزون الإنتاج التام "+batchRef,date,"مخزون الإنتاج التام","أعمال تحت التشغيل",total);
                 d.execSQL("INSERT INTO audit(action,detail,date) VALUES('PRODUCTION_FINALIZED',?,date('now'))",new Object[]{"product="+pid+",cost="+total});
                 d.setTransactionSuccessful();
             }finally{d.endTransaction();}
