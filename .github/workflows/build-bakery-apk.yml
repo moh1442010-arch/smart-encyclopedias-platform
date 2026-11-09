@@ -126,6 +126,8 @@ jobs:
           grep -Fq 'بلح شام' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'FactoryMath.saleTotal(q,p)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'daily_usage' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
+          grep -Fq 'root.put("schema_version", 13)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
+          grep -Fq 'assertEquals(13,snapshot.getInt("schema_version"))' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryBackupRestoreTest.java
           grep -Fq 'FactoryLedgerActivity' bakery-app/app/src/main/AndroidManifest.xml
           grep -Fq 'private void returns()' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'private void wip()' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
@@ -320,16 +322,17 @@ jobs:
 
       - name: Smoke test signed APK on modern Android API 35
         # API 35 is a mandatory compatibility gate; infrastructure failures must remain visible.
-        # API 35 cold boots can exceed the previous 8-minute step cap on hosted runners.
-        timeout-minutes: 18
+        # API 35 emulator boot can be slow on hosted runners; allow the boot itself to finish.
+        timeout-minutes: 22
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           target: google_apis
           arch: x86_64
           profile: pixel_2
-          # Avoid the runner's flaky input keyevent 82 setup on API 35.
-          disable-animations: false
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
           script: |
             adb install -r bakery-app/release/AlMizan-Bakery-2.8.3-review.apk
             adb logcat -c
