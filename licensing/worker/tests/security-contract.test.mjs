@@ -192,7 +192,7 @@ test("2.8.3 candidate order is accepted as pending without issuing an activation
       "CF-Connecting-IP": "192.0.2.45"
     },
     body: JSON.stringify({
-      customerName: "Candidate 2.8.2 Bakery",
+      customerName: "Candidate 2.8.3 Bakery",
       contact: "+249123456789",
       deviceId: "DEVICE-281-123456",
       plan: "monthly",
@@ -213,7 +213,7 @@ test("2.8.3 candidate order is accepted as pending without issuing an activation
   assert.equal(body.amount, 55000);
   assert.ok(body.orderId);
   assert.equal("activationToken" in body, false);
-  assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_orders") && x.values.includes("2.8.2")));
+  assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_orders") && x.values.includes("2.8.3")));
   assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_audit") && x.values.includes("order_created")));
 });
 
