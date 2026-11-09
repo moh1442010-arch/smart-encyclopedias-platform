@@ -84,6 +84,12 @@ public class FactoryBackupRestoreTest {
         } finally { db.close(); }
 
         assertEquals("مصنع الاختبار",factory.getString("business_name",""));
+        FactoryBackup.restore(context,legacySnapshot);
+        db=SecureDatabase.open(context,database);
+        try {
+            Cursor legacyOutbox=db.rawQuery("SELECT payload_version FROM factory_gl_outbox WHERE source_entry_ref='BACKUP-OUTBOX-1'",null);
+            try{assertTrue(legacyOutbox.moveToFirst());assertEquals(1,legacyOutbox.getInt(0));}finally{legacyOutbox.close();}
+        } finally {db.close();}
         assertEquals("مخبز الاختبار",bakery.getString("business_name",""));
         context.deleteDatabase(database);
         context.deleteDatabase(database+"-wal");
