@@ -105,6 +105,103 @@ public class FactoryGlOutboxInstrumentedTest {
         }
     }
 
+    private SQLiteDatabase openDestination(Context context,String name,String periodStatus) {
+        SQLiteDatabase db=SecureDatabase.open(context,name);
+        EnterpriseSchema.ensure(db);
+        db.execSQL("INSERT INTO financial_periods(period_code,start_date,end_date,status) VALUES(?,?,?,?)",
+            new Object[]{"TEST-2026","2026-01-01","2026-12-31",periodStatus});
+        return db;
+    }
+
+    private void mapCashSale(SQLiteDatabase source,String cashAccount) {
+        FactoryGlOutbox.saveMapping(source,"الصندوق",cashAccount,"MAIN","SDG",1,1);
+        FactoryGlOutbox.saveMapping(source,"المبيعات","4000","MAIN","SDG",1,1);
+    }
+
+    private long destinationEntryCount(SQLiteDatabase destination,String sourceId) {
+        Cursor c=destination.rawQuery("SELECT COUNT(*) FROM gl_journal_entries WHERE source_type='FACTORY_LEDGER' AND source_id=?",
+            new String[]{sourceId});
+        try{assertTrue(c.moveToFirst());return c.getLong(0);}finally{c.close();}
+    }
+
+    @Test public void mappedFactoryJournalPostsToGlAndCrashReplayDoesNotDuplicate() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String sourceName="factory_gl_delivery_source_"+System.currentTimeMillis()+".db";
+        String destinationName="factory_gl_delivery_dest_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase source=openSource(context,sourceName),destination=openDestination(context,destinationName,"OPEN");
+        try {
+            mapCashSale(source,"1000");
+            source.beginTransaction();
+            FactoryGlOutbox.postSourceJournal(source,"DELIVERY-1","بيع نقدي","2026-11-09",
+                new String[]{"الصندوق","المبيعات"},new long[]{18000,0},new long[]{0,18000});
+            source.setTransactionSuccessful();source.endTransaction();
+
+            FactoryGlOutbox.ProcessResult first=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(1,first.posted);
+            assertEquals(1,destinationEntryCount(destination,"DELIVERY-1"));
+
+            source.execSQL("UPDATE factory_gl_outbox SET status='PROCESSING',next_attempt_at=0 WHERE source_entry_ref='DELIVERY-1'");
+            FactoryGlOutbox.ProcessResult replay=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(1,replay.posted);
+            assertEquals("destination idempotency must prevent a second journal",1,destinationEntryCount(destination,"DELIVERY-1"));
+            Cursor state=source.rawQuery("SELECT status,destination_ref FROM factory_gl_outbox WHERE source_entry_ref='DELIVERY-1'",null);
+            try{assertTrue(state.moveToFirst());assertEquals("POSTED",state.getString(0));assertEquals("FACTORY-DELIVERY-1",state.getString(1));}finally{state.close();}
+        } finally {
+            if(source.isOpen())source.close();if(destination.isOpen())destination.close();
+            context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
+            context.deleteDatabase(destinationName);context.deleteDatabase(destinationName+"-wal");context.deleteDatabase(destinationName+"-shm");
+        }
+    }
+
+    @Test public void changedMappedPayloadWithSameIdempotencyKeyIsRejected() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String sourceName="factory_gl_changed_source_"+System.currentTimeMillis()+".db";
+        String destinationName="factory_gl_changed_dest_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase source=openSource(context,sourceName),destination=openDestination(context,destinationName,"OPEN");
+        try {
+            mapCashSale(source,"1000");
+            source.beginTransaction();
+            FactoryGlOutbox.postSourceJournal(source,"DELIVERY-CHANGED","بيع نقدي","2026-11-09",
+                new String[]{"الصندوق","المبيعات"},new long[]{12000,0},new long[]{0,12000});
+            source.setTransactionSuccessful();source.endTransaction();
+            assertEquals(1,FactoryGlOutbox.processPending(source,destination).posted);
+            source.execSQL("UPDATE factory_gl_outbox_lines SET target_account_code='5000' WHERE source_account='المبيعات'");
+            source.execSQL("UPDATE factory_gl_outbox SET status='PROCESSING',next_attempt_at=0 WHERE source_entry_ref='DELIVERY-CHANGED'");
+            FactoryGlOutbox.ProcessResult changed=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(1,changed.retried);
+            assertEquals(1,destinationEntryCount(destination,"DELIVERY-CHANGED"));
+            Cursor state=source.rawQuery("SELECT status,last_error FROM factory_gl_outbox WHERE source_entry_ref='DELIVERY-CHANGED'",null);
+            try{assertTrue(state.moveToFirst());assertEquals("RETRY",state.getString(0));assertTrue(state.getString(1).contains("مفتاح العملية"));}finally{state.close();}
+        } finally {
+            if(source.isOpen())source.close();if(destination.isOpen())destination.close();
+            context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
+            context.deleteDatabase(destinationName);context.deleteDatabase(destinationName+"-wal");context.deleteDatabase(destinationName+"-shm");
+        }
+    }
+
+    @Test public void closedFinancialPeriodBlocksPostingAndKeepsEventRetryable() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String sourceName="factory_gl_closed_source_"+System.currentTimeMillis()+".db";
+        String destinationName="factory_gl_closed_dest_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase source=openSource(context,sourceName),destination=openDestination(context,destinationName,"CLOSED");
+        try {
+            mapCashSale(source,"1000");
+            source.beginTransaction();
+            FactoryGlOutbox.postSourceJournal(source,"DELIVERY-CLOSED","بيع نقدي","2026-11-09",
+                new String[]{"الصندوق","المبيعات"},new long[]{6000,0},new long[]{0,6000});
+            source.setTransactionSuccessful();source.endTransaction();
+            FactoryGlOutbox.ProcessResult result=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(1,result.retried);
+            assertEquals(0,destinationEntryCount(destination,"DELIVERY-CLOSED"));
+            Cursor state=source.rawQuery("SELECT status,last_error FROM factory_gl_outbox WHERE source_entry_ref='DELIVERY-CLOSED'",null);
+            try{assertTrue(state.moveToFirst());assertEquals("RETRY",state.getString(0));assertTrue(state.getString(1).contains("فترة"));}finally{state.close();}
+        } finally {
+            if(source.isOpen())source.close();if(destination.isOpen())destination.close();
+            context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
+            context.deleteDatabase(destinationName);context.deleteDatabase(destinationName+"-wal");context.deleteDatabase(destinationName+"-shm");
+        }
+    }
+
     @Test public void rollingBackSourceJournalAlsoRollsBackOutboxEvent() {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String name="factory_gl_outbox_rollback_"+System.currentTimeMillis()+".db";
