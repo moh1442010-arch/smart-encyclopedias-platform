@@ -67,7 +67,7 @@ test("activation token recovery requires an authenticated admin session", async 
   assert.equal((await response.json()).error, "UNAUTHORIZED");
 });
 
-test("2.8.0 customer order is accepted and recorded as pending without issuing a token", async () => {
+test("2.8.3 candidate order is accepted and recorded as pending without issuing a token", async () => {
   const writes = [];
   const db = {
     prepare(sql) {
@@ -104,9 +104,9 @@ test("2.8.0 customer order is accepted and recorded as pending without issuing a
       plan: "monthly",
       countryCode: "SD",
       receiptReference: "BANKAK-20261107-TEST",
-      appVersion: "2.8.0"
+      appVersion: "2.8.3"
     })
-  }), { DB: db, APP_VERSION: "2.8.0", STORE_ORIGIN: "https://bakery-test.local" });
+  }), { DB: db, APP_VERSION: "2.8.3", STORE_ORIGIN: "https://bakery-test.local" });
 
   assert.equal(response.status, 201);
   const body = await response.json();
@@ -132,7 +132,7 @@ test("admin login page is served without exposing dashboard data", async () => {
 
 
 
-test("2.8.2 candidate order is accepted as pending without issuing an activation token", async () => {
+test("2.8.3 candidate order is accepted as pending without issuing an activation token", async () => {
   const writes = [];
   const db = {
     prepare(sql) {
@@ -168,12 +168,12 @@ test("2.8.2 candidate order is accepted as pending without issuing an activation
       plan: "monthly",
       countryCode: "SD",
       receiptReference: "TEST-ONLY-281",
-      appVersion: "2.8.2"
+      appVersion: "2.8.3"
     })
   }), {
     DB: db,
-    APP_VERSION: "2.8.2",
-    PREVIOUS_APP_VERSION: "2.8.1",
+    APP_VERSION: "2.8.3",
+    PREVIOUS_APP_VERSION: "2.8.2",
     STORE_ORIGIN: "https://bakery-test.local"
   });
 
