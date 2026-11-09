@@ -500,8 +500,8 @@ async function handle(request, env) {
     const orderAppVersion = requestedVersion || appVersion;
     const versionUnsupported = requestedVersion && requestedVersion !== appVersion && requestedVersion !== previousAppVersion;
     if (customer.length < 2 || customer.length > 100 ||
-        !/^[+0-9()\\s-]{8,25}$/.test(contact) ||
-        !/^[A-Za-z0-9\\-_/]{4,100}$/.test(receiptRef) ||
+        !/^[+0-9()\s-]{8,25}$/.test(contact) ||
+        !/^[A-Za-z0-9/_-]{4,100}$/.test(receiptRef) ||
         !validDevice(deviceId) || versionUnsupported) {
       return json({ error: versionUnsupported ? "APP_VERSION_UNSUPPORTED" : "INVALID_FIELDS" }, 400);
     }
