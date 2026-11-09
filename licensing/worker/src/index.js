@@ -1,14 +1,13 @@
 const APP_ID = "com.mohammedmustafa.almizan.bakery";
 const EXPECTED_APP_PUBLIC_KEY_DER_B64 = "MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAnWLF2Y4nmN7MWU1q9tzTVJCCacOf7iaGiRYrA21Ej7Xp7vV2/BgMu7N3OmcB0UJyIn1A22z34fKf3YEEDTjBz4pHHEtXeB+bjH+jn7VOcwQS9mZhTUR1+/2gYJxIKUEz9233Ab1eupGcCzuziQck362qiRBdjlHEViW0koE87TmPKRkkqzKtkOm0MzIfYr7tM/DmqncZ9RKUnctvoJd05kDxg0PXdNZ539Ip7tT6y11nmakYg5lJv9XOqNWnQbPRUDjOO9jWIPFnUvaPVofYrBOENPTu8S7414Twb7/0zmhFgNuizHbZQEOYD3ZNK0GfNDYH8Tk1ZEe9H7WHE3+B0UYkCBEfJCdXkHxRIJLb1KSyxpLw7iiGxAJdCQ95SNkcYfl6KTsZFPtt4pssXRH9XvJsvQEmP7OmqtPSJy0ZFSL/KgS5T3EIeuG2DyJom5WJ8lya4zy3noU9hL8gSjpzOdzR87KqiOYSy890nwtvHIi73qxvNpPGxPghG3JIEEBFAgMBAAE=";
-const PRICE_MATRIX = {
-  SDG: { monthly: 55000, annual: 550000, lifetime: 1050000 },
-  SAR: { monthly: 29, annual: 290, lifetime: 725 },
-  AED: { monthly: 29, annual: 290, lifetime: 725 },
-  USD: { monthly: 8, annual: 80, lifetime: 199 }
-};
 const PLAN_SECONDS = { monthly: 30 * 86400, annual: 365 * 86400, lifetime: 0 };
-function licensePrice(currency, plan) {
-  return PRICE_MATRIX[currency] && PLAN_SECONDS[plan] !== undefined ? PRICE_MATRIX[currency][plan] : null;
+async function licensePrice(env, currency, plan) {
+  if (!["SDG", "SAR", "AED", "USD"].includes(currency) || PLAN_SECONDS[plan] === undefined) return null;
+  const row = await env.DB.prepare(
+    "SELECT amount_minor FROM license_price_catalog WHERE currency_code=? AND plan_code=? AND active=1 LIMIT 1"
+  ).bind(currency, plan).first();
+  const amount = Number(row && row.amount_minor);
+  return Number.isSafeInteger(amount) && amount > 0 ? amount : null;
 }
 async function ensureCurrencyColumns(env) {
   const statement = env.DB.prepare("PRAGMA table_info(license_orders)");
@@ -494,7 +493,7 @@ async function handle(request, env) {
     const deviceId = cleanText(body.deviceId, 100);
     const plan = cleanText(body.plan, 20);
     const currencyCode = cleanText(body.currencyCode || "SDG", 3).toUpperCase();
-    const amount = licensePrice(currencyCode, plan);
+    const amount = await licensePrice(env, currencyCode, plan);
     const receiptRef = cleanText(body.receiptReference, 100);
     const requestedVersion = cleanText(body.appVersion, 32);
     const appVersion = cleanText(env.APP_VERSION || "2.8.3", 32);
