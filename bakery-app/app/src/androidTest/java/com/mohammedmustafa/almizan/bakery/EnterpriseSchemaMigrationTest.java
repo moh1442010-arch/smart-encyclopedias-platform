@@ -47,6 +47,12 @@ public class EnterpriseSchemaMigrationTest {
             Cursor unknownTax=db.rawQuery("SELECT profile_status FROM tax_jurisdiction_profiles WHERE country_code='LY'",null);
             try { assertTrue(unknownTax.moveToFirst());assertEquals("REVIEW_REQUIRED",unknownTax.getString(0)); }
             finally { unknownTax.close(); }
+            String[] factoryAccounts={"1210","1300","2200","2300","4050","5400"};
+            for(String code:factoryAccounts){
+                Cursor account=db.rawQuery("SELECT COUNT(*) FROM chart_of_accounts WHERE account_code=? AND active=1",new String[]{code});
+                try{assertTrue("Missing factory accounting control account "+code,account.moveToFirst()&&account.getInt(0)==1);}
+                finally{account.close();}
+            }
             Cursor profileColumn=db.rawQuery("PRAGMA table_info(company_settings)",null);boolean hasBusinessName=false;
             try { while(profileColumn.moveToNext())if("business_name".equals(profileColumn.getString(1)))hasBusinessName=true; } finally { profileColumn.close(); }
             assertTrue("Company name must be persisted in encrypted company settings",hasBusinessName);
