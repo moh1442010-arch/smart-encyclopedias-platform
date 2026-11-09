@@ -179,6 +179,29 @@ public class FactoryGlOutboxInstrumentedTest {
         }
     }
 
+    @Test public void unknownSourceAccountMappingNeverPostsToGl() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String sourceName="factory_gl_unmapped_source_"+System.currentTimeMillis()+".db";
+        String destinationName="factory_gl_unmapped_dest_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase source=openSource(context,sourceName),destination=openDestination(context,destinationName,"OPEN");
+        try {
+            FactoryGlOutbox.saveMapping(source,"المبيعات","4000","MAIN","SDG",1,1);
+            source.beginTransaction();
+            FactoryGlOutbox.postSourceJournal(source,"DELIVERY-UNMAPPED","قيد بحساب غير معروف","2026-11-09",
+                new String[]{"حساب غير مربوط","المبيعات"},new long[]{4000,0},new long[]{0,4000});
+            source.setTransactionSuccessful();source.endTransaction();
+            FactoryGlOutbox.ProcessResult result=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(1,result.skipped);
+            assertEquals(0,destinationEntryCount(destination,"DELIVERY-UNMAPPED"));
+            Cursor state=source.rawQuery("SELECT status,last_error FROM factory_gl_outbox WHERE source_entry_ref='DELIVERY-UNMAPPED'",null);
+            try{assertTrue(state.moveToFirst());assertEquals("RETRY",state.getString(0));assertTrue(state.getString(1).contains("حساب غير مربوط"));}finally{state.close();}
+        } finally {
+            if(source.isOpen())source.close();if(destination.isOpen())destination.close();
+            context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
+            context.deleteDatabase(destinationName);context.deleteDatabase(destinationName+"-wal");context.deleteDatabase(destinationName+"-shm");
+        }
+    }
+
     @Test public void closedFinancialPeriodBlocksPostingAndKeepsEventRetryable() {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String sourceName="factory_gl_closed_source_"+System.currentTimeMillis()+".db";
