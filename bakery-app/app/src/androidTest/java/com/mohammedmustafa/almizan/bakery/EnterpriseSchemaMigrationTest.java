@@ -53,12 +53,12 @@ public class EnterpriseSchemaMigrationTest {
             Cursor currency=db.rawQuery("SELECT base_currency,country_code FROM company_settings WHERE id=1",null);
             try { assertTrue(currency.moveToFirst());assertEquals("SDG",currency.getString(0));assertEquals("SD",currency.getString(1)); }
             finally { currency.close(); }
-            Cursor subscriptionOnly=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE code='EUR' AND active=0",null);
-            try { assertTrue(subscriptionOnly.moveToFirst());assertEquals("EUR must remain disabled for new selections",1,subscriptionOnly.getInt(0)); } finally { subscriptionOnly.close(); }
-            Cursor currencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE code IN ('USD','EUR','SAR','AED')",null);
-            try { assertTrue(currencies.moveToFirst());assertEquals(4,currencies.getInt(0)); } finally { currencies.close(); }
-            Cursor operationalCurrencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE active=1 AND code='USD'",null);
-            try { assertTrue(operationalCurrencies.moveToFirst());assertEquals("USD must be available as an operational currency",1,operationalCurrencies.getInt(0)); } finally { operationalCurrencies.close(); }
+            Cursor subscriptionOnly=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE code IN ('USD','EUR') AND active=0",null);
+            try { assertTrue(subscriptionOnly.moveToFirst());assertEquals("USD and EUR must be disabled for operational selections",2,subscriptionOnly.getInt(0)); } finally { subscriptionOnly.close(); }
+            Cursor operationalCurrencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE active=1 AND code IN ('DZD','BHD','KMF','DJF','EGP','IQD','JOD','KWD','LBP','LYD','MRU','MAD','OMR','ILS','QAR','SAR','SOS','SDG','SYP','TND','AED','YER')",null);
+            try { assertTrue(operationalCurrencies.moveToFirst());assertEquals("All 22 Arab-country operating currencies must remain selectable",22,operationalCurrencies.getInt(0)); } finally { operationalCurrencies.close(); }
+            Cursor nonRegional=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE active=1 AND code NOT IN ('DZD','BHD','KMF','DJF','EGP','IQD','JOD','KWD','LBP','LYD','MRU','MAD','OMR','ILS','QAR','SAR','SOS','SDG','SYP','TND','AED','YER')",null);
+            try { assertTrue(nonRegional.moveToFirst());assertEquals("Non-Arab and subscription currencies must not be operational",0,nonRegional.getInt(0)); } finally { nonRegional.close(); }
             Cursor regionalCurrencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE active=1 AND code IN ('SDG','EGP','LYD','SAR','AED')",null);
             try { assertTrue(regionalCurrencies.moveToFirst());assertEquals("Required regional operating currencies missing",5,regionalCurrencies.getInt(0)); } finally { regionalCurrencies.close(); }
             Cursor arabMappings=db.rawQuery("SELECT COUNT(DISTINCT country_code) FROM currency_country_map WHERE country_code IN ('DZ','BH','KM','DJ','EG','IQ','JO','KW','LB','LY','MR','MA','OM','PS','QA','SA','SO','SD','SY','TN','AE','YE')",null);
