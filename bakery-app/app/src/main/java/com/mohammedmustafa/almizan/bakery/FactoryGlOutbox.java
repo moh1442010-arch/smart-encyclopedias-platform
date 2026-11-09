@@ -24,16 +24,16 @@ final class FactoryGlOutbox {
 
     static final class ReconciliationReport {
         final int sourceJournals,outboxEvents,posted,pending,processing,retry,deadLetter;
-        final int missingOutbox,missingDestination,orphanDestination,unacknowledgedDestination,amountMismatches;
+        final int missingOutbox,orphanOutbox,missingDestination,orphanDestination,unacknowledgedDestination,amountMismatches;
         ReconciliationReport(int sourceJournals,int outboxEvents,int posted,int pending,int processing,int retry,int deadLetter,
-                             int missingOutbox,int missingDestination,int orphanDestination,int unacknowledgedDestination,int amountMismatches) {
+                             int missingOutbox,int orphanOutbox,int missingDestination,int orphanDestination,int unacknowledgedDestination,int amountMismatches) {
             this.sourceJournals=sourceJournals;this.outboxEvents=outboxEvents;this.posted=posted;this.pending=pending;
             this.processing=processing;this.retry=retry;this.deadLetter=deadLetter;this.missingOutbox=missingOutbox;
             this.missingDestination=missingDestination;this.orphanDestination=orphanDestination;
             this.unacknowledgedDestination=unacknowledgedDestination;this.amountMismatches=amountMismatches;
         }
         boolean clean() {
-            return missingOutbox==0&&pending==0&&processing==0&&retry==0&&deadLetter==0&&
+            return missingOutbox==0&&orphanOutbox==0&&pending==0&&processing==0&&retry==0&&deadLetter==0&&
                 missingDestination==0&&orphanDestination==0&&unacknowledgedDestination==0&&amountMismatches==0;
         }
     }
@@ -146,6 +146,7 @@ final class FactoryGlOutbox {
         int retry=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='RETRY'");
         int dead=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='DEAD_LETTER'");
         int missingOutbox=count(source,"SELECT COUNT(*) FROM journal_entries j LEFT JOIN factory_gl_outbox o ON o.source_entry_id=j.id WHERE j.status='POSTED' AND o.id IS NULL");
+        int orphanOutbox=count(source,"SELECT COUNT(*) FROM factory_gl_outbox o LEFT JOIN journal_entries j ON j.id=o.source_entry_id WHERE j.id IS NULL OR j.entry_ref<>o.source_entry_ref");
         int missingDestination=0,orphanDestination=0,unacknowledged=0,mismatches=0;
         Cursor events=source.rawQuery("SELECT id,source_entry_ref,status FROM factory_gl_outbox ORDER BY id",null);
         try {
@@ -184,7 +185,7 @@ final class FactoryGlOutbox {
             }
         } finally {glEvents.close();}
         return new ReconciliationReport(sourceCount,eventCount,posted,pending,processing,retry,dead,
-            missingOutbox,missingDestination,orphanDestination,unacknowledged,mismatches);
+            missingOutbox,orphanOutbox,missingDestination,orphanDestination,unacknowledged,mismatches);
     }
 
     private static int count(SQLiteDatabase db,String sql) {
