@@ -34,7 +34,7 @@ public final class AppUpdatePolicy {
                 .getString("update_url", STORE_URL);
             String message = activity.getSharedPreferences("app_update_policy", 0)
                 .getString("message", "يتطلب هذا الإصدار تحديث التطبيق لمتابعة الاستخدام.");
-            showBlockingDialog(activity, message, url);
+            showBlockingDialog(activity, message, url, minimum);
         }
     }
 
@@ -79,7 +79,7 @@ public final class AppUpdatePolicy {
                     .apply();
                 if (policy.optBoolean("mandatory", false) && BuildConfig.VERSION_CODE < minimum) {
                     final String finalUrl = updateUrl;
-                    activity.runOnUiThread(() -> showBlockingDialog(activity, message, finalUrl));
+                    activity.runOnUiThread(() -> showBlockingDialog(activity, message, finalUrl, minimum));
                 }
             } catch (Exception ignored) {
                 // Preserve normal operation during temporary network failure; a previously cached
@@ -93,7 +93,7 @@ public final class AppUpdatePolicy {
         thread.start();
     }
 
-    private static void showBlockingDialog(Activity activity, String message, String updateUrl) {
+    private static void showBlockingDialog(Activity activity, String message, String updateUrl, int minimumVersionCode) {
         if (activity == null || activity.isFinishing()) return;
         synchronized (SHOWN) {
             if (Boolean.TRUE.equals(SHOWN.get(activity))) return;
@@ -104,7 +104,7 @@ public final class AppUpdatePolicy {
             AlertDialog dialog = new AlertDialog.Builder(activity)
                 .setTitle("تحديث إلزامي")
                 .setMessage(message + "\\n\\nالإصدار المثبت: " + BuildConfig.VERSION_NAME +
-                    "\\nالحد الأدنى المطلوب: " + BuildConfig.VERSION_CODE + " أو أحدث.")
+                    "\\nالحد الأدنى المطلوب: " + minimumVersionCode + " أو أحدث.")
                 .setPositiveButton("تحديث الآن", (d, which) -> {
                     try {
                         activity.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl)));
