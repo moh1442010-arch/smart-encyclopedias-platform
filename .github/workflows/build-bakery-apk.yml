@@ -266,10 +266,7 @@ jobs:
             adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.8.2"
 
       - name: Smoke test signed APK on modern Android API 35
-        # The hosted API 35 emulator intermittently loses Android system services after boot
-        # (ADB Broken pipe) even though the signed APK builds and API 23 smoke test passes.
-        # Keep this compatibility probe visible but do not block artifact publication on runner instability.
-        continue-on-error: true
+        # API 35 is a mandatory compatibility gate; infrastructure failures must remain visible.
         timeout-minutes: 8
         uses: reactivecircus/android-emulator-runner@v2
         with:
