@@ -66,13 +66,15 @@ public class FactoryGlOutboxInstrumentedTest {
         }
     }
 
-    @Test public void existingFactoryDatabaseV11UpgradesAdditivelyToV12() throws Exception {
+    @Test public void existingFactoryDatabaseV12UpgradesAdditivelyToV13() throws Exception {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String name="factory_gl_schema_upgrade_"+System.currentTimeMillis()+".db";
         SQLiteDatabase legacy=SecureDatabase.open(context,name);
         legacy.execSQL("CREATE TABLE materials(id INTEGER PRIMARY KEY,name TEXT,qty INTEGER,value INTEGER)");
         legacy.execSQL("INSERT INTO materials(id,name,qty,value) VALUES(1,'دقيق',12000,9000)");
-        legacy.setVersion(11);
+        legacy.execSQL("CREATE TABLE factory_gl_outbox(id INTEGER PRIMARY KEY AUTOINCREMENT,event_key TEXT NOT NULL UNIQUE,source_entry_id INTEGER NOT NULL UNIQUE,source_entry_ref TEXT NOT NULL UNIQUE,description TEXT NOT NULL,transaction_date TEXT NOT NULL,payload_sha256 TEXT NOT NULL,status TEXT NOT NULL,attempt_count INTEGER NOT NULL DEFAULT 0,next_attempt_at INTEGER NOT NULL DEFAULT 0,last_error TEXT NOT NULL DEFAULT '',destination_ref TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,posted_at INTEGER)");
+        legacy.execSQL("INSERT INTO factory_gl_outbox(event_key,source_entry_id,source_entry_ref,description,transaction_date,payload_sha256,status,attempt_count,next_attempt_at,last_error,destination_ref,created_at,updated_at) VALUES('OLD-V12',1,'OLD-V12','old event','2026-11-09','0000000000000000000000000000000000000000000000000000000000000000','PENDING',0,0,'','',1,1)");
+        legacy.setVersion(12);
         legacy.close();
         SQLiteOpenHelper helper=null;
         try {
@@ -81,9 +83,11 @@ public class FactoryGlOutboxInstrumentedTest {
             constructor.setAccessible(true);
             helper=(SQLiteOpenHelper)constructor.newInstance(context);
             SQLiteDatabase upgraded=helper.getWritableDatabase();
-            assertEquals(12,upgraded.getVersion());
+            assertEquals(13,upgraded.getVersion());
             Cursor outboxTable=upgraded.rawQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='factory_gl_outbox'",null);
             try{assertTrue(outboxTable.moveToFirst());assertEquals(1,outboxTable.getInt(0));}finally{outboxTable.close();}
+            Cursor version=upgraded.rawQuery("SELECT payload_version FROM factory_gl_outbox WHERE event_key='OLD-V12'",null);
+            try{assertTrue(version.moveToFirst());assertEquals(1,version.getInt(0));}finally{version.close();}
             Cursor oldData=upgraded.rawQuery("SELECT name,qty,value FROM materials WHERE id=1",null);
             try{assertTrue(oldData.moveToFirst());assertEquals("دقيق",oldData.getString(0));assertEquals(12000,oldData.getLong(1));assertEquals(9000,oldData.getLong(2));}
             finally{oldData.close();}
