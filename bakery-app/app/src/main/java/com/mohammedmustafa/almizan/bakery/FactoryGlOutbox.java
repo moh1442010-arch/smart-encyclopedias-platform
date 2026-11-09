@@ -359,9 +359,17 @@ final class FactoryGlOutbox {
             return false;
         } finally {source.endTransaction();}
 
+        String baseCurrency=scalar(destination,"SELECT base_currency FROM company_settings WHERE id=1",null);
+        if(baseCurrency==null||baseCurrency.trim().isEmpty())throw new IllegalStateException("عملة المنشأة الأساسية غير معرفة");
         List<GeneralLedger.Line> glLines=new ArrayList<>();
-        for(SnapshotLine line:lines)glLines.add(new GeneralLedger.Line(line.targetAccount,line.branch,line.currency,
-            line.debit,line.credit,line.fxNum,line.fxDen));
+        for(SnapshotLine line:lines){
+            if(baseCurrency.equals(line.currency)&&line.fxNum!=line.fxDen)
+                throw new IllegalStateException("سعر صرف العملة الأساسية يجب أن يساوي 1");
+            if(!baseCurrency.equals(line.currency)&&line.fxNum==line.fxDen)
+                throw new IllegalStateException("سعر الصرف غير محدد للعملة "+line.currency+" مقابل "+baseCurrency+"؛ لا يسمح بترحيل افتراض 1:1");
+            glLines.add(new GeneralLedger.Line(line.targetAccount,line.branch,line.currency,
+                line.debit,line.credit,line.fxNum,line.fxDen));
+        }
         String glRef="FACTORY-"+ref;
         GeneralLedger.Entry entry=new GeneralLedger.Entry(glRef,description,date,SOURCE_TYPE,ref,
             eventKey(ref),"FACTORY",glLines);
@@ -410,6 +418,11 @@ final class FactoryGlOutbox {
             for(byte b:digest)hex.append(String.format(java.util.Locale.US,"%02x",b&0xff));
             return hex.toString();
         } catch(Exception e) {throw new IllegalStateException("SHA-256 is unavailable",e);}
+    }
+
+    private static String scalar(SQLiteDatabase db,String sql,String[] args) {
+        Cursor c=db.rawQuery(sql,args);
+        try{return c.moveToFirst()?c.getString(0):null;}finally{c.close();}
     }
 
     private static long checkedAdd(long a,long b) {
