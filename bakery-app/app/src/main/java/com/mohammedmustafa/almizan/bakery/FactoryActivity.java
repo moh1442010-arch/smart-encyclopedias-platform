@@ -43,21 +43,21 @@ public class FactoryActivity extends Activity {
         catch(Exception e){toast("تعذر فتح الطباعة: "+e.getMessage());}
     }
     private void appendPrintable(View view,StringBuilder out){
-        if(view instanceof EditText){String value=((EditText)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");return;}
-        if(view instanceof TextView){String value=((TextView)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");}
+        if(view instanceof EditText){String value=((EditText)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\n");return;}
+        if(view instanceof TextView){String value=((TextView)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\n");}
         if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++)appendPrintable(group.getChildAt(i),out);}
     }
     private void printFactoryDaily(){
-        StringBuilder out=new StringBuilder("التاريخ: ").append(today()).append("\\n");
+        StringBuilder out=new StringBuilder("التاريخ: ").append(today()).append("\n");
         Cursor c=null;
         try{
-            out.append("المواد الخام\\n");
+            out.append("المواد الخام\n");
             c=db.getReadableDatabase().rawQuery("SELECT name,qty,unit,value FROM materials ORDER BY name",null);
-            while(c.moveToNext())out.append(c.getString(0)).append(" | ").append(c.getLong(1)/1000.0).append(" ").append(c.getString(2)).append(" | القيمة ").append(c.getLong(3)).append("\\n");
+            while(c.moveToNext())out.append(c.getString(0)).append(" | ").append(c.getLong(1)/1000.0).append(" ").append(c.getString(2)).append(" | القيمة ").append(c.getLong(3)).append("\n");
             c.close();c=null;
-            out.append("\\nالمنتجات الجاهزة\\n");
+            out.append("\nالمنتجات الجاهزة\n");
             c=db.getReadableDatabase().rawQuery("SELECT p.name,f.qty,f.value FROM finished f JOIN products p ON p.id=f.product_id ORDER BY p.name",null);
-            while(c.moveToNext())out.append(c.getString(0)).append(" | الكمية ").append(c.getLong(1)/1000.0).append(" | القيمة ").append(c.getLong(2)).append("\\n");
+            while(c.moveToNext())out.append(c.getString(0)).append(" | الكمية ").append(c.getLong(1)/1000.0).append(" | القيمة ").append(c.getLong(2)).append("\n");
             PrinterService.print(this,businessName(),"تقرير المصنع اليومي",out.toString());
         }catch(Exception e){toast("تعذر تجهيز التقرير للطباعة: "+e.getMessage());}
         finally{if(c!=null)c.close();}
@@ -81,7 +81,7 @@ public class FactoryActivity extends Activity {
     }
     private void home(){
         frame("الرئيسية");
-        body.addView(label("المنشأة: "+businessName()+"\\nنظام مستقل عن دفاتر المخبز. كل المخزون والحركات والتكاليف هنا محفوظة في قاعدة بيانات منفصلة.",15));
+        body.addView(label("المنشأة: "+businessName()+"\nنظام مستقل عن دفاتر المخبز. كل المخزون والحركات والتكاليف هنا محفوظة في قاعدة بيانات منفصلة.",15));
         body.addView(btn("تعديل اسم المصنع",()->editFactoryName()));
         body.addView(btn("🖨️ إعداد الطابعة / طباعة تقرير المصنع",()->{new AlertDialog.Builder(this).setTitle("الطباعة").setMessage("ستظهر طابعات Android المتاحة. يمكن استخدام طابعة Bluetooth أو Wi-Fi أو USB إذا كان نظام الجهاز يوفر خدمتها.").setNegativeButton("إغلاق",null).setPositiveButton("طباعة تقرير المصنع",(d,w)->printFactoryDaily()).show();}));
         body.addView(btn("سجل عملاء وموردي المصنع",()->factoryParties()));
@@ -118,7 +118,7 @@ public class FactoryActivity extends Activity {
         EditText n=cell("اسم الصنف",false),u=cell("وحدة القياس",false),q=cell("الكمية",true),unitPrice=cell("سعر الوحدة SDG",false),paidCash=cell("سداد نقدي",false),paidBank=cell("سداد بنكك",false),bankRef=cell("رقم العملية",false);
         horizontalFields(n,u,q,unitPrice,paidCash,paidBank,bankRef);
         body.addView(btn("حفظ فاتورة المورد وتحديث المخزون",()->{String name=n.getText().toString().trim(),unit=u.getText().toString().trim(),ref=bankRef.getText().toString().trim();long qty=num(q),price=money(unitPrice),cashPaid=money(paidCash),bankPaid=money(paidBank);if(supplierId[0]<=0||name.isEmpty()||unit.isEmpty()||qty<=0||price<0||cashPaid<0||bankPaid<0){toast("اختر مورداً مسجلاً وأدخل الصنف والكمية والسعر والسداد");return;}try{long total=java.math.BigDecimal.valueOf(qty).multiply(java.math.BigDecimal.valueOf(price)).divide(java.math.BigDecimal.valueOf(1000),0,java.math.RoundingMode.HALF_UP).longValueExact();if(cashPaid>total||bankPaid>total-cashPaid||(bankPaid>0&&ref.isEmpty()))throw new IllegalArgumentException("راجع السداد ورقم العملية؛ لا يمكن أن يتجاوز المدفوع قيمة الفاتورة.");db.receive(name,unit,qty,total,supplierId[0],supplier.getText().toString(),cashPaid,bankPaid,ref);
-                String invoice="التاريخ: "+today()+"\\nالمورد: "+supplier.getText()+"\\nالصنف: "+name+"\\nالوحدة: "+unit+"\\nالكمية: "+(qty/1000.0)+"\\nقيمة الفاتورة: "+total+" جنيه\\nسداد نقدي: "+cashPaid+" جنيه\\nسداد بنكك: "+bankPaid+" جنيه\\nرقم العملية: "+ref+"\\nالمديونية: "+(total-cashPaid-bankPaid)+" جنيه";
+                String invoice="التاريخ: "+today()+"\nالمورد: "+supplier.getText()+"\nالصنف: "+name+"\nالوحدة: "+unit+"\nالكمية: "+(qty/1000.0)+"\nقيمة الفاتورة: "+total+" جنيه\nسداد نقدي: "+cashPaid+" جنيه\nسداد بنكك: "+bankPaid+" جنيه\nرقم العملية: "+ref+"\nالمديونية: "+(total-cashPaid-bankPaid)+" جنيه";
                 new AlertDialog.Builder(this).setTitle("تم حفظ فاتورة المورد").setMessage("تم تحديث المخزون. هل تريد طباعة الفاتورة؟").setNegativeButton("لاحقاً",(d,w)->warehouse()).setPositiveButton("🖨️ طباعة الفاتورة",(d,w)->{try{PrinterService.print(this,businessName(),"فاتورة مشتريات",invoice);}catch(Exception ex){toast("تعذر الطباعة: "+ex.getMessage());}warehouse();}).show();}catch(Exception ex){toast("تعذر تسجيل فاتورة المورد: "+ex.getMessage());}}));
         body.addView(label("سداد مديونية مورد",16));
         EditText paySupplier=cell("المورد المختار للسداد",false);paySupplier.setFocusable(false);final long[] paySupplierId={0};
@@ -187,7 +187,7 @@ public class FactoryActivity extends Activity {
                 long total=FactoryMath.saleTotal(q,p);
                 if(total<=0||c>total||bk>total-c||(bk>0&&br.isEmpty())){toast("راجع الإجمالي والتحصيل ورقم بنكك");return;}
                 db.sell(pid,customerId[0],q,total,c,bk,cust,br,channel);
-                String invoice="رقم المستند: POS-"+System.currentTimeMillis()+"\\nالتاريخ: "+today()+"\\nالعميل: "+cust+"\\nالمنتج: "+product.getText()+"\\nالكمية: "+(q/1000.0)+"\\nسعر الوحدة: "+p+" جنيه\\nالإجمالي: "+total+" جنيه\\nنقدي: "+c+" جنيه\\nبنكك: "+bk+" جنيه\\nرقم العملية: "+br+"\\nالآجل: "+(total-c-bk)+" جنيه";
+                String invoice="رقم المستند: POS-"+System.currentTimeMillis()+"\nالتاريخ: "+today()+"\nالعميل: "+cust+"\nالمنتج: "+product.getText()+"\nالكمية: "+(q/1000.0)+"\nسعر الوحدة: "+p+" جنيه\nالإجمالي: "+total+" جنيه\nنقدي: "+c+" جنيه\nبنكك: "+bk+" جنيه\nرقم العملية: "+br+"\nالآجل: "+(total-c-bk)+" جنيه";
                 new AlertDialog.Builder(this).setTitle("تم حفظ فاتورة البيع").setMessage("الإجمالي "+total+" جنيه. هل تريد طباعة الفاتورة الآن؟").setNegativeButton("لاحقاً",(d,w)->pointOfSale()).setPositiveButton("🖨️ طباعة الفاتورة",(d,w)->{try{PrinterService.print(this,businessName(),"فاتورة بيع",invoice);}catch(Exception ex){toast("تعذر الطباعة: "+ex.getMessage());}pointOfSale();}).show();
             }catch(Exception ex){toast("لم يتم البيع: "+ex.getMessage());}
         }));
