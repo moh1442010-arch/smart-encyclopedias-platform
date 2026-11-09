@@ -158,20 +158,35 @@ final class FactoryGlOutbox {
                 if("POSTED".equals(status)&&!hasGl)missingDestination++;
                 if(!"POSTED".equals(status)&&hasGl)unacknowledged++;
                 if("POSTED".equals(status)&&hasGl) {
-                    Cursor sourceTotals=source.rawQuery("SELECT COALESCE(SUM(debit_minor),0),COALESCE(SUM(credit_minor),0) FROM factory_gl_outbox_lines WHERE outbox_id=?",
+                    boolean mismatch=false;
+                    int baseMinor=minorUnits(destination,scalar(destination,"SELECT base_currency FROM company_settings WHERE id=1",null));
+                    int transactionMinor=minorUnits(destination,"SDG");
+                    Cursor sourceLines=source.rawQuery("SELECT debit_minor,credit_minor,target_account_code,branch_code,currency_code,fx_rate_num,fx_rate_den "+
+                        "FROM factory_gl_outbox_lines WHERE outbox_id=? ORDER BY line_no",
                         new String[]{String.valueOf(outboxId)});
-                    long sourceDebit,sourceCredit;
-                    try{sourceTotals.moveToFirst();sourceDebit=sourceTotals.getLong(0);sourceCredit=sourceTotals.getLong(1);}finally{sourceTotals.close();}
-                    Cursor glTotals=destination.rawQuery("SELECT COALESCE(SUM(l.transaction_debit_minor),0),"+
-                        "COALESCE(SUM(l.transaction_credit_minor),0),COUNT(DISTINCT l.transaction_currency_code),"+
-                        "COALESCE(SUM(CASE WHEN l.transaction_currency_code='SDG' THEN 0 ELSE 1 END),0) "+
-                        "FROM gl_journal_entries e JOIN gl_journal_lines l ON l.entry_id=e.id "+
-                        "WHERE e.source_type=? AND e.source_id=? AND e.status='POSTED'",
+                    Cursor glLines=destination.rawQuery("SELECT a.account_code,b.branch_code,l.transaction_currency_code,"+
+                        "l.transaction_debit_minor,l.transaction_credit_minor,l.fx_rate_num,l.fx_rate_den,"+
+                        "l.base_debit_minor,l.base_credit_minor FROM gl_journal_entries e "+
+                        "JOIN gl_journal_lines l ON l.entry_id=e.id JOIN chart_of_accounts a ON a.id=l.account_id "+
+                        "JOIN branches b ON b.id=l.branch_id WHERE e.source_type=? AND e.source_id=? AND e.status='POSTED' ORDER BY l.id",
                         new String[]{SOURCE_TYPE,sourceRef});
                     try {
-                        if(!glTotals.moveToFirst()||glTotals.getInt(2)!=1||glTotals.getInt(3)!=0||
-                           glTotals.getLong(0)!=sourceDebit||glTotals.getLong(1)!=sourceCredit)mismatches++;
-                    } finally {glTotals.close();}
+                        while(sourceLines.moveToNext()) {
+                            if(!glLines.moveToNext()){mismatch=true;break;}
+                            long debit=sourceLines.getLong(0),credit=sourceLines.getLong(1);
+                            String account=sourceLines.getString(2),branch=sourceLines.getString(3),currency=sourceLines.getString(4);
+                            long num=sourceLines.getLong(5),den=sourceLines.getLong(6);
+                            long expectedBaseDebit=debit>0?GeneralLedger.toBaseMinor(debit,num,den,transactionMinor,baseMinor):0;
+                            long expectedBaseCredit=credit>0?GeneralLedger.toBaseMinor(credit,num,den,transactionMinor,baseMinor):0;
+                            if(!eq(account,glLines.getString(0))||!eq(branch,glLines.getString(1))||
+                               !eq(currency,glLines.getString(2))||debit!=glLines.getLong(3)||credit!=glLines.getLong(4)||
+                               num!=glLines.getLong(5)||den!=glLines.getLong(6)||
+                               expectedBaseDebit!=glLines.getLong(7)||expectedBaseCredit!=glLines.getLong(8))mismatch=true;
+                        }
+                        if(glLines.moveToNext())mismatch=true;
+                    } catch(Exception invalidLine){mismatch=true;}
+                    finally {sourceLines.close();glLines.close();}
+                    if(mismatch)mismatches++;
                 }
             }
         } finally {events.close();}
@@ -186,6 +201,11 @@ final class FactoryGlOutbox {
         } finally {glEvents.close();}
         return new ReconciliationReport(sourceCount,eventCount,posted,pending,processing,retry,dead,
             missingOutbox,orphanOutbox,missingDestination,orphanDestination,unacknowledged,mismatches);
+    }
+
+    private static int minorUnits(SQLiteDatabase db,String currency) {
+        Cursor c=db.rawQuery("SELECT minor_units FROM currencies WHERE code=? AND active=1",new String[]{currency});
+        try{if(!c.moveToFirst())throw new IllegalStateException("عملة غير نشطة للمطابقة: "+currency);return c.getInt(0);}finally{c.close();}
     }
 
     private static int count(SQLiteDatabase db,String sql) {
