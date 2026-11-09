@@ -21,7 +21,7 @@ public class FactoryLedgerActivity extends Activity {
     private final Runnable entitlementWatchdog = new Runnable() {
         @Override public void run() {
             if (!LicenseAccessGate.isAccessAllowed(FactoryLedgerActivity.this)) enforceEntitlement();
-            else entitlementHandler.postDelayed(this,30000L);
+            else entitlementHandler.postDelayed(this,1000L);
         }
     };
     private boolean enforceEntitlement() {
