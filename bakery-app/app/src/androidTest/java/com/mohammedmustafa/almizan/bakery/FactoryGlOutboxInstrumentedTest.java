@@ -70,7 +70,8 @@ public class FactoryGlOutboxInstrumentedTest {
 
     @Test public void existingFactoryDatabaseV12UpgradesAdditivelyToV13() throws Exception {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
-        String name="factory_gl_schema_upgrade_"+System.currentTimeMillis()+".db";
+        String name="almizan_factory_1.db";
+        context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
         SQLiteDatabase legacy=SecureDatabase.open(context,name);
         legacy.execSQL("CREATE TABLE materials(id INTEGER PRIMARY KEY,name TEXT,qty INTEGER,value INTEGER)");
         legacy.execSQL("INSERT INTO materials(id,name,qty,value) VALUES(1,'دقيق',12000,9000)");
