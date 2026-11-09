@@ -196,6 +196,65 @@ public class FactoryLedgerActivity extends Activity {
             db.setTransactionSuccessful();return cost;
         }finally{db.endTransaction();}
     }
+    private void glBridge(){
+        frame("ربط دفتر المصنع بالأستاذ العام");
+        body.addView(label("تُحفظ قيود المصنع أولاً في Outbox داخل معاملة القيد الأصلي. لا ينتقل أي قيد قبل ربط كل حساب مصدر صراحةً بحساب نشط في الأستاذ العام، مع تحديد الفرع والعملة. لا توجد مطابقة تلقائية بأسماء العرض.",14));
+        body.addView(label("الحسابات المصدرية غير المربوطة",16));
+        rows("SELECT DISTINCT l.source_account FROM factory_gl_outbox_lines l LEFT JOIN factory_gl_account_mappings m ON m.source_account=l.source_account AND m.active=1 WHERE m.source_account IS NULL ORDER BY l.source_account");
+        body.addView(label("حالة طابور الترحيل",16));
+        rows("SELECT event_key||' — '||status||' — محاولات '||attempt_count||CASE WHEN last_error='' THEN '' ELSE ' — '||last_error END FROM factory_gl_outbox ORDER BY id DESC LIMIT 50");
+        body.addView(label("الربط الصريح للحسابات",16));
+        rows("SELECT source_account||' ← '||target_account_code||' — '||branch_code||' — '||currency_code FROM factory_gl_account_mappings WHERE active=1 ORDER BY source_account");
+        EditText source=field("اسم الحساب كما يظهر حرفياً في دفتر المصنع",false);
+        EditText target=field("كود الحساب في الأستاذ العام",false);
+        EditText branch=field("كود الفرع",false);branch.setText("MAIN");
+        EditText currency=field("عملة القيد",false);currency.setText("SDG");
+        EditText fxNum=field("بسط سعر الصرف",false);fxNum.setText("1");
+        EditText fxDen=field("مقام سعر الصرف",false);fxDen.setText("1");
+        body.addView(button("حفظ ربط الحساب",()->{
+            SQLiteDatabase destination=null;
+            try{
+                String src=source.getText().toString().trim(),code=target.getText().toString().trim();
+                String branchCode=branch.getText().toString().trim(),currencyCode=currency.getText().toString().trim().toUpperCase(Locale.US);
+                long numerator=amount(fxNum),denominator=amount(fxDen);
+                destination=SecureDatabase.open(this,"almizan_bakery_250.db");
+                EnterpriseSchema.ensure(destination);
+                requireMappingValue(destination,"SELECT COUNT(*) FROM chart_of_accounts WHERE account_code=? AND active=1",code,"كود الحساب غير موجود أو غير نشط");
+                requireMappingValue(destination,"SELECT COUNT(*) FROM branches WHERE branch_code=? AND active=1",branchCode,"الفرع غير موجود أو غير نشط");
+                requireMappingValue(destination,"SELECT COUNT(*) FROM currencies WHERE code=? AND active=1",currencyCode,"العملة غير موجودة أو غير نشطة");
+                FactoryGlOutbox.saveMapping(db,src,code,branchCode,currencyCode,numerator,denominator);
+                say("تم حفظ الربط. سيظل القيد غير مرحل حتى نجاح التحقق والترحيل.");
+                glBridge();
+            }catch(Exception e){say("تعذر حفظ الربط: "+e.getMessage());}
+            finally{if(destination!=null&&destination.isOpen())destination.close();}
+        }));
+        body.addView(label("مرجع الحسابات والفروع والعملات النشطة في قاعدة الأستاذ العام",15));
+        SQLiteDatabase destination=null;
+        try{
+            destination=SecureDatabase.open(this,"almizan_bakery_250.db");
+            EnterpriseSchema.ensure(destination);
+            appendReferenceRows(destination,"SELECT account_code||' — '||name_ar||' / '||name_en FROM chart_of_accounts WHERE active=1 ORDER BY account_code","الحسابات");
+            appendReferenceRows(destination,"SELECT branch_code||' — '||name FROM branches WHERE active=1 ORDER BY branch_code","الفروع");
+            appendReferenceRows(destination,"SELECT code||' — '||name_ar FROM currencies WHERE active=1 ORDER BY code","العملات");
+        }catch(Exception e){body.addView(label("تعذر قراءة دليل الحسابات: "+e.getMessage(),13));}
+        finally{if(destination!=null&&destination.isOpen())destination.close();}
+        body.addView(button("ترحيل القيود المعلقة إلى الأستاذ العام",()->{
+            try{
+                FactoryGlOutbox.ProcessResult result=FactoryGlOutbox.processPending(this,db);
+                say("تم ترحيل "+result.posted+" — إعادة المحاولة "+result.retried+" — متوقف نهائياً "+result.deadLetter+" — لم يرحل "+result.skipped);
+                glBridge();
+            }catch(Exception e){say("تعذر تشغيل الترحيل: "+e.getMessage());}
+        }));
+    }
+    private void requireMappingValue(SQLiteDatabase destination,String sql,String value,String error){
+        Cursor c=destination.rawQuery(sql,new String[]{value});
+        try{if(!c.moveToFirst()||c.getLong(0)!=1)throw new IllegalArgumentException(error);}finally{c.close();}
+    }
+    private void appendReferenceRows(SQLiteDatabase destination,String sql,String heading){
+        body.addView(label(heading,14));
+        Cursor c=destination.rawQuery(sql,null);
+        try{while(c.moveToNext())body.addView(label(c.getString(0),12));}finally{c.close();}
+    }
     private void journals(){
         frame("دفتر القيود");
         body.addView(label("القيد المتوازن يتكون من طرف مدين وطرف دائن بالقيمة نفسها. يسمح بعكس القيود اليدوية فقط. قيود المرتجعات وWIP مرتبطة بمستندات مخزنية ولا تعكس من هذه الشاشة حتى لا تختلف الأرصدة.",14));
