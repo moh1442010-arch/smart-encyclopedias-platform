@@ -232,6 +232,12 @@ public class MainActivity extends Activity {
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
         });
         if(sdgIndex>=0){int sd=jurisdictionCodes.indexOf("SD");if(sd>=0)jurisdictionSpinner.setSelection(sd);}
+        jurisdictionSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
+                if(position>=0&&position<jurisdictionCodes.size())taxProfileHint.setText(taxProfileSummary(jurisdictionCodes.get(position)));
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
+        });
         EditText pin = new EditText(this);
         pin.setHint(AppLanguage.tr(this,"كلمة المرور الجديدة — 6 أرقام على الأقل"));
         pin.setSingleLine(true);
