@@ -50,6 +50,10 @@ public class FactoryBackupRestoreTest {
         assertEquals(1,snapshot.getJSONObject("tables").getJSONArray("factory_gl_outbox").length());
         assertEquals(2,snapshot.getJSONObject("tables").getJSONArray("factory_gl_outbox_lines").length());
         FactoryBackup.validate(snapshot);
+        JSONObject legacySnapshot=new JSONObject(snapshot.toString());
+        legacySnapshot.put("schema_version",11);
+        legacySnapshot.getJSONObject("tables").getJSONArray("factory_gl_outbox").getJSONObject(0).remove("payload_version");
+        FactoryBackup.validate(legacySnapshot);
         assertEquals("مصنع الاختبار",snapshot.getJSONObject("profile").getString("business_name"));
 
         db=SecureDatabase.open(context,database);
