@@ -138,6 +138,7 @@ jobs:
               'static ReconciliationReport reconcile',
               'GeneralLedger.post(destination,entry)',
               'payload_version',
+              'عملة مصدر دفتر المصنع ثابتة SDG',
               'DEAD_LETTER',
             ],
             "bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java": [
@@ -150,6 +151,7 @@ jobs:
               'backfillCapturesValidLegacyJournalsWithoutChangingHistoryAndLeavesInvalidOnesVisible',
               'reconciliationDetectsDestinationTransactionAmountMismatch',
               'foreignBaseCurrencyRejectsUnverifiedOneToOneFactoryRate',
+              'nonSdgImportedMappingCannotPostFactoryAmountsAsAnotherCurrency',
             ],
             "bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryBackupRestoreTest.java": [
               'assertEquals(13,snapshot.getInt("schema_version"))',
