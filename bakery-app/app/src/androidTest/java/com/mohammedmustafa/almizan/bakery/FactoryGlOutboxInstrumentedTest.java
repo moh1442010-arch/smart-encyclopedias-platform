@@ -51,6 +51,8 @@ public class FactoryGlOutboxInstrumentedTest {
 
             assertEquals(1,count(db,"journal_entries"));
             assertEquals(1,count(db,"factory_gl_outbox"));
+            Cursor payloadVersion=db.rawQuery("SELECT payload_version FROM factory_gl_outbox WHERE source_entry_ref='OUTBOX-ATOMIC-1'",null);
+            try{assertTrue(payloadVersion.moveToFirst());assertEquals(1,payloadVersion.getInt(0));}finally{payloadVersion.close();}
             assertEquals(2,count(db,"factory_gl_outbox_lines"));
 
             db.beginTransaction();
