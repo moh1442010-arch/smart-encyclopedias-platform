@@ -178,8 +178,8 @@ final class FactoryGlOutbox {
                             long num=sourceLines.getLong(5),den=sourceLines.getLong(6);
                             long expectedBaseDebit=debit>0?GeneralLedger.toBaseMinor(debit,num,den,transactionMinor,baseMinor):0;
                             long expectedBaseCredit=credit>0?GeneralLedger.toBaseMinor(credit,num,den,transactionMinor,baseMinor):0;
-                            if(!eq(account,glLines.getString(0))||!eq(branch,glLines.getString(1))||
-                               !eq(currency,glLines.getString(2))||debit!=glLines.getLong(3)||credit!=glLines.getLong(4)||
+                            if(!same(account,glLines.getString(0))||!same(branch,glLines.getString(1))||
+                               !same(currency,glLines.getString(2))||debit!=glLines.getLong(3)||credit!=glLines.getLong(4)||
                                num!=glLines.getLong(5)||den!=glLines.getLong(6)||
                                expectedBaseDebit!=glLines.getLong(7)||expectedBaseCredit!=glLines.getLong(8))mismatch=true;
                         }
@@ -202,6 +202,8 @@ final class FactoryGlOutbox {
         return new ReconciliationReport(sourceCount,eventCount,posted,pending,processing,retry,dead,
             missingOutbox,orphanOutbox,missingDestination,orphanDestination,unacknowledged,mismatches);
     }
+
+    private static boolean same(String a,String b){return a==null?b==null:a.equals(b);}
 
     private static int minorUnits(SQLiteDatabase db,String currency) {
         Cursor c=db.rawQuery("SELECT minor_units FROM currencies WHERE code=? AND active=1",new String[]{currency});
