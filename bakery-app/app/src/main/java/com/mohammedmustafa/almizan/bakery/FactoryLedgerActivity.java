@@ -50,7 +50,7 @@ public class FactoryLedgerActivity extends Activity {
     }
     private void frame(String title){
         LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setLayoutDirection(AppLanguage.isEnglish(this)?View.LAYOUT_DIRECTION_LTR:View.LAYOUT_DIRECTION_RTL);root.setPadding(12,10,12,12);root.setBackgroundColor(Color.rgb(246,248,251));
-        TextView h=label(getSharedPreferences("factory_profile",MODE_PRIVATE).getString("business_name","المصنع")+"\\nدفتر المصنع — "+title,20);h.setTextColor(Color.rgb(11,31,58));h.setGravity(Gravity.CENTER);root.addView(h);
+        TextView h=label(getSharedPreferences("factory_profile",MODE_PRIVATE).getString("business_name","المصنع")+"\nدفتر المصنع — "+title,20);h.setTextColor(Color.rgb(11,31,58));h.setGravity(Gravity.CENTER);root.addView(h);
         root.addView(button("العودة إلى مصنع الخبائز والحلويات",()->finish()));
         root.addView(button("🌐 اللغة / Language",()->AppLanguage.showPicker(this)));
         root.addView(button("⌂ الرئيسية",()->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();}));
@@ -64,7 +64,7 @@ public class FactoryLedgerActivity extends Activity {
     }
     private void appendPrintable(View view,StringBuilder out){
         if(view instanceof EditText){String value=((EditText)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\n");return;}
-        if(view instanceof TextView){String value=((TextView)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");}
+        if(view instanceof TextView){String value=((TextView)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\n");}
         if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++)appendPrintable(group.getChildAt(i),out);}
     }
     private TextView label(String s,int size){TextView t=new TextView(this);t.setText(AppLanguage.tr(this,s));t.setTextSize(size);t.setTextColor(Color.rgb(30,40,50));t.setPadding(5,9,5,9);return t;}
