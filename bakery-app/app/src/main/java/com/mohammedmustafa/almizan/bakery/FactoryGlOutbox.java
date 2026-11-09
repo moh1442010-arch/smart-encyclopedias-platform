@@ -400,6 +400,33 @@ final class FactoryGlOutbox {
         return source.update("factory_gl_outbox",v,"status='RETRY'",null);
     }
 
+    static final class BackfillResult {
+        final int captured,failed;
+        final String firstError;
+        BackfillResult(int captured,int failed,String firstError){this.captured=captured;this.failed=failed;this.firstError=firstError;}
+    }
+
+    /** Captures valid pre-outbox posted factory journals without editing their historical rows. */
+    static BackfillResult backfillPostedJournals(SQLiteDatabase source,int limit) {
+        if(source==null||!source.isOpen()||limit<1||limit>500)throw new IllegalArgumentException("حد ترحيل التاريخ غير صالح");
+        ensureSchema(source);
+        List<Long> ids=new ArrayList<>();
+        Cursor c=source.rawQuery("SELECT j.id FROM journal_entries j LEFT JOIN factory_gl_outbox o ON o.source_entry_id=j.id "+
+            "WHERE j.status='POSTED' AND o.id IS NULL ORDER BY j.id LIMIT ?",new String[]{String.valueOf(limit)});
+        try{while(c.moveToNext())ids.add(c.getLong(0));}finally{c.close();}
+        int captured=0,failed=0;String firstError="";
+        for(Long id:ids) {
+            source.beginTransaction();
+            try {
+                enqueue(source,id);
+                source.setTransactionSuccessful();captured++;
+            } catch(Exception e) {
+                failed++;if(firstError.isEmpty())firstError="القيد "+id+": "+safeError(e);
+            } finally {source.endTransaction();}
+        }
+        return new BackfillResult(captured,failed,firstError);
+    }
+
     static ProcessResult processPending(Context context,SQLiteDatabase source) {
         SQLiteDatabase destination=null;
         try {
