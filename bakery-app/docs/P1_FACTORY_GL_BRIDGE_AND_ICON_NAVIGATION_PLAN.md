@@ -29,7 +29,10 @@ The following code is now present on this branch:
 - PROCESSING events are eligible for recovery after a process interruption. Destination idempotency is the recovery boundary if the destination committed before source acknowledgement.
 - Retry uses bounded exponential delay and DEAD_LETTER after eight failed delivery attempts.
 - Manual factory journals, WIP journal entries, sales-return journals, and manual reversal journals are captured by the outbox.
+- The main factory database now creates source journals in the same transaction for opening raw-material inventory, supplier raw-material purchases, sales revenue and COGS, customer collections, supplier payments, operating expenses, and finished-goods waste/spoilage.
+- The factory database schema was advanced additively to version 12 to create outbox tables for existing installations.
 - Factory backup schema is now version 10 and includes account mappings, outbox events, and outbox lines. Older schema versions remain accepted without those new tables.
+- Test coverage now includes isolated destination-DB integration tests for successful GL delivery, duplicate/crash replay, changed mapped payload rejection, unknown account mapping, and closed-period rejection. These tests are authored but have not yet run in CI.
 
 ## Important scope still missing
 
@@ -37,7 +40,9 @@ This is a foundation, not a completed operational integration. The main `Factory
 
 The following are also still open:
 
-- Destination integration tests for actual GL posting, duplicate delivery, crash-after-commit recovery, changed-payload conflict, closed period, missing/inactive mapping, and destination failure.
+- Production-finalization accounting. The current factory production form records material cost, labor, and overhead together but does not record the payment/accrual source for labor and overhead. Posting an invented balancing account would misstate liabilities or expenses, so this requires a proper WIP/cost-source design before GL integration.
+- Destination integration tests have been authored for successful GL posting, duplicate delivery, crash-after-commit recovery, changed-payload conflict, unknown mapping, and closed period; CI execution and fixes are still pending.
+- Inactive account/branch/currency and destination database failure tests are still missing.
 - Reconciliation report comparing factory source journals, outbox, GL destination entries, and debit/credit totals.
 - Safe operator workflow for correcting a frozen mapping after a failed delivery.
 - Automated scheduling or a clearly defined synchronization trigger beyond the manual queue action.
