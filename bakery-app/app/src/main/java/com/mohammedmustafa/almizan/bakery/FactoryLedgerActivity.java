@@ -21,22 +21,23 @@ public class FactoryLedgerActivity extends Activity {
     private final Runnable entitlementWatchdog = new Runnable() {
         @Override public void run() {
             if (!LicenseAccessGate.isAccessAllowed(FactoryLedgerActivity.this)) enforceEntitlement();
-            else entitlementHandler.postDelayed(this,30000L);
+            else entitlementHandler.postDelayed(this,1000L);
         }
     };
     private boolean enforceEntitlement() {
         if (LicenseAccessGate.isAccessAllowed(this)) return true;
         entitlementHandler.removeCallbacks(entitlementWatchdog);
         if (db != null && db.isOpen()) { db.close(); db=null; }
-        Toast.makeText(this,"انتهت التجربة أو لا يوجد ترخيص ساري. بياناتك محفوظة؛ يرجى التفعيل للمتابعة.",Toast.LENGTH_LONG).show();
+        Toast.makeText(this,AppLanguage.tr(this,"انتهت التجربة أو لا يوجد ترخيص ساري. بياناتك محفوظة؛ يرجى التفعيل للمتابعة."),Toast.LENGTH_LONG).show();
         finish();
         startActivity(new Intent(this,MainActivity.class));
         return false;
     }
     private static final int GOLD=Color.rgb(212,175,55);
     private String today(){return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());}
-    @Override public void onCreate(Bundle b){super.onCreate(b);if(!enforceEntitlement())return;db=SecureDatabase.open(this,"almizan_factory_1.db");schema();home();}
-    @Override protected void onResume(){super.onResume();if(db!=null&&!enforceEntitlement())return;entitlementHandler.removeCallbacks(entitlementWatchdog);entitlementHandler.post(entitlementWatchdog);}
+    @Override protected void attachBaseContext(android.content.Context newBase){super.attachBaseContext(AppLanguage.wrap(newBase));}
+    @Override public void onCreate(Bundle b){super.onCreate(b);AppUpdatePolicy.enforceCached(this);if(!enforceEntitlement())return;db=SecureDatabase.open(this,"almizan_factory_1.db");schema();home();}
+    @Override protected void onResume(){super.onResume();AppUpdatePolicy.check(this);if(db!=null&&!enforceEntitlement())return;entitlementHandler.removeCallbacks(entitlementWatchdog);entitlementHandler.post(entitlementWatchdog);}
     @Override protected void onPause(){entitlementHandler.removeCallbacks(entitlementWatchdog);super.onPause();}
     @Override protected void onDestroy(){entitlementHandler.removeCallbacks(entitlementWatchdog);if(db!=null&&db.isOpen())db.close();super.onDestroy();}
     private void schema(){
@@ -48,9 +49,10 @@ public class FactoryLedgerActivity extends Activity {
         db.execSQL("CREATE TABLE IF NOT EXISTS journal_lines(id INTEGER PRIMARY KEY,entry_id INTEGER NOT NULL,account TEXT NOT NULL,debit INTEGER NOT NULL DEFAULT 0,credit INTEGER NOT NULL DEFAULT 0)");
     }
     private void frame(String title){
-        LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(12,10,12,12);root.setBackgroundColor(Color.rgb(246,248,251));
+        LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setLayoutDirection(AppLanguage.isEnglish(this)?View.LAYOUT_DIRECTION_LTR:View.LAYOUT_DIRECTION_RTL);root.setPadding(12,10,12,12);root.setBackgroundColor(Color.rgb(246,248,251));
         TextView h=label(getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","المخبز")+"\\nدفتر المصنع — "+title,20);h.setTextColor(Color.rgb(11,31,58));h.setGravity(Gravity.CENTER);root.addView(h);
         root.addView(button("العودة إلى مصنع الخبائز والحلويات",()->finish()));
+        root.addView(button("🌐 اللغة / Language",()->AppLanguage.showPicker(this)));
         root.addView(button("⌂ الرئيسية",()->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();}));
         ScrollView scroll=new ScrollView(this);body=new LinearLayout(this);body.setOrientation(1);scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));root.addView(button("🖨️ طباعة الشاشة الحالية",()->printVisibleScreen(title)));setContentView(root);
     }
@@ -65,12 +67,12 @@ public class FactoryLedgerActivity extends Activity {
         if(view instanceof TextView){String value=((TextView)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");}
         if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++)appendPrintable(group.getChildAt(i),out);}
     }
-    private TextView label(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(Color.rgb(30,40,50));t.setPadding(5,9,5,9);return t;}
-    private Button button(String s,Runnable r){Button b=new Button(this);b.setText(s);b.setOnClickListener(v->r.run());return b;}
-    private EditText field(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setInputType(decimal?android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:android.text.InputType.TYPE_CLASS_TEXT);body.addView(e);return e;}
+    private TextView label(String s,int size){TextView t=new TextView(this);t.setText(AppLanguage.tr(this,s));t.setTextSize(size);t.setTextColor(Color.rgb(30,40,50));t.setPadding(5,9,5,9);return t;}
+    private Button button(String s,Runnable r){Button b=new Button(this);b.setText(AppLanguage.tr(this,s));b.setOnClickListener(v->r.run());return b;}
+    private EditText field(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(AppLanguage.tr(this,hint));e.setInputType(decimal?android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:android.text.InputType.TYPE_CLASS_TEXT);body.addView(e);return e;}
     private long qty(EditText e){try{return new java.math.BigDecimal(e.getText().toString().trim()).movePointRight(3).longValueExact();}catch(Exception x){return 0;}}
     private long amount(EditText e){try{return new java.math.BigDecimal(e.getText().toString().trim()).longValueExact();}catch(Exception x){return 0;}}
-    private void say(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
+    private void say(String s){Toast.makeText(this,AppLanguage.tr(this,s),Toast.LENGTH_LONG).show();}
     private void home(){frame("العمليات المتقدمة");body.addView(label("عمليات مستقلة تحفظ في قاعدة بيانات المصنع نفسها، وتعمل دون اتصال بالإنترنت.",14));body.addView(button("مرتجعات المبيعات",()->returns()));body.addView(button("الأعمال تحت التشغيل WIP",()->wip()));body.addView(button("دفتر القيود وعكس القيد",()->journals()));}
     private void rows(String sql){Cursor c=null;try{c=db.rawQuery(sql,null);while(c.moveToNext())body.addView(label(c.getString(0),13));}finally{if(c!=null)c.close();}}
     private void returns(){

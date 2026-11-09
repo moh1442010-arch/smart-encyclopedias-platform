@@ -1,4 +1,4 @@
-name: Build Al-Mizan Bakery 2.8.1 Device-Review APK (no commercial release)
+name: Build Al-Mizan Bakery 2.8.3 Device-Review APK (no commercial release)
 
 on:
   workflow_dispatch:
@@ -19,12 +19,12 @@ permissions:
 concurrency:
   # Push and pull_request events for the same PR must not cancel each other's verification.
   group: al-mizan-bakery-release-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.event_name }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
-    # Only the dedicated device-review branch may build an APK; this workflow never publishes a commercial release.
-    if: github.ref == 'refs/heads/review/bakery-2.8.1-device-acceptance' || github.event.pull_request.head.ref == 'review/bakery-2.8.1-device-acceptance'
+    # Dedicated review branch and the active 2.9 feature branch may build non-commercial review APKs only.
+    if: github.ref == 'refs/heads/review/bakery-2.8.2-device-acceptance' || github.ref == 'refs/heads/feature/almizan-2.9-competitive-localization' || github.event.pull_request.head.ref == 'review/bakery-2.8.2-device-acceptance' || github.event.pull_request.head.ref == 'feature/almizan-2.9-competitive-localization'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -44,11 +44,11 @@ jobs:
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           const app = fs.readFileSync('bakery-app/app/build.gradle', 'utf8');
-          const main = fs.readFileSync('bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java', 'utf8');
+          const gate = fs.readFileSync('bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java', 'utf8');
           const issuer = fs.readFileSync('tools/bakery-license-issuer.mjs', 'utf8');
           const appVersion = app.match(/versionName '([^']+)'/)?.[1];
           const issuerVersion = issuer.match(/CURRENT_APP_VERSION = "([^"]+)"/)?.[1];
-          const appKey = main.match(/LICENSE_PUBLIC_KEY_B64 = "([^"]+)"/)?.[1];
+          const appKey = gate.match(/"([A-Za-z0-9+/=]{100,})"/)?.[1];
           const issuerKey = issuer.match(/EXPECTED_PUBLIC_KEY_DER_B64 = "([^"]+)"/)?.[1];
           if (!appVersion || !issuerVersion || appVersion !== issuerVersion) {
             throw new Error(`Offline issuer version mismatch: app=${appVersion}, issuer=${issuerVersion}`);
@@ -67,27 +67,35 @@ jobs:
           const app = fs.readFileSync('bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java', 'utf8');
           const worker = fs.readFileSync('licensing/worker/src/index.js', 'utf8');
           const workerConfig = fs.readFileSync('licensing/worker/wrangler.toml', 'utf8');
-          const appMain = fs.readFileSync('bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java', 'utf8');
-          const appKey = appMain.match(/LICENSE_PUBLIC_KEY_B64 = "([^"]+)"/)?.[1];
+          const licenseSchema = fs.readFileSync('licensing/schema.sql', 'utf8');
+          const licenseGate = fs.readFileSync('bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java', 'utf8');
+          const appKey = licenseGate.match(/"([A-Za-z0-9+/=]{100,})"/)?.[1];
           const workerKey = worker.match(/EXPECTED_APP_PUBLIC_KEY_DER_B64 = "([^"]+)"/)?.[1];
           if (!appKey || appKey !== workerKey) throw new Error("Worker signing public key does not match Android app.");
-          if (!workerConfig.includes('APP_VERSION = "2.8.1"')) throw new Error("Worker APP_VERSION must be 2.8.1.");
-          if (!workerConfig.includes('PREVIOUS_APP_VERSION = "2.8.0"')) throw new Error("Worker must preserve support for existing 2.8.0 customers.");
+          if (!workerConfig.includes('APP_VERSION = "2.8.3"')) throw new Error("Worker APP_VERSION must be 2.8.3.");
+          if (!workerConfig.includes('PREVIOUS_APP_VERSION = "2.8.2"')) throw new Error("Worker must preserve upgrade compatibility from installed 2.8.2 customers.");
           const expected = {
             applicationId: "com.mohammedmustafa.almizan.bakery",
-            versionName: "2.8.1"
+            versionName: "2.8.3"
           };
           for (const [key, value] of Object.entries(expected)) {
             if (!gradle.includes(`${key} '${value}'`)) throw new Error(`Release identity mismatch: ${key}`);
           }
-          if (!gradle.includes("versionCode 280001")) throw new Error("Release identity mismatch: versionCode");
-          for (const price of ["55,000 جنيه سوداني", "550,000 جنيه سوداني", "1,050,000 جنيه سوداني"]) {
-            if (!app.includes(price)) throw new Error(`App is missing approved price: ${price}`);
+          if (!gradle.includes("versionCode 280003")) throw new Error("Release identity mismatch: versionCode");
+          if (!app.includes("return new long[]{55000,550000,1050000}")) throw new Error("App SDG license prices mismatch.");
+          if (!app.includes("return new long[]{29,290,725}")) throw new Error("App SAR/AED license prices mismatch.");
+          if (!app.includes("return new long[]{8,80,199}")) throw new Error("App USD license prices mismatch.");
+          for (const row of [
+            "('SDG','monthly',55000", "('SDG','annual',550000", "('SDG','lifetime',1050000",
+            "('SAR','monthly',29", "('SAR','annual',290", "('SAR','lifetime',725",
+            "('AED','monthly',29", "('AED','annual',290", "('AED','lifetime',725",
+            "('USD','monthly',8", "('USD','annual',80", "('USD','lifetime',199"
+          ]) {
+            if (!licenseSchema.includes(row)) throw new Error(`D1 licensing price catalog is missing approved row ${row}`);
           }
-          for (const [plan, amount] of Object.entries({monthly:55000, annual:550000, lifetime:1050000})) {
-            if (!worker.includes(`${plan}: { amount: ${amount}`)) throw new Error(`Licensing service amount mismatch for ${plan}`);
-          }
-          console.log("Release identity and all three approved bakery prices verified.");
+          if (!worker.includes("FROM license_price_catalog")) throw new Error("Worker must read license prices from D1.");
+          if (!worker.includes("CURRENCY_NOT_ALLOWED_FOR_COUNTRY")) throw new Error("Server country/currency policy is missing.");
+          console.log("Release identity and all approved SDG/SAR/AED/USD license prices verified.");
           NODE
 
       - name: Set up Java 17
@@ -129,7 +137,7 @@ jobs:
           grep -Fq 'CREATE TABLE IF NOT EXISTS work_orders' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS journal_entries' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'root.put("schema_version", 9)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
-          grep -Fq 'SD8504018822240001' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
+          grep -Fq 'SD46 0252 4541 9000 01' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq '1882224' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           test -s bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryBackupRestoreTest.java
           grep -Fq 'net.zetetic:sqlcipher-android:4.19.1@aar' bakery-app/app/build.gradle
@@ -174,14 +182,14 @@ jobs:
           grep -Fq '7L * 24L * 60L * 60L * 1000L' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
           grep -Fq '27. التجربة المجانية والاشتراك' bakery-app/app/src/main/assets/bakery-guide.html
           grep -Fq '28. حالة حماية قاعدة البيانات' bakery-app/app/src/main/assets/bakery-guide.html
-          grep -Fq 'minSdk 23' bakery-app/app/build.gradle
+          grep -Fq 'minSdk 28' bakery-app/app/build.gradle
           grep -Fq 'targetSdk 35' bakery-app/app/build.gradle
           if grep -R -E 'Math\.(addExact|subtractExact|multiplyExact)\(' bakery-app/app/src/main/java; then
-            echo "Checked arithmetic must remain compatible with Android API 23."
+            echo "Checked arithmetic must remain compatible with Android API 28."
             exit 1
           fi
           grep -Fq 'root.optInt("schema_version")<6 && "work_order_stages".equals(TABLES[i])' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
-          echo "Factory modules, schema v9 backup compatibility and Android API 23 declarations verified."
+          echo "Factory modules, schema v9 backup compatibility and Android API 28 declarations verified."
 
       - name: Run arithmetic unit tests
         working-directory: bakery-app
@@ -194,7 +202,7 @@ jobs:
       - name: Upload internal debug build (not for distribution)
         uses: actions/upload-artifact@v4
         with:
-          name: al-mizan-bakery-2.8.1-debug-internal
+          name: al-mizan-bakery-2.8.3-debug-internal
           path: bakery-app/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -219,52 +227,49 @@ jobs:
           apk="app/build/outputs/apk/release/app-release-unsigned.apk"
           test -s "$apk"
           build_tools="$ANDROID_HOME/build-tools/36.0.0"
-          "$build_tools/zipalign" -f -v 4 "$apk" release/AlMizan-Bakery-2.8.1-aligned.apk
-          "$build_tools/apksigner" sign --ks signing/release.jks --ks-key-alias "$alias" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEYSTORE_PASSWORD" --out release/AlMizan-Bakery-2.8.1-review.apk release/AlMizan-Bakery-2.8.1-aligned.apk
-          "$build_tools/apksigner" verify --verbose --print-certs release/AlMizan-Bakery-2.8.1-review.apk | tee release/SIGNING-CERTIFICATE.txt
+          "$build_tools/zipalign" -f -v 4 "$apk" release/AlMizan-Bakery-2.8.3-aligned.apk
+          "$build_tools/apksigner" sign --ks signing/release.jks --ks-key-alias "$alias" --ks-pass "pass:$KEYSTORE_PASSWORD" --key-pass "pass:$KEYSTORE_PASSWORD" --out release/AlMizan-Bakery-2.8.3-review.apk release/AlMizan-Bakery-2.8.3-aligned.apk
+          "$build_tools/apksigner" verify --verbose --print-certs release/AlMizan-Bakery-2.8.3-review.apk | tee release/SIGNING-CERTIFICATE.txt
           cert_sha="$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print tolower($2); exit}' release/SIGNING-CERTIFICATE.txt | tr -d ':[:space:]')"
           expected="159f40945e9afbba77bb58ffbbcc0c73bf247a6f4e630463b8c1fe5ec60b0279"
           test "$cert_sha" = "$expected" || { echo "::error::Signing certificate fingerprint mismatch; do not distribute this APK"; exit 1; }
-          badging="$("$build_tools/aapt" dump badging release/AlMizan-Bakery-2.8.1-review.apk)"
-          echo "$badging" | grep -F "package: name='com.mohammedmustafa.almizan.bakery' versionCode='280001' versionName='2.8.1'"
+          badging="$("$build_tools/aapt" dump badging release/AlMizan-Bakery-2.8.3-review.apk)"
+          echo "$badging" | grep -F "package: name='com.mohammedmustafa.almizan.bakery' versionCode='280003' versionName='2.8.3'"
           echo "$badging" | grep -F "application-label:'المحاسب الميزان للمخابز'"
-          sha256sum release/AlMizan-Bakery-2.8.1-review.apk > release/SHA256SUMS.txt
-          rm -f release/AlMizan-Bakery-2.8.1-aligned.apk signing/release.jks
+          sha256sum release/AlMizan-Bakery-2.8.3-review.apk > release/SHA256SUMS.txt
+          rm -f release/AlMizan-Bakery-2.8.3-aligned.apk signing/release.jks
 
       - name: Upload signed review APK and verification records
         uses: actions/upload-artifact@v4
         with:
-          name: al-mizan-bakery-2.8.1-signed-review
+          name: al-mizan-bakery-2.8.3-signed-review
           path: |
-            bakery-app/release/AlMizan-Bakery-2.8.1-review.apk
+            bakery-app/release/AlMizan-Bakery-2.8.3-review.apk
             bakery-app/release/SHA256SUMS.txt
             bakery-app/release/SIGNING-CERTIFICATE.txt
           if-no-files-found: error
           retention-days: 30
 
-      - name: Smoke test signed APK on minimum Android API 23
+      - name: Smoke test signed APK on minimum Android API 28
         timeout-minutes: 10
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 23
+          api-level: 28
           target: default
           arch: x86_64
           profile: pixel_2
           script: |
             (cd bakery-app && gradle connectedDebugAndroidTest)
             adb uninstall com.mohammedmustafa.almizan.bakery || true
-            adb install -r bakery-app/release/AlMizan-Bakery-2.8.1-review.apk
+            adb install -r bakery-app/release/AlMizan-Bakery-2.8.3-review.apk
             adb logcat -c
             adb shell monkey -p com.mohammedmustafa.almizan.bakery 1
             sleep 8
             if adb logcat -d -t 3000 | grep -E 'FATAL EXCEPTION|Process: com.mohammedmustafa.almizan.bakery'; then echo "Application crash detected"; exit 1; fi
-            adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.8.1"
+            adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.8.3"
 
       - name: Smoke test signed APK on modern Android API 35
-        # The hosted API 35 emulator intermittently loses Android system services after boot
-        # (ADB Broken pipe) even though the signed APK builds and API 23 smoke test passes.
-        # Keep this compatibility probe visible but do not block artifact publication on runner instability.
-        continue-on-error: true
+        # API 35 is a mandatory compatibility gate; infrastructure failures must remain visible.
         timeout-minutes: 8
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -275,9 +280,9 @@ jobs:
           # Avoid the runner's flaky input keyevent 82 setup on API 35.
           disable-animations: false
           script: |
-            adb install -r bakery-app/release/AlMizan-Bakery-2.8.1-review.apk
+            adb install -r bakery-app/release/AlMizan-Bakery-2.8.3-review.apk
             adb logcat -c
             adb shell monkey -p com.mohammedmustafa.almizan.bakery 1
             sleep 8
             if adb logcat -d -t 3000 | grep -E 'FATAL EXCEPTION|Process: com.mohammedmustafa.almizan.bakery'; then echo "Application crash detected"; exit 1; fi
-            adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.8.1"
+            adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.8.3"

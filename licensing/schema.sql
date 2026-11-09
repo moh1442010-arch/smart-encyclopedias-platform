@@ -1,5 +1,29 @@
 PRAGMA foreign_keys = ON;
 
+
+CREATE TABLE IF NOT EXISTS license_price_catalog (
+  currency_code TEXT NOT NULL CHECK (currency_code IN ('SDG','SAR','AED','USD')),
+  plan_code TEXT NOT NULL CHECK (plan_code IN ('monthly','annual','lifetime')),
+  amount_minor INTEGER NOT NULL CHECK (amount_minor > 0),
+  active INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0,1)),
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY(currency_code, plan_code)
+);
+
+INSERT OR IGNORE INTO license_price_catalog(currency_code,plan_code,amount_minor,active,updated_at) VALUES
+ ('SDG','monthly',55000,1,'2026-11-09T00:00:00.000Z'),
+ ('SDG','annual',550000,1,'2026-11-09T00:00:00.000Z'),
+ ('SDG','lifetime',1050000,1,'2026-11-09T00:00:00.000Z'),
+ ('SAR','monthly',29,1,'2026-11-09T00:00:00.000Z'),
+ ('SAR','annual',290,1,'2026-11-09T00:00:00.000Z'),
+ ('SAR','lifetime',725,1,'2026-11-09T00:00:00.000Z'),
+ ('AED','monthly',29,1,'2026-11-09T00:00:00.000Z'),
+ ('AED','annual',290,1,'2026-11-09T00:00:00.000Z'),
+ ('AED','lifetime',725,1,'2026-11-09T00:00:00.000Z'),
+ ('USD','monthly',8,1,'2026-11-09T00:00:00.000Z'),
+ ('USD','annual',80,1,'2026-11-09T00:00:00.000Z'),
+ ('USD','lifetime',199,1,'2026-11-09T00:00:00.000Z');
+
 CREATE TABLE IF NOT EXISTS license_orders (
   id TEXT PRIMARY KEY,
   created_at TEXT NOT NULL,
@@ -8,7 +32,9 @@ CREATE TABLE IF NOT EXISTS license_orders (
   contact TEXT NOT NULL,
   device_id TEXT NOT NULL,
   plan TEXT NOT NULL CHECK (plan IN ('monthly','annual','lifetime')),
-  amount_sdg INTEGER NOT NULL CHECK (amount_sdg > 0),
+  amount_sdg INTEGER NOT NULL DEFAULT 0 CHECK (amount_sdg >= 0),
+  currency_code TEXT NOT NULL DEFAULT 'SDG' CHECK (currency_code IN ('SDG','SAR','AED','USD')),
+  amount_minor INTEGER NOT NULL CHECK (amount_minor > 0),
   receipt_reference TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('pending','approved','rejected')),
   reviewed_at TEXT,
@@ -17,6 +43,9 @@ CREATE TABLE IF NOT EXISTS license_orders (
   token_expires INTEGER,
   app_version TEXT NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_license_orders_currency_created
+  ON license_orders(currency_code, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_license_orders_status_created
   ON license_orders(status, created_at DESC);

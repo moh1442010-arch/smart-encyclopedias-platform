@@ -2,7 +2,36 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import worker from "../src/index.js";
 
-test("new order rejects a client app version that differs from the deployed release", async () => {
+
+test("app policy reports optional update while the release gate is disabled", async () => {
+  const response = await worker.fetch(new Request("https://bakery-test.local/api/app-policy?versionCode=280001"), {
+    DB: {},
+    MIN_SUPPORTED_VERSION_CODE: "0",
+    LATEST_VERSION_CODE: "280003",
+    LATEST_VERSION_NAME: "2.8.3"
+  });
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.mandatory, false);
+  assert.equal(body.minimumSupportedVersionCode, 0);
+  assert.equal(body.latestVersionCode, 280003);
+});
+
+test("app policy blocks clients below the configured minimum version code", async () => {
+  const response = await worker.fetch(new Request("https://bakery-test.local/api/app-policy?versionCode=280001"), {
+    DB: {},
+    MIN_SUPPORTED_VERSION_CODE: "280003",
+    LATEST_VERSION_CODE: "280003",
+    LATEST_VERSION_NAME: "2.8.3",
+    APP_DOWNLOAD_URL: "https://moh1442010-arch.github.io/smart-encyclopedias-platform/store/bakery.html"
+  });
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.mandatory, true);
+  assert.equal(body.minimumSupportedVersionCode, 280003);
+});
+
+test("server rejects vulnerable 2.8.1 order requests while 2.8.3 is current", async () => {
   const response = await worker.fetch(new Request("https://bakery-test.local/api/orders", {
     method: "POST",
     headers: { "content-type": "application/json", origin: "https://moh1442010-arch.github.io" },
@@ -11,10 +40,11 @@ test("new order rejects a client app version that differs from the deployed rele
       contact: "+249123456789",
       deviceId: "DEVICE-12345678",
       plan: "monthly",
+      countryCode: "SD",
       receiptReference: "BANKAK-1234",
-      appVersion: "2.6.15"
+      appVersion: "2.8.1"
     })
-  }), { DB: {}, APP_VERSION: "2.6.17", STORE_ORIGIN: "https://moh1442010-arch.github.io" });
+  }), { DB: {}, APP_VERSION: "2.8.3", PREVIOUS_APP_VERSION: "2.8.2", STORE_ORIGIN: "https://moh1442010-arch.github.io" });
   assert.equal(response.status, 400);
   assert.equal((await response.json()).error, "APP_VERSION_UNSUPPORTED");
 });
@@ -67,7 +97,7 @@ test("activation token recovery requires an authenticated admin session", async 
   assert.equal((await response.json()).error, "UNAUTHORIZED");
 });
 
-test("2.8.0 customer order is accepted and recorded as pending without issuing a token", async () => {
+test("2.8.3 candidate order is accepted and recorded as pending without issuing a token", async () => {
   const writes = [];
   const db = {
     prepare(sql) {
@@ -75,6 +105,8 @@ test("2.8.0 customer order is accepted and recorded as pending without issuing a
         bind(...values) {
           return {
             first: async () => {
+              if (sql.includes("license_price_catalog")) return { amount_minor: 55000 };
+              if (sql.includes("license_price_catalog")) return { amount_minor: 55000 };
               if (sql.includes("license_order_rate_limits")) return { attempts: 1 };
               if (sql.includes("SELECT id FROM license_orders")) return null;
               return null;
@@ -100,15 +132,17 @@ test("2.8.0 customer order is accepted and recorded as pending without issuing a
       contact: "+249123456789",
       deviceId: "DEVICE-12345678",
       plan: "monthly",
+      countryCode: "SD",
       receiptReference: "BANKAK-20261107-TEST",
-      appVersion: "2.8.0"
+      appVersion: "2.8.3"
     })
-  }), { DB: db, APP_VERSION: "2.8.0", STORE_ORIGIN: "https://bakery-test.local" });
+  }), { DB: db, APP_VERSION: "2.8.3", STORE_ORIGIN: "https://bakery-test.local" });
 
   assert.equal(response.status, 201);
   const body = await response.json();
   assert.equal(body.status, "pending");
-  assert.equal(body.amountSdg, 55000);
+  assert.equal(body.amount, 55000);
+  assert.equal(body.currencyCode, "SDG");
   assert.ok(body.orderId);
   assert.equal("activationToken" in body, false);
   assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_orders")));
@@ -128,7 +162,7 @@ test("admin login page is served without exposing dashboard data", async () => {
 
 
 
-test("2.8.1 candidate order is accepted as pending without issuing an activation token", async () => {
+test("2.8.3 candidate order is accepted as pending without issuing an activation token", async () => {
   const writes = [];
   const db = {
     prepare(sql) {
@@ -136,6 +170,7 @@ test("2.8.1 candidate order is accepted as pending without issuing an activation
         bind(...values) {
           return {
             first: async () => {
+              if (sql.includes("license_price_catalog")) return { amount_minor: 55000 };
               if (sql.includes("license_order_rate_limits")) return { attempts: 1 };
               if (sql.includes("SELECT id FROM license_orders")) return null;
               return null;
@@ -157,26 +192,69 @@ test("2.8.1 candidate order is accepted as pending without issuing an activation
       "CF-Connecting-IP": "192.0.2.45"
     },
     body: JSON.stringify({
-      customerName: "Candidate 2.8.1 Bakery",
+      customerName: "Candidate 2.8.2 Bakery",
       contact: "+249123456789",
       deviceId: "DEVICE-281-123456",
       plan: "monthly",
+      countryCode: "SD",
       receiptReference: "TEST-ONLY-281",
-      appVersion: "2.8.1"
+      appVersion: "2.8.3"
     })
   }), {
     DB: db,
-    APP_VERSION: "2.8.1",
-    PREVIOUS_APP_VERSION: "2.8.0",
+    APP_VERSION: "2.8.3",
+    PREVIOUS_APP_VERSION: "2.8.2",
     STORE_ORIGIN: "https://bakery-test.local"
   });
 
   assert.equal(response.status, 201);
   const body = await response.json();
   assert.equal(body.status, "pending");
-  assert.equal(body.amountSdg, 55000);
+  assert.equal(body.amount, 55000);
   assert.ok(body.orderId);
   assert.equal("activationToken" in body, false);
-  assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_orders") && x.values.includes("2.8.1")));
+  assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_orders") && x.values.includes("2.8.2")));
   assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_audit") && x.values.includes("order_created")));
+});
+
+test("international license prices accept SAR, AED and USD and reject EUR", async () => {
+  async function submit(currencyCode, receiptReference) {
+    const writes=[];
+    const db={prepare(sql){return{bind(...values){return{
+      first:async()=>sql.includes("license_price_catalog")?({amount_minor:({SDG:{monthly:55000,annual:550000,lifetime:1050000},SAR:{monthly:29,annual:290,lifetime:725},AED:{monthly:29,annual:290,lifetime:725},USD:{monthly:8,annual:80,lifetime:199}}[currencyCode].annual)}):sql.includes("license_order_rate_limits")?{attempts:1}:null,
+      run:async()=>{writes.push({sql,values});return{meta:{changes:1}};}
+    };}};}};
+    const response=await worker.fetch(new Request("https://bakery-test.local/api/orders",{
+      method:"POST",headers:{"content-type":"application/json",origin:"https://bakery-test.local","CF-Connecting-IP":"192.0.2.90"},
+      body:JSON.stringify({customerName:"International Bakery",contact:"+249123456789",deviceId:"DEVICE-INT-123456",plan:"annual",countryCode:"AE",currencyCode,receiptReference,appVersion:"2.8.3"})
+    }),{DB:db,APP_VERSION:"2.8.3",STORE_ORIGIN:"https://bakery-test.local"});
+    return {response,writes};
+  }
+  for (const [currencyCode,amount] of [["SAR",290],["AED",290],["USD",80]]) {
+    const {response,writes}=await submit(currencyCode,"REF-"+currencyCode);
+    assert.equal(response.status,201);
+    const body=await response.json();
+    assert.equal(body.amount,amount);
+    assert.equal(body.currencyCode,currencyCode);
+    const insert=writes.find(x=>x.sql.includes("INSERT INTO license_orders"));
+    assert.ok(insert);
+    assert.ok(insert.values.includes(currencyCode));
+    assert.ok(insert.values.includes(amount));
+  }
+  const invalid=await submit("EUR","REF-EUR");
+  assert.equal(invalid.response.status,400);
+});
+
+test("server rejects licensing currency that conflicts with Cloudflare country", async () => {
+  const response = await worker.fetch(new Request("https://bakery-test.local/api/orders", {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: "https://bakery-test.local" },
+    body: JSON.stringify({
+      customerName: "Sudan Bakery", contact: "+249123456789", deviceId: "DEVICE-SD-123456",
+      plan: "monthly", countryCode: "SD", currencyCode: "USD",
+      receiptReference: "COUNTRY-MISMATCH", appVersion: "2.8.3"
+    })
+  }), { DB: {}, APP_VERSION: "2.8.3", STORE_ORIGIN: "https://bakery-test.local" });
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error, "CURRENCY_NOT_ALLOWED_FOR_COUNTRY");
 });

@@ -1,0 +1,554 @@
+{
+  "schema_version": 1,
+  "product": "Al-Mizan Bakery",
+  "baseline": "2.8.0",
+  "candidate": "2.8.3",
+  "policy": "No defect is closed without a source commit, reproducible passing test, result, and evidence reference. Android 9 (API 28) is the minimum supported platform. No commercial release until all 90 defects and device acceptance gates pass.",
+  "phases": {
+    "P1": "Core accounting, unified posting, subledger reconciliation and financial statements",
+    "P2": "Bakery/factory operations, costing, inventory, tax, payroll, assets and currencies",
+    "P3": "Security, backup/restore, licensing, localization, upgrade compatibility and device acceptance"
+  },
+  "defects": [
+    {
+      "id": "D01",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D02",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D03",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D04",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D05",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D06",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D07",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D08",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D09",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D10",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D11",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D12",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D13",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D14",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D15",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D16",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D17",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D18",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D19",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D20",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D21",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D22",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D23",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D24",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D25",
+      "phase": "P1",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D26",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D27",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D28",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D29",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D30",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D31",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D32",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D33",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D34",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D35",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D36",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D37",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D38",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D39",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D40",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D41",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D42",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D43",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D44",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D45",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D46",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D47",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D48",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D49",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D50",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D51",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D52",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D53",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D54",
+      "phase": "P2",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D55",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D56",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D57",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D58",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D59",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D60",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D61",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D62",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D63",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D64",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D65",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D66",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D67",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D68",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D69",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D70",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D71",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D72",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D73",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D74",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D75",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D76",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D77",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D78",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D79",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D80",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D81",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D82",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D83",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D84",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D85",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D86",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D87",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D88",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D89",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    },
+    {
+      "id": "D90",
+      "phase": "P3",
+      "status": "OPEN",
+      "evidence": null
+    }
+  ]
+}

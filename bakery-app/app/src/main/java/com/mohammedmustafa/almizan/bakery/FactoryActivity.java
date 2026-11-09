@@ -25,7 +25,7 @@ public class FactoryActivity extends Activity {
         if (LicenseAccessGate.isAccessAllowed(this)) return true;
         entitlementHandler.removeCallbacks(entitlementWatchdog);
         if (db != null) { db.close(); db=null; }
-        Toast.makeText(this,"انتهت التجربة أو لا يوجد ترخيص ساري. بياناتك محفوظة؛ يرجى التفعيل للمتابعة.",Toast.LENGTH_LONG).show();
+        Toast.makeText(this,AppLanguage.tr(this,"انتهت التجربة أو لا يوجد ترخيص ساري. بياناتك محفوظة؛ يرجى التفعيل للمتابعة."),Toast.LENGTH_LONG).show();
         finish();
         startActivity(new Intent(this,MainActivity.class));
         return false;
@@ -60,17 +60,19 @@ public class FactoryActivity extends Activity {
         }catch(Exception e){toast("تعذر تجهيز التقرير للطباعة: "+e.getMessage());}
         finally{if(c!=null)c.close();}
     }
-    @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE|WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);if(!enforceEntitlement())return;db=new DB(this);db.seedMaterials(DEFAULT_MATERIALS);db.seedProducts(DEFAULT_PRODUCTS);home();}
-    @Override protected void onResume(){super.onResume();if(db!=null&&!enforceEntitlement())return;entitlementHandler.removeCallbacks(entitlementWatchdog);entitlementHandler.post(entitlementWatchdog);}
+    @Override protected void attachBaseContext(Context newBase){super.attachBaseContext(AppLanguage.wrap(newBase));}
+    @Override public void onCreate(Bundle b){super.onCreate(b);AppUpdatePolicy.enforceCached(this);getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE|WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);if(!enforceEntitlement())return;db=new DB(this);db.seedMaterials(DEFAULT_MATERIALS);db.seedProducts(DEFAULT_PRODUCTS);home();}
+    @Override protected void onResume(){super.onResume();AppUpdatePolicy.check(this);if(db!=null&&!enforceEntitlement())return;entitlementHandler.removeCallbacks(entitlementWatchdog);entitlementHandler.post(entitlementWatchdog);}
     @Override protected void onPause(){entitlementHandler.removeCallbacks(entitlementWatchdog);super.onPause();}
     @Override protected void onDestroy(){entitlementHandler.removeCallbacks(entitlementWatchdog);if(db!=null){db.close();db=null;}super.onDestroy();}
     @Override public void onBackPressed(){if(!enforceEntitlement())return;if("home".equals(screen))super.onBackPressed();else home();}
-    private TextView label(String s,int size){TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(Color.rgb(30,40,50));t.setPadding(4,10,4,10);return t;}
-    private Button btn(String s,Runnable r){Button b=new Button(this);b.setText(s);b.setOnClickListener(v->r.run());return b;}
+    private TextView label(String s,int size){TextView t=new TextView(this);t.setText(AppLanguage.tr(this,s));t.setTextSize(size);t.setTextColor(Color.rgb(30,40,50));t.setPadding(4,10,4,10);return t;}
+    private Button btn(String s,Runnable r){Button b=new Button(this);b.setText(AppLanguage.tr(this,s));b.setOnClickListener(v->r.run());return b;}
     private void frame(String title){
-        screen="الرئيسية".equals(title)?"home":title; LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setPadding(14,12,14,16);root.setBackgroundColor(Color.rgb(246,248,251));
+        screen="الرئيسية".equals(title)?"home":title; LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setLayoutDirection(AppLanguage.isEnglish(this)?View.LAYOUT_DIRECTION_LTR:View.LAYOUT_DIRECTION_RTL);root.setPadding(14,12,14,16);root.setBackgroundColor(Color.rgb(246,248,251));
         TextView head=label(businessName()+"\n🏭 مصنع الخبائز والحلويات والباسطة — "+title,21);head.setTextColor(NAVY);head.setBackgroundColor(Color.WHITE);head.setGravity(Gravity.CENTER);root.addView(head);
         root.addView(btn("⌂ العودة إلى مصنع الخبائز والحلويات والباسطة",()->home()));
+        root.addView(btn("🌐 اللغة / Language",()->AppLanguage.showPicker(this)));
         root.addView(btn("↩ العودة إلى قائمة المخبز الرئيسية",()->finish()));
         root.addView(btn("⌂ الرئيسية",()->{Intent i=new Intent(this,MainActivity.class);i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);startActivity(i);finish();}));
         ScrollView sc=new ScrollView(this);sc.setFillViewport(true);sc.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);body=new LinearLayout(this);body.setOrientation(1);body.setPadding(4,8,4,16);sc.addView(body);root.addView(sc,new LinearLayout.LayoutParams(-1,0,1));root.addView(btn("🖨️ طباعة الشاشة الحالية",()->printVisibleScreen(title)));setContentView(root);
@@ -94,7 +96,7 @@ public class FactoryActivity extends Activity {
         body.addView(btn("9. مرتجعات المبيعات والأعمال تحت التشغيل وعكس القيود",()->startActivity(new Intent(this,FactoryLedgerActivity.class))));
     }
     private EditText field(String hint,boolean decimal){EditText e=cell(hint,decimal);body.addView(e,new LinearLayout.LayoutParams(-1,(int)(58*getResources().getDisplayMetrics().density+0.5f)));return e;}
-    private EditText cell(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(hint);e.setTextSize(17);e.setPadding(14,8,14,8);e.setMinHeight((int)(56*getResources().getDisplayMetrics().density+0.5f));e.setFocusable(true);e.setFocusableInTouchMode(true);e.setClickable(true);boolean numeric=decimal||hint.contains("سعر")||hint.contains("تكلفة")||hint.contains("قيمة")||hint.contains("مبلغ")||hint.contains("سداد")||hint.contains("أجور")||hint.contains("مصروف")||hint.contains("الرصيد");e.setInputType(numeric?(android.text.InputType.TYPE_CLASS_NUMBER|(decimal?android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:0)):android.text.InputType.TYPE_CLASS_TEXT);e.setBackgroundColor(Color.WHITE);return e;}
+    private EditText cell(String hint,boolean decimal){EditText e=new EditText(this);e.setSingleLine(true);e.setHint(AppLanguage.tr(this,hint));e.setTextSize(17);e.setPadding(14,8,14,8);e.setMinHeight((int)(56*getResources().getDisplayMetrics().density+0.5f));e.setFocusable(true);e.setFocusableInTouchMode(true);e.setClickable(true);boolean numeric=decimal||hint.contains("سعر")||hint.contains("تكلفة")||hint.contains("قيمة")||hint.contains("مبلغ")||hint.contains("سداد")||hint.contains("أجور")||hint.contains("مصروف")||hint.contains("الرصيد");e.setInputType(numeric?(android.text.InputType.TYPE_CLASS_NUMBER|(decimal?android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL:0)):android.text.InputType.TYPE_CLASS_TEXT);e.setBackgroundColor(Color.WHITE);return e;}
     private void horizontalFields(View... views){LinearLayout column=new LinearLayout(this);column.setOrientation(1);for(View v:views){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,(int)(58*getResources().getDisplayMetrics().density+0.5f));p.setMargins(2,3,2,3);column.addView(v,p);}body.addView(column,new LinearLayout.LayoutParams(-1,-2));}
     private long num(EditText e){try{java.math.BigDecimal x=new java.math.BigDecimal(e.getText().toString().trim());return x.movePointRight(3).longValueExact();}catch(Exception ex){return 0;}}
     private long money(EditText e){try{return new java.math.BigDecimal(e.getText().toString().trim()).longValueExact();}catch(Exception ex){return 0;}}
@@ -330,7 +332,7 @@ public class FactoryActivity extends Activity {
     private void listFactoryParties(String type){
         Cursor cur=null;try{cur=db.searchFactoryParties(type,"");while(cur.moveToNext()){String phone=cur.getString(2),iban=cur.getString(3);body.addView(label(cur.getString(1)+(phone==null||phone.isEmpty()?"":" | "+phone)+(iban==null||iban.isEmpty()?"":" | "+iban),14));}}catch(Exception ex){body.addView(label("تعذر عرض سجل الأطراف: "+ex.getMessage(),13));}finally{if(cur!=null)cur.close();}
     }
-    private void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
+    private void toast(String s){Toast.makeText(this,AppLanguage.tr(this,s),Toast.LENGTH_LONG).show();}
 
     private static class DB extends SQLiteOpenHelper {
         DB(Context c){super(c,"almizan_factory_1.db",SecureDatabase.passphrase(c,"almizan_factory_1.db"),null,11,0,null,null,false);}

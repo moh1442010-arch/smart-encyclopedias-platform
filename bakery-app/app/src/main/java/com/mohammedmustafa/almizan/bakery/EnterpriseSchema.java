@@ -66,13 +66,14 @@ final class EnterpriseSchema {
             "('5200','مصروفات تشغيلية','Operating Expenses','EXPENSE','DEBIT')," +
             "('5300','مصروف الإهلاك','Depreciation Expense','EXPENSE','DEBIT')");
         db.execSQL("CREATE TABLE IF NOT EXISTS user_roles (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, role_id INTEGER NOT NULL REFERENCES roles(id), branch_id INTEGER NOT NULL REFERENCES branches(id), PRIMARY KEY(user_id,role_id,branch_id))");
-        db.execSQL("INSERT OR IGNORE INTO currencies(code,name_ar,name_en,minor_units,active) VALUES('USD','الدولار الأمريكي','US Dollar',2,0),('EUR','اليورو','Euro',2,0),('SAR','الريال السعودي','Saudi Riyal',2,1),('AED','الدرهم الإماراتي','UAE Dirham',2,1)");
-        // USD and EUR are subscription display currencies only, never operational currencies.
-        db.execSQL("UPDATE currencies SET active=0 WHERE code IN ('USD','EUR')");
+        db.execSQL("INSERT OR IGNORE INTO currencies(code,name_ar,name_en,minor_units,active) VALUES('USD','الدولار الأمريكي','US Dollar',2,1),('EUR','اليورو','Euro',2,0),('SAR','الريال السعودي','Saudi Riyal',2,1),('AED','الدرهم الإماراتي','UAE Dirham',2,1)");
+        // Only Arab-region business currencies are selectable for operational accounting.
+        // USD and EUR are reserved for subscription/payment and must never appear in the company ledger currency picker.
+        db.execSQL("UPDATE currencies SET active=CASE WHEN code IN ('DZD','BHD','KMF','DJF','EGP','IQD','JOD','KWD','LBP','LYD','MRU','MAD','OMR','ILS','QAR','SAR','SOS','SDG','SYP','TND','AED','YER') THEN 1 ELSE 0 END");
         db.execSQL("INSERT OR IGNORE INTO currencies(code,name_ar,name_en,minor_units,active) VALUES" +
             "('EGP','الجنيه المصري','Egyptian Pound',2,1),('LYD','الدينار الليبي','Libyan Dinar',3,1)," +
             "('SDG','الجنيه السوداني','Sudanese Pound',0,1),('SYP','الليرة السورية','Syrian Pound',2,1)," +
-            "('LBP','الليرة اللبنانية','Lebanese Pound',2,1),('JOD','الدينار الأردني','Jordanian Dinar',3,1)," +
+            "('LBP','الليرة اللبنانية','Lebanese Pound',2,1),('ILS','الشيكل الإسرائيلي','Israeli New Shekel',2,1),('JOD','الدينار الأردني','Jordanian Dinar',3,1)," +
             "('KWD','الدينار الكويتي','Kuwaiti Dinar',3,1),('BHD','الدينار البحريني','Bahraini Dinar',3,1)," +
             "('OMR','الريال العماني','Omani Rial',3,1),('QAR','الريال القطري','Qatari Riyal',2,1)," +
             "('IQD','الدينار العراقي','Iraqi Dinar',3,1),('YER','الريال اليمني','Yemeni Rial',2,1)," +
@@ -97,8 +98,8 @@ final class EnterpriseSchema {
             "('RUB','الروبل الروسي','Russian Ruble',2,1),('UAH','الهريفنيا الأوكرانية','Ukrainian Hryvnia',2,1)");
         // Sudanese Pound records in the existing bakery ledger use whole SDG units.
         db.execSQL("UPDATE currencies SET minor_units=0 WHERE code='SDG'");
-        // USD and EUR are subscription billing currencies only.
-        db.execSQL("UPDATE currencies SET active=0 WHERE code IN ('USD','EUR')");
+        // Re-apply the operational whitelist after all currency seeds.
+        db.execSQL("UPDATE currencies SET active=CASE WHEN code IN ('DZD','BHD','KMF','DJF','EGP','IQD','JOD','KWD','LBP','LYD','MRU','MAD','OMR','ILS','QAR','SAR','SOS','SDG','SYP','TND','AED','YER') THEN 1 ELSE 0 END");
         db.execSQL("CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY AUTOINCREMENT, customer_code TEXT NOT NULL UNIQUE, name TEXT NOT NULL COLLATE NOCASE, phone TEXT NOT NULL DEFAULT '', address TEXT NOT NULL DEFAULT '', opening_balance_minor INTEGER NOT NULL DEFAULT 0 CHECK(opening_balance_minor>=0), currency_code TEXT NOT NULL DEFAULT 'SDG' REFERENCES currencies(code), credit_limit_minor INTEGER NOT NULL DEFAULT 0 CHECK(credit_limit_minor>=0), active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)), notes TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL)");
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_name_phone ON customers(name,phone)");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_customers_search ON customers(name,phone,active)");
@@ -126,6 +127,7 @@ final class EnterpriseSchema {
         db.execSQL("CREATE TABLE IF NOT EXISTS depreciation_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, asset_id INTEGER NOT NULL REFERENCES fixed_assets(id), period_code TEXT NOT NULL, amount_minor INTEGER NOT NULL CHECK(amount_minor>=0), accumulated_minor INTEGER NOT NULL CHECK(accumulated_minor>=0), journal_ref TEXT NOT NULL UNIQUE, posted_at INTEGER NOT NULL, UNIQUE(asset_id,period_code))");
         db.execSQL("CREATE TABLE IF NOT EXISTS sync_outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, event_uuid TEXT NOT NULL UNIQUE, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, operation TEXT NOT NULL CHECK(operation IN ('UPSERT','DELETE')), payload TEXT NOT NULL, created_at INTEGER NOT NULL, attempt_count INTEGER NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT '', synced_at INTEGER)");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_sync_outbox_pending ON sync_outbox(synced_at,created_at)");
+        TaxJurisdictionProfiles.ensure(db);
         db.execSQL("INSERT OR REPLACE INTO enterprise_meta(key,value) VALUES('schema_version','" + VERSION + "')");
     }
 

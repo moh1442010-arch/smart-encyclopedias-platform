@@ -29,12 +29,24 @@ public class EnterpriseSchemaMigrationTest {
             Cursor old=db.rawQuery("SELECT payload FROM records WHERE day='2026-11-06' AND module='stock'",null);
             try { assertTrue(old.moveToFirst()); assertEquals("KEEP_EXISTING_STOCK",old.getString(0)); }
             finally { old.close(); }
-            String[] required={"company_settings","countries","currencies","exchange_rates","branches","users","roles","permissions","suppliers","customers","company_bank_accounts","party_opening_payments","party_payments","supplier_quick_invoices","purchase_invoices","purchase_lines","supplier_payments","employees","payroll_periods","payroll_items","fixed_assets","depreciation_entries","sync_outbox","tax_rules","financial_periods","chart_of_accounts","gl_journal_entries","gl_journal_lines","idempotency_keys"};
+            String[] required={"company_settings","countries","currencies","exchange_rates","branches","users","roles","permissions","suppliers","customers","company_bank_accounts","party_opening_payments","party_payments","supplier_quick_invoices","purchase_invoices","purchase_lines","supplier_payments","employees","payroll_periods","payroll_items","fixed_assets","depreciation_entries","sync_outbox","tax_rules","tax_jurisdiction_profiles","currency_country_map","financial_periods","chart_of_accounts","gl_journal_entries","gl_journal_lines","idempotency_keys"};
             for(String table:required) {
                 Cursor exists=db.rawQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",new String[]{table});
                 try { assertTrue("Missing table "+table,exists.moveToFirst()&&exists.getInt(0)==1); }
                 finally { exists.close(); }
             }
+            Cursor sdTax=db.rawQuery("SELECT rate_num,rate_den FROM tax_rules WHERE country_code='SD' AND tax_code='VAT_STANDARD'",null);
+            try { assertTrue("Sudan VAT baseline missing",sdTax.moveToFirst());assertEquals(17,sdTax.getInt(0));assertEquals(100,sdTax.getInt(1)); }
+            finally { sdTax.close(); }
+            Cursor uaeTax=db.rawQuery("SELECT rate_num,rate_den FROM tax_rules WHERE country_code='AE' AND tax_code='VAT_STANDARD'",null);
+            try { assertTrue("UAE VAT baseline missing",uaeTax.moveToFirst());assertEquals(5,uaeTax.getInt(0));assertEquals(100,uaeTax.getInt(1)); }
+            finally { uaeTax.close(); }
+            Cursor noVat=db.rawQuery("SELECT profile_status,indirect_tax_type FROM tax_jurisdiction_profiles WHERE country_code='QA'",null);
+            try { assertTrue(noVat.moveToFirst());assertEquals("NO_VAT_CONFIRMED",noVat.getString(0));assertEquals("NO_VAT",noVat.getString(1)); }
+            finally { noVat.close(); }
+            Cursor unknownTax=db.rawQuery("SELECT profile_status FROM tax_jurisdiction_profiles WHERE country_code='LY'",null);
+            try { assertTrue(unknownTax.moveToFirst());assertEquals("REVIEW_REQUIRED",unknownTax.getString(0)); }
+            finally { unknownTax.close(); }
             Cursor profileColumn=db.rawQuery("PRAGMA table_info(company_settings)",null);boolean hasBusinessName=false;
             try { while(profileColumn.moveToNext())if("business_name".equals(profileColumn.getString(1)))hasBusinessName=true; } finally { profileColumn.close(); }
             assertTrue("Company name must be persisted in encrypted company settings",hasBusinessName);
@@ -42,13 +54,19 @@ public class EnterpriseSchemaMigrationTest {
             try { assertTrue(currency.moveToFirst());assertEquals("SDG",currency.getString(0));assertEquals("SD",currency.getString(1)); }
             finally { currency.close(); }
             Cursor subscriptionOnly=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE code IN ('USD','EUR') AND active=0",null);
-            try { assertTrue(subscriptionOnly.moveToFirst());assertEquals("USD and EUR must be inactive for in-app operations",2,subscriptionOnly.getInt(0)); } finally { subscriptionOnly.close(); }
-            Cursor currencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE code IN ('USD','EUR','SAR','AED')",null);
-            try { assertTrue(currencies.moveToFirst());assertEquals(4,currencies.getInt(0)); } finally { currencies.close(); }
-            Cursor operationalCurrencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE active=1 AND code IN ('USD','EUR')",null);
-            try { assertTrue(operationalCurrencies.moveToFirst());assertEquals("USD/EUR must never appear in operational currency pickers",0,operationalCurrencies.getInt(0)); } finally { operationalCurrencies.close(); }
+            try { assertTrue(subscriptionOnly.moveToFirst());assertEquals("USD and EUR must be disabled for operational selections",2,subscriptionOnly.getInt(0)); } finally { subscriptionOnly.close(); }
+            Cursor operationalCurrencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE active=1 AND code IN ('DZD','BHD','KMF','DJF','EGP','IQD','JOD','KWD','LBP','LYD','MRU','MAD','OMR','ILS','QAR','SAR','SOS','SDG','SYP','TND','AED','YER')",null);
+            try { assertTrue(operationalCurrencies.moveToFirst());assertEquals("All 22 Arab-country operating currencies must remain selectable",22,operationalCurrencies.getInt(0)); } finally { operationalCurrencies.close(); }
+            Cursor nonRegional=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE active=1 AND code NOT IN ('DZD','BHD','KMF','DJF','EGP','IQD','JOD','KWD','LBP','LYD','MRU','MAD','OMR','ILS','QAR','SAR','SOS','SDG','SYP','TND','AED','YER')",null);
+            try { assertTrue(nonRegional.moveToFirst());assertEquals("Non-Arab and subscription currencies must not be operational",0,nonRegional.getInt(0)); } finally { nonRegional.close(); }
             Cursor regionalCurrencies=db.rawQuery("SELECT COUNT(*) FROM currencies WHERE active=1 AND code IN ('SDG','EGP','LYD','SAR','AED')",null);
             try { assertTrue(regionalCurrencies.moveToFirst());assertEquals("Required regional operating currencies missing",5,regionalCurrencies.getInt(0)); } finally { regionalCurrencies.close(); }
+            Cursor arabMappings=db.rawQuery("SELECT COUNT(DISTINCT country_code) FROM currency_country_map WHERE country_code IN ('DZ','BH','KM','DJ','EG','IQ','JO','KW','LB','LY','MR','MA','OM','PS','QA','SA','SO','SD','SY','TN','AE','YE')",null);
+            try { assertTrue(arabMappings.moveToFirst());assertEquals("All 22 Arab League country currency mappings must be seeded",22,arabMappings.getInt(0)); } finally { arabMappings.close(); }
+            Cursor usdMappings=db.rawQuery("SELECT COUNT(*) FROM currency_country_map WHERE currency_code='USD'",null);
+            try { assertTrue(usdMappings.moveToFirst());assertEquals("Shared USD must require country selection",3,usdMappings.getInt(0)); } finally { usdMappings.close(); }
+            Cursor ils=db.rawQuery("SELECT active FROM currencies WHERE code='ILS'",null);
+            try { assertTrue(ils.moveToFirst());assertEquals(1,ils.getInt(0)); } finally { ils.close(); }
             Cursor sdgPrecision=db.rawQuery("SELECT minor_units FROM currencies WHERE code='SDG'",null);
             try { assertTrue(sdgPrecision.moveToFirst());assertEquals("SDG preserves the existing bakery ledger whole-pound precision",0,sdgPrecision.getInt(0)); } finally { sdgPrecision.close(); }
             Cursor supplierColumns=db.rawQuery("PRAGMA table_info(suppliers)",null);
@@ -130,6 +148,39 @@ public class EnterpriseSchemaMigrationTest {
             db.close();context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
         }
     }
+    @Test public void generalLedgerReversalPostsOnceAndKeepsBothSidesInTrialBalance() throws Exception {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="ledger_reversal_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase db=SecureDatabase.open(context,name);
+        try {
+            EnterpriseSchema.ensure(db);
+            db.execSQL("INSERT INTO financial_periods(period_code,start_date,end_date,status) VALUES('FY26-11','2026-11-01','2026-11-30','OPEN')");
+            java.util.List<GeneralLedger.Line> lines=new java.util.ArrayList<>();
+            lines.add(new GeneralLedger.Line("1000","MAIN","SDG",12500,0,1,1));
+            lines.add(new GeneralLedger.Line("4000","MAIN","SDG",0,12500,1,1));
+            GeneralLedger.Entry original=new GeneralLedger.Entry("TEST-ORIGINAL","اختبار بيع نقدي","2026-11-09",
+                "TEST_SALE","TEST-ORIGINAL","test-sale:original","tester",lines);
+            GeneralLedger.post(db,original);
+            GeneralLedger.Result first=GeneralLedger.reverse(db,"TEST-ORIGINAL","2026-11-09","tester");
+            assertFalse("First reversal must create a new journal",first.alreadyPosted);
+            GeneralLedger.Result retry=GeneralLedger.reverse(db,"TEST-ORIGINAL","2026-11-09","tester");
+            assertTrue("Repeated reversal must be idempotent",retry.alreadyPosted);
+            assertEquals(first.reference,retry.reference);
+            Cursor count=db.rawQuery("SELECT COUNT(*) FROM gl_journal_entries WHERE source_type='REVERSAL' AND source_id='TEST-ORIGINAL'",null);
+            try { assertTrue(count.moveToFirst());assertEquals(1,count.getInt(0)); } finally { count.close(); }
+            Cursor relation=db.rawQuery("SELECT reversal_of FROM gl_journal_entries WHERE entry_ref=?",new String[]{first.reference});
+            try { assertTrue(relation.moveToFirst());assertTrue("Reversal must reference original journal id",relation.getLong(0)>0); } finally { relation.close(); }
+            GeneralLedgerReports.TrialBalance trial=GeneralLedgerReports.trialBalance(db,"2026-11-01","2026-11-30",null);
+            assertTrue("Original and reversal must both remain in the posted trial balance",trial.isBalanced());
+            for(GeneralLedgerReports.Line line:trial.lines) {
+                if("1000".equals(line.code)||"4000".equals(line.code))
+                    assertEquals("Reversed account must net to zero",0L,line.balanceMinor);
+            }
+        } finally {
+            db.close();context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
+        }
+    }
+
     @Test public void permissionMatrixIsBranchScopedAndLeastPrivilege() throws Exception {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String name="permission_matrix_"+System.currentTimeMillis()+".db";

@@ -73,10 +73,6 @@ public class MainActivity extends Activity {
     }
     private static final int NAVY = Color.rgb(11,31,58), GOLD = Color.rgb(212,175,55), BG = Color.rgb(246,248,251);
     private static final String SUPPORT = "249121851285", BANKAK = "1882224";
-    // Public verification key only. The matching private key remains server-side in the Cloudflare Worker secret.
-    private static final String LICENSE_PUBLIC_KEY_B64 = "MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAnWLF2Y4nmN7MWU1q9tzTVJCCacOf7iaGiRYrA21Ej7Xp7vV2/BgMu7N3OmcB0UJyIn1A22z34fKf3YEEDTjBz4pHHEtXeB+bjH+jn7VOcwQS9mZhTUR1+/2gYJxIKUEz9233Ab1eupGcCzuziQck362qiRBdjlHEViW0koE87TmPKRkkqzKtkOm0MzIfYr7tM/DmqncZ9RKUnctvoJd05kDxg0PXdNZ539Ip7tT6y11nmakYg5lJv9XOqNWnQbPRUDjOO9jWIPFnUvaPVofYrBOENPTu8S7414Twb7/0zmhFgNuizHbZQEOYD3ZNK0GfNDYH8Tk1ZEe9H7WHE3+B0UYkCBEfJCdXkHxRIJLb1KSyxpLw7iiGxAJdCQ95SNkcYfl6KTsZFPtt4pssXRH9XvJsvQEmP7OmqtPSJy0ZFSL/KgS5T3EIeuG2DyJom5WJ8lya4zy3noU9hL8gSjpzOdzR87KqiOYSy890nwtvHIi73qxvNpPGxPghG3JIEEBFAgMBAAE=";
-    // Retain the previous public key so any previously issued licenses remain valid.
-    private static final String LEGACY_LICENSE_PUBLIC_KEY_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvsK66CYxt4X7R9GcVaJ0FjrheMAkFpzbirdz7/X/lj8UAuqUabNOPN3R5dGuZro90i+raIyngTz+VxRxLcNPRQru4VzWIDLsoBEwi/CrsOaMJFgVLom7jYXFjQ5P25TO5hRxzPN8ZOOG1MTo8j6ipgPOKY5be6Gmsj8R03SbulYnVO8STWC4bSkqwvV9YlEIpZwnyAJVbWHbE4JSKiCC/TMOcfrBgGG0W7qCJeEjnUKPfHAtH85ayZjBQwMIQx+z1CoTFWrqKXywSWN65G7yZbHwsnREovRprxjyVHqmTtLd45VyNQU2zXBKchzkwnpiG1zeD8kfdDeACeaAmxbsiwIDAQAB";
     private static final int REQUEST_EXPORT_BACKUP = 4250, REQUEST_IMPORT_BACKUP = 4251, REQUEST_PAYMENT_RECEIPT = 4252, REQUEST_COMPANY_LOGO = 4253;
     private static final String BAKERY_PROFILE_BACKUP_TYPE = "almizan_bakery_profile_backup";
     private String pendingActivationMessage = "";
@@ -92,7 +88,7 @@ public class MainActivity extends Activity {
                 paywallLocked = true;
                 showPaywall();
             }
-            entitlementHandler.postDelayed(this, 30000L);
+            entitlementHandler.postDelayed(this, 1000L);
         }
     };
     private LinearLayout root, content;
@@ -108,6 +104,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        AppUpdatePolicy.check(this);
         entitlementHandler.removeCallbacks(entitlementWatchdog);
         entitlementHandler.post(entitlementWatchdog);
     }
@@ -123,8 +120,11 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
+    @Override protected void attachBaseContext(android.content.Context newBase) { super.attachBaseContext(AppLanguage.wrap(newBase)); }
+
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        AppUpdatePolicy.enforceCached(this);
         day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
         // Check entitlement before opening the operational database.
         if (!LicenseAccessGate.isAccessAllowed(this)) {
@@ -180,29 +180,81 @@ public class MainActivity extends Activity {
         content.addView(retry);
     }
 
+    private String taxProfileSummary(String countryCode) {
+        Cursor profile=store.getReadableDatabase().rawQuery(
+            "SELECT c.name_ar,c.tax_profile,p.profile_status,p.indirect_tax_type,p.notes FROM countries c LEFT JOIN tax_jurisdiction_profiles p ON p.country_code=c.code WHERE c.code=?",
+            new String[]{countryCode});
+        String name=countryCode,status="REVIEW_REQUIRED",type="UNVERIFIED",code="CUSTOM_REVIEW_REQUIRED",notes="";
+        try { if(profile.moveToFirst()){name=profile.getString(0);code=profile.getString(1);status=profile.isNull(2)?"REVIEW_REQUIRED":profile.getString(2);type=profile.isNull(3)?"UNVERIFIED":profile.getString(3);notes=profile.isNull(4)?"":profile.getString(4);} }
+        finally { profile.close(); }
+        if("NO_VAT_CONFIRMED".equals(status))return name+" — لا توجد ضريبة قيمة مضافة مؤكدة حالياً. راجع الضرائب الأخرى حسب النشاط.";
+        if(!"VERIFIED_BASELINE".equals(status)) {
+            Cursor reference=store.getReadableDatabase().rawQuery(
+                "SELECT name,rate_num,rate_den FROM tax_rules WHERE country_code=? ORDER BY effective_from DESC LIMIT 1",
+                new String[]{countryCode});
+            try {
+                if(reference.moveToFirst())return name+" — مرجع ضريبي غير مفعل: "+reference.getString(0)+" "+(100.0*reference.getLong(1)/reference.getLong(2))+"%. لن يطبق آلياً قبل التحقق من الإعفاءات والتسجيل والفوترة.";
+            } finally { reference.close(); }
+            return name+" — "+type+" — "+(notes.isEmpty()?"مراجعة النظام الضريبي المحلي مطلوبة.":notes)+" لن يطبق التطبيق نسبة غير معتمدة.";
+        }
+        Cursor rate=store.getReadableDatabase().rawQuery(
+            "SELECT name,rate_num,rate_den FROM tax_rules WHERE country_code=? AND active=1 AND effective_from<=date('now') AND (effective_to IS NULL OR effective_to='' OR effective_to>=date('now')) ORDER BY effective_from DESC LIMIT 1",
+            new String[]{countryCode});
+        try { if(rate.moveToFirst())return name+" — "+rate.getString(0)+": "+(100.0*rate.getLong(1)/rate.getLong(2))+"%"; }
+        finally { rate.close(); }
+        return name+" — الملف الأساسي معتمد، لكن لا توجد قاعدة ضريبية سارية؛ يلزم استكمال إعدادها.";
+    }
+
     private void showPinSetup() {
         LinearLayout box = new LinearLayout(this);
         box.setPadding(24, 12, 24, 4);
         box.setOrientation(LinearLayout.VERTICAL);
         TextView instructions = text("ابدأ إعداد منشأتك. أدخل اسم المخبز أو المصنع كما سيظهر في الشاشات والفواتير والتقارير، ثم اختر عملة الدفاتر الأساسية وأنشئ كلمة المرور.", 15);
         box.addView(instructions);
-        EditText businessName=new EditText(this);businessName.setSingleLine(true);businessName.setHint("اسم المخبز أو المصنع");businessName.setTextSize(17);box.addView(businessName);
+        EditText businessName=new EditText(this);businessName.setSingleLine(true);businessName.setHint(AppLanguage.tr(this,"اسم المخبز أو المصنع"));businessName.setTextSize(17);box.addView(businessName);
         box.addView(text("عملة المشروع الأساسية",15));
         ArrayList<String> currencyCodes=new ArrayList<>(),currencyLabels=new ArrayList<>();
-        Cursor currencyCursor=store.getReadableDatabase().rawQuery("SELECT code,name_ar FROM currencies WHERE active=1 ORDER BY CASE code WHEN 'SDG' THEN 0 ELSE 1 END,name_ar",null);
-        try {while(currencyCursor.moveToNext()){currencyCodes.add(currencyCursor.getString(0));currencyLabels.add(currencyCursor.getString(1)+" ("+currencyCursor.getString(0)+")");}} finally {currencyCursor.close();}
+        Cursor currencyCursor=store.getReadableDatabase().rawQuery("SELECT code,name_ar,name_en FROM currencies WHERE active=1 ORDER BY CASE code WHEN 'SDG' THEN 0 ELSE 1 END,name_ar",null);
+        try {while(currencyCursor.moveToNext()){currencyCodes.add(currencyCursor.getString(0));currencyLabels.add((AppLanguage.isEnglish(this)?currencyCursor.getString(2):currencyCursor.getString(1))+" ("+currencyCursor.getString(0)+")");}} finally {currencyCursor.close();}
         Spinner projectCurrency=new Spinner(this);
         ArrayAdapter<String> currencyAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,currencyLabels);
         currencyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);projectCurrency.setAdapter(currencyAdapter);
         int sdgIndex=currencyCodes.indexOf("SDG");if(sdgIndex>=0)projectCurrency.setSelection(sdgIndex);
         box.addView(projectCurrency);
+        box.addView(text("الدولة صاحبة العملة والملف الضريبي",15));
+        ArrayList<String> jurisdictionCodes=new ArrayList<>(),jurisdictionLabels=new ArrayList<>();
+        Cursor jurisdictionCursor=store.getReadableDatabase().rawQuery("SELECT code,name_ar,name_en FROM countries WHERE active=1 ORDER BY name_ar",null);
+        try {while(jurisdictionCursor.moveToNext()){jurisdictionCodes.add(jurisdictionCursor.getString(0));jurisdictionLabels.add(AppLanguage.isEnglish(this)?jurisdictionCursor.getString(2):jurisdictionCursor.getString(1));}} finally {jurisdictionCursor.close();}
+        Spinner jurisdictionSpinner=new Spinner(this);
+        ArrayAdapter<String> jurisdictionAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,jurisdictionLabels);
+        jurisdictionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);jurisdictionSpinner.setAdapter(jurisdictionAdapter);
+        int defaultCountryIndex=jurisdictionCodes.indexOf("SD");if(defaultCountryIndex>=0)jurisdictionSpinner.setSelection(defaultCountryIndex);
+        TextView taxProfileHint=text("سيُحمّل ملف الدولة الضريبي. العملات المشتركة أو غير المدعومة تتطلب تأكيد الدولة ومراجعة القواعد المحلية.",12);
+        box.addView(jurisdictionSpinner);box.addView(taxProfileHint);
+        projectCurrency.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
+                if(position<0||position>=currencyCodes.size())return;
+                java.util.List<String> mapped=TaxJurisdictionProfiles.countriesForCurrency(store.getReadableDatabase(),currencyCodes.get(position));
+                jurisdictionSpinner.setEnabled(mapped.size()!=1);
+                if(!mapped.isEmpty()){int countryIndex=jurisdictionCodes.indexOf(mapped.get(0));if(countryIndex>=0)jurisdictionSpinner.setSelection(countryIndex);}
+                taxProfileHint.setText(mapped.size()==1?taxProfileSummary(mapped.get(0)):AppLanguage.tr(MainActivity.this,mapped.isEmpty()?"هذه العملة لا تملك مطابقة تلقائية. اختر دولة التسجيل الفعلية.":"هذه العملة مرتبطة بأكثر من دولة. اختر دولة التسجيل الفعلية لعرض ملفها الضريبي."));
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
+        });
+        if(sdgIndex>=0){int sd=jurisdictionCodes.indexOf("SD");if(sd>=0)jurisdictionSpinner.setSelection(sd);}
+        jurisdictionSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            @Override public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){
+                if(position>=0&&position<jurisdictionCodes.size())taxProfileHint.setText(taxProfileSummary(jurisdictionCodes.get(position)));
+            }
+            @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
+        });
         EditText pin = new EditText(this);
-        pin.setHint("كلمة المرور الجديدة — 6 أرقام على الأقل");
+        pin.setHint(AppLanguage.tr(this,"كلمة المرور الجديدة — 6 أرقام على الأقل"));
         pin.setSingleLine(true);
         pin.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
         box.addView(pin);
         EditText confirm = new EditText(this);
-        confirm.setHint("تأكيد كلمة المرور");
+        confirm.setHint(AppLanguage.tr(this,"تأكيد كلمة المرور"));
         confirm.setSingleLine(true);
         confirm.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
         box.addView(confirm);
@@ -228,7 +280,14 @@ public class MainActivity extends Activity {
                 byte[] hash = derivePinHash(p1, salt);
                 if(currencyCodes.isEmpty())throw new IllegalStateException("قائمة العملات غير مهيأة");
                 String selectedCurrency=currencyCodes.get(projectCurrency.getSelectedItemPosition());
+                if(jurisdictionCodes.isEmpty()||jurisdictionSpinner.getSelectedItemPosition()<0)throw new IllegalStateException("قائمة الدول غير مهيأة");
+                String selectedCountry=jurisdictionCodes.get(jurisdictionSpinner.getSelectedItemPosition());
+                java.util.List<String> permittedCountries=TaxJurisdictionProfiles.countriesForCurrency(store.getReadableDatabase(),selectedCurrency);
+                if(!permittedCountries.isEmpty()&&!permittedCountries.contains(selectedCountry))throw new IllegalArgumentException("العملة المختارة لا تطابق دولة التسجيل؛ اختر دولة مرتبطة بهذه العملة.");
+                Cursor profileCursor=store.getReadableDatabase().rawQuery("SELECT tax_profile FROM countries WHERE code=?",new String[]{selectedCountry});
+                String selectedTaxProfile="CUSTOM_REVIEW_REQUIRED";try{if(profileCursor.moveToFirst())selectedTaxProfile=profileCursor.getString(0);}finally{profileCursor.close();}
                 ContentValues projectSettings=new ContentValues();projectSettings.put("base_currency",selectedCurrency);
+                projectSettings.put("country_code",selectedCountry);projectSettings.put("tax_profile",selectedTaxProfile);
                 projectSettings.put("business_name",enteredBusinessName);
                 store.getWritableDatabase().update("company_settings",projectSettings,"id=1",null);
                 getSharedPreferences("bakery_profile",MODE_PRIVATE).edit().putString("business_name",enteredBusinessName).apply();
@@ -332,62 +391,11 @@ public class MainActivity extends Activity {
     }
 
     private boolean hasActiveLicense() {
-        String token = getPreferences(0).getString("license_token", null);
-        return token != null && verifyLicenseToken(token);
+        return LicenseAccessGate.hasValidLicense(this);
     }
 
     private boolean verifyLicenseToken(String token) {
-        try {
-            String[] parts = token.trim().split("\\.", -1);
-            if (parts.length != 2) return false;
-            int flags = Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING;
-            byte[] payloadBytes = Base64.decode(parts[0], flags);
-            byte[] signatureBytes = Base64.decode(parts[1], flags);
-            String payload = new String(payloadBytes, StandardCharsets.UTF_8);
-            boolean signatureValid = false;
-            for (String publicKeyB64 : new String[]{LICENSE_PUBLIC_KEY_B64, LEGACY_LICENSE_PUBLIC_KEY_B64}) {
-                try {
-                    java.security.PublicKey key = java.security.KeyFactory.getInstance("RSA").generatePublic(
-                        new java.security.spec.X509EncodedKeySpec(Base64.decode(publicKeyB64, Base64.NO_WRAP)));
-                    java.security.Signature verifier = java.security.Signature.getInstance("SHA256withRSA");
-                    verifier.initVerify(key);
-                    verifier.update(payloadBytes);
-                    if (verifier.verify(signatureBytes)) { signatureValid = true; break; }
-                } catch (Exception ignored) { }
-            }
-            if (!signatureValid) return false;
-            java.util.Map<String,String> fields = new java.util.HashMap<>();
-            for (String field : payload.split(";")) {
-                int at = field.indexOf('=');
-                if (at <= 0) return false;
-                fields.put(field.substring(0, at), field.substring(at + 1));
-            }
-            if (!"com.mohammedmustafa.almizan.bakery".equals(fields.get("app"))) return false;
-            String licensedDevice = fields.get("device");
-            // Accept the old locally stored UUID for already-issued licenses, while new orders use Android ID.
-            String legacyDevice = legacyDeviceId();
-            if (!deviceId().equals(licensedDevice) &&
-                (legacyDevice == null || !legacyDevice.equals(licensedDevice))) return false;
-            String plan = fields.get("plan");
-            if (!"monthly".equals(plan) && !"annual".equals(plan) && !"lifetime".equals(plan)) return false;
-            // New lifetime purchases are bound to the purchased app version; dated subscriptions remain version-flexible.
-            String maxVersion = fields.get("max_version");
-            // New lifetime tokens use "any". Preserve existing 2.6.15 lifetime tokens too.
-            if (!"any".equals(maxVersion) &&
-                !("lifetime".equals(plan) &&
-                    ("2.6.15".equals(maxVersion) || BuildConfig.VERSION_NAME.equals(maxVersion)))) return false;
-            long expires = Long.parseLong(fields.get("expires"));
-            if (expires == 0L) return true;
-            android.content.SharedPreferences prefs = getPreferences(0);
-            long now = System.currentTimeMillis() / 1000L;
-            long lastSeen = prefs.getLong("license_last_seen", 0L);
-            if (lastSeen > 0L && now < lastSeen - 300L) return false;
-            prefs.edit().putLong("license_last_seen", Math.max(lastSeen, now)).apply();
-            return now <= expires;
-        } catch (Exception ex) {
-            android.util.Log.w("AlMizanBakery", "Activation token rejected", ex);
-            return false;
-        }
+        return LicenseAccessGate.verifyToken(this,token);
     }
 
     private void showActivationDialog() {
@@ -535,7 +543,7 @@ public class MainActivity extends Activity {
     private void base(String title) {
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        root.setLayoutDirection(AppLanguage.isEnglish(this)?View.LAYOUT_DIRECTION_LTR:View.LAYOUT_DIRECTION_RTL);
         root.setBackgroundColor(BG);
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.HORIZONTAL);
@@ -551,12 +559,12 @@ public class MainActivity extends Activity {
         LinearLayout titles = new LinearLayout(this);
         titles.setOrientation(LinearLayout.VERTICAL);
         TextView name = new TextView(this);
-        name.setText(title);
+        name.setText(AppLanguage.tr(this,title));
         name.setTextSize(19);
         name.setTextColor(Color.WHITE);
         name.setTypeface(null,1);
         TextView subtitle = new TextView(this);
-        subtitle.setText(businessName()+"  •  إدارة المخبز والمخزون والتشغيل");
+        subtitle.setText(AppLanguage.tr(this,businessName()+"  •  إدارة المخبز والمخزون والتشغيل"));
         subtitle.setTextSize(12);
         subtitle.setTextColor(Color.rgb(236,226,190));
         titles.addView(name);
@@ -564,6 +572,7 @@ public class MainActivity extends Activity {
         head.addView(titles,new LinearLayout.LayoutParams(0,-2,1f));
         head.setElevation(5f);
         root.addView(head);
+        Button languageButton=button("🌐 اللغة / Language");languageButton.setOnClickListener(v->AppLanguage.showPicker(this));root.addView(languageButton);
         if (!title.startsWith("🥖 المحاسب الميزان للمخابز")) {
             LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);actions.setPadding(8,4,8,4);
             Button home = button("⌂ الرئيسية");
@@ -578,7 +587,7 @@ public class MainActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        content.setLayoutDirection(AppLanguage.isEnglish(this)?View.LAYOUT_DIRECTION_LTR:View.LAYOUT_DIRECTION_RTL);
         content.setPadding(14,14,14,20);
         scroll.addView(content);
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
@@ -600,29 +609,29 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("🖨️ الطابعة الثابتة")
             .setMessage("تتم الطباعة عبر خدمة الطباعة في Android. اختر الطابعة مرة واحدة من نافذة الطباعة؛ يحتفظ Android بآخر وجهة طباعة استخدمتها. يمكنك اختيار طابعة Bluetooth أو Wi-Fi أو USB إذا كانت خدمتها مثبتة، أو اختيار حفظ PDF. الطباعة المحلية لا تحتاج إلى الإنترنت.")
             .setNegativeButton("إغلاق",null)
-            .setPositiveButton("اختبار الطباعة",(d,w)->printText("اختبار الطابعة",businessName()+"\\nاختبار اتصال الطباعة\\n"+day))
+            .setPositiveButton("اختبار الطباعة",(d,w)->printText("اختبار الطابعة",businessName()+"\nاختبار اتصال الطباعة\n"+day))
             .show();
     }
     private void printDailyWork(){
         JSONObject data=store.get(day,"cuts");
         StringBuilder report=new StringBuilder();
-        report.append("التاريخ: ").append(day).append("\\n");
-        report.append("اسم المنشأة: ").append(businessName()).append("\\n");
-        report.append("شغل اليوم\\n");
-        if(data!=null){java.util.Iterator<String> keys=data.keys();while(keys.hasNext()){String k=keys.next();report.append(k).append(": ").append(data.optString(k,"")).append("\\n");}}
-        else report.append("لا توجد بيانات مسجلة لشغل اليوم.\\n");
+        report.append("التاريخ: ").append(day).append("\n");
+        report.append("اسم المنشأة: ").append(businessName()).append("\n");
+        report.append("شغل اليوم\n");
+        if(data!=null){java.util.Iterator<String> keys=data.keys();while(keys.hasNext()){String k=keys.next();report.append(k).append(": ").append(data.optString(k,"")).append("\n");}}
+        else report.append("لا توجد بيانات مسجلة لشغل اليوم.\n");
         printText("شغل اليوم - "+businessName(),report.toString());
     }
     private void printText(String jobName,String text){try{PrinterService.print(this,businessName(),jobName,text);}catch(Exception ex){toast("تعذر فتح الطباعة: "+ex.getMessage());}}
     private void printVisibleScreen(String screenTitle){
-        StringBuilder out=new StringBuilder("المنشأة: ").append(businessName()).append("\\nالشاشة: ").append(screenTitle).append("\\nالتاريخ: ").append(day).append("\\n\\n");
+        StringBuilder out=new StringBuilder("المنشأة: ").append(businessName()).append("\nالشاشة: ").append(screenTitle).append("\nالتاريخ: ").append(day).append("\n\n");
         appendPrintable(content,out);
         if(out.length()<80){toast("لا توجد بيانات ظاهرة للطباعة.");return;}
         printText(screenTitle+" - "+businessName(),out.toString());
     }
     private void appendPrintable(View view,StringBuilder out){
-        if(view instanceof EditText){String value=((EditText)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");return;}
-        if(view instanceof TextView){String value=((TextView)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");}
+        if(view instanceof EditText){String value=((EditText)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\n");return;}
+        if(view instanceof TextView){String value=((TextView)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\n");}
         if(view instanceof android.view.ViewGroup){android.view.ViewGroup group=(android.view.ViewGroup)view;for(int i=0;i<group.getChildCount();i++)appendPrintable(group.getChildAt(i),out);}
     }
 
@@ -801,12 +810,12 @@ public class MainActivity extends Activity {
     }
 
     private TextView text(String value, int size) {
-        TextView v = new TextView(this); v.setText(value); v.setTextSize(size); v.setTextColor(Color.rgb(31,41,55));
+        TextView v = new TextView(this); v.setText(AppLanguage.tr(this,value)); v.setTextSize(size); v.setTextColor(Color.rgb(31,41,55));
         v.setPadding(7,8,7,8); return v;
     }
     private Button button(String value) {
         Button b = new Button(this);
-        b.setText(value);
+        b.setText(AppLanguage.tr(this,value));
         b.setAllCaps(false);
         b.setTextColor(NAVY);
         b.setTextSize(15);
@@ -815,6 +824,15 @@ public class MainActivity extends Activity {
         b.setBackground(rounded(GOLD,14));
         b.setElevation(2f);
         return b;
+    }
+
+    private void showLanguagePicker() {
+        String[] choices={"العربية","English"};
+        new AlertDialog.Builder(this).setTitle(getString(R.string.language_picker_title))
+            .setItems(choices,(dialog,which)->{
+                AppLanguage.setLanguage(this,which==1?"en":"ar");
+                recreate();
+            }).show();
     }
 
     private void chooseDate() {
@@ -914,7 +932,7 @@ public class MainActivity extends Activity {
     private String normalizeRows(String raw) {
         if (raw == null || raw.isEmpty()) return "";
         // Recover rows saved by older builds with literal backslash-n separators.
-        return raw.replace("\\n", "\n").replace("\r\n", "\n").replace("\r", "\n");
+        return raw.replace("\n", "\n").replace("\r\n", "\n").replace("\r", "\n");
     }
 
     private String[] stockParts(String line) {
@@ -961,7 +979,7 @@ public class MainActivity extends Activity {
         }
         table.addView(header);
         java.util.List<EditText[]> rows=new java.util.ArrayList<>();
-        for(String line:normalizeRows(saved.optString("items_rows","")).split("\\r?\\n")) {
+        for(String line:normalizeRows(saved.optString("items_rows","")).split("\\r?\n")) {
             if(line.trim().isEmpty()) continue;
             String[] p=stockParts(line);
             addInventoryRow(table,rows,p[0],p[1],p[2],p[3]);
@@ -1029,7 +1047,7 @@ public class MainActivity extends Activity {
         table.addView(header);
         java.util.List<EditText[]> rows=new java.util.ArrayList<>();
         String raw=normalizeRows(saved.optString("rows",""));
-        for(String line:raw.split("\\r?\\n")) {
+        for(String line:raw.split("\\r?\n")) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             addWorkerTableRow(table,rows,p.length>0?p[0].trim():"",p.length>1?p[1].trim():"",p.length>2?p[2].trim():"",p.length>3?p[3].trim():"");
@@ -1081,7 +1099,7 @@ public class MainActivity extends Activity {
         box.addView(text("تحويلات بنكك",15));LinearLayout table=new LinearLayout(this);table.setOrientation(1);
         java.util.List<EditText[]> rows=new java.util.ArrayList<>();
         String raw=normalizeRows(saved.optString("bank_transfers",""));
-        for(String line:raw.split("\\r?\\n"))if(!line.trim().isEmpty()){String[] p=line.split("\\|",-1);addBankTransferRow(table,rows,p[0].trim(),p.length>1?p[1].trim():"");}
+        for(String line:raw.split("\\r?\n"))if(!line.trim().isEmpty()){String[] p=line.split("\\|",-1);addBankTransferRow(table,rows,p[0].trim(),p.length>1?p[1].trim():"");}
         if(rows.isEmpty()){long old=saved.optLong("bank",0);if(old>0||!saved.optString("bank_ref","").isEmpty())addBankTransferRow(table,rows,String.valueOf(old),saved.optString("bank_ref",""));else addBankTransferRow(table,rows,"","");}
         box.addView(table);Button add=button("＋ إضافة تحويل بنكك");box.addView(add);
         TextView total=text("إجمالي بنكك: 0",15);box.addView(total);
@@ -1112,7 +1130,7 @@ public class MainActivity extends Activity {
         LinearLayout table=new LinearLayout(this);table.setOrientation(1);java.util.List<EditText[]> rows=new java.util.ArrayList<>();
         LinearLayout head=new LinearLayout(this);head.setOrientation(0);head.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
         for(String title:new String[]{"العميل","العيش","نقدي","بنكك","رقم العملية","ديون","فرق السعر"}){TextView h=ruledHeading(title);head.addView(h,new LinearLayout.LayoutParams(0,-2,1f));}table.addView(head);
-        String raw=normalizeRows(saved.optString("rows",""));for(String line:raw.split("\\r?\\n")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);
+        String raw=normalizeRows(saved.optString("rows",""));for(String line:raw.split("\\r?\n")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);
             if(p.length>=7){addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),p[3].trim(),p[4].trim(),p[5].trim(),p[6].trim());if(p.length>=8)try{rows.get(rows.size()-1)[0].setTag(Long.parseLong(p[7].trim()));}catch(Exception ignored){}}
             else if(p.length>=6)addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),p[4].trim(),"",p[3].trim(),p[5].trim());
             else if(p.length>=5)addDistributionTableRow(table,rows,p[0].trim(),p[1].trim(),p[2].trim(),"","",p[3].trim(),p[4].trim());
@@ -1142,8 +1160,8 @@ public class MainActivity extends Activity {
         PartyDirectory.showCustomerPicker(this,(id,name)->{target.setText(name);target.setTag(id);});
     }
     private void mergeRegularCustomers(String names){
-        try{java.util.LinkedHashMap<String,String> all=new java.util.LinkedHashMap<>();for(String line:normalizeRows(regularCustomers().optString("rows","")).split("\\r?\\n")){String[] p=line.split("\\|",-1);if(p.length>0&&!p[0].trim().isEmpty())all.put(p[0].trim(),p.length>1?p[1].trim():"عميل");}
-            for(String n:names.split("\\r?\\n"))if(!n.trim().isEmpty()&&!all.containsKey(n.trim()))all.put(n.trim(),"عميل");StringBuilder out=new StringBuilder();for(java.util.Map.Entry<String,String> e:all.entrySet()){if(out.length()>0)out.append("\n");out.append(e.getKey()).append(" | ").append(e.getValue());}JSONObject rec=new JSONObject();rec.put("rows",out.toString());store.put(day,"customers",rec);
+        try{java.util.LinkedHashMap<String,String> all=new java.util.LinkedHashMap<>();for(String line:normalizeRows(regularCustomers().optString("rows","")).split("\\r?\n")){String[] p=line.split("\\|",-1);if(p.length>0&&!p[0].trim().isEmpty())all.put(p[0].trim(),p.length>1?p[1].trim():"عميل");}
+            for(String n:names.split("\\r?\n"))if(!n.trim().isEmpty()&&!all.containsKey(n.trim()))all.put(n.trim(),"عميل");StringBuilder out=new StringBuilder();for(java.util.Map.Entry<String,String> e:all.entrySet()){if(out.length()>0)out.append("\n");out.append(e.getKey()).append(" | ").append(e.getValue());}JSONObject rec=new JSONObject();rec.put("rows",out.toString());store.put(day,"customers",rec);
         }catch(Exception e){android.util.Log.w("AlMizanBakery","Customer save failed",e);}
     }
     private void manageRegularCustomers(){startActivity(new Intent(MainActivity.this,PartyDirectoryActivity.class));}
@@ -1167,7 +1185,7 @@ public class MainActivity extends Activity {
         java.util.List<EditText> loafCells=new java.util.ArrayList<>();
         String raw=normalizeRows(saved.optString("production_rows",""));
         int next=1;
-        for(String line:raw.split("\\r?\\n")) {
+        for(String line:raw.split("\\r?\n")) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             String loaf=p.length>1?p[1].trim():"";
@@ -1248,9 +1266,9 @@ public class MainActivity extends Activity {
                 } catch(Exception ex) { toast("تعذر حفظ بيانات شغل اليوم: "+ex.getMessage()); }
             });
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v->{
-                StringBuilder report=new StringBuilder("التاريخ: ").append(day).append("\\nاسم المنشأة: ").append(businessName()).append("\\n");
-                report.append("عدد جوالات الدقيق: ").append(work.getText()).append("\\nعدد الأرغفة لكل 1,000 جنيه: ").append(perThousand.getText()).append("\\n");
-                for(int i=0;i<loafCells.size();i++) report.append("القطعية ").append(i+1).append(": ").append(loafCells.get(i).getText()).append(" رغيف\\n");
+                StringBuilder report=new StringBuilder("التاريخ: ").append(day).append("\nاسم المنشأة: ").append(businessName()).append("\n");
+                report.append("عدد جوالات الدقيق: ").append(work.getText()).append("\nعدد الأرغفة لكل 1,000 جنيه: ").append(perThousand.getText()).append("\n");
+                for(int i=0;i<loafCells.size();i++) report.append("القطعية ").append(i+1).append(": ").append(loafCells.get(i).getText()).append(" رغيف\n");
                 report.append("ملاحظات: ").append(notes.getText());
                 printText("شغل اليوم - "+day,report.toString());
             });
@@ -1452,7 +1470,7 @@ public class MainActivity extends Activity {
     private void validateStockRows(String raw) {
         if (raw.trim().isEmpty()) throw new IllegalArgumentException("أدخل أصناف المخزن أولًا.");
         boolean flourFound=false;
-        for (String line : normalizeRows(raw).split("\\r?\\n")) {
+        for (String line : normalizeRows(raw).split("\\r?\n")) {
             if (line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             if (p.length<4 || p[0].trim().isEmpty() || p[1].trim().isEmpty() || p[2].trim().isEmpty() || p[3].trim().isEmpty())
@@ -1469,7 +1487,7 @@ public class MainActivity extends Activity {
     private long stockFlourQuantity(JSONObject stock) {
         String rows=stock.optString("items_rows","").trim();
         if(!rows.isEmpty()) {
-            for(String line:normalizeRows(rows).split("\\r?\\n")) {
+            for(String line:normalizeRows(rows).split("\\r?\n")) {
                 String[] p=line.split("\\|",-1);
                 if(p.length>=2 && (p[0].trim().contains("دقيق") || p[0].trim().equalsIgnoreCase("flour"))) {
                     String[] q=p[1].trim().split("\\s+");
@@ -1481,7 +1499,7 @@ public class MainActivity extends Activity {
     }
     private String setStockFlourQuantity(String raw,long quantity) {
         StringBuilder out=new StringBuilder(); boolean found=false;
-        for(String line:normalizeRows(raw).split("\\r?\\n")) {
+        for(String line:normalizeRows(raw).split("\\r?\n")) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             if(p.length>=3 && (p[0].trim().contains("دقيق") || p[0].trim().equalsIgnoreCase("flour"))) {
@@ -1512,7 +1530,7 @@ public class MainActivity extends Activity {
         String rows=record("cuts").optString("production_rows","").trim();
         if(!rows.isEmpty()) {
             long total=0L;
-            for(String line:normalizeRows(rows).split("\\r?\\n")) {
+            for(String line:normalizeRows(rows).split("\\r?\n")) {
                 if(line.trim().isEmpty()) continue;
                 String[] p=line.split("\\|",-1);
                 if(p.length<2) throw new IllegalArgumentException("اكتب رقم الجوال | عدد الأرغفة");
@@ -1566,7 +1584,7 @@ public class MainActivity extends Activity {
         String rows=stock.optString("items_rows","").trim();
         if(rows.isEmpty()) return 0L;
         long total=0L;
-        for(String line:normalizeRows(rows).split("\\r?\\n")) {
+        for(String line:normalizeRows(rows).split("\\r?\n")) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             if(p.length<3) throw new IllegalArgumentException("راجع جدول المخزن: الصنف | الكمية والوحدة | سعر الوحدة");
@@ -1584,7 +1602,7 @@ public class MainActivity extends Activity {
         String raw=stock.optString("items_rows","");
         if(raw.trim().isEmpty()) raw=legacyStockRows(stock);
         long total=0L;
-        for(String line:normalizeRows(raw).split("\\r?\\n")) {
+        for(String line:normalizeRows(raw).split("\\r?\n")) {
             if(line.trim().isEmpty()) continue;
             String[] p=line.split("\\|",-1);
             if(p.length==3) p=new String[]{p[0],p[1],(p[0].trim().contains("دقيق")?"1":"0"),p[2]};
@@ -1628,7 +1646,7 @@ public class MainActivity extends Activity {
     private long bankTotal() {
         Totals d=distribution();JSONObject window=record("window");long windowBank=window.optLong("bank",0L);
         String raw=normalizeRows(window.optString("bank_transfers",""));
-        if(!raw.trim().isEmpty()){windowBank=0L;for(String line:raw.split("\\r?\\n")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);if(p.length<2||p[1].trim().isEmpty())throw new IllegalArgumentException("رقم عملية بنكك غير مكتمل");long n=parseLong(p[0].trim());if(n<0)throw new IllegalArgumentException("مبلغ بنكك سالب");windowBank=exactAdd(windowBank,n);}}
+        if(!raw.trim().isEmpty()){windowBank=0L;for(String line:raw.split("\\r?\n")){if(line.trim().isEmpty())continue;String[] p=line.split("\\|",-1);if(p.length<2||p[1].trim().isEmpty())throw new IllegalArgumentException("رقم عملية بنكك غير مكتمل");long n=parseLong(p[0].trim());if(n<0)throw new IllegalArgumentException("مبلغ بنكك سالب");windowBank=exactAdd(windowBank,n);}}
         return exactAdd(windowBank,d.bank);
     }
     private long distributionDiff() { return distribution().diff; }
@@ -1997,11 +2015,7 @@ public class MainActivity extends Activity {
     }
 
     private void showPaywall() {
-        // Keep backup and restore available after trial expiry; operational screens remain gated.
-        if (store == null) {
-            try { store = new Store(); }
-            catch (RuntimeException ex) { android.util.Log.e("AlMizanBakery","Backup database unavailable on paywall",ex); }
-        }
+        // Expired users see licensing controls only. No operational, backup or restore screen is exposed.
         base("🔐 اشتراك المحاسب الميزان للمخابز");
         boolean licensed = hasActiveLicense();
         boolean expired = !LicenseAccessGate.isAccessAllowed(this);
@@ -2012,18 +2026,30 @@ public class MainActivity extends Activity {
                 ? "انتهت فترة التجربة المجانية (7 أيام)، وتم إيقاف الوصول إلى الدفاتر حتى التفعيل. بياناتك المحلية محفوظة ولن تُحذف. اختر الباقة وحوّل المبلغ عبر بنكك ثم أرسل الإيصال عبر واتساب لطلب التفعيل."
                 : "أهلًا بك في المحاسب الميزان للمخابز. بقي نحو " + trialDaysRemaining() + " يومًا من التجربة المجانية. يمكنك اختيار باقة مسبقًا؛ ستظل بياناتك محفوظة على الهاتف.";
         content.addView(text(trialMessage,16));
-        content.addView(text("الاشتراك الشهري — 55,000 جنيه سوداني",18));
-        Button monthly=button("اختيار الباقة الشهرية");
-        monthly.setOnClickListener(v->requestActivation("شهرية","55,000 جنيه سوداني"));
-        content.addView(monthly);
-        content.addView(text("الاشتراك السنوي — 550,000 جنيه سوداني",18));
-        Button annual=button("اختيار الباقة السنوية");
-        annual.setOnClickListener(v->requestActivation("سنوية","550,000 جنيه سوداني"));
-        content.addView(annual);
-        content.addView(text("شراء مرة واحدة — 1,050,000 جنيه سوداني",18));
-        Button lifetime=button("اختيار باقة الشراء مرة واحدة");
-        lifetime.setOnClickListener(v->requestActivation("شراء مرة واحدة","1,050,000 جنيه سوداني"));
-        content.addView(lifetime);
+        content.addView(text("اختر عملة الترخيص",16));
+        String[] licenseCurrencies={"SDG — جنيه سوداني","SAR — ريال سعودي","AED — درهم إماراتي","USD — دولار أمريكي"};
+        String[] licenseCodes={"SDG","SAR","AED","USD"};
+        Spinner licenseCurrency=new Spinner(this);
+        ArrayAdapter<String> licenseCurrencyAdapter=new ArrayAdapter<>(this,android.R.layout.simple_spinner_item,licenseCurrencies);
+        licenseCurrencyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        licenseCurrency.setAdapter(licenseCurrencyAdapter);content.addView(licenseCurrency);
+        Button monthly=button("شهري — 55,000 SDG");content.addView(monthly);
+        Button annual=button("سنوي — 550,000 SDG");content.addView(annual);
+        Button lifetime=button("دائم — 1,050,000 SDG");content.addView(lifetime);
+        android.widget.AdapterView.OnItemSelectedListener currencyListener=new android.widget.AdapterView.OnItemSelectedListener(){
+            public void onNothingSelected(android.widget.AdapterView<?> p){}
+            public void onItemSelected(android.widget.AdapterView<?> p,View v,int position,long id){
+                String code=licenseCodes[position];
+                long[] amounts=licenseAmounts(code);
+                monthly.setText("شهري — "+amounts[0]+" "+code);
+                annual.setText("سنوي — "+amounts[1]+" "+code);
+                lifetime.setText("دائم — "+amounts[2]+" "+code);
+            }
+        };
+        licenseCurrency.setOnItemSelectedListener(currencyListener);
+        monthly.setOnClickListener(v->{String code=licenseCodes[licenseCurrency.getSelectedItemPosition()];requestActivation("شهرية",licenseAmounts(code)[0]+" "+code,code);});
+        annual.setOnClickListener(v->{String code=licenseCodes[licenseCurrency.getSelectedItemPosition()];requestActivation("سنوية",licenseAmounts(code)[1]+" "+code,code);});
+        lifetime.setOnClickListener(v->{String code=licenseCodes[licenseCurrency.getSelectedItemPosition()];requestActivation("شراء مرة واحدة",licenseAmounts(code)[2]+" "+code,code);});
         content.addView(text("تنبيه قبل الدفع: الشراء لمرة واحدة يفعّل هذا الإصدار فقط ولا يشمل التحديثات المستقبلية. الباقات الشهرية والسنوية تشمل التحديثات طوال فترة الاشتراك.",13));
         content.addView(text("معرّف هذا الجهاز لربط الاشتراك به:",14));
         content.addView(text(deviceId(),13));
@@ -2040,21 +2066,27 @@ public class MainActivity extends Activity {
         content.addView(text("الدفع المحلي عبر بنكك — رقم الحساب: 1882224",16));
         Button copy=button("نسخ رقم حساب بنكك");
         copy.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("Bankak",BANKAK));toast("تم نسخ رقم بنكك");});
-        content.addView(text("التحويل المصرفي الدولي — IBAN: SD8504018822240001",16));
-        Button copyIban=button("نسخ رقم IBAN");
-        copyIban.setOnClickListener(v->{android.content.ClipboardManager cm=(android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE);cm.setPrimaryClip(android.content.ClipData.newPlainText("IBAN","SD8504018822240001"));toast("تم نسخ رقم IBAN");});
         content.addView(copy);
+        content.addView(text("التحويل الدولي — IBAN: SD46 0252 4541 9000 01 — الحساب: 1019380025245419000 — فوري. تحقق من اسم المستفيد قبل التحويل.",14));
         content.addView(text("سجّل طلب الترخيص في البوابة وأدخل مرجع التحويل. أرسل إشعار واتساب للمالك. لن يصدر الترخيص إلا بعد تأكيد وصول المبلغ إلى حساب بنكك وموافقة المالك. لا ترسل الرقم السري أو رمز التحقق البنكي.",14));
         Button logoRequest=button("🌾 إرسال شعار المخبز لتخصيص الفواتير عبر واتساب");
         logoRequest.setOnClickListener(v->chooseCompanyLogo());
         content.addView(logoRequest);
-        Button backup=button("🗂️ تصدير / استعادة بياناتك");
-        backup.setOnClickListener(v->backupRestoreMenu());
-        content.addView(backup);
+        if (!expired) {
+            Button backup=button("🗂️ تصدير / استعادة بياناتك");
+            backup.setOnClickListener(v->backupRestoreMenu());
+            content.addView(backup);
+        }
         if (LicenseAccessGate.isAccessAllowed(this)) { Button back=button("العودة إلى التطبيق"); back.setOnClickListener(v->buildHome()); content.addView(back); }
     }
 
-    private void requestActivation(String plan,String amount) {
+    private long[] licenseAmounts(String currency) {
+        if("SAR".equals(currency)||"AED".equals(currency))return new long[]{29,290,725};
+        if("USD".equals(currency))return new long[]{8,80,199};
+        return new long[]{55000,550000,1050000};
+    }
+
+    private void requestActivation(String plan,String amount,String currencyCode) {
         String planCode = "شهرية".equals(plan) ? "monthly" :
             "سنوية".equals(plan) ? "annual" : "lifetime";
         android.net.Uri portal = android.net.Uri.parse(
@@ -2140,7 +2172,7 @@ public class MainActivity extends Activity {
         try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/"+SUPPORT+"?text="+Uri.encode(message)))); }
         catch(Exception e) { toast("تعذر فتح واتساب. الرقم: +249 121 851 285"); }
     }
-    private void toast(String s) { Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
+    private void toast(String s) { Toast.makeText(this,AppLanguage.tr(this,s),Toast.LENGTH_LONG).show(); }
 
     private class Store extends SQLiteOpenHelper {
         Store(){super(MainActivity.this,"almizan_bakery_250.db",SecureDatabase.passphrase(MainActivity.this,"almizan_bakery_250.db"),null,7,0,null,null,false);}
@@ -2186,7 +2218,7 @@ public class MainActivity extends Activity {
 
         private JSONObject materialUsageFor(String raw,long workUnits) throws Exception {
             JSONObject usage=new JSONObject();
-            for(String line:normalizeRows(raw).split("\\r?\\n")) {
+            for(String line:normalizeRows(raw).split("\\r?\n")) {
                 if(line.trim().isEmpty()) continue;
                 String[] p=line.split("\\|",-1);
                 if(p.length==3) p=new String[]{p[0],p[1],(p[0].trim().contains("دقيق")?"1":"0"),p[2]};
@@ -2198,7 +2230,7 @@ public class MainActivity extends Activity {
         }
         private String adjustMaterialRows(String raw,JSONObject usage,boolean restore) throws Exception {
             StringBuilder out=new StringBuilder();
-            for(String line:normalizeRows(raw).split("\\r?\\n")) {
+            for(String line:normalizeRows(raw).split("\\r?\n")) {
                 if(line.trim().isEmpty()) continue;
                 String[] p=line.split("\\|",-1);
                 if(p.length==3) p=new String[]{p[0],p[1],(p[0].trim().contains("دقيق")?"1":"0"),p[2]};
@@ -2262,7 +2294,7 @@ public class MainActivity extends Activity {
             } finally { db.endTransaction(); }
         }
         private long stockFlourQuantityFromRows(String raw) {
-            for(String line:normalizeRows(raw).split("\\r?\\n")) {
+            for(String line:normalizeRows(raw).split("\\r?\n")) {
                 String[] p=line.split("\\|",-1);
                 if(p.length>=2 && (p[0].trim().contains("دقيق") || p[0].trim().equalsIgnoreCase("flour")))
                     return parseLong(p[1].trim().split("\\s+")[0]);

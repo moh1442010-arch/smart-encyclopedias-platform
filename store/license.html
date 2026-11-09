@@ -37,13 +37,14 @@
 <div class="field"><label for="customer">اسم العميل أو المخبز</label><input id="customer" maxlength="100" required autocomplete="name"></div>
 <div class="field"><label for="contact">رقم واتساب للتواصل</label><input id="contact" maxlength="40" required autocomplete="tel"></div>
 <div class="field"><label for="device">معرّف الجهاز من التطبيق</label><input id="device" maxlength="100" required autocomplete="off" autocapitalize="off"></div>
+<div class="field"><label for="currency">عملة الترخيص والدفع</label><select id="currency" required><option value="SDG">جنيه سوداني — SDG</option><option value="SAR">ريال سعودي — SAR</option><option value="AED">درهم إماراتي — AED</option><option value="USD">دولار أمريكي — USD</option></select></div>
 <div class="field"><label for="plan">الباقة</label><select id="plan" required>
 <option value="monthly">شهري — 55,000 جنيه</option>
 <option value="annual">سنوي — 550,000 جنيه</option>
 <option value="lifetime">شراء مرة واحدة — 1,050,000 جنيه</option>
 </select></div>
 <div class="field"><label for="receipt">مرجع تحويل بنكك</label><input id="receipt" maxlength="100" required placeholder="رقم العملية كما يظهر في بنكك"></div>
-<p class="muted">رقم حساب بنكك: 1882224. أرسل صورة الإيصال في محادثة واتساب بعد فتحها. لا ترسل الرقم السري أو رمز التحقق البنكي.</p>
+<div id="paymentDetails" class="notice"><strong>الدفع المحلي عبر بنكك</strong><p>رقم الحساب: 1882224<br>المستفيد: محمد مصطفى بابكر</p></div><p class="muted">التحويل الدولي عبر فوري: IBAN SD46 0252 4541 9000 01 — الحساب 1019380025245419000 — المستفيد محمد مصطفى بابكر. تحقق من بيانات المستفيد في تطبيق البنك قبل التأكيد.</p>
 <button type="submit">تسجيل الطلب وفتح واتساب</button>
 <div id="result" class="result" hidden></div>
 </form>
@@ -63,12 +64,19 @@
 <script>
 const params=new URLSearchParams(location.search);
 const validPlans=["monthly","annual","lifetime"];
+const currency=document.getElementById("currency");
+const prices={SDG:{monthly:55000,annual:550000,lifetime:1050000},SAR:{monthly:29,annual:290,lifetime:725},AED:{monthly:29,annual:290,lifetime:725},USD:{monthly:8,annual:80,lifetime:199}};
+const currencyNames={SDG:"جنيه سوداني",SAR:"ريال سعودي",AED:"درهم إماراتي",USD:"دولار أمريكي"};
+function updatePriceLabels(){const c=currency.value,p=prices[c];document.querySelector('#plan option[value="monthly"]').textContent="شهري — "+p.monthly.toLocaleString("en-US")+" "+currencyNames[c];document.querySelector('#plan option[value="annual"]').textContent="سنوي — "+p.annual.toLocaleString("en-US")+" "+currencyNames[c];document.querySelector('#plan option[value="lifetime"]').textContent="دائم — "+p.lifetime.toLocaleString("en-US")+" "+currencyNames[c];document.getElementById("paymentDetails").innerHTML=c==="SDG"?"<strong>الدفع المحلي عبر بنكك</strong><p>رقم الحساب: 1882224<br>المستفيد: محمد مصطفى بابكر</p>":"<strong>التحويل الدولي عبر فوري</strong><p>IBAN: SD46 0252 4541 9000 01<br>رقم الحساب: 1019380025245419000<br>المستفيد: محمد مصطفى بابكر</p>";}
+currency.addEventListener("change",updatePriceLabels);
 const initialPlan=params.get("plan");
 if(params.get("deviceId"))document.getElementById("device").value=params.get("deviceId");
 if(validPlans.includes(initialPlan))document.getElementById("plan").value=initialPlan;
-const version=params.get("appVersion")||"2.8.0";
-const amounts={monthly:55000,annual:550000,lifetime:1050000};
-const labels={monthly:"شهري — 55,000 جنيه — 30 يوماً",annual:"سنوي — 550,000 جنيه — 365 يوماً",lifetime:"شراء مرة واحدة — 1,050,000 جنيه — دائم لهذا الإصدار فقط"};
+const initialCurrency=params.get("currency");if(["SDG","SAR","AED","USD"].includes(initialCurrency))currency.value=initialCurrency;
+updatePriceLabels();
+const version=params.get("appVersion")||"2.8.1";
+
+const labels={monthly:"شهري — 30 يوماً",annual:"سنوي — 365 يوماً",lifetime:"دائم لجهاز واحد"};
 document.getElementById("requestForm").addEventListener("submit",async event=>{
  event.preventDefault();
  const form=event.currentTarget;
@@ -76,6 +84,8 @@ document.getElementById("requestForm").addEventListener("submit",async event=>{
  const contact=document.getElementById("contact").value.trim();
  const device=document.getElementById("device").value.trim();
  const plan=document.getElementById("plan").value;
+ const currencyCode=currency.value;
+ const amount=prices[currencyCode][plan];
  const receipt=document.getElementById("receipt").value.trim();
  const result=document.getElementById("result");
  result.hidden=false;result.textContent="";
@@ -86,12 +96,12 @@ document.getElementById("requestForm").addEventListener("submit",async event=>{
  try{
   const response=await fetch("https://al-mizan-bakery-licensing.moh1442010.workers.dev/api/orders",{
    method:"POST",headers:{"content-type":"application/json"},
-   body:JSON.stringify({customerName:customer,contact,deviceId:device,plan,receiptReference:receipt,appVersion:version})
+   body:JSON.stringify({customerName:customer,contact,deviceId:device,plan,currencyCode,receiptReference:receipt,appVersion:version})
   });
   const data=await response.json().catch(()=>({}));
   if(!response.ok||!data.orderId||data.status!=="pending"){
    const errors={
-    APP_VERSION_UNSUPPORTED:"إصدار التطبيق غير متزامن مع خدمة التراخيص. حدّث التطبيق أو أعد فتح رابط الاشتراك من داخل الإصدار 2.8.0.",
+    APP_VERSION_UNSUPPORTED:"إصدار التطبيق غير متزامن مع خدمة التراخيص. حدّث التطبيق أو أعد فتح رابط الاشتراك من داخل الإصدار 2.8.1.",
     INVALID_FIELDS:"بعض البيانات غير مقبولة. راجع رقم الهاتف ومعرّف الجهاز ومرجع التحويل.",
     RECEIPT_REFERENCE_ALREADY_USED:"مرجع التحويل مستخدم في طلب سابق. لا تعِد إرسال الطلب؛ تواصل مع الإدارة برقم المرجع.",
     ORDER_RATE_LIMITED:"تم تجاوز عدد محاولات التسجيل. انتظر قليلاً ثم أعد المحاولة."
@@ -106,8 +116,8 @@ document.getElementById("requestForm").addEventListener("submit",async event=>{
    "رقم التواصل: "+contact,
    "معرّف الجهاز: "+device,
    "الباقة: "+labels[plan],
-   "المبلغ: "+amounts[plan].toLocaleString("en-US")+" جنيه سوداني",
-   "مرجع تحويل بنكك: "+receipt,
+   "المبلغ: "+amount.toLocaleString("en-US")+" "+currencyCode,
+   "مرجع التحويل: "+receipt,
    "",
    "تم تسجيل الطلب في النظام. أرفق صورة الإيصال هنا. لا يصدر رمز التفعيل إلا بعد تحقق المالك وموافقته."
   ].join("\n");

@@ -252,18 +252,18 @@ async function load(status="pending"){
    const card=document.createElement("article");card.className="order";
    const h=document.createElement("h3");h.textContent=o.customer_name+" — "+o.plan;card.append(h);
    const details=document.createElement("p");
-   details.textContent="رقم الطلب: "+o.id+"\nالتواصل: "+o.contact+"\nمعرّف الجهاز: "+o.device_id+"\nالمبلغ: "+Number(o.amount_sdg).toLocaleString("en-US")+" ج.س\nمرجع بنكك: "+o.receipt_reference+"\nالإصدار المسجل: "+o.app_version+"\nتاريخ الطلب: "+o.created_at;
+   details.textContent="رقم الطلب: "+o.id+"\nالتواصل: "+o.contact+"\nمعرّف الجهاز: "+o.device_id+"\nالمبلغ: "+Number(o.amount_minor||o.amount_sdg||0).toLocaleString("en-US")+" "+(o.currency_code||"SDG")+"\nمرجع التحويل: "+o.receipt_reference+"\nالإصدار المسجل: "+o.app_version+"\nتاريخ الطلب: "+o.created_at;
    card.append(details);
    if(status==="pending"){
     const note=document.createElement("input");note.placeholder="ملاحظة للمراجعة (اختياري)";note.maxLength=500;card.append(note);
     const row=document.createElement("div");row.className="row";
     const approve=document.createElement("button");approve.className="btn";approve.textContent="اعتماد وإصدار الرمز";
     approve.addEventListener("click",async()=>{
-     if(!confirm("تأكدت بنفسك من وصول مبلغ "+Number(o.amount_sdg).toLocaleString("en-US")+" ج.س إلى الحساب؟ لن تعتمد الطلب إلا بعد التحقق الفعلي."))return;
+     if(!confirm("تأكدت بنفسك من وصول مبلغ "+Number(o.amount_minor||o.amount_sdg||0).toLocaleString("en-US")+" "+(o.currency_code||"SDG")+" إلى الحساب؟ لن تعتمد الطلب إلا بعد التحقق الفعلي."))return;
      approve.disabled=true;
      try{
       const result=await call("/admin/orders/"+encodeURIComponent(o.id)+"/approve",{method:"POST",body:JSON.stringify({note:note.value.trim()})});
-      showMessage("تمت الموافقة وإصدار الترخيص.\nرقم الطلب: "+result.orderId+"\nالباقة: "+o.plan+"\nالمبلغ: "+Number(o.amount_sdg).toLocaleString("en-US")+" جنيه سوداني\nالإصدار: "+result.appVersion+"\nانتهاء الصلاحية (Unix): "+result.expiresAt);
+      showMessage("تمت الموافقة وإصدار الترخيص.\nرقم الطلب: "+result.orderId+"\nالباقة: "+o.plan+"\nالمبلغ: "+Number(o.amount_minor||o.amount_sdg||0).toLocaleString("en-US")+" "+(o.currency_code||"SDG")+"\nالإصدار: "+result.appVersion+"\nانتهاء الصلاحية (Unix): "+result.expiresAt);
       const phone=String(o.contact||"").replace(/[^0-9]/g,"").replace(/^0/,"249");
       const message="تمت الموافقة على طلب ترخيص الميزان للمخابز.\nرقم الطلب: "+result.orderId+"\nالباقة: "+o.plan+"\nرمز التفعيل الخاص بجهازك: ("+result.activationToken+")\nافتح التطبيق ثم الاشتراك والتفعيل وأدخل الرمز.";
       const send=document.createElement("a");send.className="btn";send.target="_blank";send.rel="noopener noreferrer";send.href="https://wa.me/"+phone+"?text="+encodeURIComponent(message);send.textContent="إرسال رمز التفعيل عبر واتساب";
