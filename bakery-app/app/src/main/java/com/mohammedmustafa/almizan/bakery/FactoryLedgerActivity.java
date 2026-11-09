@@ -249,6 +249,8 @@ public class FactoryLedgerActivity extends Activity {
             rows("SELECT DISTINCT l.source_account FROM factory_gl_outbox_lines l LEFT JOIN factory_gl_account_mappings m ON m.source_account=l.source_account AND m.active=1 WHERE m.source_account IS NULL ORDER BY l.source_account");
             body.addView(label("حالة طابور الترحيل",16));
             rows("SELECT event_key||' — '||status||' — محاولات '||attempt_count||CASE WHEN last_error='' THEN '' ELSE ' — '||last_error END FROM factory_gl_outbox ORDER BY id DESC LIMIT 50");
+            body.addView(label("قيود تاريخية لم تُلتقط بعد",16));
+            rows("SELECT j.entry_ref||' — '||j.date||' — '||j.description FROM journal_entries j LEFT JOIN factory_gl_outbox o ON o.source_entry_id=j.id WHERE j.status='POSTED' AND o.id IS NULL ORDER BY j.id LIMIT 50");
             body.addView(label("الربط الصريح للحسابات",16));
             rows("SELECT source_account||' ← '||target_account_code||' — '||branch_code||' — '||currency_code FROM factory_gl_account_mappings WHERE active=1 ORDER BY source_account");
             FactoryGlOutbox.ReconciliationReport report=FactoryGlOutbox.reconcile(db,destination);
@@ -268,6 +270,14 @@ public class FactoryLedgerActivity extends Activity {
                 say("أعيد فتح "+count+" حدث للمراجعة. الأحداث الموجودة في الأستاذ العام ستُعاد عبر idempotency للتحقق من تطابق الحمولة قبل تأكيدها.");
                 glBridge();
             }catch(Exception e){say("تعذر فحص الأحداث المتوقفة: "+e.getMessage());}
+        }));
+        body.addView(button("التقاط القيود التاريخية القديمة في Outbox",()->{
+            try{
+                FactoryGlOutbox.BackfillResult result=FactoryGlOutbox.backfillPostedJournals(db,100);
+                say("تم التقاط "+result.captured+" قيد تاريخي — تعذر التقاط "+result.failed+
+                    (result.firstError.isEmpty()?"":" — أول خطأ: "+result.firstError));
+                glBridge();
+            }catch(Exception e){say("تعذر التقاط القيود التاريخية: "+e.getMessage());}
         }));
         body.addView(button("ترحيل القيود المعلقة إلى الأستاذ العام",()->{
             try{
