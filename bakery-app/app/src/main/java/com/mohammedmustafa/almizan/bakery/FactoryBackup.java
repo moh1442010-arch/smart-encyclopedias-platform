@@ -230,6 +230,12 @@ final class FactoryBackup {
             long exact=number.longValue();
             if (number.doubleValue()!=((double)exact) || exact<0) throw new IllegalArgumentException("Negative or fractional factory integer");
         }
+        if ("factory_gl_account_mappings".equals(table) && !"SDG".equals(row.optString("currency_code")))
+            throw new IllegalArgumentException("Factory account mappings must retain SDG source currency");
+        if ("factory_gl_outbox_lines".equals(table) && row.has("currency_code") && !row.isNull("currency_code") && !"SDG".equals(row.optString("currency_code")))
+            throw new IllegalArgumentException("Factory outbox lines must retain SDG source currency");
+        if ("factory_gl_account_mappings".equals(table) && (row.getLong("fx_rate_num")==0 || row.getLong("fx_rate_den")==0))
+            throw new IllegalArgumentException("Factory mapping FX rate must be positive");
         if ("daily_usage".equals(table) && row.getLong("qty")==0) throw new IllegalArgumentException("Daily usage quantity must be positive");
         if ("sales_returns".equals(table) && (row.getLong("qty")==0 || row.getLong("refund_value")==0 || safeAdd(safeAdd(row.getLong("refund_cash"),row.getLong("refund_bank")),row.getLong("credit_adjustment"))!=row.getLong("refund_value"))) throw new IllegalArgumentException("Invalid sales return settlement");
         if ("work_orders".equals(table) && (row.getLong("batches")==0 || row.getLong("planned_qty")==0)) throw new IllegalArgumentException("Invalid work order");
