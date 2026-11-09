@@ -223,6 +223,7 @@ final class FactoryBackup {
         else numeric=new String[]{"id"};
         for (String key : numeric) {
             if ("products".equals(table) && "unit_price".equals(key) && !row.has(key)) continue;
+            if ("factory_gl_outbox".equals(table) && "payload_version".equals(key) && !row.has(key)) continue;
             Object value=row.get(key);
             if (!(value instanceof Number)) throw new IllegalArgumentException("Invalid numeric factory field");
             Number number=(Number)value;
