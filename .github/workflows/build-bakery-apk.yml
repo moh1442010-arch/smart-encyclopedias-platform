@@ -146,6 +146,8 @@ jobs:
           grep -Fq 'postJournal(d,"WASTE-"+wasteId' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'postPairJournal(d,"BATCH-"+batchId+"-FINISHED"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'seedReviewedMappings' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
+          grep -Fq 'validateReviewedChart' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
+          grep -Fq 'FactoryGlOutbox.validateReviewedChart(db)' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchemaMigrationTest.java
           grep -Fq 'static ReconciliationReport reconcile' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
           grep -Fq 'FactoryGlOutbox.reconcile(db,destination)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'reconciliationDetectsDestinationTransactionAmountMismatch' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxInstrumentedTest.java
