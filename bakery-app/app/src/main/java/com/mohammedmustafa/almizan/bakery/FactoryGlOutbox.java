@@ -146,6 +146,32 @@ final class FactoryGlOutbox {
         return entryId;
     }
 
+    /**
+     * Seeds a reviewed, fixed account map only when the caller has verified the target chart.
+     * INSERT OR IGNORE preserves every operator-edited mapping.
+     */
+    static int seedReviewedMappings(SQLiteDatabase source,String branch,String currency) {
+        if(branch==null||branch.trim().isEmpty()||currency==null||currency.trim().isEmpty())
+            throw new IllegalArgumentException("الفرع والعملة مطلوبان لتهيئة الربط");
+        ensureSchema(source);
+        String[][] reviewed={
+            {"الصندوق","1000"},{"بنكك","1010"},{"العملاء","1100"},{"الموردون","2000"},
+            {"رأس المال","3000"},{"إيرادات المبيعات","4000"},{"مرتجعات المبيعات","4050"},
+            {"تكلفة البضاعة المباعة","5000"},{"مصروفات تشغيلية","5200"},
+            {"مخزون المواد الخام","1200"},{"مخزون الإنتاج التام","1210"},{"أعمال تحت التشغيل","1300"},
+            {"أجور مستحقة","2200"},{"تكاليف صناعية مستحقة","2300"},{"خسائر هالك وتالف","5400"}
+        };
+        int inserted=0;
+        for(String[] pair:reviewed) {
+            ContentValues v=new ContentValues();v.put("source_account",pair[0]);v.put("target_account_code",pair[1]);
+            v.put("branch_code",branch.trim());v.put("currency_code",currency.trim().toUpperCase(java.util.Locale.US));
+            v.put("fx_rate_num",1);v.put("fx_rate_den",1);v.put("active",1);v.put("updated_at",System.currentTimeMillis());
+            long id=source.insertWithOnConflict("factory_gl_account_mappings",null,v,SQLiteDatabase.CONFLICT_IGNORE);
+            if(id!=-1)inserted++;
+        }
+        return inserted;
+    }
+
     /** Exact source labels are intentionally mapped by an authorized operator, never guessed. */
     static void saveMapping(SQLiteDatabase source,String sourceAccount,String targetAccount,
                             String branch,String currency,long fxNum,long fxDen) {
