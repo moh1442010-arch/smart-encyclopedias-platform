@@ -103,8 +103,8 @@ public final class AppUpdatePolicy {
             if (activity.isFinishing()) return;
             AlertDialog dialog = new AlertDialog.Builder(activity)
                 .setTitle("تحديث إلزامي")
-                .setMessage(message + "\\n\\nالإصدار المثبت: " + BuildConfig.VERSION_NAME +
-                    "\\nالحد الأدنى المطلوب: " + minimumVersionCode + " أو أحدث.")
+                .setMessage(message + "\n\nالإصدار المثبت: " + BuildConfig.VERSION_NAME +
+                    "\nالحد الأدنى المطلوب: " + minimumVersionCode + " أو أحدث.")
                 .setPositiveButton("تحديث الآن", (d, which) -> {
                     try {
                         activity.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl)));
