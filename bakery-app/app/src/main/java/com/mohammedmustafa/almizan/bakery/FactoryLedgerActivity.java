@@ -246,6 +246,12 @@ public class FactoryLedgerActivity extends Activity {
             }else{
                 body.addView(label("عملة المنشأة الأساسية "+baseCurrency+". معاملات المصنع مسجلة بالجنيه السوداني SDG؛ اترك عملة المصدر SDG وأدخل سعر التحويل المعتمد إلى "+baseCurrency+" لكل حساب قبل الترحيل.",13));
             }
+            FactoryGlOutbox.ReconciliationReport report=FactoryGlOutbox.reconcile(db,destination);
+            body.addView(label("تقرير مطابقة المصنع مع الأستاذ العام",16));
+            body.addView(label("قيود المصنع: "+report.sourceJournals+" — أحداث Outbox: "+report.outboxEvents+" — مرحل: "+report.posted,13));
+            body.addView(label("معلق: "+report.pending+" — قيد المعالجة: "+report.processing+" — إعادة محاولة: "+report.retry+" — متوقف: "+report.deadLetter,13));
+            body.addView(label("بلا Outbox: "+report.missingOutbox+" — بلا قيد وجهة: "+report.missingDestination+" — قيد وجهة يتيم: "+report.orphanDestination+" — غير مؤكد: "+report.unacknowledgedDestination+" — فروقات المبالغ: "+report.amountMismatches,13));
+            body.addView(label(report.clean()?"مطابقة الأحداث المرحّلة سليمة حسب البيانات المتاحة.":"توجد أحداث أو فروقات تتطلب المعالجة قبل اعتماد الإغلاق.",13));
             appendReferenceRows(destination,"SELECT account_code||' — '||name_ar||' / '||name_en FROM chart_of_accounts WHERE active=1 ORDER BY account_code","الحسابات");
             appendReferenceRows(destination,"SELECT branch_code||' — '||name FROM branches WHERE active=1 ORDER BY branch_code","الفروع");
             appendReferenceRows(destination,"SELECT code||' — '||name_ar FROM currencies WHERE active=1 ORDER BY code","العملات");
