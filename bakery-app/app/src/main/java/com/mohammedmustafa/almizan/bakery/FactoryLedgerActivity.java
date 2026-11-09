@@ -259,7 +259,7 @@ public class FactoryLedgerActivity extends Activity {
         body.addView(button("إعادة فحص الأحداث المتوقفة واستعادة ما لم يرحل",()->{
             try{
                 int count=FactoryGlOutbox.requeueDeadLetters(this,db);
-                say("أعيد فتح "+count+" حدث لم يظهر له قيد مرحل في الأستاذ العام. الأحداث التي سبق ترحيلها تم تأكيدها دون تكرار.");
+                say("أعيد فتح "+count+" حدث للمراجعة. الأحداث الموجودة في الأستاذ العام ستُعاد عبر idempotency للتحقق من تطابق الحمولة قبل تأكيدها.");
                 glBridge();
             }catch(Exception e){say("تعذر فحص الأحداث المتوقفة: "+e.getMessage());}
         }));
