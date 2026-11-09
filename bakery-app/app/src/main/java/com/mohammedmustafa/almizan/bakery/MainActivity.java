@@ -226,7 +226,7 @@ public class MainActivity extends Activity {
                 if(position<0||position>=currencyCodes.size())return;
                 java.util.List<String> mapped=TaxJurisdictionProfiles.countriesForCurrency(store.getReadableDatabase(),currencyCodes.get(position));
                 jurisdictionSpinner.setEnabled(mapped.size()!=1);
-                if(mapped.size()==1){int countryIndex=jurisdictionCodes.indexOf(mapped.get(0));if(countryIndex>=0)jurisdictionSpinner.setSelection(countryIndex);}
+                if(!mapped.isEmpty()){int countryIndex=jurisdictionCodes.indexOf(mapped.get(0));if(countryIndex>=0)jurisdictionSpinner.setSelection(countryIndex);}
                 taxProfileHint.setText(mapped.size()==1?taxProfileSummary(mapped.get(0)):AppLanguage.tr(MainActivity.this,mapped.isEmpty()?"هذه العملة لا تملك مطابقة تلقائية. اختر دولة التسجيل الفعلية.":"هذه العملة مرتبطة بأكثر من دولة. اختر دولة التسجيل الفعلية لعرض ملفها الضريبي."));
             }
             @Override public void onNothingSelected(android.widget.AdapterView<?> parent){}
