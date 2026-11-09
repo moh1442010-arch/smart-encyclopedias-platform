@@ -129,7 +129,7 @@ test("admin login page is served without exposing dashboard data", async () => {
 
 
 
-test("2.8.1 candidate order is accepted as pending without issuing an activation token", async () => {
+test("2.8.2 candidate order is accepted as pending without issuing an activation token", async () => {
   const writes = [];
   const db = {
     prepare(sql) {
@@ -158,17 +158,17 @@ test("2.8.1 candidate order is accepted as pending without issuing an activation
       "CF-Connecting-IP": "192.0.2.45"
     },
     body: JSON.stringify({
-      customerName: "Candidate 2.8.1 Bakery",
+      customerName: "Candidate 2.8.2 Bakery",
       contact: "+249123456789",
       deviceId: "DEVICE-281-123456",
       plan: "monthly",
       receiptReference: "TEST-ONLY-281",
-      appVersion: "2.8.1"
+      appVersion: "2.8.2"
     })
   }), {
     DB: db,
-    APP_VERSION: "2.8.1",
-    PREVIOUS_APP_VERSION: "2.8.0",
+    APP_VERSION: "2.8.2",
+    PREVIOUS_APP_VERSION: "2.8.1",
     STORE_ORIGIN: "https://bakery-test.local"
   });
 
@@ -178,7 +178,7 @@ test("2.8.1 candidate order is accepted as pending without issuing an activation
   assert.equal(body.amount, 55000);
   assert.ok(body.orderId);
   assert.equal("activationToken" in body, false);
-  assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_orders") && x.values.includes("2.8.1")));
+  assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_orders") && x.values.includes("2.8.2")));
   assert.ok(writes.some(x => x.sql.includes("INSERT INTO license_audit") && x.values.includes("order_created")));
 });
 
@@ -191,8 +191,8 @@ test("international license prices accept SAR, AED and USD and reject EUR", asyn
     };}};}};
     const response=await worker.fetch(new Request("https://bakery-test.local/api/orders",{
       method:"POST",headers:{"content-type":"application/json",origin:"https://bakery-test.local","CF-Connecting-IP":"192.0.2.90"},
-      body:JSON.stringify({customerName:"International Bakery",contact:"+249123456789",deviceId:"DEVICE-INT-123456",plan:"annual",currencyCode,receiptReference,appVersion:"2.8.1"})
-    }),{DB:db,APP_VERSION:"2.8.1",STORE_ORIGIN:"https://bakery-test.local"});
+      body:JSON.stringify({customerName:"International Bakery",contact:"+249123456789",deviceId:"DEVICE-INT-123456",plan:"annual",currencyCode,receiptReference,appVersion:"2.8.2"})
+    }),{DB:db,APP_VERSION:"2.8.2",STORE_ORIGIN:"https://bakery-test.local"});
     return {response,writes};
   }
   for (const [currencyCode,amount] of [["SAR",290],["AED",290],["USD",80]]) {
