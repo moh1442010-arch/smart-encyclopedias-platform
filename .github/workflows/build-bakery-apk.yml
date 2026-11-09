@@ -150,6 +150,7 @@ jobs:
           grep -Fq 'FactoryGlOutbox.reconcile(db,destination)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'reconciliationDetectsDestinationTransactionAmountMismatch' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxInstrumentedTest.java
           grep -Fq 'foreignBaseCurrencyRejectsUnverifiedOneToOneFactoryRate' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxInstrumentedTest.java
+          grep -Fq 'existingFactoryDatabaseV11UpgradesAdditivelyToV12' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxInstrumentedTest.java
           grep -Fq 'private void glBridge()' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'GeneralLedger.post(destination,entry)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
           grep -Fq 'DEAD_LETTER' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
