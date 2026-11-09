@@ -271,7 +271,8 @@ jobs:
 
       - name: Smoke test signed APK on modern Android API 35
         # API 35 is a mandatory compatibility gate; infrastructure failures must remain visible.
-        timeout-minutes: 8
+        # API 35 cold boots can exceed the previous 8-minute step cap on hosted runners.
+        timeout-minutes: 18
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
