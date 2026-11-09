@@ -93,7 +93,16 @@ final class FactoryGlOutbox {
         try {
             if(!head.moveToFirst())throw new IllegalArgumentException("قيد المصنع غير موجود");
             ref=head.getString(0);description=head.getString(1);date=head.getString(2);
-            if(!"POSTED".equals(head.getString(3)))throw new IllegalStateException("لا يمكن إرسال قيد مصنع غير مرحل");
+            String sourceStatus=head.getString(3);
+            if(!"POSTED".equals(sourceStatus)&&!"REVERSED".equals(sourceStatus))
+                throw new IllegalStateException("لا يمكن إرسال قيد مصنع غير مرحل");
+            if("REVERSED".equals(sourceStatus)) {
+                Cursor reversal=source.rawQuery("SELECT COUNT(*) FROM journal_entries WHERE reversal_of=? AND status='POSTED'",
+                    new String[]{String.valueOf(sourceEntryId)});
+                try{if(!reversal.moveToFirst()||reversal.getInt(0)==0)
+                    throw new IllegalStateException("القيد المعكوس لا يملك قيداً عكسياً مرحلاً");}
+                finally{reversal.close();}
+            }
         } finally {head.close();}
         List<SnapshotLine> lines=new ArrayList<>();
         Cursor rows=source.rawQuery("SELECT account,debit,credit FROM journal_lines WHERE entry_id=? ORDER BY account,debit,credit,id",
@@ -140,15 +149,17 @@ final class FactoryGlOutbox {
         if(source==null||!source.isOpen()||destination==null||!destination.isOpen())
             throw new IllegalStateException("قاعدتا المصنع والأستاذ العام مطلوبتان للمطابقة");
         ensureSchema(source);EnterpriseSchema.ensure(destination);
-        int sourceCount=count(source,"SELECT COUNT(*) FROM journal_entries WHERE status='POSTED'");
+        String eligibleSource="(j.status='POSTED' OR (j.status='REVERSED' AND EXISTS "+
+            "(SELECT 1 FROM journal_entries r WHERE r.reversal_of=j.id AND r.status='POSTED')))";
+        int sourceCount=count(source,"SELECT COUNT(*) FROM journal_entries j WHERE "+eligibleSource);
         int eventCount=count(source,"SELECT COUNT(*) FROM factory_gl_outbox");
         int posted=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='POSTED'");
         int pending=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='PENDING'");
         int processing=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='PROCESSING'");
         int retry=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='RETRY'");
         int dead=count(source,"SELECT COUNT(*) FROM factory_gl_outbox WHERE status='DEAD_LETTER'");
-        int missingOutbox=count(source,"SELECT COUNT(*) FROM journal_entries j LEFT JOIN factory_gl_outbox o ON o.source_entry_id=j.id WHERE j.status='POSTED' AND o.id IS NULL");
-        int orphanOutbox=count(source,"SELECT COUNT(*) FROM factory_gl_outbox o LEFT JOIN journal_entries j ON j.id=o.source_entry_id WHERE j.id IS NULL OR j.entry_ref<>o.source_entry_ref OR j.status<>'POSTED'");
+        int missingOutbox=count(source,"SELECT COUNT(*) FROM journal_entries j LEFT JOIN factory_gl_outbox o ON o.source_entry_id=j.id WHERE "+eligibleSource+" AND o.id IS NULL");
+        int orphanOutbox=count(source,"SELECT COUNT(*) FROM factory_gl_outbox o LEFT JOIN journal_entries j ON j.id=o.source_entry_id WHERE j.id IS NULL OR j.entry_ref<>o.source_entry_ref OR NOT "+eligibleSource);
         int missingDestination=0,orphanDestination=0,unacknowledged=0,mismatches=0;
         Cursor events=source.rawQuery("SELECT id,source_entry_ref,status FROM factory_gl_outbox ORDER BY id",null);
         try {
@@ -406,13 +417,15 @@ final class FactoryGlOutbox {
         BackfillResult(int captured,int failed,String firstError){this.captured=captured;this.failed=failed;this.firstError=firstError;}
     }
 
-    /** Captures valid pre-outbox posted factory journals without editing their historical rows. */
+    /** Captures valid pre-outbox posted journals and reversed originals with their posted reversals, without editing historical rows. */
     static BackfillResult backfillPostedJournals(SQLiteDatabase source,int limit) {
         if(source==null||!source.isOpen()||limit<1||limit>500)throw new IllegalArgumentException("حد ترحيل التاريخ غير صالح");
         ensureSchema(source);
         List<Long> ids=new ArrayList<>();
         Cursor c=source.rawQuery("SELECT j.id FROM journal_entries j LEFT JOIN factory_gl_outbox o ON o.source_entry_id=j.id "+
-            "WHERE j.status='POSTED' AND o.id IS NULL ORDER BY j.id LIMIT ?",new String[]{String.valueOf(limit)});
+            "WHERE (j.status='POSTED' OR (j.status='REVERSED' AND EXISTS "+
+            "(SELECT 1 FROM journal_entries r WHERE r.reversal_of=j.id AND r.status='POSTED'))) "+
+            "AND o.id IS NULL ORDER BY j.id LIMIT ?",new String[]{String.valueOf(limit)});
         try{while(c.moveToNext())ids.add(c.getLong(0));}finally{c.close();}
         int captured=0,failed=0;String firstError="";
         for(Long id:ids) {
