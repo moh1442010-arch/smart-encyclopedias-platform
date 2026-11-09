@@ -23,7 +23,8 @@ The following code is now present on this branch:
 - `FactoryGlOutbox` creates additive source-side tables for explicit account mappings, outbox events, and immutable journal-line snapshots.
 - `enqueue` requires an active source transaction, validates debit/credit balance, computes a SHA-256 payload fingerprint, and inserts the event and all source lines with the original journal transaction.
 - Repeated enqueue with the same source reference and same payload is idempotent. A changed payload under the same event identity is rejected.
-- Account mapping is explicit by exact source account label to target account code, branch, currency, and rational FX rate. A reviewed fixed mapping set is seeded only for SDG-base companies after all target accounts and MAIN branch are validated; INSERT OR IGNORE preserves operator overrides. Non-SDG base currencies receive no automatic 1:1 mapping because factory source transactions are recorded in SDG. No dynamic translated display-name inference is used.
+- Account mapping is explicit by exact source account label to target account code, branch, currency, and rational FX rate. Fifteen fixed reviewed mappings are seeded only for SDG-base companies after all target accounts and MAIN branch are validated; INSERT OR IGNORE preserves operator overrides. Factory source currency is enforced as SDG. For a non-SDG base currency, the operator must enter a verified SDG conversion rate; an unverified 1:1 rate is blocked before GL posting. No dynamic translated display-name inference is used.
+- The enterprise chart now seeds dedicated control accounts for finished goods, WIP, accrued wages, accrued manufacturing overhead, sales returns, and spoilage loss. Existing accounts are not overwritten.
 - The factory ledger screen now exposes unmapped source labels, queue status, available target accounts/branches/currencies, mapping entry, and a manual retry action.
 - Delivery uses `GeneralLedger.post` with a deterministic source identity and idempotency key. The source event becomes POSTED only after the destination call returns successfully.
 - PROCESSING events are eligible for recovery after a process interruption. Destination idempotency is the recovery boundary if the destination committed before source acknowledgement.
@@ -41,7 +42,7 @@ This is a foundation, not a completed operational integration. The main `Factory
 The following are also still open:
 
 - Dedicated settlement screen for accrued wages and manufacturing overhead. The current production posting records those cost components against dedicated accrued-liability accounts; settlement remains possible through a manual journal but should be made a controlled operational workflow.
-- Destination integration tests have been authored for successful GL posting, duplicate delivery, crash-after-commit recovery, changed-payload conflict, unknown mapping, and closed period; CI execution and fixes are still pending.
+- Destination integration tests have been authored for successful GL posting, duplicate delivery, crash-after-commit recovery, changed-payload conflict, unknown mapping, closed period, and unverified foreign-currency 1:1 conversion; CI execution and fixes are still pending.
 - Inactive account/branch/currency and destination database failure tests are still missing.
 - Reconciliation report comparing factory source journals, outbox, GL destination entries, and debit/credit totals.
 - Safe operator workflow for correcting a frozen mapping after a failed delivery.
