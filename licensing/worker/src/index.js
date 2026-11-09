@@ -27,7 +27,7 @@ const encoder = new TextEncoder();
 const ADMIN_PRODUCT_REGISTRY = [
   { id: "accounting-android", name: "المحاسب الميزان", platform: "Android", category: "محاسبة", scope: "التطبيق المحاسبي العام" },
   { id: "accounting-windows", name: "المحاسب الميزان", platform: "Windows", category: "محاسبة", scope: "نسخة سطح المكتب" },
-  { id: "bakery-android", name: "الميزان للمخابز", platform: "Android", category: "المخابز", scope: "تراخيص المخابز والإصدار 2.8.1" },
+  { id: "bakery-android", name: "الميزان للمخابز", platform: "Android", category: "المخابز", scope: "تراخيص المخابز والإصدار 2.8.2" },
   { id: "store-website", name: "المتجر والموقع", platform: "Web", category: "منصة", scope: "صفحات المنتجات والتنزيلات والمراجعات" },
   { id: "future-products", name: "منتجات مستقبلية", platform: "Modular", category: "قابل للتوسع", scope: "سجل مفتوح لإضافة منتجات ووحدات جديدة" }
 ];
