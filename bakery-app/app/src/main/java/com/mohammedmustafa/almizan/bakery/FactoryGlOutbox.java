@@ -242,8 +242,20 @@ final class FactoryGlOutbox {
     }
 
     static ProcessResult processPending(Context context,SQLiteDatabase source) {
+        SQLiteDatabase destination=null;
+        try {
+            destination=SecureDatabase.open(context,"almizan_bakery_250.db");
+            EnterpriseSchema.ensure(destination);
+            return processPending(source,destination);
+        } finally {if(destination!=null&&destination.isOpen())destination.close();}
+    }
+
+    /** Package-visible overload for deterministic integration tests with an isolated destination DB. */
+    static ProcessResult processPending(SQLiteDatabase source,SQLiteDatabase destination) {
         if(source==null||!source.isOpen())throw new IllegalStateException("قاعدة المصنع غير متاحة");
+        if(destination==null||!destination.isOpen())throw new IllegalStateException("قاعدة الأستاذ العام غير متاحة");
         ensureSchema(source);
+        EnterpriseSchema.ensure(destination);
         List<Long> ids=new ArrayList<>();
         Cursor due=source.rawQuery("SELECT id FROM factory_gl_outbox WHERE status IN ('PENDING','RETRY','PROCESSING') "+
             "AND next_attempt_at<=? ORDER BY id LIMIT "+BATCH_SIZE,
@@ -252,7 +264,7 @@ final class FactoryGlOutbox {
         int posted=0,retried=0,dead=0,skipped=0;
         for(Long id:ids) {
             try {
-                if(processOne(context,source,id))posted++;
+                if(processOne(source,destination,id))posted++;
                 else skipped++;
             } catch(Exception e) {
                 boolean isDead=recordFailure(source,id,e);
@@ -262,7 +274,7 @@ final class FactoryGlOutbox {
         return new ProcessResult(posted,retried,dead,skipped);
     }
 
-    private static boolean processOne(Context context,SQLiteDatabase source,long outboxId) {
+    private static boolean processOne(SQLiteDatabase source,SQLiteDatabase destination,long outboxId) {
         String ref,description,date,hash;
         List<SnapshotLine> lines=new ArrayList<>();
         source.beginTransaction();
@@ -321,27 +333,22 @@ final class FactoryGlOutbox {
             return false;
         } finally {source.endTransaction();}
 
-        SQLiteDatabase destination=null;
+        List<GeneralLedger.Line> glLines=new ArrayList<>();
+        for(SnapshotLine line:lines)glLines.add(new GeneralLedger.Line(line.targetAccount,line.branch,line.currency,
+            line.debit,line.credit,line.fxNum,line.fxDen));
+        String glRef="FACTORY-"+ref;
+        GeneralLedger.Entry entry=new GeneralLedger.Entry(glRef,description,date,SOURCE_TYPE,ref,
+            eventKey(ref),"FACTORY",glLines);
+        GeneralLedger.post(destination,entry);
+        source.beginTransaction();
         try {
-            destination=SecureDatabase.open(context,"almizan_bakery_250.db");
-            EnterpriseSchema.ensure(destination);
-            List<GeneralLedger.Line> glLines=new ArrayList<>();
-            for(SnapshotLine line:lines)glLines.add(new GeneralLedger.Line(line.targetAccount,line.branch,line.currency,
-                line.debit,line.credit,line.fxNum,line.fxDen));
-            String glRef="FACTORY-"+ref;
-            GeneralLedger.Entry entry=new GeneralLedger.Entry(glRef,description,date,SOURCE_TYPE,ref,
-                eventKey(ref),"FACTORY",glLines);
-            GeneralLedger.post(destination,entry);
-            source.beginTransaction();
-            try {
-                ContentValues done=new ContentValues();done.put("status","POSTED");
-                done.put("destination_ref",glRef);done.put("posted_at",System.currentTimeMillis());
-                done.put("updated_at",System.currentTimeMillis());done.put("last_error","");
-                source.update("factory_gl_outbox",done,"id=?",new String[]{String.valueOf(outboxId)});
-                source.setTransactionSuccessful();
-            } finally {source.endTransaction();}
-            return true;
-        } finally {if(destination!=null&&destination.isOpen())destination.close();}
+            ContentValues done=new ContentValues();done.put("status","POSTED");
+            done.put("destination_ref",glRef);done.put("posted_at",System.currentTimeMillis());
+            done.put("updated_at",System.currentTimeMillis());done.put("last_error","");
+            source.update("factory_gl_outbox",done,"id=?",new String[]{String.valueOf(outboxId)});
+            source.setTransactionSuccessful();
+        } finally {source.endTransaction();}
+        return true;
     }
 
     private static boolean recordFailure(SQLiteDatabase source,long id,Exception error) {
