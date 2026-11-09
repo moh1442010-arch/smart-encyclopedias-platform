@@ -21,7 +21,7 @@ This work starts P1 factory-to-general-ledger integration while the screen-speci
 The following code is now present on this branch:
 
 - `FactoryGlOutbox` creates additive source-side tables for explicit account mappings, outbox events, and immutable journal-line snapshots.
-- `enqueue` requires an active source transaction, validates debit/credit balance, computes a SHA-256 payload fingerprint, and inserts the event and all source lines with the original journal transaction.
+- `enqueue` requires an active source transaction, validates debit/credit balance, computes a SHA-256 payload fingerprint with an explicit `payload_version=1`, and inserts the versioned event and all source lines with the original journal transaction. Unsupported event versions are rejected.
 - Repeated enqueue with the same source reference and same payload is idempotent. A changed payload under the same event identity is rejected.
 - Account mapping is explicit by exact source account label to target account code, branch, currency, and rational FX rate. Fifteen fixed reviewed mappings are seeded only for SDG-base companies after all target accounts and MAIN branch are validated; INSERT OR IGNORE preserves operator overrides. Factory source currency is enforced as SDG. For a non-SDG base currency, the operator must enter a verified SDG conversion rate; an unverified 1:1 rate is blocked before GL posting. No dynamic translated display-name inference is used.
 - The enterprise chart now seeds dedicated control accounts for finished goods, WIP, accrued wages, accrued manufacturing overhead, sales returns, and spoilage loss. Existing accounts are not overwritten.
@@ -31,8 +31,8 @@ The following code is now present on this branch:
 - Retry uses bounded exponential delay and DEAD_LETTER after eight failed delivery attempts.
 - Manual factory journals, WIP journal entries, sales-return journals, and manual reversal journals are captured by the outbox.
 - The main factory database now creates source journals in the same transaction for opening raw-material inventory, supplier raw-material purchases, production WIP/material/labor/overhead/finished-goods transfers, sales revenue and COGS, customer collections, supplier payments, operating expenses, and finished-goods waste/spoilage. Labor and overhead are accrued to dedicated payable accounts; settlement can be recorded through the general journal until a dedicated payroll/cost-payment screen is implemented.
-- The factory database schema was advanced additively to version 12 to create outbox tables for existing installations.
-- Factory backup schema is now version 10 and includes account mappings, outbox events, and outbox lines. Older schema versions remain accepted without those new tables.
+- The factory database schema was advanced additively to version 13 to create outbox tables for existing installations.
+- Factory backup schema is now version 11 and includes account mappings, outbox events, and outbox lines. Older schema versions remain accepted without those new tables.
 - Test coverage now includes isolated destination-DB integration tests for successful GL delivery, duplicate/crash replay, changed mapped payload rejection, unknown account mapping, and closed-period rejection. These tests are authored but have not yet run in CI.
 
 ## Important scope still missing
