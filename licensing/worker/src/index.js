@@ -485,6 +485,33 @@ async function handle(request, env) {
     return json({ ok: true, service: "al-mizan-bakery-licensing", mode: "manual-payment-review" });
   }
 
+  if (url.pathname === "/api/app-policy" && request.method === "GET") {
+    const requestedCode = Number(url.searchParams.get("versionCode"));
+    if (!Number.isSafeInteger(requestedCode) || requestedCode < 1) {
+      return json({ error: "INVALID_VERSION_CODE" }, 400);
+    }
+    const minimumCode = Number(env.MIN_SUPPORTED_VERSION_CODE || 0);
+    const latestCode = Number(env.LATEST_VERSION_CODE || 280003);
+    if (!Number.isSafeInteger(minimumCode) || minimumCode < 0 ||
+        !Number.isSafeInteger(latestCode) || latestCode < 1) {
+      return json({ error: "APP_POLICY_NOT_CONFIGURED" }, 503);
+    }
+    const updateUrl = cleanText(env.APP_DOWNLOAD_URL ||
+      "https://moh1442010-arch.github.io/smart-encyclopedias-platform/store/bakery.html", 300);
+    const message = cleanText(env.APP_UPDATE_MESSAGE ||
+      "يتطلب هذا الإصدار تحديث التطبيق لمتابعة الاستخدام وحماية بيانات الترخيص.", 240);
+    return json({
+      appId: APP_ID,
+      latestVersionCode: latestCode,
+      latestVersionName: cleanText(env.LATEST_VERSION_NAME || env.APP_VERSION || "2.8.3", 32),
+      minimumSupportedVersionCode: minimumCode,
+      mandatory: minimumCode > 0 && requestedCode < minimumCode,
+      updateUrl,
+      message,
+      policyUpdatedAt: cleanText(env.APP_POLICY_UPDATED_AT || "", 40)
+    });
+  }
+
   if (url.pathname === "/api/orders" && request.method === "POST") {
     let body;
     try { body = await request.json(); } catch { return json({ error: "INVALID_JSON" }, 400); }
