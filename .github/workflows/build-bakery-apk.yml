@@ -200,7 +200,7 @@ jobs:
             'bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java',
             'bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java'
           ];
-          const literalBackslashN = String.raw\`\\\\n\`;
+          const literalBackslashN = String.raw`\\n`;
           for (const file of files) {
             const source = fs.readFileSync(file, 'utf8');
             if (source.includes(literalBackslashN)) {
