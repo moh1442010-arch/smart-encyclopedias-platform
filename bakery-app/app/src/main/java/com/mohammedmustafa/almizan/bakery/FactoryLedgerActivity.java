@@ -239,6 +239,13 @@ public class FactoryLedgerActivity extends Activity {
             appendReferenceRows(destination,"SELECT code||' — '||name_ar FROM currencies WHERE active=1 ORDER BY code","العملات");
         }catch(Exception e){body.addView(label("تعذر قراءة دليل الحسابات: "+e.getMessage(),13));}
         finally{if(destination!=null&&destination.isOpen())destination.close();}
+        body.addView(button("إعادة فحص الأحداث المتوقفة واستعادة ما لم يرحل",()->{
+            try{
+                int count=FactoryGlOutbox.requeueDeadLetters(this,db);
+                say("أعيد فتح "+count+" حدث لم يظهر له قيد مرحل في الأستاذ العام. الأحداث التي سبق ترحيلها تم تأكيدها دون تكرار.");
+                glBridge();
+            }catch(Exception e){say("تعذر فحص الأحداث المتوقفة: "+e.getMessage());}
+        }));
         body.addView(button("ترحيل القيود المعلقة إلى الأستاذ العام",()->{
             try{
                 FactoryGlOutbox.ProcessResult result=FactoryGlOutbox.processPending(this,db);
