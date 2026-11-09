@@ -151,8 +151,8 @@ final class FactoryGlOutbox {
      * INSERT OR IGNORE preserves every operator-edited mapping.
      */
     static int seedReviewedMappings(SQLiteDatabase source,String branch,String currency) {
-        if(branch==null||branch.trim().isEmpty()||currency==null||currency.trim().isEmpty())
-            throw new IllegalArgumentException("الفرع والعملة مطلوبان لتهيئة الربط");
+        if(branch==null||branch.trim().isEmpty()||!"SDG".equals(currency))
+            throw new IllegalArgumentException("دفتر المصنع الحالي يسجل المعاملات بالجنيه السوداني SDG فقط");
         ensureSchema(source);
         String[][] reviewed={
             {"الصندوق","1000"},{"بنكك","1010"},{"العملاء","1100"},{"الموردون","2000"},
@@ -176,8 +176,8 @@ final class FactoryGlOutbox {
     static void saveMapping(SQLiteDatabase source,String sourceAccount,String targetAccount,
                             String branch,String currency,long fxNum,long fxDen) {
         if(sourceAccount==null||sourceAccount.trim().isEmpty()||targetAccount==null||targetAccount.trim().isEmpty()||
-           branch==null||branch.trim().isEmpty()||currency==null||currency.trim().isEmpty()||fxNum<=0||fxDen<=0)
-            throw new IllegalArgumentException("بيانات ربط الحساب غير مكتملة");
+           branch==null||branch.trim().isEmpty()||!"SDG".equals(currency.trim().toUpperCase(java.util.Locale.US))||fxNum<=0||fxDen<=0)
+            throw new IllegalArgumentException("بيانات الربط غير مكتملة؛ عملة دفتر المصنع هي SDG");
         ensureSchema(source);
         ContentValues v=new ContentValues();v.put("source_account",sourceAccount.trim());
         v.put("target_account_code",targetAccount.trim());v.put("branch_code",branch.trim());
