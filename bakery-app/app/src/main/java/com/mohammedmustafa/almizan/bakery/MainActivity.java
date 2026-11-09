@@ -180,13 +180,21 @@ public class MainActivity extends Activity {
 
     private String taxProfileSummary(String countryCode) {
         Cursor profile=store.getReadableDatabase().rawQuery(
-            "SELECT c.name_ar,c.tax_profile,p.profile_status,p.indirect_tax_type FROM countries c LEFT JOIN tax_jurisdiction_profiles p ON p.country_code=c.code WHERE c.code=?",
+            "SELECT c.name_ar,c.tax_profile,p.profile_status,p.indirect_tax_type,p.notes FROM countries c LEFT JOIN tax_jurisdiction_profiles p ON p.country_code=c.code WHERE c.code=?",
             new String[]{countryCode});
-        String name=countryCode,status="REVIEW_REQUIRED",type="UNVERIFIED",code="CUSTOM_REVIEW_REQUIRED";
-        try { if(profile.moveToFirst()){name=profile.getString(0);code=profile.getString(1);status=profile.isNull(2)?"REVIEW_REQUIRED":profile.getString(2);type=profile.isNull(3)?"UNVERIFIED":profile.getString(3);} }
+        String name=countryCode,status="REVIEW_REQUIRED",type="UNVERIFIED",code="CUSTOM_REVIEW_REQUIRED",notes="";
+        try { if(profile.moveToFirst()){name=profile.getString(0);code=profile.getString(1);status=profile.isNull(2)?"REVIEW_REQUIRED":profile.getString(2);type=profile.isNull(3)?"UNVERIFIED":profile.getString(3);notes=profile.isNull(4)?"":profile.getString(4);} }
         finally { profile.close(); }
         if("NO_VAT_CONFIRMED".equals(status))return name+" — لا توجد ضريبة قيمة مضافة مؤكدة حالياً. راجع الضرائب الأخرى حسب النشاط.";
-        if(!"VERIFIED_BASELINE".equals(status))return name+" — "+code+" — مراجعة النظام الضريبي المحلي مطلوبة. لن يطبق التطبيق نسبة تلقائية غير معتمدة.";
+        if(!"VERIFIED_BASELINE".equals(status)) {
+            Cursor reference=store.getReadableDatabase().rawQuery(
+                "SELECT name,rate_num,rate_den FROM tax_rules WHERE country_code=? ORDER BY effective_from DESC LIMIT 1",
+                new String[]{countryCode});
+            try {
+                if(reference.moveToFirst())return name+" — مرجع ضريبي غير مفعل: "+reference.getString(0)+" "+(100.0*reference.getLong(1)/reference.getLong(2))+"%. لن يطبق آلياً قبل التحقق من الإعفاءات والتسجيل والفوترة.";
+            } finally { reference.close(); }
+            return name+" — "+type+" — "+(notes.isEmpty()?"مراجعة النظام الضريبي المحلي مطلوبة.":notes)+" لن يطبق التطبيق نسبة غير معتمدة.";
+        }
         Cursor rate=store.getReadableDatabase().rawQuery(
             "SELECT name,rate_num,rate_den FROM tax_rules WHERE country_code=? AND active=1 AND effective_from<=date('now') AND (effective_to IS NULL OR effective_to='' OR effective_to>=date('now')) ORDER BY effective_from DESC LIMIT 1",
             new String[]{countryCode});
