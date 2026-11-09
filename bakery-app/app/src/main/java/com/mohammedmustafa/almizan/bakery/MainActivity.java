@@ -813,7 +813,7 @@ public class MainActivity extends Activity {
     private void addCard(String title, String description, Runnable action) {
         int firstCodePoint=title.codePointAt(0);
         String icon=title.substring(0,Character.charCount(firstCodePoint));
-        String caption=title.substring(Character.charCount(firstCodePoint)).trim();
+        
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
@@ -832,7 +832,7 @@ public class MainActivity extends Activity {
 
         LinearLayout details=new LinearLayout(this);
         details.setOrientation(LinearLayout.VERTICAL);
-        TextView h=text(caption,16);
+        TextView h=text(title,16);
         h.setTextColor(NAVY);
         h.setTypeface(null,1);
         details.addView(h);
