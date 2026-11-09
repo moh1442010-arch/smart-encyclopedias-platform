@@ -316,6 +316,30 @@ public class FactoryGlOutboxInstrumentedTest {
         }
     }
 
+    @Test public void nonSdgImportedMappingCannotPostFactoryAmountsAsAnotherCurrency() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String sourceName="factory_gl_currency_source_"+System.currentTimeMillis()+".db";
+        String destinationName="factory_gl_currency_dest_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase source=openSource(context,sourceName),destination=openDestination(context,destinationName,"OPEN");
+        try {
+            mapCashSale(source,"1000");
+            source.execSQL("UPDATE factory_gl_account_mappings SET currency_code='AED',fx_rate_num=2,fx_rate_den=1 WHERE source_account='الصندوق'");
+            source.beginTransaction();
+            FactoryGlOutbox.postSourceJournal(source,"CURRENCY-SOURCE-1","بيع نقدي","2026-11-09",
+                new String[]{"الصندوق","المبيعات"},new long[]{18000,0},new long[]{0,18000});
+            source.setTransactionSuccessful();source.endTransaction();
+            FactoryGlOutbox.ProcessResult result=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(1,result.retried);
+            assertEquals(0,destinationEntryCount(destination,"CURRENCY-SOURCE-1"));
+            Cursor state=source.rawQuery("SELECT status,last_error FROM factory_gl_outbox WHERE source_entry_ref='CURRENCY-SOURCE-1'",null);
+            try{assertTrue(state.moveToFirst());assertEquals("RETRY",state.getString(0));assertTrue(state.getString(1).contains("عملة مصدر دفتر المصنع ثابتة SDG"));}finally{state.close();}
+        } finally {
+            if(source.isOpen())source.close();if(destination.isOpen())destination.close();
+            context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
+            context.deleteDatabase(destinationName);context.deleteDatabase(destinationName+"-wal");context.deleteDatabase(destinationName+"-shm");
+        }
+    }
+
     @Test public void unknownSourceAccountMappingNeverPostsToGl() {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String sourceName="factory_gl_unmapped_source_"+System.currentTimeMillis()+".db";
