@@ -47,6 +47,7 @@ public class FactoryLedgerActivity extends Activity {
         db.execSQL("CREATE TABLE IF NOT EXISTS work_order_stages(id INTEGER PRIMARY KEY,work_order_id INTEGER NOT NULL,stage_no INTEGER NOT NULL,output_qty INTEGER NOT NULL,material_cost INTEGER NOT NULL,labor INTEGER NOT NULL,overhead INTEGER NOT NULL,total_cost INTEGER NOT NULL,date TEXT,UNIQUE(work_order_id,stage_no))");
         db.execSQL("CREATE TABLE IF NOT EXISTS journal_entries(id INTEGER PRIMARY KEY,entry_ref TEXT UNIQUE,description TEXT,status TEXT NOT NULL,reversal_of INTEGER,date TEXT)");
         db.execSQL("CREATE TABLE IF NOT EXISTS journal_lines(id INTEGER PRIMARY KEY,entry_id INTEGER NOT NULL,account TEXT NOT NULL,debit INTEGER NOT NULL DEFAULT 0,credit INTEGER NOT NULL DEFAULT 0)");
+        FactoryGlOutbox.ensureSchema(db);
     }
     private void frame(String title){
         LinearLayout root=new LinearLayout(this);root.setOrientation(1);root.setLayoutDirection(AppLanguage.isEnglish(this)?View.LAYOUT_DIRECTION_LTR:View.LAYOUT_DIRECTION_RTL);root.setPadding(12,10,12,12);root.setBackgroundColor(Color.rgb(246,248,251));
@@ -73,7 +74,7 @@ public class FactoryLedgerActivity extends Activity {
     private long qty(EditText e){try{return new java.math.BigDecimal(e.getText().toString().trim()).movePointRight(3).longValueExact();}catch(Exception x){return 0;}}
     private long amount(EditText e){try{return new java.math.BigDecimal(e.getText().toString().trim()).longValueExact();}catch(Exception x){return 0;}}
     private void say(String s){Toast.makeText(this,AppLanguage.tr(this,s),Toast.LENGTH_LONG).show();}
-    private void home(){frame("العمليات المتقدمة");body.addView(label("عمليات مستقلة تحفظ في قاعدة بيانات المصنع نفسها، وتعمل دون اتصال بالإنترنت.",14));body.addView(button("مرتجعات المبيعات",()->returns()));body.addView(button("الأعمال تحت التشغيل WIP",()->wip()));body.addView(button("دفتر القيود وعكس القيد",()->journals()));}
+    private void home(){frame("العمليات المتقدمة");body.addView(label("عمليات مستقلة تحفظ في قاعدة بيانات المصنع نفسها، وتعمل دون اتصال بالإنترنت.",14));body.addView(button("مرتجعات المبيعات",()->returns()));body.addView(button("الأعمال تحت التشغيل WIP",()->wip()));body.addView(button("دفتر القيود وعكس القيد",()->journals()));body.addView(button("ربط دفتر المصنع بالأستاذ العام",()->glBridge()));}
     private void rows(String sql){Cursor c=null;try{c=db.rawQuery(sql,null);while(c.moveToNext())body.addView(label(c.getString(0),13));}finally{if(c!=null)c.close();}}
     private void returns(){
         frame("مرتجعات المبيعات");
@@ -220,6 +221,7 @@ public class FactoryLedgerActivity extends Activity {
         ContentValues audit=new ContentValues();audit.put("action","JOURNAL_POSTED");
         audit.put("detail",ref+":"+refund+":"+cash+":"+bank+":"+credit);audit.put("date",today());
         db.insertOrThrow("audit",null,audit);
+        FactoryGlOutbox.enqueue(db,entryId);
     }
     private void insertReturnCreditLine(long entryId,String account,long amount){
         ContentValues line=new ContentValues();line.put("entry_id",entryId);line.put("account",account);
@@ -233,6 +235,7 @@ public class FactoryLedgerActivity extends Activity {
             db.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,?,?,0)",new Object[]{id,debit,value});
             db.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,?,0,?)",new Object[]{id,credit,value});
             db.execSQL("INSERT INTO audit(action,detail,date) VALUES('JOURNAL_POSTED',?,date('now'))",new Object[]{ref+":"+desc+":"+value});
+            FactoryGlOutbox.enqueue(db,id);
             if(own)db.setTransactionSuccessful();
         }finally{if(own)db.endTransaction();}
     }
@@ -244,6 +247,7 @@ public class FactoryLedgerActivity extends Activity {
             db.execSQL("INSERT INTO journal_entries(entry_ref,description,status,reversal_of,date) VALUES(?,?,'POSTED',?,date('now'))",new Object[]{reverseRef,"عكس "+desc,id});
             Cursor n=db.rawQuery("SELECT last_insert_rowid()",null);n.moveToFirst();long rid=n.getLong(0);n.close();
             Cursor lines=db.rawQuery("SELECT account,debit,credit FROM journal_lines WHERE entry_id=?",new String[]{""+id});while(lines.moveToNext())db.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,?,?,?)",new Object[]{rid,lines.getString(0),lines.getLong(2),lines.getLong(1)});lines.close();
+            FactoryGlOutbox.enqueue(db,rid);
             ContentValues v=new ContentValues();v.put("status","REVERSED");db.update("journal_entries",v,"id=?",new String[]{""+id});
             db.execSQL("INSERT INTO audit(action,detail,date) VALUES('JOURNAL_REVERSED',?,date('now'))",new Object[]{id+":"+rid});
             db.setTransactionSuccessful();return rid;
