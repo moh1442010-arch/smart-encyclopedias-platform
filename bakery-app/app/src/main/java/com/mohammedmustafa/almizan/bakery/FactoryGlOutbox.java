@@ -544,7 +544,7 @@ final class FactoryGlOutbox {
         List<String> canonical=new ArrayList<>();
         for(SnapshotLine line:lines)canonical.add(line.sourceAccount+"\u001f"+line.debit+"\u001f"+line.credit);
         Collections.sort(canonical);
-        StringBuilder payload=new StringBuilder("factory-gl-outbox-v1").append('\u001e').append(ref).append('\u001e').append(description).append('\u001e').append(date);
+        StringBuilder payload=new StringBuilder(ref).append('\u001e').append(description).append('\u001e').append(date);
         for(String line:canonical)payload.append('\u001d').append(line);
         try {
             byte[] digest=MessageDigest.getInstance("SHA-256").digest(payload.toString().getBytes(StandardCharsets.UTF_8));
