@@ -171,6 +171,25 @@ final class FactoryBackup {
                 if(!found)throw new IllegalArgumentException("Orphan journal line in backup");
             }
         }
+        if(version>=10){
+            JSONArray outbox=tables.optJSONArray("factory_gl_outbox"),outboxLines=tables.optJSONArray("factory_gl_outbox_lines");
+            for(int i=0;i<outbox.length();i++){
+                JSONObject event=outbox.getJSONObject(i);long sourceId=event.getLong("source_entry_id");
+                boolean sourceFound=false;for(int j=0;j<entries.length();j++){JSONObject entry=entries.getJSONObject(j);if(entry.getLong("id")==sourceId&&entry.getString("entry_ref").equals(event.getString("source_entry_ref"))){sourceFound=true;break;}}
+                if(!sourceFound)throw new IllegalArgumentException("Outbox event has no matching factory journal");
+                long debit=0,credit=0;int count=0;
+                for(int j=0;j<outboxLines.length();j++){JSONObject line=outboxLines.getJSONObject(j);if(line.getLong("outbox_id")==event.getLong("id")){debit=safeAdd(debit,line.getLong("debit_minor"));credit=safeAdd(credit,line.getLong("credit_minor"));count++;}}
+                if(count<2||debit!=credit)throw new IllegalArgumentException("Unbalanced factory outbox snapshot");
+                String status=event.getString("status");
+                if(!Arrays.asList("PENDING","PROCESSING","POSTED","RETRY","DEAD_LETTER").contains(status))throw new IllegalArgumentException("Invalid factory outbox status");
+                if("POSTED".equals(status)&&(event.optString("destination_ref").trim().isEmpty()||event.isNull("posted_at")))throw new IllegalArgumentException("Posted outbox event is missing destination acknowledgement");
+            }
+            for(int i=0;i<outboxLines.length();i++){
+                JSONObject line=outboxLines.getJSONObject(i);boolean found=false;
+                for(int j=0;j<outbox.length();j++)if(outbox.getJSONObject(j).getLong("id")==line.getLong("outbox_id")){found=true;break;}
+                if(!found)throw new IllegalArgumentException("Orphan factory outbox line");
+            }
+        }
     }
 
     private static void validateRow(String table, JSONObject row) throws Exception {
@@ -187,6 +206,9 @@ final class FactoryBackup {
         else if ("supplier_purchase_records".equals(table)) numeric=new String[]{"id","supplier_master_id","quantity_milli","invoice_total","paid_cash","paid_bank","debt"};
         else if ("supplier_payment_records".equals(table)) numeric=new String[]{"id","supplier_master_id","cash","bank"};
         else if ("factory_customers".equals(table) || "factory_suppliers".equals(table)) numeric=new String[]{"id"};
+        else if ("factory_gl_account_mappings".equals(table)) numeric=new String[]{"fx_rate_num","fx_rate_den","active","updated_at"};
+        else if ("factory_gl_outbox".equals(table)) numeric=new String[]{"id","source_entry_id","attempt_count","next_attempt_at","created_at","updated_at"};
+        else if ("factory_gl_outbox_lines".equals(table)) numeric=new String[]{"id","outbox_id","line_no","debit_minor","credit_minor"};
         else if ("recipe".equals(table)) numeric=new String[]{"id","product_id","material_id","qty"};
         else if ("batches".equals(table)) numeric=new String[]{"id","product_id","batches","output","labor","overhead","cost","unit_cost"};
         else if ("finished".equals(table)) numeric=new String[]{"product_id","qty","value","unit_cost"};
@@ -227,6 +249,20 @@ final class FactoryBackup {
         if ("supplier_purchase_records".equals(table)) { long total=row.getLong("invoice_total"),cash=row.getLong("paid_cash"),bank=row.getLong("paid_bank"),debt=row.getLong("debt"); if(row.getLong("quantity_milli")==0||total==0||safeAdd(safeAdd(cash,bank),debt)!=total||(bank>0&&row.optString("bank_ref").trim().isEmpty()))throw new IllegalArgumentException("Invalid supplier invoice settlement"); }
         if ("supplier_payment_records".equals(table) && safeAdd(row.getLong("cash"),row.getLong("bank"))==0) throw new IllegalArgumentException("Empty supplier payment");
         if ("supplier_payment_records".equals(table) && row.getLong("bank")>0 && row.optString("bank_ref").trim().isEmpty()) throw new IllegalArgumentException("Missing supplier Bankak reference");
+        if ("factory_gl_account_mappings".equals(table) && (row.getLong("fx_rate_num")==0 || row.getLong("fx_rate_den")==0 || row.getLong("active")>1 || row.optString("source_account").trim().isEmpty() || row.optString("target_account_code").trim().isEmpty())) throw new IllegalArgumentException("Invalid factory GL account mapping");
+        if ("factory_gl_outbox".equals(table)) {
+            String status=row.optString("status");
+            if (!Arrays.asList("PENDING","PROCESSING","POSTED","RETRY","DEAD_LETTER").contains(status) || !row.optString("payload_sha256").matches("[0-9a-f]{64}")) throw new IllegalArgumentException("Invalid factory GL outbox event");
+            if (!row.isNull("posted_at") && !(row.get("posted_at") instanceof Number)) throw new IllegalArgumentException("Invalid factory GL posted timestamp");
+        }
+        if ("factory_gl_outbox_lines".equals(table)) {
+            long debit=row.getLong("debit_minor"),credit=row.getLong("credit_minor");
+            if (((debit>0)==(credit>0)) || debit<0 || credit<0) throw new IllegalArgumentException("Invalid factory GL outbox journal line");
+            boolean anyMapping=!row.isNull("target_account_code")||!row.isNull("branch_code")||!row.isNull("currency_code")||!row.isNull("fx_rate_num")||!row.isNull("fx_rate_den");
+            boolean fullMapping=!row.isNull("target_account_code")&&!row.isNull("branch_code")&&!row.isNull("currency_code")&&!row.isNull("fx_rate_num")&&!row.isNull("fx_rate_den");
+            if (anyMapping&&!fullMapping) throw new IllegalArgumentException("Partial factory GL outbox account mapping");
+            if (fullMapping&&(row.getLong("fx_rate_num")==0||row.getLong("fx_rate_den")==0)) throw new IllegalArgumentException("Invalid factory GL outbox exchange rate");
+        }
     }
 
     static void restore(Context context, JSONObject root) throws Exception {
