@@ -166,7 +166,7 @@ public class FactoryGlOutboxInstrumentedTest {
             try{assertTrue(state.moveToFirst());assertEquals("POSTED",state.getString(0));assertEquals("FACTORY-DELIVERY-1",state.getString(1));}finally{state.close();}
             FactoryGlOutbox.ReconciliationReport report=FactoryGlOutbox.reconcile(source,destination);
             assertTrue("posted source/outbox/GL must reconcile",report.clean());
-            assertEquals(0,report.missingOutbox);assertEquals(0,report.missingDestination);assertEquals(0,report.amountMismatches);
+            assertEquals(0,report.missingOutbox);assertEquals(0,report.orphanOutbox);assertEquals(0,report.missingDestination);assertEquals(0,report.amountMismatches);
         } finally {
             if(source.isOpen())source.close();if(destination.isOpen())destination.close();
             context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
