@@ -138,6 +138,12 @@ jobs:
           grep -Fq 'FactoryGlOutbox.enqueue(db,entryId)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'FactoryGlOutbox.enqueue(db,id)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'FactoryGlOutbox.enqueue(db,rid)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
+          grep -Fq 'FactoryGlOutbox.postSourceJournal' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
+          grep -Fq 'postJournal(d,"SALE-"+saleId+"-REVENUE"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'postJournal(d,"RAW-IN-"+purchaseId' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'postJournal(d,"SUPPLIER-PAY-"+paymentId' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'postJournal(d,"EXPENSE-"+expenseId' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'postJournal(d,"WASTE-"+wasteId' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'private void glBridge()' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'GeneralLedger.post(destination,entry)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
           grep -Fq 'DEAD_LETTER' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
