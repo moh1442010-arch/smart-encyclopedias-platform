@@ -370,6 +370,6 @@ final class FactoryBackup {
         ensureColumn(d,"collections","customer_master_id","INTEGER NOT NULL DEFAULT 0");
         ensureColumn(d,"movements","supplier_master_id","INTEGER NOT NULL DEFAULT 0");
         FactoryGlOutbox.ensureSchema(d);
-        if (d.getVersion() < 11) d.setVersion(11);
+        if (d.getVersion() < 13) d.setVersion(13);
     }
 }
