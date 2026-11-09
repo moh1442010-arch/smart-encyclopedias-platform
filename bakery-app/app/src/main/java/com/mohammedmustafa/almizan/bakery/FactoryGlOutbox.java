@@ -118,6 +118,39 @@ final class FactoryGlOutbox {
         }
     }
 
+    /** Creates a balanced source journal and its outbox snapshot in the caller's existing transaction. */
+    static long postSourceJournal(SQLiteDatabase source,String reference,String description,String date,
+                                  String[] accounts,long[] debits,long[] credits) {
+        if(source==null||!source.isOpen()||!source.inTransaction())
+            throw new IllegalStateException("يجب ترحيل مستند المصنع داخل معاملته الأصلية");
+        if(reference==null||reference.trim().isEmpty()||description==null||date==null||
+           accounts==null||debits==null||credits==null||accounts.length!=debits.length||
+           accounts.length!=credits.length||accounts.length<2)
+            throw new IllegalArgumentException("بيانات قيد المصنع غير مكتملة");
+        long totalDebit=0,totalCredit=0;int count=0;
+        for(int i=0;i<accounts.length;i++) {
+            if(accounts[i]==null||accounts[i].trim().isEmpty()||debits[i]<0||credits[i]<0||
+               ((debits[i]>0)==(credits[i]>0)))throw new IllegalArgumentException("سطر قيد المصنع غير صالح");
+            totalDebit=checkedAdd(totalDebit,debits[i]);totalCredit=checkedAdd(totalCredit,credits[i]);count++;
+        }
+        GeneralLedger.validateBalancedTotals(totalDebit,totalCredit,count);
+        ContentValues head=new ContentValues();head.put("entry_ref",reference.trim());
+        head.put("description",description);head.put("status","POSTED");head.put("date",date);
+        long entryId=source.insertOrThrow("journal_entries",null,head);
+        for(int i=0;i<accounts.length;i++) {
+            ContentValues line=new ContentValues();line.put("entry_id",entryId);
+            line.put("account",accounts[i].trim());line.put("debit",debits[i]);line.put("credit",credits[i]);
+            source.insertOrThrow("journal_lines",null,line);
+        }
+        enqueue(source,entryId);
+        return entryId;
+    }
+
+    private static long checkedAdd(long a,long b) {
+        if(a<0||b<0||Long.MAX_VALUE-a<b)throw new ArithmeticException("Journal total overflow");
+        return a+b;
+    }
+
     /** Exact source labels are intentionally mapped by an authorized operator, never guessed. */
     static void saveMapping(SQLiteDatabase source,String sourceAccount,String targetAccount,
                             String branch,String currency,long fxNum,long fxDen) {
