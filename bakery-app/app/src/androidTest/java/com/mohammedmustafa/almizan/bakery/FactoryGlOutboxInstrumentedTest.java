@@ -124,6 +124,24 @@ public class FactoryGlOutboxInstrumentedTest {
         try{assertTrue(c.moveToFirst());return c.getLong(0);}finally{c.close();}
     }
 
+    @Test public void reviewedDefaultMappingsAreExplicitAndNeverOverwriteOperatorChanges() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="factory_gl_default_map_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase source=openSource(context,name);
+        try {
+            int first=FactoryGlOutbox.seedReviewedMappings(source,"MAIN","SDG");
+            assertEquals(15,first);
+            FactoryGlOutbox.saveMapping(source,"الصندوق","1010","MAIN","SDG",1,1);
+            int second=FactoryGlOutbox.seedReviewedMappings(source,"MAIN","SDG");
+            assertEquals(0,second);
+            Cursor cash=source.rawQuery("SELECT target_account_code FROM factory_gl_account_mappings WHERE source_account='الصندوق'",null);
+            try{assertTrue(cash.moveToFirst());assertEquals("1010",cash.getString(0));}finally{cash.close();}
+        } finally {
+            if(source.isOpen())source.close();
+            context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
+        }
+    }
+
     @Test public void mappedFactoryJournalPostsToGlAndCrashReplayDoesNotDuplicate() {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String sourceName="factory_gl_delivery_source_"+System.currentTimeMillis()+".db";
