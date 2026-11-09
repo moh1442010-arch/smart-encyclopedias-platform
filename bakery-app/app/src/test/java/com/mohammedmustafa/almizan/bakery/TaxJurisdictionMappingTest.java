@@ -13,6 +13,19 @@ public class TaxJurisdictionMappingTest {
         assertEquals("KW",TaxJurisdictionProfiles.countriesForCurrency("KWD").get(0));
     }
 
+    @Test public void allArabLeagueNationalCurrenciesHaveCountryMappings() {
+        String[] currencies={"DZD","BHD","KMF","DJF","EGP","IQD","JOD","KWD","LBP","LYD","MRU","MAD","OMR","ILS","QAR","SAR","SOS","SDG","SYP","TND","AED","YER"};
+        for(String currency:currencies)assertFalse(currency,TaxJurisdictionProfiles.countriesForCurrency(currency).isEmpty());
+    }
+
+    @Test public void sharedUsDollarRequiresCountrySelection() {
+        java.util.List<String> countries=TaxJurisdictionProfiles.countriesForCurrency("USD");
+        assertTrue(countries.contains("US"));
+        assertTrue(countries.contains("LB"));
+        assertTrue(countries.contains("PS"));
+        assertEquals(3,countries.size());
+    }
+
     @Test public void unknownCurrencyNeverGetsAnInventedCountry() {
         assertTrue(TaxJurisdictionProfiles.countriesForCurrency("XXX").isEmpty());
     }
