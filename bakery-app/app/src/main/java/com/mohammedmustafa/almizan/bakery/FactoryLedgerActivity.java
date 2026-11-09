@@ -36,8 +36,8 @@ public class FactoryLedgerActivity extends Activity {
     private static final int GOLD=Color.rgb(212,175,55);
     private String today(){return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());}
     @Override protected void attachBaseContext(android.content.Context newBase){super.attachBaseContext(AppLanguage.wrap(newBase));}
-    @Override public void onCreate(Bundle b){super.onCreate(b);if(!enforceEntitlement())return;db=SecureDatabase.open(this,"almizan_factory_1.db");schema();home();}
-    @Override protected void onResume(){super.onResume();if(db!=null&&!enforceEntitlement())return;entitlementHandler.removeCallbacks(entitlementWatchdog);entitlementHandler.post(entitlementWatchdog);}
+    @Override public void onCreate(Bundle b){super.onCreate(b);AppUpdatePolicy.enforceCached(this);if(!enforceEntitlement())return;db=SecureDatabase.open(this,"almizan_factory_1.db");schema();home();}
+    @Override protected void onResume(){super.onResume();AppUpdatePolicy.check(this);if(db!=null&&!enforceEntitlement())return;entitlementHandler.removeCallbacks(entitlementWatchdog);entitlementHandler.post(entitlementWatchdog);}
     @Override protected void onPause(){entitlementHandler.removeCallbacks(entitlementWatchdog);super.onPause();}
     @Override protected void onDestroy(){entitlementHandler.removeCallbacks(entitlementWatchdog);if(db!=null&&db.isOpen())db.close();super.onDestroy();}
     private void schema(){
