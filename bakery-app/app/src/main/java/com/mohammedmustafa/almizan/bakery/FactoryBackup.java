@@ -14,7 +14,7 @@ final class FactoryBackup {
     private static final String DB_NAME = "almizan_factory_1.db";
     private static final String[] TABLES = {
         "materials","products","recipe","batches","finished","sales",
-        "expenses","waste","movements","collections","cashbook","audit","daily_usage","sales_returns","work_orders","work_order_materials","journal_entries","journal_lines","work_order_stages","supplier_purchase_records","supplier_payment_records","factory_customers","factory_suppliers"
+        "expenses","waste","movements","collections","cashbook","audit","daily_usage","sales_returns","work_orders","work_order_materials","journal_entries","journal_lines","work_order_stages","supplier_purchase_records","supplier_payment_records","factory_customers","factory_suppliers","factory_gl_account_mappings","factory_gl_outbox","factory_gl_outbox_lines"
     };
     private static final String[][] COLUMNS = {
         {"id","name","unit","qty","value"},
@@ -39,7 +39,10 @@ final class FactoryBackup {
         {"id","supplier_master_id","supplier_name","item_name","quantity_milli","invoice_total","paid_cash","paid_bank","bank_ref","debt","currency_code","date"},
         {"id","supplier_master_id","supplier_name","cash","bank","bank_ref","date"},
         {"id","name","phone","iban","created_at"},
-        {"id","name","phone","iban","created_at"}
+        {"id","name","phone","iban","created_at"},
+        {"source_account","target_account_code","branch_code","currency_code","fx_rate_num","fx_rate_den","active","updated_at"},
+        {"id","event_key","source_entry_id","source_entry_ref","description","transaction_date","payload_sha256","status","attempt_count","next_attempt_at","last_error","destination_ref","created_at","updated_at","posted_at"},
+        {"id","outbox_id","line_no","source_account","debit_minor","credit_minor","target_account_code","branch_code","currency_code","fx_rate_num","fx_rate_den"}
     };
     private static final String[][] REQUIRED = {
         {"id","name","unit","qty","value"},
@@ -64,7 +67,10 @@ final class FactoryBackup {
         {"id","supplier_master_id","supplier_name","item_name","quantity_milli","invoice_total","paid_cash","paid_bank","debt","currency_code","date"},
         {"id","supplier_master_id","supplier_name","cash","bank","date"},
         {"id","name"},
-        {"id","name"}
+        {"id","name"},
+        {"source_account","target_account_code","branch_code","currency_code","fx_rate_num","fx_rate_den","active","updated_at"},
+        {"id","event_key","source_entry_id","source_entry_ref","description","transaction_date","payload_sha256","status","attempt_count","next_attempt_at","last_error","destination_ref","created_at","updated_at"},
+        {"id","outbox_id","line_no","source_account","debit_minor","credit_minor"}
     };
 
     private FactoryBackup() {}
@@ -81,7 +87,7 @@ final class FactoryBackup {
             ensureSchema(db);
             JSONObject root = new JSONObject();
             root.put("_type", TYPE);
-            root.put("schema_version", 9);
+            root.put("schema_version", 10);
             JSONObject tables = new JSONObject();
             for (int i=0;i<TABLES.length;i++) {
                 JSONArray rows = new JSONArray();
@@ -111,7 +117,7 @@ final class FactoryBackup {
     }
 
     static void validate(JSONObject root) throws Exception {
-        if (root == null || !TYPE.equals(root.optString("_type")) || (root.optInt("schema_version") < 3 || root.optInt("schema_version") > 9))
+        if (root == null || !TYPE.equals(root.optString("_type")) || (root.optInt("schema_version") < 3 || root.optInt("schema_version") > 10))
             throw new IllegalArgumentException("Unsupported factory backup format");
         JSONObject tables = root.optJSONObject("tables");
         if (tables == null) throw new IllegalArgumentException("Factory backup tables are missing");
@@ -125,6 +131,7 @@ final class FactoryBackup {
             if (rows == null && root.optInt("schema_version")<6 && "work_order_stages".equals(TABLES[i])) continue;
             if (rows == null && root.optInt("schema_version")<7 && Arrays.asList("supplier_purchase_records","supplier_payment_records").contains(TABLES[i])) continue;
             if (rows == null && root.optInt("schema_version")<8 && Arrays.asList("factory_customers","factory_suppliers").contains(TABLES[i])) continue;
+            if (rows == null && root.optInt("schema_version")<10 && Arrays.asList("factory_gl_account_mappings","factory_gl_outbox","factory_gl_outbox_lines").contains(TABLES[i])) continue;
             if (rows == null && root.optInt("schema_version")==3 && "daily_usage".equals(TABLES[i])) continue;
             if (rows == null) throw new IllegalArgumentException("Missing factory table: " + TABLES[i]);
             for (int n=0;n<rows.length();n++) {
@@ -239,6 +246,7 @@ final class FactoryBackup {
                     if (rows == null && root.optInt("schema_version")<6 && "work_order_stages".equals(TABLES[i])) continue;
                     if (rows == null && root.optInt("schema_version")<7 && Arrays.asList("supplier_purchase_records","supplier_payment_records").contains(TABLES[i])) continue;
                     if (rows == null && root.optInt("schema_version")<8 && Arrays.asList("factory_customers","factory_suppliers").contains(TABLES[i])) continue;
+                    if (rows == null && root.optInt("schema_version")<10 && Arrays.asList("factory_gl_account_mappings","factory_gl_outbox","factory_gl_outbox_lines").contains(TABLES[i])) continue;
                     if (rows == null && root.optInt("schema_version")==3 && "daily_usage".equals(TABLES[i])) continue;
                     if (rows == null) throw new IllegalArgumentException("Missing factory table: "+TABLES[i]);
                     for (int n=0;n<rows.length();n++) {
@@ -321,6 +329,7 @@ final class FactoryBackup {
         ensureColumn(d,"sales","customer_master_id","INTEGER NOT NULL DEFAULT 0");
         ensureColumn(d,"collections","customer_master_id","INTEGER NOT NULL DEFAULT 0");
         ensureColumn(d,"movements","supplier_master_id","INTEGER NOT NULL DEFAULT 0");
-        if (d.getVersion() < 9) d.setVersion(9);
+        FactoryGlOutbox.ensureSchema(d);
+        if (d.getVersion() < 10) d.setVersion(10);
     }
 }
