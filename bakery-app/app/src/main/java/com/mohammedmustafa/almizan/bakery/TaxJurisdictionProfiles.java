@@ -11,6 +11,15 @@ import java.util.List;
  */
 final class TaxJurisdictionProfiles {
     private TaxJurisdictionProfiles() {}
+    private static final String[][] CURRENCY_COUNTRY_MAP = {
+        {"DZD","DZ","1"},{"BHD","BH","1"},{"KMF","KM","1"},{"DJF","DJ","1"},
+        {"EGP","EG","1"},{"IQD","IQ","1"},{"JOD","JO","1"},{"KWD","KW","1"},
+        {"LBP","LB","1"},{"USD","LB","0"},{"LYD","LY","1"},{"MRU","MR","1"},
+        {"MAD","MA","1"},{"OMR","OM","1"},{"ILS","PS","1"},{"JOD","PS","0"},
+        {"USD","PS","0"},{"QAR","QA","1"},{"SAR","SA","1"},{"SOS","SO","1"},
+        {"SDG","SD","1"},{"SYP","SY","1"},{"TND","TN","1"},{"AED","AE","1"},
+        {"YER","YE","1"},{"USD","US","1"}
+    };
 
     static void ensure(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS tax_jurisdiction_profiles ("+
@@ -90,20 +99,8 @@ final class TaxJurisdictionProfiles {
         db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='BHD 37500 mandatory' WHERE country_code='BH'");
         db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='OMR 38500 mandatory; OMR 19250 voluntary' WHERE country_code='OM'");
         db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='ZAR 2300000 mandatory; ZAR 120000 voluntary' WHERE country_code='ZA'");
-        // Currency-to-country relationships are stored in the encrypted database, not hard-coded in the login UI.
-        mapCurrency(db,"DZD","DZ",true); mapCurrency(db,"BHD","BH",true);
-        mapCurrency(db,"KMF","KM",true); mapCurrency(db,"DJF","DJ",true);
-        mapCurrency(db,"EGP","EG",true); mapCurrency(db,"IQD","IQ",true);
-        mapCurrency(db,"JOD","JO",true); mapCurrency(db,"KWD","KW",true);
-        mapCurrency(db,"LBP","LB",true); mapCurrency(db,"USD","LB",false);
-        mapCurrency(db,"LYD","LY",true); mapCurrency(db,"MRU","MR",true);
-        mapCurrency(db,"MAD","MA",true); mapCurrency(db,"OMR","OM",true);
-        mapCurrency(db,"ILS","PS",true); mapCurrency(db,"JOD","PS",false); mapCurrency(db,"USD","PS",false);
-        mapCurrency(db,"QAR","QA",true); mapCurrency(db,"SAR","SA",true);
-        mapCurrency(db,"SOS","SO",true); mapCurrency(db,"SDG","SD",true);
-        mapCurrency(db,"SYP","SY",true); mapCurrency(db,"TND","TN",true);
-        mapCurrency(db,"AED","AE",true); mapCurrency(db,"YER","YE",true);
-        mapCurrency(db,"USD","US",true);
+        // Currency-to-country relationships are persisted in the encrypted database.
+        for(String[] mapping:CURRENCY_COUNTRY_MAP)mapCurrency(db,mapping[0],mapping[1],"1".equals(mapping[2]));
         db.execSQL("UPDATE company_settings SET tax_profile='SD_VAT_17' WHERE country_code='SD' AND tax_profile='SD_DEFAULT'");
         db.execSQL("INSERT OR IGNORE INTO tax_rules(country_code,tax_code,name,rate_num,rate_den,inclusive,exempt_category,effective_from,active) VALUES"+
             "('SD','VAT_STANDARD','ضريبة القيمة المضافة العامة',17,100,0,'حسب القانون واللوائح','2026-01-01',1),"+
@@ -145,19 +142,12 @@ final class TaxJurisdictionProfiles {
             new Object[]{currency,country,primary?1:0});
     }
 
-    // Pure catalog helper retained for deterministic local unit tests; the app UI reads the persisted table.
+    // Pure catalog helper retained for deterministic unit tests; runtime UI reads the persisted table.
     @Deprecated
     static List<String> countriesForCurrency(String currency) {
-        switch(currency) {
-            case "SDG": return Collections.singletonList("SD");
-            case "SAR": return Collections.singletonList("SA");
-            case "AED": return Collections.singletonList("AE");
-            case "EGP": return Collections.singletonList("EG");
-            case "QAR": return Collections.singletonList("QA");
-            case "KWD": return Collections.singletonList("KW");
-            case "USD": return Arrays.asList("US","LB","PS");
-            default: return Collections.emptyList();
-        }
+        java.util.ArrayList<String> countries=new java.util.ArrayList<>();
+        for(String[] mapping:CURRENCY_COUNTRY_MAP)if(mapping[0].equals(currency))countries.add(mapping[1]);
+        return countries;
     }
 
     static List<String> countriesForCurrency(SQLiteDatabase db,String currency) {
