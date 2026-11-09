@@ -154,6 +154,7 @@ jobs:
             "bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryBackupRestoreTest.java": [
               'assertEquals(13,snapshot.getInt("schema_version"))',
               'legacySnapshot.put("schema_version",11)',
+              'FactoryBackup.restore(context,legacySnapshot)',
             ],
             "bakery-app/app/src/main/AndroidManifest.xml": ['FactoryLedgerActivity'],
             "bakery-app/app/build.gradle": ['minSdk 28', 'targetSdk 35'],
