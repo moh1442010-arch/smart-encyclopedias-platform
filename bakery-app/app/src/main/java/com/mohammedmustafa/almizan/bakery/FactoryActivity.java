@@ -509,10 +509,14 @@ public class FactoryActivity extends Activity {
                 if(payment>remaining)throw new IllegalArgumentException("السداد أكبر من مديونية المورد المتبقية: "+remaining);
                 if(bank>0)ensureUniqueBankakRef(d,ref);
                 String date=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
-                d.execSQL("INSERT INTO supplier_payment_records(supplier_master_id,supplier_name,cash,bank,bank_ref,date) VALUES(?,?,?,?,?,?)",new Object[]{supplierId,supplierName,cash,bank,ref,date});
+                d.execSQL("INSERT INTO supplier_payment_records(supplier_master_id,supplier_name,cash,bank,bank_ref,date) VALUES(?,?,?,?,?,?)",new Object[]{supplierId,supplierName,cash,bank,ref,date});long paymentId=lastId(d);
                 if(cash>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('CASH','PURCHASE',?,?,?)",new Object[]{cash,supplierName,date});
                 if(bank>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('BANKAK','PURCHASE',?,?,?)",new Object[]{bank,ref,date});
                 d.execSQL("INSERT INTO audit(action,detail,date) VALUES('SUPPLIER_PAYMENT',?,date('now'))",new Object[]{supplierName+":"+cash+":"+bank});
+                ArrayList<String> a=new ArrayList<>();ArrayList<Long> dr=new ArrayList<>(),cr=new ArrayList<>();
+                addJournalLine(a,dr,cr,"الموردون",FactoryMath.add(cash,bank),0);
+                addJournalLine(a,dr,cr,"الصندوق",0,cash);addJournalLine(a,dr,cr,"بنكك",0,bank);
+                postJournal(d,"SUPPLIER-PAY-"+paymentId,"سداد للمورد "+supplierName,date,a,dr,cr);
                 d.setTransactionSuccessful();
             }finally{d.endTransaction();}
         }
