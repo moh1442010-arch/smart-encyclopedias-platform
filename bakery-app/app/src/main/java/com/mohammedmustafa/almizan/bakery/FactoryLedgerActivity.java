@@ -235,6 +235,17 @@ public class FactoryLedgerActivity extends Activity {
         try{
             destination=SecureDatabase.open(this,"almizan_bakery_250.db");
             EnterpriseSchema.ensure(destination);
+            Cursor base=destination.rawQuery("SELECT base_currency FROM company_settings WHERE id=1",null);
+            String baseCurrency;try{if(!base.moveToFirst())throw new IllegalStateException("عملة المنشأة الأساسية غير معرفة");baseCurrency=base.getString(0);}finally{base.close();}
+            if("SDG".equals(baseCurrency)){
+                String[] reviewedCodes={"1000","1010","1100","2000","3000","4000","4050","5000","5200","1200","1210","1300","2200","2300","5400"};
+                for(String accountCode:reviewedCodes)requireMappingValue(destination,"SELECT COUNT(*) FROM chart_of_accounts WHERE account_code=? AND active=1",accountCode,"حساب الربط المبدئي غير موجود: "+accountCode);
+                requireMappingValue(destination,"SELECT COUNT(*) FROM branches WHERE branch_code=? AND active=1","MAIN","الفرع الرئيسي غير نشط");
+                int seeded=FactoryGlOutbox.seedReviewedMappings(db,"MAIN","SDG");
+                body.addView(label("العملة الأساسية SDG. تم تجهيز "+seeded+" ربط محاسبي معتمد دون استبدال أي ربط عدله المشرف.",13));
+            }else{
+                body.addView(label("عملة المنشأة الأساسية "+baseCurrency+". لم يتم تطبيق ربط تلقائي لأن معاملات المصنع مسجلة بالجنيه السوداني. أدخل العملة وسعر الصرف الصحيحين لكل حساب قبل الترحيل.",13));
+            }
             appendReferenceRows(destination,"SELECT account_code||' — '||name_ar||' / '||name_en FROM chart_of_accounts WHERE active=1 ORDER BY account_code","الحسابات");
             appendReferenceRows(destination,"SELECT branch_code||' — '||name FROM branches WHERE active=1 ORDER BY branch_code","الفروع");
             appendReferenceRows(destination,"SELECT code||' — '||name_ar FROM currencies WHERE active=1 ORDER BY code","العملات");
