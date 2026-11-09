@@ -164,6 +164,9 @@ public class FactoryGlOutboxInstrumentedTest {
             assertEquals("destination idempotency must prevent a second journal",1,destinationEntryCount(destination,"DELIVERY-1"));
             Cursor state=source.rawQuery("SELECT status,destination_ref FROM factory_gl_outbox WHERE source_entry_ref='DELIVERY-1'",null);
             try{assertTrue(state.moveToFirst());assertEquals("POSTED",state.getString(0));assertEquals("FACTORY-DELIVERY-1",state.getString(1));}finally{state.close();}
+            FactoryGlOutbox.ReconciliationReport report=FactoryGlOutbox.reconcile(source,destination);
+            assertTrue("posted source/outbox/GL must reconcile",report.clean());
+            assertEquals(0,report.missingOutbox);assertEquals(0,report.missingDestination);assertEquals(0,report.amountMismatches);
         } finally {
             if(source.isOpen())source.close();if(destination.isOpen())destination.close();
             context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
@@ -190,6 +193,32 @@ public class FactoryGlOutboxInstrumentedTest {
             assertEquals(1,destinationEntryCount(destination,"DELIVERY-CHANGED"));
             Cursor state=source.rawQuery("SELECT status,last_error FROM factory_gl_outbox WHERE source_entry_ref='DELIVERY-CHANGED'",null);
             try{assertTrue(state.moveToFirst());assertEquals("RETRY",state.getString(0));assertTrue(state.getString(1).contains("مفتاح العملية"));}finally{state.close();}
+            FactoryGlOutbox.ReconciliationReport report=FactoryGlOutbox.reconcile(source,destination);
+            assertEquals(1,report.unacknowledgedDestination);
+        } finally {
+            if(source.isOpen())source.close();if(destination.isOpen())destination.close();
+            context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
+            context.deleteDatabase(destinationName);context.deleteDatabase(destinationName+"-wal");context.deleteDatabase(destinationName+"-shm");
+        }
+    }
+
+    @Test public void reconciliationDetectsDestinationTransactionAmountMismatch() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String sourceName="factory_gl_reconcile_source_"+System.currentTimeMillis()+".db";
+        String destinationName="factory_gl_reconcile_dest_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase source=openSource(context,sourceName),destination=openDestination(context,destinationName,"OPEN");
+        try {
+            mapCashSale(source,"1000");
+            source.beginTransaction();
+            FactoryGlOutbox.postSourceJournal(source,"RECONCILE-1","بيع نقدي","2026-11-09",
+                new String[]{"الصندوق","المبيعات"},new long[]{15000,0},new long[]{0,15000});
+            source.setTransactionSuccessful();source.endTransaction();
+            assertEquals(1,FactoryGlOutbox.processPending(source,destination).posted);
+            destination.execSQL("UPDATE gl_journal_lines SET transaction_debit_minor=15001 WHERE entry_id IN "+
+                "(SELECT id FROM gl_journal_entries WHERE source_type='FACTORY_LEDGER' AND source_id='RECONCILE-1') AND transaction_debit_minor>0");
+            FactoryGlOutbox.ReconciliationReport report=FactoryGlOutbox.reconcile(source,destination);
+            assertEquals(1,report.amountMismatches);
+            assertFalse(report.clean());
         } finally {
             if(source.isOpen())source.close();if(destination.isOpen())destination.close();
             context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
