@@ -199,12 +199,6 @@ public class FactoryLedgerActivity extends Activity {
     private void glBridge(){
         frame("ربط دفتر المصنع بالأستاذ العام");
         body.addView(label("تُحفظ قيود المصنع أولاً في Outbox داخل معاملة القيد الأصلي. لا ينتقل أي قيد قبل ربط كل حساب مصدر صراحةً بحساب نشط في الأستاذ العام، مع تحديد الفرع والعملة. لا توجد مطابقة تلقائية بأسماء العرض.",14));
-        body.addView(label("الحسابات المصدرية غير المربوطة",16));
-        rows("SELECT DISTINCT l.source_account FROM factory_gl_outbox_lines l LEFT JOIN factory_gl_account_mappings m ON m.source_account=l.source_account AND m.active=1 WHERE m.source_account IS NULL ORDER BY l.source_account");
-        body.addView(label("حالة طابور الترحيل",16));
-        rows("SELECT event_key||' — '||status||' — محاولات '||attempt_count||CASE WHEN last_error='' THEN '' ELSE ' — '||last_error END FROM factory_gl_outbox ORDER BY id DESC LIMIT 50");
-        body.addView(label("الربط الصريح للحسابات",16));
-        rows("SELECT source_account||' ← '||target_account_code||' — '||branch_code||' — '||currency_code FROM factory_gl_account_mappings WHERE active=1 ORDER BY source_account");
         EditText source=field("اسم الحساب كما يظهر حرفياً في دفتر المصنع",false);
         EditText target=field("كود الحساب في الأستاذ العام",false);
         EditText branch=field("كود الفرع",false);branch.setText("MAIN");
@@ -245,6 +239,12 @@ public class FactoryLedgerActivity extends Activity {
             }else{
                 body.addView(label("عملة المنشأة الأساسية "+baseCurrency+". معاملات المصنع مسجلة بالجنيه السوداني SDG؛ اترك عملة المصدر SDG وأدخل سعر التحويل المعتمد إلى "+baseCurrency+" لكل حساب قبل الترحيل.",13));
             }
+            body.addView(label("الحسابات المصدرية غير المربوطة",16));
+            rows("SELECT DISTINCT l.source_account FROM factory_gl_outbox_lines l LEFT JOIN factory_gl_account_mappings m ON m.source_account=l.source_account AND m.active=1 WHERE m.source_account IS NULL ORDER BY l.source_account");
+            body.addView(label("حالة طابور الترحيل",16));
+            rows("SELECT event_key||' — '||status||' — محاولات '||attempt_count||CASE WHEN last_error='' THEN '' ELSE ' — '||last_error END FROM factory_gl_outbox ORDER BY id DESC LIMIT 50");
+            body.addView(label("الربط الصريح للحسابات",16));
+            rows("SELECT source_account||' ← '||target_account_code||' — '||branch_code||' — '||currency_code FROM factory_gl_account_mappings WHERE active=1 ORDER BY source_account");
             FactoryGlOutbox.ReconciliationReport report=FactoryGlOutbox.reconcile(db,destination);
             body.addView(label("تقرير مطابقة المصنع مع الأستاذ العام",16));
             body.addView(label("قيود المصنع: "+report.sourceJournals+" — أحداث Outbox: "+report.outboxEvents+" — مرحل: "+report.posted,13));
