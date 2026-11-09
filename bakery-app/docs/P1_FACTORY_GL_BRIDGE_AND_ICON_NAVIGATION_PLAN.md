@@ -23,13 +23,13 @@ The following code is now present on this branch:
 - `FactoryGlOutbox` creates additive source-side tables for explicit account mappings, outbox events, and immutable journal-line snapshots.
 - `enqueue` requires an active source transaction, validates debit/credit balance, computes a SHA-256 payload fingerprint, and inserts the event and all source lines with the original journal transaction.
 - Repeated enqueue with the same source reference and same payload is idempotent. A changed payload under the same event identity is rejected.
-- Account mapping is explicit by exact source account label to target account code, branch, currency, and rational FX rate. No translated display-name inference is used.
+- Account mapping is explicit by exact source account label to target account code, branch, currency, and rational FX rate. A reviewed fixed mapping set is seeded only for SDG-base companies after all target accounts and MAIN branch are validated; INSERT OR IGNORE preserves operator overrides. Non-SDG base currencies receive no automatic 1:1 mapping because factory source transactions are recorded in SDG. No dynamic translated display-name inference is used.
 - The factory ledger screen now exposes unmapped source labels, queue status, available target accounts/branches/currencies, mapping entry, and a manual retry action.
 - Delivery uses `GeneralLedger.post` with a deterministic source identity and idempotency key. The source event becomes POSTED only after the destination call returns successfully.
 - PROCESSING events are eligible for recovery after a process interruption. Destination idempotency is the recovery boundary if the destination committed before source acknowledgement.
 - Retry uses bounded exponential delay and DEAD_LETTER after eight failed delivery attempts.
 - Manual factory journals, WIP journal entries, sales-return journals, and manual reversal journals are captured by the outbox.
-- The main factory database now creates source journals in the same transaction for opening raw-material inventory, supplier raw-material purchases, sales revenue and COGS, customer collections, supplier payments, operating expenses, and finished-goods waste/spoilage.
+- The main factory database now creates source journals in the same transaction for opening raw-material inventory, supplier raw-material purchases, production WIP/material/labor/overhead/finished-goods transfers, sales revenue and COGS, customer collections, supplier payments, operating expenses, and finished-goods waste/spoilage. Labor and overhead are accrued to dedicated payable accounts; settlement can be recorded through the general journal until a dedicated payroll/cost-payment screen is implemented.
 - The factory database schema was advanced additively to version 12 to create outbox tables for existing installations.
 - Factory backup schema is now version 10 and includes account mappings, outbox events, and outbox lines. Older schema versions remain accepted without those new tables.
 - Test coverage now includes isolated destination-DB integration tests for successful GL delivery, duplicate/crash replay, changed mapped payload rejection, unknown account mapping, and closed-period rejection. These tests are authored but have not yet run in CI.
@@ -40,7 +40,7 @@ This is a foundation, not a completed operational integration. The main `Factory
 
 The following are also still open:
 
-- Production-finalization accounting. The current factory production form records material cost, labor, and overhead together but does not record the payment/accrual source for labor and overhead. Posting an invented balancing account would misstate liabilities or expenses, so this requires a proper WIP/cost-source design before GL integration.
+- Dedicated settlement screen for accrued wages and manufacturing overhead. The current production posting records those cost components against dedicated accrued-liability accounts; settlement remains possible through a manual journal but should be made a controlled operational workflow.
 - Destination integration tests have been authored for successful GL posting, duplicate delivery, crash-after-commit recovery, changed-payload conflict, unknown mapping, and closed period; CI execution and fixes are still pending.
 - Inactive account/branch/currency and destination database failure tests are still missing.
 - Reconciliation report comparing factory source journals, outbox, GL destination entries, and debit/credit totals.
