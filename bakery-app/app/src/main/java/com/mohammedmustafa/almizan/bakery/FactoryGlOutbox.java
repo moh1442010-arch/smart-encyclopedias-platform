@@ -133,6 +133,49 @@ final class FactoryGlOutbox {
         source.insertWithOnConflict("factory_gl_account_mappings",null,v,SQLiteDatabase.CONFLICT_REPLACE);
     }
 
+    /**
+     * Re-resolves a failed mapping only when no destination journal exists for that source.
+     * This prevents an operator edit from changing a payload after destination commit.
+     */
+    static int refreshUnpostedMappings(Context context,SQLiteDatabase source,String sourceAccount) {
+        if(sourceAccount==null||sourceAccount.trim().isEmpty())throw new IllegalArgumentException("اسم حساب المصدر مطلوب");
+        SQLiteDatabase destination=null;
+        try {
+            destination=SecureDatabase.open(context,"almizan_bakery_250.db");
+            EnterpriseSchema.ensure(destination);
+            int refreshed=0;
+            source.beginTransaction();
+            try {
+                Cursor events=source.rawQuery("SELECT DISTINCT e.id,e.source_entry_ref FROM factory_gl_outbox e "+
+                    "JOIN factory_gl_outbox_lines l ON l.outbox_id=e.id "+
+                    "WHERE l.source_account=? AND e.status IN ('PENDING','RETRY') ORDER BY e.id",
+                    new String[]{sourceAccount.trim()});
+                List<long[]> candidates=new ArrayList<>();
+                try {while(events.moveToNext())candidates.add(new long[]{events.getLong(0)});}finally{events.close();}
+                for(long[] candidate:candidates) {
+                    long eventId=candidate[0];String sourceRef;
+                    Cursor ref=source.rawQuery("SELECT source_entry_ref FROM factory_gl_outbox WHERE id=?",
+                        new String[]{String.valueOf(eventId)});
+                    try{if(!ref.moveToFirst())continue;sourceRef=ref.getString(0);}finally{ref.close();}
+                    Cursor posted=destination.rawQuery("SELECT COUNT(*) FROM gl_journal_entries WHERE source_type=? AND source_id=?",
+                        new String[]{SOURCE_TYPE,sourceRef});
+                    boolean alreadyPosted;try{posted.moveToFirst();alreadyPosted=posted.getLong(0)>0;}finally{posted.close();}
+                    if(alreadyPosted)continue;
+                    ContentValues clear=new ContentValues();clear.putNull("target_account_code");clear.putNull("branch_code");
+                    clear.putNull("currency_code");clear.putNull("fx_rate_num");clear.putNull("fx_rate_den");
+                    source.update("factory_gl_outbox_lines",clear,"outbox_id=? AND source_account=?",
+                        new String[]{String.valueOf(eventId),sourceAccount.trim()});
+                    ContentValues reset=new ContentValues();reset.put("status","PENDING");reset.put("next_attempt_at",0L);
+                    reset.put("last_error","");reset.put("updated_at",System.currentTimeMillis());
+                    source.update("factory_gl_outbox",reset,"id=?",new String[]{String.valueOf(eventId)});
+                    refreshed++;
+                }
+                source.setTransactionSuccessful();
+            } finally {source.endTransaction();}
+            return refreshed;
+        } finally {if(destination!=null&&destination.isOpen())destination.close();}
+    }
+
     static ProcessResult processPending(Context context,SQLiteDatabase source) {
         if(source==null||!source.isOpen())throw new IllegalStateException("قاعدة المصنع غير متاحة");
         ensureSchema(source);
