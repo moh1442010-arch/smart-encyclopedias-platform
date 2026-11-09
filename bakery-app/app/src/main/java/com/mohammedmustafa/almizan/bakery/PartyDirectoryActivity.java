@@ -41,12 +41,13 @@ public class PartyDirectoryActivity extends Activity {
     @Override protected void attachBaseContext(android.content.Context newBase){super.attachBaseContext(AppLanguage.wrap(newBase));}
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
+        AppUpdatePolicy.enforceCached(this);
         if(!enforceEntitlement())return;
         helper=new PartyDirectory.Db(this);db=helper.getWritableDatabase();
         PartyDirectory.migrateLegacyCustomers(db);
         render();
     }
-    @Override protected void onResume(){super.onResume();if(db!=null&&!enforceEntitlement())return;entitlementHandler.removeCallbacks(entitlementWatchdog);entitlementHandler.post(entitlementWatchdog);}
+    @Override protected void onResume(){super.onResume();AppUpdatePolicy.check(this);if(db!=null&&!enforceEntitlement())return;entitlementHandler.removeCallbacks(entitlementWatchdog);entitlementHandler.post(entitlementWatchdog);}
     @Override protected void onPause(){entitlementHandler.removeCallbacks(entitlementWatchdog);super.onPause();}
     @Override protected void onDestroy(){entitlementHandler.removeCallbacks(entitlementWatchdog);if(helper!=null)helper.close();super.onDestroy();}
 
