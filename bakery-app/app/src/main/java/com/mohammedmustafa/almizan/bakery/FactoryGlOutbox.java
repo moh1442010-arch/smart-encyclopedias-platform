@@ -146,11 +146,6 @@ final class FactoryGlOutbox {
         return entryId;
     }
 
-    private static long checkedAdd(long a,long b) {
-        if(a<0||b<0||Long.MAX_VALUE-a<b)throw new ArithmeticException("Journal total overflow");
-        return a+b;
-    }
-
     /** Exact source labels are intentionally mapped by an authorized operator, never guessed. */
     static void saveMapping(SQLiteDatabase source,String sourceAccount,String targetAccount,
                             String branch,String currency,long fxNum,long fxDen) {
