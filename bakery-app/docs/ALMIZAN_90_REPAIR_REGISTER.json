@@ -15,7 +15,7 @@
       "phase": "P1",
       "status": "IN_PROGRESS",
       "evidence": null,
-      "work_note": "تم تنفيذ Outbox وربطه بقيود دفتر المصنع وWIP والمرتجعات والعكس، وبعمليات المخزون الافتتاحي وشراء الخامات والإنتاج ومبيعات المصنع والتحصيلات وسداد الموردين والمصروفات والهالك. قيود الإنتاج تفصل المواد والأجور والتكاليف الصناعية ثم تحول إجمالي WIP إلى مخزون الإنتاج التام. أضيفت حسابات مراقبة مستقلة في دليل الحسابات. رُفع مخطط المصنع إلى v12 والنسخ الاحتياطي إلى v10. ما زالت شاشة تسوية الأجور والتكاليف المستحقة، وتقارير المطابقة، واختبارات CI والتنفيذ الفعلي مفتوحة.",
+      "work_note": "تم تنفيذ Outbox وربطه بقيود دفتر المصنع وWIP والمرتجعات والعكس، وعمليات المخزون الافتتاحي وشراء الخامات والإنتاج ومبيعات المصنع والتحصيلات وسداد الموردين والمصروفات والهالك. قيود الإنتاج تفصل المواد والأجور والتكاليف الصناعية ثم تحول WIP إلى مخزون الإنتاج التام. أضيفت حسابات مراقبة مستقلة، ومطابقة مصدر/Outbox/أستاذ عام تعرض الأحداث اليتيمة والمفقودة وحالات الانتظار وفروقات المبالغ. رُفع مخطط المصنع إلى v12 والنسخ الاحتياطي إلى v10. شاشة تسوية الأجور والتكاليف المستحقة، واختبارات CI والتنفيذ الفعلي ما زالت مفتوحة.",
       "title": "Factory journal transactional outbox",
       "scope": "Capture each committed factory journal header and immutable line payload in the same transaction as the source journal. Preserve source identity and provide retry/dead-letter state without modifying historical source records.",
       "acceptance_criteria": [
@@ -46,7 +46,7 @@
       "phase": "P1",
       "status": "IN_PROGRESS",
       "evidence": null,
-      "work_note": "أضيفت شاشة ربط صريح و15 mapping ثابتًا تمت مراجعتها لحسابات المصنع، وتُزرع فقط عندما تكون العملة الأساسية SDG وبعد التحقق من دليل الحسابات والفرع MAIN، دون استبدال أي تعديل للمشرف. عملة المصدر مثبتة SDG. عند اختلاف العملة الأساسية يجب إدخال سعر صرف موثق؛ يمنع الترحيل بسعر 1:1 غير موثق. أضيفت بصمة SHA-256 وidempotency وإعادة مطابقة آمنة وdead-letter recovery. أضيفت اختبارات تكامل للترحيل والتكرار والتعافي وتعارض الحمولة والحساب غير المربوط والفترة المغلقة وسعر الصرف، ولم تُشغّل بعد على CI.",
+      "work_note": "أضيفت شاشة ربط صريح و15 mapping ثابتًا تمت مراجعتها، وتُزرع فقط عند عملة أساس SDG بعد التحقق من الحسابات والفرع MAIN، ولا تستبدل تعديل المشرف. عملة مصدر المصنع مثبتة SDG. عند اختلاف عملة الأساس يلزم إدخال سعر تحويل موثق؛ يمنع الترحيل بسعر 1:1 غير موثق. أضيفت بصمة SHA-256 وidempotency وإعادة مطابقة آمنة وdead-letter recovery. اختبارات Android تغطي الترحيل والتكرار والتعافي وتعارض الحمولة والحساب غير المربوط والفترة المغلقة وسعر الصرف وفروقات المطابقة؛ لم تُشغّل بعد على CI.",
       "title": "Explicit factory-to-GL account mapping and idempotent posting",
       "scope": "Resolve each exact source account label to an explicitly configured target chart-of-accounts code, branch, currency and rational exchange rate. Never infer target accounts from translated display names.",
       "acceptance_criteria": [
