@@ -209,7 +209,7 @@ jobs:
             exit 1
           fi
           grep -Fq 'root.optInt("schema_version")<6 && "work_order_stages".equals(TABLES[i])' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
-          echo "Factory modules, schema v9 backup compatibility and Android API 28 declarations verified."
+          echo "Factory modules, schema v10 backup compatibility and Android API 28 declarations verified."
 
       - name: Guard factory report and print line breaks
         run: |
@@ -289,7 +289,8 @@ jobs:
           retention-days: 30
 
       - name: Smoke test signed APK on minimum Android API 28
-        timeout-minutes: 10
+        # Run the full SQLCipher/ledger/backup instrumentation suite on the declared minimum API.
+        timeout-minutes: 20
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 28
