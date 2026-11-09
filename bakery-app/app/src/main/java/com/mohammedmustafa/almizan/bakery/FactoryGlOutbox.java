@@ -29,7 +29,7 @@ final class FactoryGlOutbox {
         }
     }
 
-    private static final class SnapshotLine {
+    static final class SnapshotLine {
         final long id;
         final String sourceAccount;
         final long debit, credit;
