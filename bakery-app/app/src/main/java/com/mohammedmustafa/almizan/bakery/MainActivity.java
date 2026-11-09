@@ -88,7 +88,7 @@ public class MainActivity extends Activity {
                 paywallLocked = true;
                 showPaywall();
             }
-            entitlementHandler.postDelayed(this, 30000L);
+            entitlementHandler.postDelayed(this, 1000L);
         }
     };
     private LinearLayout root, content;
