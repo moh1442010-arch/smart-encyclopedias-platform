@@ -209,9 +209,18 @@ public class MainActivity extends Activity {
         LinearLayout box = new LinearLayout(this);
         box.setPadding(24, 12, 24, 4);
         box.setOrientation(LinearLayout.VERTICAL);
-        TextView instructions = text("ابدأ إعداد منشأتك. أدخل اسم المخبز أو المصنع كما سيظهر في الشاشات والفواتير والتقارير، ثم اختر عملة الدفاتر الأساسية وأنشئ كلمة المرور.", 15);
+        TextView instructions = text("أدخل اسم المخبز واسم المصنع كلٌّ في حقل مستقل. سيظهر اسم كل منشأة في شاشاتها ومعاملاتها وفواتيرها وتقاريرها ومطبوعاتها.", 15);
         box.addView(instructions);
-        EditText businessName=new EditText(this);businessName.setSingleLine(true);businessName.setHint(AppLanguage.tr(this,"اسم المخبز أو المصنع"));businessName.setTextSize(17);box.addView(businessName);
+        EditText bakeryNameField=new EditText(this);
+        bakeryNameField.setSingleLine(true);
+        bakeryNameField.setHint(AppLanguage.tr(this,"اسم المخبز"));
+        bakeryNameField.setTextSize(17);
+        box.addView(bakeryNameField);
+        EditText factoryNameField=new EditText(this);
+        factoryNameField.setSingleLine(true);
+        factoryNameField.setHint(AppLanguage.tr(this,"اسم المصنع"));
+        factoryNameField.setTextSize(17);
+        box.addView(factoryNameField);
         box.addView(text("عملة المشروع الأساسية",15));
         ArrayList<String> currencyCodes=new ArrayList<>(),currencyLabels=new ArrayList<>();
         Cursor currencyCursor=store.getReadableDatabase().rawQuery("SELECT code,name_ar,name_en FROM currencies WHERE active=1 ORDER BY CASE code WHEN 'SDG' THEN 0 ELSE 1 END,name_ar",null);
@@ -264,8 +273,10 @@ public class MainActivity extends Activity {
         dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             String p1 = normalizePin(pin.getText().toString());
             String p2 = normalizePin(confirm.getText().toString());
-            String enteredBusinessName=businessName.getText().toString().trim();
-            if(enteredBusinessName.length()<2){businessName.setError("أدخل اسم المخبز أو المصنع");return;}
+            String enteredBakeryName=bakeryNameField.getText().toString().trim();
+            String enteredFactoryName=factoryNameField.getText().toString().trim();
+            if(enteredBakeryName.length()<2){bakeryNameField.setError("أدخل اسم المخبز");return;}
+            if(enteredFactoryName.length()<2){factoryNameField.setError("أدخل اسم المصنع");return;}
             if (p1.length() < 6 || !p1.matches("[0-9]+")) {
                 pin.setError("أدخل 6 أرقام على الأقل");
                 return;
@@ -288,9 +299,10 @@ public class MainActivity extends Activity {
                 String selectedTaxProfile="CUSTOM_REVIEW_REQUIRED";try{if(profileCursor.moveToFirst())selectedTaxProfile=profileCursor.getString(0);}finally{profileCursor.close();}
                 ContentValues projectSettings=new ContentValues();projectSettings.put("base_currency",selectedCurrency);
                 projectSettings.put("country_code",selectedCountry);projectSettings.put("tax_profile",selectedTaxProfile);
-                projectSettings.put("business_name",enteredBusinessName);
+                projectSettings.put("business_name",enteredBakeryName);
                 store.getWritableDatabase().update("company_settings",projectSettings,"id=1",null);
-                getSharedPreferences("bakery_profile",MODE_PRIVATE).edit().putString("business_name",enteredBusinessName).apply();
+                getSharedPreferences("bakery_profile",MODE_PRIVATE).edit().putString("business_name",enteredBakeryName).apply();
+                getSharedPreferences("factory_profile",MODE_PRIVATE).edit().putString("business_name",enteredFactoryName).apply();
                 getPreferences(MODE_PRIVATE).edit()
                     .putString("pin_salt", Base64.encodeToString(salt, Base64.NO_WRAP))
                     .putString("pin_hash", Base64.encodeToString(hash, Base64.NO_WRAP))
@@ -314,7 +326,8 @@ public class MainActivity extends Activity {
         LinearLayout box = new LinearLayout(this);
         box.setPadding(24, 8, 24, 4);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.addView(text("المنشأة: "+businessName(),17));
+        box.addView(text("اسم المخبز: "+businessName(),17));
+        box.addView(text("اسم المصنع: "+factoryBusinessName(),17));
         box.addView(text("افتح الدفاتر بكلمة المرور التي أنشأتها عند أول تشغيل.", 15));
         box.addView(pin);
         AlertDialog dialog = new AlertDialog.Builder(this).setTitle("🔐 تسجيل الدخول")
@@ -600,9 +613,13 @@ public class MainActivity extends Activity {
         String n=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","");
         return n==null||n.trim().isEmpty()?"المخبز":n.trim();
     }
+    private String factoryBusinessName(){
+        String n=getSharedPreferences("factory_profile",MODE_PRIVATE).getString("business_name","");
+        return n==null||n.trim().isEmpty()?"المصنع":n.trim();
+    }
     private void editBusinessName(){
-        EditText field=new EditText(this);field.setSingleLine(true);field.setHint("اسم المخبز أو المصنع");field.setText(businessName());
-        new AlertDialog.Builder(this).setTitle("بيانات المنشأة").setMessage("سيظهر الاسم في رأس الشاشات والمطبوعات.").setView(field)
+        EditText field=new EditText(this);field.setSingleLine(true);field.setHint("اسم المخبز");field.setText(businessName());
+        new AlertDialog.Builder(this).setTitle("بيانات المخبز").setMessage("سيظهر اسم المخبز في شاشات المخبز ومعاملاته وفواتيره ومطبوعاته.").setView(field)
             .setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{String n=field.getText().toString().trim();if(n.length()<2){toast("أدخل اسماً صحيحاً");return;}getSharedPreferences("bakery_profile",MODE_PRIVATE).edit().putString("business_name",n).apply();ContentValues cv=new ContentValues();cv.put("business_name",n);store.getWritableDatabase().update("company_settings",cv,"id=1",null);buildHome();}).show();
     }
     private void showPrinterSettings(){
@@ -661,7 +678,8 @@ public class MainActivity extends Activity {
             content.addView(plans);
         }
         addBakeryHero();
-        Button profile=button("🏷️ بيانات المنشأة: "+businessName());profile.setOnClickListener(v->editBusinessName());content.addView(profile);
+        Button profile=button("🏷️ اسم المخبز: "+businessName());profile.setOnClickListener(v->editBusinessName());content.addView(profile);
+        Button factoryProfile=button("🏭 اسم المصنع: "+factoryBusinessName());factoryProfile.setOnClickListener(v->startActivity(new Intent(MainActivity.this,FactoryActivity.class)));content.addView(factoryProfile);
         Button printer=button("🖨️ إعداد الطابعة والطباعة");printer.setOnClickListener(v->showPrinterSettings());content.addView(printer);
         Button printDaily=button("🖨️ طباعة شغل اليوم");printDaily.setOnClickListener(v->printDailyWork());content.addView(printDaily);
         LinearLayout dateRow = new LinearLayout(this); dateRow.setOrientation(LinearLayout.HORIZONTAL);
