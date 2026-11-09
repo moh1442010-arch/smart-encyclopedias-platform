@@ -244,7 +244,7 @@ public class FactoryLedgerActivity extends Activity {
                 int seeded=FactoryGlOutbox.seedReviewedMappings(db,"MAIN","SDG");
                 body.addView(label("العملة الأساسية SDG. تم تجهيز "+seeded+" ربط محاسبي معتمد دون استبدال أي ربط عدله المشرف.",13));
             }else{
-                body.addView(label("عملة المنشأة الأساسية "+baseCurrency+". لم يتم تطبيق ربط تلقائي لأن معاملات المصنع مسجلة بالجنيه السوداني. أدخل العملة وسعر الصرف الصحيحين لكل حساب قبل الترحيل.",13));
+                body.addView(label("عملة المنشأة الأساسية "+baseCurrency+". معاملات المصنع مسجلة بالجنيه السوداني SDG؛ اترك عملة المصدر SDG وأدخل سعر التحويل المعتمد إلى "+baseCurrency+" لكل حساب قبل الترحيل.",13));
             }
             appendReferenceRows(destination,"SELECT account_code||' — '||name_ar||' / '||name_en FROM chart_of_accounts WHERE active=1 ORDER BY account_code","الحسابات");
             appendReferenceRows(destination,"SELECT branch_code||' — '||name FROM branches WHERE active=1 ORDER BY branch_code","الفروع");
