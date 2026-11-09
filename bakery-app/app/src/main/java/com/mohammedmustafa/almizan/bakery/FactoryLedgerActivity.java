@@ -222,6 +222,7 @@ public class FactoryLedgerActivity extends Activity {
                 requireMappingValue(destination,"SELECT COUNT(*) FROM chart_of_accounts WHERE account_code=? AND active=1",code,"كود الحساب غير موجود أو غير نشط");
                 requireMappingValue(destination,"SELECT COUNT(*) FROM branches WHERE branch_code=? AND active=1",branchCode,"الفرع غير موجود أو غير نشط");
                 requireMappingValue(destination,"SELECT COUNT(*) FROM currencies WHERE code=? AND active=1",currencyCode,"العملة غير موجودة أو غير نشطة");
+                destination.close();destination=null;
                 FactoryGlOutbox.saveMapping(db,src,code,branchCode,currencyCode,numerator,denominator);
                 int refreshed=FactoryGlOutbox.refreshUnpostedMappings(this,db,src);
                 say("تم حفظ الربط. أُعيد تجهيز "+refreshed+" حدث غير مرحل لإعادة التحقق والترحيل.");
