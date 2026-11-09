@@ -16,29 +16,50 @@ This work starts P1 factory-to-general-ledger integration while the screen-speci
 - There is no proven bridge that moves factory journals to the enterprise ledger.
 - GeneralLedger already validates balanced totals, branch/account/currency/period, stable idempotency keys, and posts atomically within the bakery database. These controls must remain the destination posting boundary.
 
-## Required bridge design before implementation
+## Implemented bridge foundation — still under verification
 
-1. Add a versioned, additive outbox table to the factory database. Never rewrite or delete existing factory journal rows.
-2. Insert the outbox event in the same factory SQLCipher transaction as the source journal. Use a stable source identity, immutable serialized posting payload, creation timestamp, attempt count, next-attempt time, and states PENDING / PROCESSING / POSTED / RETRY / DEAD_LETTER.
-3. Create an explicit, reviewed account mapping table. Do not infer account codes from translated Arabic display names. Unmapped accounts must be held for review, never silently mapped to a generic account.
-4. Resolve active branch and base currency from the bakery enterprise database. Validate source date against an OPEN financial period.
-5. Post through GeneralLedger.post using a deterministic idempotency key derived from source database + source journal reference. Preserve transaction currency and FX evidence. Validate debit equals credit after base-currency conversion.
-6. Mark the factory outbox row POSTED only after destination commit succeeds. If the app stops between destination commit and source acknowledgement, retry must return the same destination entry through idempotency.
-7. Use bounded exponential backoff and a visible retry/dead-letter report. Do not mark a source row posted on any exception.
-8. Add a reconciliation report comparing eligible source journals, posted destination journals, totals, unmapped entries, and pending/dead-letter rows.
+The following code is now present on this branch:
 
-## Required automated tests
+- `FactoryGlOutbox` creates additive source-side tables for explicit account mappings, outbox events, and immutable journal-line snapshots.
+- `enqueue` requires an active source transaction, validates debit/credit balance, computes a SHA-256 payload fingerprint, and inserts the event and all source lines with the original journal transaction.
+- Repeated enqueue with the same source reference and same payload is idempotent. A changed payload under the same event identity is rejected.
+- Account mapping is explicit by exact source account label to target account code, branch, currency, and rational FX rate. No translated display-name inference is used.
+- The factory ledger screen now exposes unmapped source labels, queue status, available target accounts/branches/currencies, mapping entry, and a manual retry action.
+- Delivery uses `GeneralLedger.post` with a deterministic source identity and idempotency key. The source event becomes POSTED only after the destination call returns successfully.
+- PROCESSING events are eligible for recovery after a process interruption. Destination idempotency is the recovery boundary if the destination committed before source acknowledgement.
+- Retry uses bounded exponential delay and DEAD_LETTER after eight failed delivery attempts.
+- Manual factory journals, WIP journal entries, sales-return journals, and manual reversal journals are captured by the outbox.
+- Factory backup schema is now version 10 and includes account mappings, outbox events, and outbox lines. Older schema versions remain accepted without those new tables.
 
-- Balanced and unbalanced source journal payloads.
-- Every supported factory account mapping; unknown mapping is rejected.
+## Important scope still missing
+
+This is a foundation, not a completed operational integration. The main `FactoryActivity` workflows currently mutate factory stock, production, sales, cashbook, collections, supplier records, expenses, and waste without consistently creating legacy journal entries. Those workflows must be given source documents and accounting events before the outbox can represent the complete factory operation stream.
+
+The following are also still open:
+
+- Destination integration tests for actual GL posting, duplicate delivery, crash-after-commit recovery, changed-payload conflict, closed period, missing/inactive mapping, and destination failure.
+- Reconciliation report comparing factory source journals, outbox, GL destination entries, and debit/credit totals.
+- Safe operator workflow for correcting a frozen mapping after a failed delivery.
+- Automated scheduling or a clearly defined synchronization trigger beyond the manual queue action.
+- Device verification of mapping and retry screens.
+- No migration has been applied to production customer data or Cloudflare D1.
+
+## Required bridge tests
+
+- Source journal and outbox commit atomically.
+- Source transaction rollback leaves neither source journal nor outbox event.
+- Duplicate enqueue creates one event.
+- Changed source payload under the same event identity is rejected.
+- Exact payload fingerprint remains stable when source line ordering changes.
+- Explicit mapping and target account/branch/currency validation.
 - Closed/missing financial period is rejected.
-- Duplicate delivery creates exactly one GL entry.
-- Same idempotency key with changed payload is rejected.
-- Destination failure leaves outbox retryable.
+- Duplicate destination delivery creates exactly one GL entry.
+- Same idempotency key with changed mapped payload is rejected.
+- Destination failure leaves the event retryable.
 - Crash after destination commit but before source acknowledgement is safely recovered.
-- Factory transaction rollback leaves neither journal nor outbox row.
-- Debit/credit totals match in transaction and base currency.
-- Reconciliation reports missing, duplicate, pending, and mismatched totals.
+- Bounded retry and DEAD_LETTER behavior.
+- Backup/restore preserves outbox events, lines, and mappings.
+- Reconciliation reports missing, duplicate, pending, dead-letter, and mismatched totals.
 
 ## Screen-specific icon navigation
 
@@ -67,8 +88,12 @@ Acceptance tests:
 
 ## Current work status
 
-- Screen-specific icon navigation tile implementation has been started in MainActivity.
-- Factory ledger print header was corrected to use the factory identity and real newline characters.
-- The factory-to-GL outbox is not implemented yet.
-- No defect is closed by this plan.
-- Device acceptance and printer hardware tests remain separate release gates.
+- Initial screen-specific icon navigation tiles have been added to MainActivity; the full sub-screen route audit is not complete.
+- FactoryActivity and FactoryLedgerActivity report/print strings were corrected to use real newline characters.
+- A CI guard now rejects double-escaped newline sequences in those two source files.
+- The API 35 emulator smoke-test step timeout was raised from 8 to 18 minutes after the previous hosted runner timed out while waiting for the emulator to boot. This timeout correction still needs a new CI run.
+- New unit and Android instrumentation tests cover deterministic event identity, payload hashing, source/outbox atomicity, rollback, duplicate enqueue, and changed-payload rejection.
+- Factory backup/restore has been extended to include the outbox and mappings under schema version 10; its expanded instrumentation test has not yet run.
+- No D01-D90 item is CLOSED. The outbox foundation is not equivalent to full operational-to-GL integration.
+- No commercial APK is approved. No production Worker policy or minimum supported version has been changed.
+- Device acceptance and physical printer tests remain separate release gates.
