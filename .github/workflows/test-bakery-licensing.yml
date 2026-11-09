@@ -67,10 +67,10 @@ jobs:
           WORKER_VERSION="$(grep -oE '^APP_VERSION = "[^"]+"' licensing/worker/wrangler.toml | cut -d '"' -f2)"
           WORKER_PREVIOUS="$(grep -oE '^PREVIOUS_APP_VERSION = "[^"]+"' licensing/worker/wrangler.toml | cut -d '"' -f2)"
           printf 'Release versions: previous=%s (%s), candidate=%s (%s), Worker=%s, Worker previous=%s\n' "$PREVIOUS_VERSION" "$PREVIOUS_CODE" "$CANDIDATE_VERSION" "$CANDIDATE_CODE" "$WORKER_VERSION" "$WORKER_PREVIOUS"
-          test "$PREVIOUS_VERSION" = "2.8.1" || { echo "::error::Expected previous app version 2.8.0"; exit 1; }
-          test "$PREVIOUS_CODE" = "280001" || { echo "::error::Expected previous versionCode 280000"; exit 1; }
-          test "$CANDIDATE_VERSION" = "2.8.2" || { echo "::error::Expected candidate app version 2.8.1"; exit 1; }
-          test "$CANDIDATE_CODE" = "280002" || { echo "::error::Expected candidate versionCode 280001"; exit 1; }
+          test "$PREVIOUS_VERSION" = "2.8.1" || { echo "::error::Expected previous app version 2.8.1"; exit 1; }
+          test "$PREVIOUS_CODE" = "280001" || { echo "::error::Expected previous versionCode 280001"; exit 1; }
+          test "$CANDIDATE_VERSION" = "2.8.2" || { echo "::error::Expected candidate app version 2.8.2"; exit 1; }
+          test "$CANDIDATE_CODE" = "280002" || { echo "::error::Expected candidate versionCode 280002"; exit 1; }
           test "$WORKER_VERSION" = "$CANDIDATE_VERSION" || { echo "::error::Worker APP_VERSION does not match candidate"; exit 1; }
           test "$WORKER_PREVIOUS" = "$PREVIOUS_VERSION" || { echo "::error::Worker PREVIOUS_APP_VERSION does not match previous app"; exit 1; }
 
@@ -79,7 +79,7 @@ jobs:
           if [ -z "$PREVIOUS_GATE" ]; then PREVIOUS_GATE="$(git show origin/review/bakery-2.8.1-device-acceptance:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java)"; fi
           PREVIOUS_KEY="$(printf '%s' "$PREVIOUS_GATE" | grep -oE '"[A-Za-z0-9+/=]{100,}"' | head -1 | tr -d '"')"
           CANDIDATE_GATE="$(cat bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java)"
-          if [ -z "$CANDIDATE_GATE" ]; then CANDIDATE_GATE="$(git show origin/feature/almizan-global-platform-foundation:bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java)"; fi
+          if [ -z "$CANDIDATE_GATE" ]; then CANDIDATE_GATE="$(cat bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java)"; fi
           CANDIDATE_KEY="$(printf '%s' "$CANDIDATE_GATE" | grep -oE '"[A-Za-z0-9+/=]{100,}"' | head -1 | tr -d '"')"
           WORKER_KEY="$(grep -oE 'EXPECTED_APP_PUBLIC_KEY_DER_B64 = "[^"]+"' licensing/worker/src/index.js | cut -d '"' -f2)"
           MAIN_APP_KEY="$(extract_first_public_key bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/LicenseAccessGate.java)"
