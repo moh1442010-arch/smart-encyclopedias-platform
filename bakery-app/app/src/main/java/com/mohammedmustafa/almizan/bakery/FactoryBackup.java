@@ -41,7 +41,7 @@ final class FactoryBackup {
         {"id","name","phone","iban","created_at"},
         {"id","name","phone","iban","created_at"},
         {"source_account","target_account_code","branch_code","currency_code","fx_rate_num","fx_rate_den","active","updated_at"},
-        {"id","event_key","source_entry_id","source_entry_ref","description","transaction_date","payload_sha256","status","attempt_count","next_attempt_at","last_error","destination_ref","created_at","updated_at","posted_at"},
+        {"id","event_key","source_entry_id","source_entry_ref","description","transaction_date","payload_sha256","payload_version","status","attempt_count","next_attempt_at","last_error","destination_ref","created_at","updated_at","posted_at"},
         {"id","outbox_id","line_no","source_account","debit_minor","credit_minor","target_account_code","branch_code","currency_code","fx_rate_num","fx_rate_den"}
     };
     private static final String[][] REQUIRED = {
@@ -87,7 +87,7 @@ final class FactoryBackup {
             ensureSchema(db);
             JSONObject root = new JSONObject();
             root.put("_type", TYPE);
-            root.put("schema_version", 10);
+            root.put("schema_version", 11);
             JSONObject tables = new JSONObject();
             for (int i=0;i<TABLES.length;i++) {
                 JSONArray rows = new JSONArray();
@@ -117,7 +117,7 @@ final class FactoryBackup {
     }
 
     static void validate(JSONObject root) throws Exception {
-        if (root == null || !TYPE.equals(root.optString("_type")) || (root.optInt("schema_version") < 3 || root.optInt("schema_version") > 10))
+        if (root == null || !TYPE.equals(root.optString("_type")) || (root.optInt("schema_version") < 3 || root.optInt("schema_version") > 11))
             throw new IllegalArgumentException("Unsupported factory backup format");
         JSONObject tables = root.optJSONObject("tables");
         if (tables == null) throw new IllegalArgumentException("Factory backup tables are missing");
@@ -139,6 +139,8 @@ final class FactoryBackup {
                 for (String key : REQUIRED[i]) {
                     if (!row.has(key) || row.isNull(key)) throw new IllegalArgumentException("Missing factory field: " + TABLES[i] + "." + key);
                 }
+                if(root.optInt("schema_version")>=11&&"factory_gl_outbox".equals(TABLES[i])&&!row.has("payload_version"))
+                    throw new IllegalArgumentException("Missing factory outbox payload version");
                 for (java.util.Iterator<String> it=row.keys();it.hasNext();) {
                     String key=it.next();
                     if (!Arrays.asList(COLUMNS[i]).contains(key)) throw new IllegalArgumentException("Unknown factory field");
@@ -207,7 +209,7 @@ final class FactoryBackup {
         else if ("supplier_payment_records".equals(table)) numeric=new String[]{"id","supplier_master_id","cash","bank"};
         else if ("factory_customers".equals(table) || "factory_suppliers".equals(table)) numeric=new String[]{"id"};
         else if ("factory_gl_account_mappings".equals(table)) numeric=new String[]{"fx_rate_num","fx_rate_den","active","updated_at"};
-        else if ("factory_gl_outbox".equals(table)) numeric=new String[]{"id","source_entry_id","attempt_count","next_attempt_at","created_at","updated_at"};
+        else if ("factory_gl_outbox".equals(table)) numeric=new String[]{"id","source_entry_id","payload_version","attempt_count","next_attempt_at","created_at","updated_at"};
         else if ("factory_gl_outbox_lines".equals(table)) numeric=new String[]{"id","outbox_id","line_no","debit_minor","credit_minor"};
         else if ("recipe".equals(table)) numeric=new String[]{"id","product_id","material_id","qty"};
         else if ("batches".equals(table)) numeric=new String[]{"id","product_id","batches","output","labor","overhead","cost","unit_cost"};
@@ -251,6 +253,7 @@ final class FactoryBackup {
         if ("supplier_payment_records".equals(table) && row.getLong("bank")>0 && row.optString("bank_ref").trim().isEmpty()) throw new IllegalArgumentException("Missing supplier Bankak reference");
         if ("factory_gl_account_mappings".equals(table) && (row.getLong("fx_rate_num")==0 || row.getLong("fx_rate_den")==0 || row.getLong("active")>1 || row.optString("source_account").trim().isEmpty() || row.optString("target_account_code").trim().isEmpty())) throw new IllegalArgumentException("Invalid factory GL account mapping");
         if ("factory_gl_outbox".equals(table)) {
+            if(row.has("payload_version")&&row.getInt("payload_version")<1)throw new IllegalArgumentException("Invalid factory outbox payload version");
             String status=row.optString("status");
             if (!Arrays.asList("PENDING","PROCESSING","POSTED","RETRY","DEAD_LETTER").contains(status) || !row.optString("payload_sha256").matches("[0-9a-f]{64}")) throw new IllegalArgumentException("Invalid factory GL outbox event");
             if (!row.isNull("posted_at") && !(row.get("posted_at") instanceof Number)) throw new IllegalArgumentException("Invalid factory GL posted timestamp");
@@ -366,6 +369,6 @@ final class FactoryBackup {
         ensureColumn(d,"collections","customer_master_id","INTEGER NOT NULL DEFAULT 0");
         ensureColumn(d,"movements","supplier_master_id","INTEGER NOT NULL DEFAULT 0");
         FactoryGlOutbox.ensureSchema(d);
-        if (d.getVersion() < 10) d.setVersion(10);
+        if (d.getVersion() < 11) d.setVersion(11);
     }
 }
