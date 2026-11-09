@@ -139,7 +139,7 @@ final class FactoryBackup {
                 for (String key : REQUIRED[i]) {
                     if (!row.has(key) || row.isNull(key)) throw new IllegalArgumentException("Missing factory field: " + TABLES[i] + "." + key);
                 }
-                if(root.optInt("schema_version")>=11&&"factory_gl_outbox".equals(TABLES[i])&&!row.has("payload_version"))
+                if(root.optInt("schema_version")>=13&&"factory_gl_outbox".equals(TABLES[i])&&!row.has("payload_version"))
                     throw new IllegalArgumentException("Missing factory outbox payload version");
                 for (java.util.Iterator<String> it=row.keys();it.hasNext();) {
                     String key=it.next();
