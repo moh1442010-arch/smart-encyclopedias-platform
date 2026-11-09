@@ -5,6 +5,11 @@ compatibility_date = "2026-10-25"
 [vars]
 APP_VERSION = "2.8.3"
 PREVIOUS_APP_VERSION = "2.8.2"
+MIN_SUPPORTED_VERSION_CODE = "0"
+LATEST_VERSION_CODE = "280003"
+LATEST_VERSION_NAME = "2.8.3"
+APP_DOWNLOAD_URL = "https://moh1442010-arch.github.io/smart-encyclopedias-platform/store/bakery.html"
+APP_UPDATE_MESSAGE = "يتطلب هذا الإصدار تحديث التطبيق لمتابعة الاستخدام وحماية بيانات الترخيص."
 STORE_ORIGIN = "https://moh1442010-arch.github.io"
 
 [[d1_databases]]
