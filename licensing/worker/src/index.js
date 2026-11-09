@@ -493,6 +493,18 @@ async function handle(request, env) {
     const deviceId = cleanText(body.deviceId, 100);
     const plan = cleanText(body.plan, 20);
     const currencyCode = cleanText(body.currencyCode || "SDG", 3).toUpperCase();
+    const receiptRef = cleanText(body.receiptReference, 100);
+    const requestedVersion = cleanText(body.appVersion, 32);
+    const appVersion = cleanText(env.APP_VERSION || "2.8.3", 32);
+    const previousAppVersion = cleanText(env.PREVIOUS_APP_VERSION || "2.8.0", 32);
+    const orderAppVersion = requestedVersion || appVersion;
+    const versionUnsupported = requestedVersion && requestedVersion !== appVersion && requestedVersion !== previousAppVersion;
+    if (customer.length < 2 || customer.length > 100 ||
+        !/^[+0-9()\\s-]{8,25}$/.test(contact) ||
+        !/^[A-Za-z0-9\\-_/]{4,100}$/.test(receiptRef) ||
+        !validDevice(deviceId) || versionUnsupported) {
+      return json({ error: versionUnsupported ? "APP_VERSION_UNSUPPORTED" : "INVALID_FIELDS" }, 400);
+    }
     const countryCode = cleanText(request.cf && request.cf.country || body.countryCode || "", 2).toUpperCase();
     if (!/^[A-Z]{2}$/.test(countryCode)) return json({ error: "COUNTRY_REQUIRED" }, 400);
     if ((countryCode === "SD" && currencyCode !== "SDG") ||
@@ -500,18 +512,7 @@ async function handle(request, env) {
       return json({ error: "CURRENCY_NOT_ALLOWED_FOR_COUNTRY" }, 400);
     }
     const amount = await licensePrice(env, currencyCode, plan);
-    const receiptRef = cleanText(body.receiptReference, 100);
-    const requestedVersion = cleanText(body.appVersion, 32);
-    const appVersion = cleanText(env.APP_VERSION || "2.8.3", 32);
-    const previousAppVersion = cleanText(env.PREVIOUS_APP_VERSION || "2.8.0", 32);
-    const orderAppVersion = requestedVersion || appVersion;
-    if (customer.length < 2 || customer.length > 100 ||
-        !/^[+0-9()\s-]{8,25}$/.test(contact) ||
-        !/^[A-Za-z0-9\-_/]{4,100}$/.test(receiptRef) ||
-        !validDevice(deviceId) || amount === null ||
-        (requestedVersion && requestedVersion !== appVersion && requestedVersion !== previousAppVersion)) {
-      return json({ error: requestedVersion && requestedVersion !== appVersion && requestedVersion !== previousAppVersion ? "APP_VERSION_UNSUPPORTED" : "INVALID_FIELDS" }, 400);
-    }
+    if (amount === null) return json({ error: "INVALID_FIELDS" }, 400);
     await ensureCurrencyColumns(env);
     if (!await allowOrderSubmission(request, env)) return json({ error: "ORDER_RATE_LIMITED" }, 429);
     const duplicate = await env.DB.prepare(
