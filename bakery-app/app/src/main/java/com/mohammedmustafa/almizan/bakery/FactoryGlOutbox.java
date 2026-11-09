@@ -365,8 +365,11 @@ final class FactoryGlOutbox {
                     String destinationRef=null;try{if(posted.moveToFirst())destinationRef=posted.getString(0);}finally{posted.close();}
                     ContentValues event=new ContentValues();event.put("updated_at",System.currentTimeMillis());
                     if(destinationRef!=null) {
-                        event.put("status","POSTED");event.put("destination_ref",destinationRef);
-                        event.put("posted_at",System.currentTimeMillis());event.put("last_error","");
+                        // Do not acknowledge by reference alone. Replay through GeneralLedger.post
+                        // so its idempotency payload comparison verifies the existing destination entry.
+                        event.put("status","RETRY");event.put("attempt_count",0);event.put("next_attempt_at",0L);
+                        event.put("last_error","قيد الوجهة موجود؛ يلزم إعادة فحص بصمة idempotency قبل التأكيد");
+                        requeued++;
                     } else {
                         ContentValues clear=new ContentValues();clear.putNull("target_account_code");clear.putNull("branch_code");
                         clear.putNull("currency_code");clear.putNull("fx_rate_num");clear.putNull("fx_rate_den");
