@@ -64,6 +64,47 @@ public class FactoryGlOutboxInstrumentedTest {
         }
     }
 
+    @Test public void sourceJournalWriterCreatesJournalAndOutboxInsideCallerTransaction() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="factory_gl_outbox_writer_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase db=openSource(context,name);
+        try {
+            db.beginTransaction();
+            long id=FactoryGlOutbox.postSourceJournal(db,"WRITER-1","اختبار ترحيل","2026-11-09",
+                new String[]{"الصندوق","المبيعات"},new long[]{5000,0},new long[]{0,5000});
+            db.setTransactionSuccessful();
+            db.endTransaction();
+            assertTrue(id>0);
+            assertEquals(1,count(db,"journal_entries"));
+            assertEquals(1,count(db,"factory_gl_outbox"));
+            assertEquals(2,count(db,"factory_gl_outbox_lines"));
+        } finally {
+            if(db.isOpen())db.close();
+            context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
+        }
+    }
+
+    @Test public void sourceJournalWriterRejectsUnbalancedAmounts() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="factory_gl_outbox_unbalanced_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase db=openSource(context,name);
+        try {
+            db.beginTransaction();
+            try {
+                FactoryGlOutbox.postSourceJournal(db,"WRITER-BAD","قيد غير متوازن","2026-11-09",
+                    new String[]{"الصندوق","المبيعات"},new long[]{5000,0},new long[]{0,4999});
+                fail("unbalanced factory journal must be rejected");
+            } catch(IllegalArgumentException expected) {
+                // The source transaction is intentionally rolled back.
+            } finally { db.endTransaction(); }
+            assertEquals(0,count(db,"journal_entries"));
+            assertEquals(0,count(db,"factory_gl_outbox"));
+        } finally {
+            if(db.isOpen())db.close();
+            context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
+        }
+    }
+
     @Test public void rollingBackSourceJournalAlsoRollsBackOutboxEvent() {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String name="factory_gl_outbox_rollback_"+System.currentTimeMillis()+".db";
