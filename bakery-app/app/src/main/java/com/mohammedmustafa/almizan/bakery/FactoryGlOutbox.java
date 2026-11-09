@@ -242,6 +242,26 @@ final class FactoryGlOutbox {
         return entryId;
     }
 
+    static void validateReviewedChart(SQLiteDatabase destination) {
+        String[][] expected={
+            {"1000","الصندوق","ASSET","DEBIT"},{"1010","البنك","ASSET","DEBIT"},
+            {"1100","العملاء","ASSET","DEBIT"},{"2000","الموردون","LIABILITY","CREDIT"},
+            {"3000","رأس المال","EQUITY","CREDIT"},{"4000","إيرادات المبيعات","REVENUE","CREDIT"},
+            {"4050","مرتجعات المبيعات","REVENUE","DEBIT"},{"5000","تكلفة المواد المباعة","EXPENSE","DEBIT"},
+            {"5200","مصروفات تشغيلية","EXPENSE","DEBIT"},{"1200","مخزون المواد","ASSET","DEBIT"},
+            {"1210","مخزون الإنتاج التام","ASSET","DEBIT"},{"1300","أعمال تحت التشغيل","ASSET","DEBIT"},
+            {"2200","أجور مستحقة","LIABILITY","CREDIT"},{"2300","تكاليف صناعية مستحقة","LIABILITY","CREDIT"},
+            {"5400","خسائر الهالك والتالف","EXPENSE","DEBIT"}
+        };
+        for(String[] account:expected) {
+            Cursor c=destination.rawQuery("SELECT COUNT(*) FROM chart_of_accounts WHERE account_code=? AND name_ar=? "+
+                "AND account_type=? AND normal_side=? AND active=1",
+                new String[]{account[0],account[1],account[2],account[3]});
+            try{if(!c.moveToFirst()||c.getInt(0)!=1)throw new IllegalStateException("دليل الحسابات لا يطابق حساب الربط المعتمد: "+account[0]);}
+            finally{c.close();}
+        }
+    }
+
     /**
      * Seeds a reviewed, fixed account map only when the caller has verified the target chart.
      * INSERT OR IGNORE preserves every operator-edited mapping.
