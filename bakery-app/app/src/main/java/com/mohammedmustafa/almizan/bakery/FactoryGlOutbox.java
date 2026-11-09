@@ -524,6 +524,8 @@ final class FactoryGlOutbox {
         if(baseCurrency==null||baseCurrency.trim().isEmpty())throw new IllegalStateException("عملة المنشأة الأساسية غير معرفة");
         List<GeneralLedger.Line> glLines=new ArrayList<>();
         for(SnapshotLine line:lines){
+            if(!"SDG".equals(line.currency))
+                throw new IllegalStateException("عملة مصدر دفتر المصنع ثابتة SDG؛ أعد ضبط ربط الحساب قبل الترحيل");
             if(baseCurrency.equals(line.currency)&&line.fxNum!=line.fxDen)
                 throw new IllegalStateException("سعر صرف العملة الأساسية يجب أن يساوي 1");
             if(!baseCurrency.equals(line.currency)&&line.fxNum==line.fxDen)
