@@ -1,4 +1,5 @@
 name: Build Al-Mizan Bakery 2.8.3 Device-Review APK (no commercial release)
+# Compile the mandatory update-policy client as part of the candidate APK verification.
 
 on:
   workflow_dispatch:
