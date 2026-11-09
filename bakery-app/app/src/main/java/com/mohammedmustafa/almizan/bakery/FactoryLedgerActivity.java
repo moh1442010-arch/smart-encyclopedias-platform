@@ -238,8 +238,7 @@ public class FactoryLedgerActivity extends Activity {
             Cursor base=destination.rawQuery("SELECT base_currency FROM company_settings WHERE id=1",null);
             String baseCurrency;try{if(!base.moveToFirst())throw new IllegalStateException("عملة المنشأة الأساسية غير معرفة");baseCurrency=base.getString(0);}finally{base.close();}
             if("SDG".equals(baseCurrency)){
-                String[] reviewedCodes={"1000","1010","1100","2000","3000","4000","4050","5000","5200","1200","1210","1300","2200","2300","5400"};
-                for(String accountCode:reviewedCodes)requireMappingValue(destination,"SELECT COUNT(*) FROM chart_of_accounts WHERE account_code=? AND active=1",accountCode,"حساب الربط المبدئي غير موجود: "+accountCode);
+                FactoryGlOutbox.validateReviewedChart(destination);
                 requireMappingValue(destination,"SELECT COUNT(*) FROM branches WHERE branch_code=? AND active=1","MAIN","الفرع الرئيسي غير نشط");
                 int seeded=FactoryGlOutbox.seedReviewedMappings(db,"MAIN","SDG");
                 body.addView(label("العملة الأساسية SDG. تم تجهيز "+seeded+" ربط محاسبي معتمد دون استبدال أي ربط عدله المشرف.",13));
