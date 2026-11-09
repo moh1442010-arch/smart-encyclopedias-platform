@@ -18,6 +18,7 @@ final class TaxJurisdictionProfiles {
             "indirect_tax_type TEXT NOT NULL, profile_status TEXT NOT NULL CHECK(profile_status IN ('VERIFIED_BASELINE','NO_VAT_CONFIRMED','LOCAL_RULES_REQUIRED','REVIEW_REQUIRED')),"+
             "registration_threshold TEXT NOT NULL DEFAULT '', notes TEXT NOT NULL DEFAULT '', source_url TEXT NOT NULL DEFAULT '',"+
             "verified_on TEXT NOT NULL, profile_version INTEGER NOT NULL DEFAULT 1)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS currency_country_map (currency_code TEXT NOT NULL REFERENCES currencies(code), country_code TEXT NOT NULL REFERENCES countries(code), is_primary INTEGER NOT NULL DEFAULT 1 CHECK(is_primary IN (0,1)), PRIMARY KEY(currency_code,country_code))");
         seed(db,"SD","السودان","Sudan","SD_VAT_17","VAT","VERIFIED_BASELINE","تسجيل المكلفين وفق قانون الضريبة؛ يلزم التحقق من حد التسجيل والنشاط والإعفاءات مع ديوان الضرائب.","17% VAT; registration threshold and exemptions require authority confirmation.","https://tax.gov.sd/en/value-added-tax-vat/","2026-11-08",17,100,"2026-01-01");
         seed(db,"AE","الإمارات العربية المتحدة","United Arab Emirates","AE_VAT_5","VAT","VERIFIED_BASELINE","حد التسجيل الإلزامي 375,000 درهم؛ الاختياري 187,500 درهم؛ توجد توريدات صفرية ومعفاة.","Mandatory AED 375,000; voluntary AED 187,500. Verify supply classification.","https://www.tax.gov.ae/en/services/vat.registration.aspx","2026-11-08",5,100,"2018-01-01");
         seed(db,"SA","المملكة العربية السعودية","Saudi Arabia","SA_VAT_15","VAT","VERIFIED_BASELINE","النسبة الأساسية 15%؛ تطبق نسب الصفر والإعفاءات وفق نوع التوريد؛ التسجيل والفوترة الإلكترونية لهما قواعد مستقلة.","Standard 15%; supply classifications and e-invoicing rules apply.","https://www.zatca.gov.sa/ar/RulesRegulations/Taxes/Pages/VATLaw.aspx","2026-11-08",15,100,"2020-07-01");
@@ -30,6 +31,9 @@ final class TaxJurisdictionProfiles {
         seed(db,"KW","الكويت","Kuwait","KW_NO_VAT","NO_VAT","NO_VAT_CONFIRMED","لا توجد ضريبة قيمة مضافة مطبقة حالياً؛ قد تنطبق ضريبة دخل الشركات والزكاة بحسب الكيان والنشاط.","No VAT currently; corporate income tax and zakat may apply by entity/activity.","https://www.gov.uk/government/publications/exporting-to-kuwait/exporting-to-kuwait","2026-11-08",0,1,"2026-11-08");
         seed(db,"US","الولايات المتحدة","United States","US_LOCAL_SALES_TAX","SALES_TAX_LOCAL","LOCAL_RULES_REQUIRED","لا توجد ضريبة مبيعات اتحادية عامة؛ تختلف ضريبة المبيعات والاستعمال حسب الولاية والمقاطعة والمدينة وموقع الترابط الضريبي.","No federal VAT/sales tax; state and local nexus/rates must be configured by address.","https://taxsummaries.pwc.com/united-states/corporate/other-taxes","2026-11-08",0,1,"2026-11-08");
         seedReview(db,"LY","ليبيا","Libya","LYD");
+        seedReview(db,"LB","لبنان","Lebanon","LBP");
+        seedReview(db,"SY","سوريا","Syria","SYP");
+        seedReview(db,"PS","فلسطين","Palestine","ILS");
         seedReview(db,"JO","الأردن","Jordan","JOD");
         seedReview(db,"IQ","العراق","Iraq","IQD");
         seedReview(db,"YE","اليمن","Yemen","YER");
@@ -70,6 +74,20 @@ final class TaxJurisdictionProfiles {
         db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='BHD 37500 mandatory' WHERE country_code='BH'");
         db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='OMR 38500 mandatory; OMR 19250 voluntary' WHERE country_code='OM'");
         db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='ZAR 2300000 mandatory; ZAR 120000 voluntary' WHERE country_code='ZA'");
+        // Currency-to-country relationships are stored in the encrypted database, not hard-coded in the login UI.
+        mapCurrency(db,"DZD","DZ",true); mapCurrency(db,"BHD","BH",true);
+        mapCurrency(db,"KMF","KM",true); mapCurrency(db,"DJF","DJ",true);
+        mapCurrency(db,"EGP","EG",true); mapCurrency(db,"IQD","IQ",true);
+        mapCurrency(db,"JOD","JO",true); mapCurrency(db,"KWD","KW",true);
+        mapCurrency(db,"LBP","LB",true); mapCurrency(db,"USD","LB",false);
+        mapCurrency(db,"LYD","LY",true); mapCurrency(db,"MRU","MR",true);
+        mapCurrency(db,"MAD","MA",true); mapCurrency(db,"OMR","OM",true);
+        mapCurrency(db,"ILS","PS",true); mapCurrency(db,"JOD","PS",false); mapCurrency(db,"USD","PS",false);
+        mapCurrency(db,"QAR","QA",true); mapCurrency(db,"SAR","SA",true);
+        mapCurrency(db,"SOS","SO",true); mapCurrency(db,"SDG","SD",true);
+        mapCurrency(db,"SYP","SY",true); mapCurrency(db,"TND","TN",true);
+        mapCurrency(db,"AED","AE",true); mapCurrency(db,"YER","YE",true);
+        mapCurrency(db,"USD","US",true);
         db.execSQL("UPDATE company_settings SET tax_profile='SD_VAT_17' WHERE country_code='SD' AND tax_profile='SD_DEFAULT'");
         db.execSQL("INSERT OR IGNORE INTO tax_rules(country_code,tax_code,name,rate_num,rate_den,inclusive,exempt_category,effective_from,active) VALUES"+
             "('SD','VAT_STANDARD','ضريبة القيمة المضافة العامة',17,100,0,'حسب القانون واللوائح','2026-01-01',1),"+
@@ -94,55 +112,18 @@ final class TaxJurisdictionProfiles {
             new Object[]{code,type,status,"",notesAr+" "+notesEn,source,checked});
     }
 
-    static List<String> countriesForCurrency(String currency) {
-        switch(currency) {
-            case "SDG": return Collections.singletonList("SD");
-            case "AED": return Collections.singletonList("AE");
-            case "SAR": return Collections.singletonList("SA");
-            case "EGP": return Collections.singletonList("EG");
-            case "BHD": return Collections.singletonList("BH");
-            case "OMR": return Collections.singletonList("OM");
-            case "QAR": return Collections.singletonList("QA");
-            case "KWD": return Collections.singletonList("KW");
-            case "KES": return Collections.singletonList("KE");
-            case "ZAR": return Collections.singletonList("ZA");
-            case "LYD": return Collections.singletonList("LY");
-            case "JOD": return Collections.singletonList("JO");
-            case "IQD": return Collections.singletonList("IQ");
-            case "YER": return Collections.singletonList("YE");
-            case "MAD": return Collections.singletonList("MA");
-            case "DZD": return Collections.singletonList("DZ");
-            case "TND": return Collections.singletonList("TN");
-            case "MRU": return Collections.singletonList("MR");
-            case "SOS": return Collections.singletonList("SO");
-            case "DJF": return Collections.singletonList("DJ");
-            case "KMF": return Collections.singletonList("KM");
-            case "ETB": return Collections.singletonList("ET");
-            case "ERN": return Collections.singletonList("ER");
-            case "SSP": return Collections.singletonList("SS");
-            case "GBP": return Collections.singletonList("GB");
-            case "CHF": return Collections.singletonList("CH");
-            case "CAD": return Collections.singletonList("CA");
-            case "AUD": return Collections.singletonList("AU");
-            case "NZD": return Collections.singletonList("NZ");
-            case "JPY": return Collections.singletonList("JP");
-            case "CNY": return Collections.singletonList("CN");
-            case "INR": return Collections.singletonList("IN");
-            case "PKR": return Collections.singletonList("PK");
-            case "TRY": return Collections.singletonList("TR");
-            case "NGN": return Collections.singletonList("NG");
-            case "GHS": return Collections.singletonList("GH");
-            case "UGX": return Collections.singletonList("UG");
-            case "TZS": return Collections.singletonList("TZ");
-            case "RWF": return Collections.singletonList("RW");
-            case "BRL": return Collections.singletonList("BR");
-            case "MXN": return Collections.singletonList("MX");
-            case "SGD": return Collections.singletonList("SG");
-            case "HKD": return Collections.singletonList("HK");
-            case "KRW": return Collections.singletonList("KR");
-            case "THB": return Collections.singletonList("TH");
-            case "USD": return Arrays.asList("US");
-            default: return Collections.emptyList();
-        }
+    private static void mapCurrency(SQLiteDatabase db,String currency,String country,boolean primary) {
+        db.execSQL("INSERT OR IGNORE INTO currency_country_map(currency_code,country_code,is_primary) VALUES(?,?,?)",
+            new Object[]{currency,country,primary?1:0});
     }
-}
+
+    static List<String> countriesForCurrency(SQLiteDatabase db,String currency) {
+        java.util.ArrayList<String> countries=new java.util.ArrayList<>();
+        android.database.Cursor c=db.rawQuery(
+            "SELECT country_code FROM currency_country_map WHERE currency_code=? ORDER BY is_primary DESC,country_code",
+            new String[]{currency});
+        try { while(c.moveToNext()) countries.add(c.getString(0)); }
+        finally { c.close(); }
+        return countries;
+    }
+}}
