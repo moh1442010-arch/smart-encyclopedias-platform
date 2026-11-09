@@ -118,113 +118,57 @@ jobs:
 
       - name: Validate factory module schema and requested screens
         run: |
-          grep -Fq 'DB(Context c){super(c,"almizan_factory_1.db",SecureDatabase.passphrase(c,"almizan_factory_1.db"),null,13,0,null,null,false);}' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'CREATE TABLE daily_usage' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'دقيق' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'مواد تغليف' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'باسطة' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'بلح شام' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'FactoryMath.saleTotal(q,p)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'daily_usage' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
-          grep -Fq 'root.put("schema_version", 13)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
-          grep -Fq 'assertEquals(13,snapshot.getInt("schema_version"))' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryBackupRestoreTest.java
-          grep -Fq 'FactoryLedgerActivity' bakery-app/app/src/main/AndroidManifest.xml
-          grep -Fq 'private void returns()' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'private void wip()' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'work_order_stages' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'incrementalWipMaterialCost' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryMath.java
-          grep -Fq 'financialReports()' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'work_order_stages' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
-          grep -Fq 'private void journals()' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'FactoryGlOutbox.ensureSchema(db)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'FactoryGlOutbox.enqueue(db,entryId)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'FactoryGlOutbox.enqueue(db,id)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'FactoryGlOutbox.enqueue(db,rid)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'FactoryGlOutbox.postSourceJournal' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
-          grep -Fq 'postJournal(d,"SALE-"+saleId+"-REVENUE"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'postJournal(d,"RAW-IN-"+purchaseId' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'postJournal(d,"SUPPLIER-PAY-"+paymentId' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'postJournal(d,"EXPENSE-"+expenseId' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'postJournal(d,"WASTE-"+wasteId' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'postPairJournal(d,"BATCH-"+batchId+"-FINISHED"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'seedReviewedMappings' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
-          grep -Fq 'validateReviewedChart' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
-          grep -Fq 'FactoryGlOutbox.validateReviewedChart(db)' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchemaMigrationTest.java
-          grep -Fq 'static ReconciliationReport reconcile' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
-          grep -Fq 'backfillPostedJournals' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
-          grep -Fq 'FactoryGlOutbox.backfillPostedJournals(db,100)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'backfillCapturesValidLegacyJournalsWithoutChangingHistoryAndLeavesInvalidOnesVisible' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxInstrumentedTest.java
-          grep -Fq 'makeRetriesDueNow' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
-          grep -Fq 'FactoryGlOutbox.reconcile(db,destination)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'reconciliationDetectsDestinationTransactionAmountMismatch' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxInstrumentedTest.java
-          grep -Fq 'foreignBaseCurrencyRejectsUnverifiedOneToOneFactoryRate' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxInstrumentedTest.java
-          grep -Fq 'existingFactoryDatabaseV12UpgradesAdditivelyToV13' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxInstrumentedTest.java
-          grep -Fq 'private void glBridge()' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'GeneralLedger.post(destination,entry)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
-          grep -Fq 'DEAD_LETTER' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
-          test -s bakery-app/app/src/test/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxTest.java
-          test -s bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxInstrumentedTest.java
-          grep -Fq 'assertEquals(13,snapshot.getInt("schema_version"))' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryBackupRestoreTest.java
-          grep -Fq 'factory_gl_outbox_lines' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryBackupRestoreTest.java
-          grep -Fq 'CREATE TABLE IF NOT EXISTS sales_returns' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'CREATE TABLE IF NOT EXISTS work_orders' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'CREATE TABLE IF NOT EXISTS journal_entries' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'root.put("schema_version", 13)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
-          grep -Fq 'FactoryGlOutbox.ensureSchema(d)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
-          grep -Fq 'payload_version' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
-          grep -Fq '"factory_gl_outbox_lines"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
-          grep -Fq 'SD46 0252 4541 9000 01' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
-          grep -Fq '1882224' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
-          test -s bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryBackupRestoreTest.java
-          grep -Fq 'net.zetetic:sqlcipher-android:4.19.1@aar' bakery-app/app/build.gradle
-          grep -Fq 'System.loadLibrary("sqlcipher")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/SecureDatabase.java
-          grep -Fq 'AndroidKeyStore' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/SecureDatabase.java
-          grep -Fq 'migratePlaintext' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/SecureDatabase.java
-          grep -Fq 'SecureDatabase.passphrase(MainActivity.this,"almizan_bakery_250.db")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
-          grep -Fq 'SecureDatabase.passphrase(c,"almizan_factory_1.db")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'SecureDatabase.open(this,"almizan_factory_1.db")' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'migratesLegacyBakeryDatabaseAndHidesPlaintext' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/SecureDatabaseMigrationTest.java
-          grep -Fq 'EnterpriseSchema.ensure(db)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
-          grep -Fq 'onConfigure(SQLiteDatabase db)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
-          grep -Fq 'null,7,0,null,null,false' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
-          grep -Fq 'CREATE TABLE IF NOT EXISTS suppliers' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
-          grep -Fq 'CREATE TABLE IF NOT EXISTS employees' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
-          grep -Fq 'CREATE TABLE IF NOT EXISTS fixed_assets' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
-          grep -Fq 'CREATE TABLE IF NOT EXISTS exchange_rates' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
-          grep -Fq 'CREATE TABLE IF NOT EXISTS tax_rules' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
-          grep -Fq 'CREATE TABLE IF NOT EXISTS gl_journal_entries' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
-          grep -Fq 'CREATE TABLE IF NOT EXISTS gl_journal_lines' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
-          grep -Fq 'CREATE TABLE IF NOT EXISTS customers' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
-          grep -Fq 'CREATE TABLE IF NOT EXISTS company_bank_accounts' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
-          grep -Fq "('EUR','اليورو','Euro'" bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchema.java
-          grep -Fq 'showFactoryPartyPicker("customer"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'showFactoryPartyPicker("supplier"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'supplier_purchase_records' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
-          grep -Fq 'PartyDirectoryBackup.export' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
-          grep -Fq 'PartyDirectoryBackup.restore' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
-          grep -Fq 'exchangeRatesSection' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/PartyDirectoryActivity.java
-          grep -Fq 'exchange_rates' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/PartyDirectoryBackup.java
-          grep -Fq 'supplier_payment_records' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
-          grep -Fq '.PartyDirectoryActivity' bakery-app/app/src/main/AndroidManifest.xml
-          grep -Fq 'addsEnterpriseTablesWithoutChangingExistingBakeryRecords' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/EnterpriseSchemaMigrationTest.java
-          grep -Fq 'convertsCurrenciesUsingRationalRatesAndMinorUnits' bakery-app/app/src/test/java/com/mohammedmustafa/almizan/bakery/EnterpriseMathTest.java
-          grep -Fq 'PortableBackupCrypto.encrypt' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
-          grep -Fq 'PortableBackupCrypto.decrypt' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
-          grep -Fq 'almizan_backup_manifest' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
-          grep -Fq '"0 جوال"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
-          grep -Fq 'MIZANBK1' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/PortableBackupCrypto.java
-          grep -Fq 'encryptsAndDecryptsPortableBackup' bakery-app/app/src/test/java/com/mohammedmustafa/almizan/bakery/PortableBackupCryptoTest.java
-          grep -Fq 'كل نسخة تخص نظاماً واحداً فقط' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
-          grep -Fq '7L * 24L * 60L * 60L * 1000L' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/MainActivity.java
-          grep -Fq '27. التجربة المجانية والاشتراك' bakery-app/app/src/main/assets/bakery-guide.html
-          grep -Fq '28. حالة حماية قاعدة البيانات' bakery-app/app/src/main/assets/bakery-guide.html
-          grep -Fq 'minSdk 28' bakery-app/app/build.gradle
-          grep -Fq 'targetSdk 35' bakery-app/app/build.gradle
-          if grep -R -E 'Math\.(addExact|subtractExact|multiplyExact)\(' bakery-app/app/src/main/java; then
+          python3 - <<'PY'
+          from pathlib import Path
+          checks = {
+            "bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java": [
+              'DB(Context c){super(c,"almizan_factory_1.db",SecureDatabase.passphrase(c,"almizan_factory_1.db"),null,13,0,null,null,false);}',
+              'FactoryGlOutbox.postSourceJournal',
+              'postPairJournal(d,"BATCH-"+batchId+"-FINISHED"',
+            ],
+            "bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java": [
+              'root.put("schema_version", 13)',
+              'root.optInt("schema_version") > 13',
+              'factory_gl_outbox_lines',
+            ],
+            "bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java": [
+              'static void ensureSchema',
+              'static long postSourceJournal',
+              'static BackfillResult backfillPostedJournals',
+              'static ReconciliationReport reconcile',
+              'GeneralLedger.post(destination,entry)',
+              'payload_version',
+              'DEAD_LETTER',
+            ],
+            "bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java": [
+              'private void glBridge()',
+              'FactoryGlOutbox.backfillPostedJournals(db,100)',
+              'FactoryGlOutbox.reconcile(db,destination)',
+            ],
+            "bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxInstrumentedTest.java": [
+              'existingFactoryDatabaseV12UpgradesAdditivelyToV13',
+              'backfillCapturesValidLegacyJournalsWithoutChangingHistoryAndLeavesInvalidOnesVisible',
+              'reconciliationDetectsDestinationTransactionAmountMismatch',
+              'foreignBaseCurrencyRejectsUnverifiedOneToOneFactoryRate',
+            ],
+            "bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryBackupRestoreTest.java": [
+              'assertEquals(13,snapshot.getInt("schema_version"))',
+              'legacySnapshot.put("schema_version",11)',
+            ],
+            "bakery-app/app/src/main/AndroidManifest.xml": ['FactoryLedgerActivity'],
+            "bakery-app/app/build.gradle": ['minSdk 28', 'targetSdk 35'],
+          }
+          for filename, needles in checks.items():
+              content = Path(filename).read_text(encoding="utf-8")
+              for needle in needles:
+                  if needle not in content:
+                      raise SystemExit(f"Missing required implementation marker: {filename}: {needle}")
+          print("Factory outbox, backfill, reconciliation, backup migration and API declarations verified.")
+          PY
+          if grep -R -E 'Math\\.(addExact|subtractExact|multiplyExact)\\(' bakery-app/app/src/main/java; then
             echo "Checked arithmetic must remain compatible with Android API 28."
             exit 1
           fi
-          echo "Factory modules, schema v13 backup compatibility and Android API 28 declarations verified."
 
       - name: Guard factory report and print line breaks
         run: |
