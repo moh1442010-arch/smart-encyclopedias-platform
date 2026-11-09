@@ -47,6 +47,7 @@ public class EnterpriseSchemaMigrationTest {
             Cursor unknownTax=db.rawQuery("SELECT profile_status FROM tax_jurisdiction_profiles WHERE country_code='LY'",null);
             try { assertTrue(unknownTax.moveToFirst());assertEquals("REVIEW_REQUIRED",unknownTax.getString(0)); }
             finally { unknownTax.close(); }
+            FactoryGlOutbox.validateReviewedChart(db);
             String[] factoryAccounts={"1210","1300","2200","2300","4050","5400"};
             for(String code:factoryAccounts){
                 Cursor account=db.rawQuery("SELECT COUNT(*) FROM chart_of_accounts WHERE account_code=? AND active=1",new String[]{code});
