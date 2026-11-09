@@ -196,8 +196,8 @@ test("international license prices accept SAR, AED and USD and reject EUR", asyn
     };}};}};
     const response=await worker.fetch(new Request("https://bakery-test.local/api/orders",{
       method:"POST",headers:{"content-type":"application/json",origin:"https://bakery-test.local","CF-Connecting-IP":"192.0.2.90"},
-      body:JSON.stringify({customerName:"International Bakery",contact:"+249123456789",deviceId:"DEVICE-INT-123456",plan:"annual",countryCode:"AE",currencyCode,receiptReference,appVersion:"2.8.2"})
-    }),{DB:db,APP_VERSION:"2.8.2",STORE_ORIGIN:"https://bakery-test.local"});
+      body:JSON.stringify({customerName:"International Bakery",contact:"+249123456789",deviceId:"DEVICE-INT-123456",plan:"annual",countryCode:"AE",currencyCode,receiptReference,appVersion:"2.8.3"})
+    }),{DB:db,APP_VERSION:"2.8.3",STORE_ORIGIN:"https://bakery-test.local"});
     return {response,writes};
   }
   for (const [currencyCode,amount] of [["SAR",290],["AED",290],["USD",80]]) {
