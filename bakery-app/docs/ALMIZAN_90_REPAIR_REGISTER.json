@@ -13,14 +13,16 @@
     {
       "id": "D01",
       "phase": "P1",
-      "status": "OPEN",
-      "evidence": null
+      "status": "IN_PROGRESS",
+      "evidence": null,
+      "work_note": "تأكيد فصل قاعدة المصنع عن قاعدة الأستاذ العام، وتصميم جسر Outbox. لم يكتمل التنفيذ أو الاختبار بعد."
     },
     {
       "id": "D02",
       "phase": "P1",
-      "status": "OPEN",
-      "evidence": null
+      "status": "IN_PROGRESS",
+      "evidence": null,
+      "work_note": "بدء تحديد ترحيل القيود الموحد ومفاتيح منع التكرار ومطابقة الحسابات. لم يكتمل التنفيذ أو الاختبار بعد."
     },
     {
       "id": "D03",
