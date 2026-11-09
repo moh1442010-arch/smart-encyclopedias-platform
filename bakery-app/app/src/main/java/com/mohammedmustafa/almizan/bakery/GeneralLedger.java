@@ -160,7 +160,7 @@ final class GeneralLedger {
             if(!head.moveToFirst())throw new IllegalArgumentException("القيد الأصلي غير موجود أو غير مرحل");
             originalId=head.getLong(0);description=head.getString(1);
             sourceType=head.getString(2);sourceId=head.getString(3);
-            if(!head.isNull(4))throw new IllegalArgumentException("لا يمكن عكس قيد عكسي");
+            if(!head.isNull(4)||"REVERSAL".equals(sourceType))throw new IllegalArgumentException("لا يمكن عكس قيد عكسي");
         } finally {head.close();}
         List<Line> reversedLines=new ArrayList<>();
         Cursor rows=db.rawQuery("SELECT a.account_code,b.branch_code,l.transaction_currency_code,"+
