@@ -135,6 +135,7 @@ jobs:
               'static void ensureSchema',
               'static long postSourceJournal',
               'static BackfillResult backfillPostedJournals',
+              'j.status=\'REVERSED\'',
               'static ReconciliationReport reconcile',
               'GeneralLedger.post(destination,entry)',
               'payload_version',
@@ -144,6 +145,7 @@ jobs:
             "bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java": [
               'private void glBridge()',
               'FactoryGlOutbox.backfillPostedJournals(db,100)',
+              'FactoryGlOutbox.enqueue(db,id);',
               'FactoryGlOutbox.reconcile(db,destination)',
             ],
             "bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxInstrumentedTest.java": [
