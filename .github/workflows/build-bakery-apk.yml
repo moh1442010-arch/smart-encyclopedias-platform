@@ -192,6 +192,24 @@ jobs:
           grep -Fq 'root.optInt("schema_version")<6 && "work_order_stages".equals(TABLES[i])' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
           echo "Factory modules, schema v9 backup compatibility and Android API 28 declarations verified."
 
+      - name: Guard factory report and print line breaks
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const files = [
+            'bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java',
+            'bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java'
+          ];
+          const literalBackslashN = String.raw\`\\\\n\`;
+          for (const file of files) {
+            const source = fs.readFileSync(file, 'utf8');
+            if (source.includes(literalBackslashN)) {
+              throw new Error(`Double-escaped newline found in ${file}; report output would show literal \\\\n.`);
+            }
+          }
+          console.log('Factory report and print strings contain no double-escaped newline sequences.');
+          NODE
+
       - name: Run arithmetic unit tests
         working-directory: bakery-app
         run: gradle testDebugUnitTest
