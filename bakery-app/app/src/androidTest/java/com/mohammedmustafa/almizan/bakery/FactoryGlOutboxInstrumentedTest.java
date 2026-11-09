@@ -5,6 +5,8 @@ import android.database.Cursor;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import net.zetetic.database.sqlcipher.SQLiteDatabase;
+import net.zetetic.database.sqlcipher.SQLiteOpenHelper;
+import java.lang.reflect.Constructor;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import static org.junit.Assert.*;
@@ -61,6 +63,33 @@ public class FactoryGlOutboxInstrumentedTest {
             context.deleteDatabase(name);
             context.deleteDatabase(name+"-wal");
             context.deleteDatabase(name+"-shm");
+        }
+    }
+
+    @Test public void existingFactoryDatabaseV11UpgradesAdditivelyToV12() throws Exception {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="factory_gl_schema_upgrade_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase legacy=SecureDatabase.open(context,name);
+        legacy.execSQL("CREATE TABLE materials(id INTEGER PRIMARY KEY,name TEXT,qty INTEGER,value INTEGER)");
+        legacy.execSQL("INSERT INTO materials(id,name,qty,value) VALUES(1,'دقيق',12000,9000)");
+        legacy.setVersion(11);
+        legacy.close();
+        SQLiteOpenHelper helper=null;
+        try {
+            Class<?> dbClass=Class.forName("com.mohammedmustafa.almizan.bakery.FactoryActivity$DB");
+            Constructor<?> constructor=dbClass.getDeclaredConstructor(Context.class);
+            constructor.setAccessible(true);
+            helper=(SQLiteOpenHelper)constructor.newInstance(context);
+            SQLiteDatabase upgraded=helper.getWritableDatabase();
+            assertEquals(12,upgraded.getVersion());
+            Cursor outboxTable=upgraded.rawQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='factory_gl_outbox'",null);
+            try{assertTrue(outboxTable.moveToFirst());assertEquals(1,outboxTable.getInt(0));}finally{outboxTable.close();}
+            Cursor oldData=upgraded.rawQuery("SELECT name,qty,value FROM materials WHERE id=1",null);
+            try{assertTrue(oldData.moveToFirst());assertEquals("دقيق",oldData.getString(0));assertEquals(12000,oldData.getLong(1));assertEquals(9000,oldData.getLong(2));}
+            finally{oldData.close();}
+        } finally {
+            if(helper!=null)helper.close();
+            context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
         }
     }
 
