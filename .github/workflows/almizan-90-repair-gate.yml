@@ -1,0 +1,32 @@
+name: Al-Mizan 90-defect evidence gate
+
+on:
+  pull_request:
+    paths:
+      - "bakery-app/docs/ALMIZAN_90_REPAIR_REGISTER.json"
+      - "tools/almizan-90-repair/**"
+      - ".github/workflows/almizan-90-repair-gate.yml"
+  workflow_dispatch:
+    inputs:
+      enforce_final_gate:
+        description: "Run the strict final 90-defect closure gate"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  register-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Report phase status
+        run: python tools/almizan-90-repair/almizan90.py report
+      - name: Enforce final closure when explicitly requested
+        if: github.event_name == 'workflow_dispatch' && inputs.enforce_final_gate
+        run: python tools/almizan-90-repair/almizan90.py gate
