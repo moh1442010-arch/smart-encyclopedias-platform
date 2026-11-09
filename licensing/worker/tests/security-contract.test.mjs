@@ -101,6 +101,7 @@ test("2.8.0 customer order is accepted and recorded as pending without issuing a
       contact: "+249123456789",
       deviceId: "DEVICE-12345678",
       plan: "monthly",
+      countryCode: "SD",
       receiptReference: "BANKAK-20261107-TEST",
       appVersion: "2.8.0"
     })
@@ -163,6 +164,7 @@ test("2.8.2 candidate order is accepted as pending without issuing an activation
       contact: "+249123456789",
       deviceId: "DEVICE-281-123456",
       plan: "monthly",
+      countryCode: "SD",
       receiptReference: "TEST-ONLY-281",
       appVersion: "2.8.2"
     })
@@ -192,7 +194,7 @@ test("international license prices accept SAR, AED and USD and reject EUR", asyn
     };}};}};
     const response=await worker.fetch(new Request("https://bakery-test.local/api/orders",{
       method:"POST",headers:{"content-type":"application/json",origin:"https://bakery-test.local","CF-Connecting-IP":"192.0.2.90"},
-      body:JSON.stringify({customerName:"International Bakery",contact:"+249123456789",deviceId:"DEVICE-INT-123456",plan:"annual",currencyCode,receiptReference,appVersion:"2.8.2"})
+      body:JSON.stringify({customerName:"International Bakery",contact:"+249123456789",deviceId:"DEVICE-INT-123456",plan:"annual",countryCode:"AE",currencyCode,receiptReference,appVersion:"2.8.2"})
     }),{DB:db,APP_VERSION:"2.8.2",STORE_ORIGIN:"https://bakery-test.local"});
     return {response,writes};
   }
@@ -209,4 +211,18 @@ test("international license prices accept SAR, AED and USD and reject EUR", asyn
   }
   const invalid=await submit("EUR","REF-EUR");
   assert.equal(invalid.response.status,400);
+});
+
+test("server rejects licensing currency that conflicts with Cloudflare country", async () => {
+  const response = await worker.fetch(new Request("https://bakery-test.local/api/orders", {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: "https://bakery-test.local" },
+    body: JSON.stringify({
+      customerName: "Sudan Bakery", contact: "+249123456789", deviceId: "DEVICE-SD-123456",
+      plan: "monthly", countryCode: "SD", currencyCode: "USD",
+      receiptReference: "COUNTRY-MISMATCH", appVersion: "2.8.3"
+    })
+  }), { DB: {}, APP_VERSION: "2.8.3", STORE_ORIGIN: "https://bakery-test.local" });
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error, "CURRENCY_NOT_ALLOWED_FOR_COUNTRY");
 });
