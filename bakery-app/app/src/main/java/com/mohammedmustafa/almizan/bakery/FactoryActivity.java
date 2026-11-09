@@ -536,10 +536,10 @@ public class FactoryActivity extends Activity {
             d.setTransactionSuccessful();}finally{d.endTransaction();}
         }
         void collect(long customerMasterId,String customer,long cash,long bank,String ref){if(customer==null||customer.trim().isEmpty()||cash<0||bank<0||FactoryMath.add(cash,bank)<=0||(bank>0&&(ref==null||ref.trim().isEmpty())))throw new IllegalArgumentException("بيانات التحصيل غير صحيحة");SQLiteDatabase d=w();d.beginTransaction();try{FactoryMath.validateBankakReference(bank,ref);if(bank>0)ensureUniqueBankakRef(d,ref);Cursor c=d.rawQuery("SELECT COALESCE(SUM(debt),0) FROM sales WHERE customer=?",new String[]{customer});c.moveToFirst();long debt=c.getLong(0);c.close();Cursor p=d.rawQuery("SELECT COALESCE(SUM(cash+bank),0) FROM collections WHERE customer=?",new String[]{customer});p.moveToFirst();long previous=p.getLong(0);p.close();Cursor cr=d.rawQuery("SELECT COALESCE(SUM(r.credit_adjustment),0) FROM sales_returns r JOIN sales s ON s.id=r.sale_id WHERE s.customer=?",new String[]{customer});cr.moveToFirst();long credits=cr.getLong(0);cr.close();long remaining=Math.max(0,debt-previous-credits);if(FactoryMath.add(cash,bank)>remaining)throw new IllegalArgumentException("التحصيل أكبر من المديونية المتبقية: "+remaining);String date=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());d.execSQL("INSERT INTO collections(customer,customer_master_id,cash,bank,bank_ref,date) VALUES(?,?,?,?,?,?)",new Object[]{customer,customerMasterId,cash,bank,ref,date});long collectionId=lastId(d);if(cash>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('CASH','COLLECTION',?,?,?)",new Object[]{cash,customer,date});if(bank>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('BANKAK','COLLECTION',?,?,?)",new Object[]{bank,ref,date});d.execSQL("INSERT INTO audit(action,detail,date) VALUES('CUSTOMER_COLLECTION',?,date('now'))",new Object[]{customer+":"+cash+":"+bank});
-            ArrayList<String> a=new ArrayList<>();ArrayList<Long> dr=new ArrayList<>(),cr=new ArrayList<>();
-            addJournalLine(a,dr,cr,"الصندوق",cash,0);addJournalLine(a,dr,cr,"بنكك",bank,0);
-            addJournalLine(a,dr,cr,"العملاء",0,FactoryMath.add(cash,bank));
-            postJournal(d,"COLLECTION-"+collectionId,"تحصيل من العميل "+customer,date,a,dr,cr);
+            ArrayList<String> journalAccounts=new ArrayList<>();ArrayList<Long> journalDebits=new ArrayList<>(),journalCredits=new ArrayList<>();
+            addJournalLine(journalAccounts,journalDebits,journalCredits,"الصندوق",cash,0);addJournalLine(journalAccounts,journalDebits,journalCredits,"بنكك",bank,0);
+            addJournalLine(journalAccounts,journalDebits,journalCredits,"العملاء",0,FactoryMath.add(cash,bank));
+            postJournal(d,"COLLECTION-"+collectionId,"تحصيل من العميل "+customer,date,journalAccounts,journalDebits,journalCredits);
             d.setTransactionSuccessful();}finally{d.endTransaction();}}
         void paySupplier(long supplierId,String supplierName,long cash,long bank,String ref){
             if(supplierId<=0||supplierName==null||supplierName.trim().isEmpty()||cash<0||bank<0||FactoryMath.add(cash,bank)<=0||(bank>0&&(ref==null||ref.trim().isEmpty())))throw new IllegalArgumentException("بيانات سداد المورد غير صحيحة");
@@ -554,10 +554,10 @@ public class FactoryActivity extends Activity {
                 if(cash>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('CASH','PURCHASE',?,?,?)",new Object[]{cash,supplierName,date});
                 if(bank>0)d.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('BANKAK','PURCHASE',?,?,?)",new Object[]{bank,ref,date});
                 d.execSQL("INSERT INTO audit(action,detail,date) VALUES('SUPPLIER_PAYMENT',?,date('now'))",new Object[]{supplierName+":"+cash+":"+bank});
-                ArrayList<String> a=new ArrayList<>();ArrayList<Long> dr=new ArrayList<>(),cr=new ArrayList<>();
-                addJournalLine(a,dr,cr,"الموردون",FactoryMath.add(cash,bank),0);
-                addJournalLine(a,dr,cr,"الصندوق",0,cash);addJournalLine(a,dr,cr,"بنكك",0,bank);
-                postJournal(d,"SUPPLIER-PAY-"+paymentId,"سداد للمورد "+supplierName,date,a,dr,cr);
+                ArrayList<String> journalAccounts=new ArrayList<>();ArrayList<Long> journalDebits=new ArrayList<>(),journalCredits=new ArrayList<>();
+                addJournalLine(journalAccounts,journalDebits,journalCredits,"الموردون",FactoryMath.add(cash,bank),0);
+                addJournalLine(journalAccounts,journalDebits,journalCredits,"الصندوق",0,cash);addJournalLine(journalAccounts,journalDebits,journalCredits,"بنكك",0,bank);
+                postJournal(d,"SUPPLIER-PAY-"+paymentId,"سداد للمورد "+supplierName,date,journalAccounts,journalDebits,journalCredits);
                 d.setTransactionSuccessful();
             }finally{d.endTransaction();}
         }
