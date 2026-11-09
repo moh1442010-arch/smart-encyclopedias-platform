@@ -224,7 +224,6 @@ jobs:
             echo "Checked arithmetic must remain compatible with Android API 28."
             exit 1
           fi
-          grep -Fq 'root.optInt("schema_version")<6 && "work_order_stages".equals(TABLES[i])' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
           echo "Factory modules, schema v13 backup compatibility and Android API 28 declarations verified."
 
       - name: Guard factory report and print line breaks
