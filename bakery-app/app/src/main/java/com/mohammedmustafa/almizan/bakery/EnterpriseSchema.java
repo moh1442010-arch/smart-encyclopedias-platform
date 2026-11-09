@@ -64,7 +64,13 @@ final class EnterpriseSchema {
             "('5000','تكلفة المواد المباعة','Cost of Goods Sold','EXPENSE','DEBIT')," +
             "('5100','أجور العمال','Wages Expense','EXPENSE','DEBIT')," +
             "('5200','مصروفات تشغيلية','Operating Expenses','EXPENSE','DEBIT')," +
-            "('5300','مصروف الإهلاك','Depreciation Expense','EXPENSE','DEBIT')");
+            "('5300','مصروف الإهلاك','Depreciation Expense','EXPENSE','DEBIT')," +
+            "('1210','مخزون الإنتاج التام','Finished Goods Inventory','ASSET','DEBIT')," +
+            "('1300','أعمال تحت التشغيل','Work in Progress','ASSET','DEBIT')," +
+            "('2200','أجور مستحقة','Accrued Wages','LIABILITY','CREDIT')," +
+            "('2300','تكاليف صناعية مستحقة','Accrued Manufacturing Overhead','LIABILITY','CREDIT')," +
+            "('4050','مرتجعات المبيعات','Sales Returns','REVENUE','DEBIT')," +
+            "('5400','خسائر الهالك والتالف','Spoilage and Waste Loss','EXPENSE','DEBIT')");
         db.execSQL("CREATE TABLE IF NOT EXISTS user_roles (user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, role_id INTEGER NOT NULL REFERENCES roles(id), branch_id INTEGER NOT NULL REFERENCES branches(id), PRIMARY KEY(user_id,role_id,branch_id))");
         db.execSQL("INSERT OR IGNORE INTO currencies(code,name_ar,name_en,minor_units,active) VALUES('USD','الدولار الأمريكي','US Dollar',2,1),('EUR','اليورو','Euro',2,0),('SAR','الريال السعودي','Saudi Riyal',2,1),('AED','الدرهم الإماراتي','UAE Dirham',2,1)");
         // Only Arab-region business currencies are selectable for operational accounting.
