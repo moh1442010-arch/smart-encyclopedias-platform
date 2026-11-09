@@ -161,12 +161,12 @@ jobs:
           grep -Fq 'DEAD_LETTER' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
           test -s bakery-app/app/src/test/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxTest.java
           test -s bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxInstrumentedTest.java
-          grep -Fq 'assertEquals(10,snapshot.getInt("schema_version"))' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryBackupRestoreTest.java
+          grep -Fq 'assertEquals(13,snapshot.getInt("schema_version"))' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryBackupRestoreTest.java
           grep -Fq 'factory_gl_outbox_lines' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryBackupRestoreTest.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS sales_returns' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS work_orders' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'CREATE TABLE IF NOT EXISTS journal_entries' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
-          grep -Fq 'root.put("schema_version", 11)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
+          grep -Fq 'root.put("schema_version", 13)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
           grep -Fq 'FactoryGlOutbox.ensureSchema(d)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
           grep -Fq 'payload_version' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
           grep -Fq '"factory_gl_outbox_lines"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
@@ -222,7 +222,7 @@ jobs:
             exit 1
           fi
           grep -Fq 'root.optInt("schema_version")<6 && "work_order_stages".equals(TABLES[i])' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryBackup.java
-          echo "Factory modules, schema v11 backup compatibility and Android API 28 declarations verified."
+          echo "Factory modules, schema v13 backup compatibility and Android API 28 declarations verified."
 
       - name: Guard factory report and print line breaks
         run: |
