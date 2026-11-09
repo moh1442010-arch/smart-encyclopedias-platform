@@ -270,8 +270,9 @@ public class FactoryLedgerActivity extends Activity {
         }));
         body.addView(button("ترحيل القيود المعلقة إلى الأستاذ العام",()->{
             try{
+                int madeDue=FactoryGlOutbox.makeRetriesDueNow(db);
                 FactoryGlOutbox.ProcessResult result=FactoryGlOutbox.processPending(this,db);
-                say("تم ترحيل "+result.posted+" — إعادة المحاولة "+result.retried+" — متوقف نهائياً "+result.deadLetter+" — لم يرحل "+result.skipped);
+                say("تم ترحيل "+result.posted+" — أعيد فحص "+madeDue+" حدث قابل للمحاولة — فشل مؤقت "+result.retried+" — متوقف نهائياً "+result.deadLetter+" — لم يرحل "+result.skipped);
                 glBridge();
             }catch(Exception e){say("تعذر تشغيل الترحيل: "+e.getMessage());}
         }));
