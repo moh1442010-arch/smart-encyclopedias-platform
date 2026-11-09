@@ -126,4 +126,4 @@ final class TaxJurisdictionProfiles {
         finally { c.close(); }
         return countries;
     }
-}}
+}
