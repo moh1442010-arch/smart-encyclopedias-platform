@@ -31,7 +31,7 @@ test("app policy blocks clients below the configured minimum version code", asyn
   assert.equal(body.minimumSupportedVersionCode, 280003);
 });
 
-test("new order rejects a client app version that differs from the deployed release", async () => {
+test("server rejects vulnerable 2.8.1 order requests while 2.8.3 is current", async () => {
   const response = await worker.fetch(new Request("https://bakery-test.local/api/orders", {
     method: "POST",
     headers: { "content-type": "application/json", origin: "https://moh1442010-arch.github.io" },
@@ -40,10 +40,11 @@ test("new order rejects a client app version that differs from the deployed rele
       contact: "+249123456789",
       deviceId: "DEVICE-12345678",
       plan: "monthly",
+      countryCode: "SD",
       receiptReference: "BANKAK-1234",
-      appVersion: "2.6.15"
+      appVersion: "2.8.1"
     })
-  }), { DB: {}, APP_VERSION: "2.6.17", STORE_ORIGIN: "https://moh1442010-arch.github.io" });
+  }), { DB: {}, APP_VERSION: "2.8.3", PREVIOUS_APP_VERSION: "2.8.2", STORE_ORIGIN: "https://moh1442010-arch.github.io" });
   assert.equal(response.status, 400);
   assert.equal((await response.json()).error, "APP_VERSION_UNSUPPORTED");
 });
