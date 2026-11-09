@@ -2,6 +2,33 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import worker from "../src/index.js";
 
+
+test("app policy reports optional update while the release gate is disabled", async () => {
+  const response = await worker.fetch(new Request("https://bakery-test.local/api/app-policy?versionCode=280001"), {
+    MIN_SUPPORTED_VERSION_CODE: "0",
+    LATEST_VERSION_CODE: "280003",
+    LATEST_VERSION_NAME: "2.8.3"
+  });
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.mandatory, false);
+  assert.equal(body.minimumSupportedVersionCode, 0);
+  assert.equal(body.latestVersionCode, 280003);
+});
+
+test("app policy blocks clients below the configured minimum version code", async () => {
+  const response = await worker.fetch(new Request("https://bakery-test.local/api/app-policy?versionCode=280001"), {
+    MIN_SUPPORTED_VERSION_CODE: "280003",
+    LATEST_VERSION_CODE: "280003",
+    LATEST_VERSION_NAME: "2.8.3",
+    APP_DOWNLOAD_URL: "https://moh1442010-arch.github.io/smart-encyclopedias-platform/store/bakery.html"
+  });
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.mandatory, true);
+  assert.equal(body.minimumSupportedVersionCode, 280003);
+});
+
 test("new order rejects a client app version that differs from the deployed release", async () => {
   const response = await worker.fetch(new Request("https://bakery-test.local/api/orders", {
     method: "POST",
