@@ -36,9 +36,11 @@ public class FactoryActivity extends Activity {
     private String businessName(){android.content.SharedPreferences factory=getSharedPreferences("factory_profile",MODE_PRIVATE);String n=factory.getString("business_name",null);if(n==null){String legacy=getSharedPreferences("bakery_profile",MODE_PRIVATE).getString("business_name","");n=legacy==null?"":legacy.trim();if(!n.isEmpty())factory.edit().putString("business_name",n).apply();}return n==null||n.trim().isEmpty()?"المصنع":n.trim();}
     private void editFactoryName(){EditText name=cell("اسم المصنع",false);name.setText(businessName().equals("المصنع")?"":businessName());new AlertDialog.Builder(this).setTitle("بيانات المصنع").setMessage("اسم مستقل للمصنع، لا يغيّر اسم المخبز ولا يربط دفاترهما.").setView(name).setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{String value=name.getText().toString().trim();if(value.length()<2){toast("أدخل اسم المصنع بصورة صحيحة");return;}getSharedPreferences("factory_profile",MODE_PRIVATE).edit().putString("business_name",value).apply();toast("تم حفظ اسم المصنع بصورة مستقلة");home();}).show();}
     private void printVisibleScreen(String title){
-        StringBuilder out=new StringBuilder("المنشأة: ").append(businessName()).append("\\nالمصنع: مصنع الخبائز والحلويات والباسطة\\nالشاشة: ").append(title).append("\\nالتاريخ: ").append(today()).append("\\n\\n");
-        appendPrintable(body,out);if(out.length()<100){toast("لا توجد بيانات ظاهرة للطباعة.");return;}
-        try{PrinterService.print(this,businessName(),title+" - "+businessName(),out.toString());}catch(Exception e){toast("تعذر فتح الطباعة: "+e.getMessage());}
+        StringBuilder out=new StringBuilder("اسم المصنع: ").append(businessName()).append("\nاسم الوحدة: مصنع الخبائز والحلويات والباسطة\nالشاشة: ").append(title).append("\nالتاريخ: ").append(today()).append("\n\n");
+        appendPrintable(body,out);
+        if(out.length()<100){toast("لا توجد بيانات ظاهرة للطباعة.");return;}
+        try{PrinterService.print(this,businessName(),title+" - "+businessName(),out.toString());}
+        catch(Exception e){toast("تعذر فتح الطباعة: "+e.getMessage());}
     }
     private void appendPrintable(View view,StringBuilder out){
         if(view instanceof EditText){String value=((EditText)view).getText().toString().trim();if(!value.isEmpty())out.append(value).append("\\n");return;}
