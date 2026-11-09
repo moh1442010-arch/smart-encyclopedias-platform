@@ -250,7 +250,7 @@ public class FactoryLedgerActivity extends Activity {
             body.addView(label("حالة طابور الترحيل",16));
             rows("SELECT event_key||' — '||status||' — محاولات '||attempt_count||CASE WHEN last_error='' THEN '' ELSE ' — '||last_error END FROM factory_gl_outbox ORDER BY id DESC LIMIT 50");
             body.addView(label("قيود تاريخية لم تُلتقط بعد",16));
-            rows("SELECT j.entry_ref||' — '||j.date||' — '||j.description FROM journal_entries j LEFT JOIN factory_gl_outbox o ON o.source_entry_id=j.id WHERE j.status='POSTED' AND o.id IS NULL ORDER BY j.id LIMIT 50");
+            rows("SELECT j.entry_ref||' — '||j.status||' — '||j.date||' — '||j.description FROM journal_entries j LEFT JOIN factory_gl_outbox o ON o.source_entry_id=j.id WHERE (j.status='POSTED' OR (j.status='REVERSED' AND EXISTS (SELECT 1 FROM journal_entries r WHERE r.reversal_of=j.id AND r.status='POSTED'))) AND o.id IS NULL ORDER BY j.id LIMIT 50");
             body.addView(label("الربط الصريح للحسابات",16));
             rows("SELECT source_account||' ← '||target_account_code||' — '||branch_code||' — '||currency_code FROM factory_gl_account_mappings WHERE active=1 ORDER BY source_account");
             FactoryGlOutbox.ReconciliationReport report=FactoryGlOutbox.reconcile(db,destination);
@@ -344,6 +344,8 @@ public class FactoryLedgerActivity extends Activity {
         db.beginTransaction();try{
             Cursor e=db.rawQuery("SELECT entry_ref,description,status,reversal_of FROM journal_entries WHERE id=?",new String[]{""+id});if(!e.moveToFirst()){e.close();throw new IllegalArgumentException("القيد غير موجود");}String entryRef=e.getString(0),desc=e.getString(1),status=e.getString(2);boolean isReversal=!e.isNull(3);e.close();if(!"POSTED".equals(status))throw new IllegalArgumentException("القيد سبق عكسه أو غير مرحل");
             if(isReversal||entryRef.startsWith("WIP-")||entryRef.startsWith("RETURN-")||entryRef.startsWith("REV-"))throw new IllegalArgumentException("هذا القيد مرتبط بمستند أصلي أو هو قيد عكسي؛ راجع المستند الأصلي ولا تعكسه مرة أخرى");
+            // Capture a pre-outbox original before changing its status to REVERSED.
+            FactoryGlOutbox.enqueue(db,id);
             String reverseRef="REV-"+id+"-"+System.currentTimeMillis();
             db.execSQL("INSERT INTO journal_entries(entry_ref,description,status,reversal_of,date) VALUES(?,?,'POSTED',?,date('now'))",new Object[]{reverseRef,"عكس "+desc,id});
             Cursor n=db.rawQuery("SELECT last_insert_rowid()",null);n.moveToFirst();long rid=n.getLong(0);n.close();
