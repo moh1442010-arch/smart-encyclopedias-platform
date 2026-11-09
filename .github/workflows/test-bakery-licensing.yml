@@ -1,4 +1,5 @@
 name: Validate bakery licensing portal
+# Covers app-policy response, 2.8.1 rejection, licensing and D1 price contracts.
 on:
   push:
     paths:
