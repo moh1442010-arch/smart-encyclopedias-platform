@@ -493,6 +493,12 @@ async function handle(request, env) {
     const deviceId = cleanText(body.deviceId, 100);
     const plan = cleanText(body.plan, 20);
     const currencyCode = cleanText(body.currencyCode || "SDG", 3).toUpperCase();
+    const countryCode = cleanText(request.cf && request.cf.country || body.countryCode || "", 2).toUpperCase();
+    if (!/^[A-Z]{2}$/.test(countryCode)) return json({ error: "COUNTRY_REQUIRED" }, 400);
+    if ((countryCode === "SD" && currencyCode !== "SDG") ||
+        (countryCode !== "SD" && currencyCode === "SDG")) {
+      return json({ error: "CURRENCY_NOT_ALLOWED_FOR_COUNTRY" }, 400);
+    }
     const amount = await licensePrice(env, currencyCode, plan);
     const receiptRef = cleanText(body.receiptReference, 100);
     const requestedVersion = cleanText(body.appVersion, 32);
