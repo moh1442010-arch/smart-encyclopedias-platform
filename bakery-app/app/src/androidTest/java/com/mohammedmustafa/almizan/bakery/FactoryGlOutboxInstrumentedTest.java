@@ -100,6 +100,36 @@ public class FactoryGlOutboxInstrumentedTest {
         }
     }
 
+    @Test public void backfillCapturesValidLegacyJournalsWithoutChangingHistoryAndLeavesInvalidOnesVisible() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="factory_gl_backfill_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase db=openSource(context,name);
+        try {
+            db.beginTransaction();
+            long valid=insertBalancedJournal(db,"LEGACY-VALID",9000);
+            db.execSQL("INSERT INTO journal_entries(entry_ref,description,status,date) VALUES('LEGACY-BAD','قديم غير متوازن','POSTED','2026-11-09')");
+            long invalid;Cursor id=db.rawQuery("SELECT last_insert_rowid()",null);
+            try{assertTrue(id.moveToFirst());invalid=id.getLong(0);}finally{id.close();}
+            db.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,'الصندوق',7000,0)",new Object[]{invalid});
+            db.setTransactionSuccessful();db.endTransaction();
+
+            FactoryGlOutbox.BackfillResult result=FactoryGlOutbox.backfillPostedJournals(db,100);
+            assertEquals(1,result.captured);assertEquals(1,result.failed);
+            assertEquals(1,count(db,"factory_gl_outbox"));
+            assertEquals(2,count(db,"journal_entries"));
+            assertEquals(1,count(db,"factory_gl_outbox_lines"));
+            Cursor missing=db.rawQuery("SELECT COUNT(*) FROM journal_entries j LEFT JOIN factory_gl_outbox o ON o.source_entry_id=j.id WHERE j.id=? AND o.id IS NULL",
+                new String[]{String.valueOf(invalid)});
+            try{assertTrue(missing.moveToFirst());assertEquals(1,missing.getInt(0));}finally{missing.close();}
+            FactoryGlOutbox.BackfillResult replay=FactoryGlOutbox.backfillPostedJournals(db,100);
+            assertEquals(0,replay.captured);assertEquals(1,replay.failed);
+            assertEquals(1,count(db,"factory_gl_outbox"));
+        } finally {
+            if(db.isOpen())db.close();
+            context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
+        }
+    }
+
     @Test public void sourceJournalWriterCreatesJournalAndOutboxInsideCallerTransaction() {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String name="factory_gl_outbox_writer_"+System.currentTimeMillis()+".db";
