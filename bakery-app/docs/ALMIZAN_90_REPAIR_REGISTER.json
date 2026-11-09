@@ -15,7 +15,7 @@
       "phase": "P1",
       "status": "IN_PROGRESS",
       "evidence": null,
-      "work_note": "تم تنفيذ Outbox وربطه بقيود دفتر المصنع وWIP والمرتجعات والعكس، وعمليات المخزون الافتتاحي وشراء الخامات والإنتاج ومبيعات المصنع والتحصيلات وسداد الموردين والمصروفات والهالك. قيود الإنتاج تفصل المواد والأجور والتكاليف الصناعية ثم تحول WIP إلى مخزون الإنتاج التام. لكل حدث payload_version صريح وبصمة SHA-256، مع مطابقة سطرية للحساب والفرع والعملة وسعر الصرف والقيمة الأساسية. رُفع مخطط المصنع إلى v13 والنسخ الاحتياطي إلى v11، مع ترحيل إضافي يحافظ على أحداث الإصدار السابق. شاشة تسوية الأجور والتكاليف المستحقة، واختبارات CI والتنفيذ الفعلي ما زالت مفتوحة. أضيف التقاط آمن للقيود التاريخية المرحلة قبل Outbox على دفعات من 100 قيد، دون تعديل القيود الأصلية؛ تُلتقط القيود المتوازنة فقط وتظل القيود غير الصالحة ظاهرة في تقرير النواقص. أضيف اختبار يثبت عدم تكرار الالتقاط وعدم تغيير التاريخ. الاختبارات الآلية ما زالت قيد التشغيل ولم يُغلق البند.",
+      "work_note": "تم تنفيذ Outbox وربطه بقيود دفتر المصنع وWIP والمرتجعات والعكس، وعمليات المخزون الافتتاحي وشراء الخامات والإنتاج ومبيعات المصنع والتحصيلات وسداد الموردين والمصروفات والهالك. قيود الإنتاج تفصل المواد والأجور والتكاليف الصناعية ثم تحول WIP إلى مخزون الإنتاج التام. لكل حدث payload_version صريح وبصمة SHA-256، مع مطابقة سطرية للحساب والفرع والعملة وسعر الصرف والقيمة الأساسية. رُفع مخطط المصنع إلى v13 والنسخ الاحتياطي إلى v11، مع ترحيل إضافي يحافظ على أحداث الإصدار السابق. شاشة تسوية الأجور والتكاليف المستحقة، واختبارات CI والتنفيذ الفعلي ما زالت مفتوحة. أضيف التقاط آمن للقيود التاريخية المرحلة قبل Outbox على دفعات من 100 قيد، دون تعديل القيود الأصلية؛ تُلتقط القيود المتوازنة فقط وتظل القيود غير الصالحة ظاهرة في تقرير النواقص. أضيف اختبار يثبت عدم تكرار الالتقاط وعدم تغيير التاريخ. الاختبارات الآلية ما زالت قيد التشغيل ولم يُغلق البند. أُضيفت معالجة القيود التاريخية المعكوسة: يلتقط النظام القيد الأصلي المعكوس وقيده العكسي المرحل معًا، ويُلتقط القيد الأصلي قبل تغيير حالته عند عكس قيد قديم بعد التحديث. هذا يمنع ترحيل القيد العكسي منفردًا وإفساد الأرصدة. أضيف اختبار لهذه الحالة؛ لم تُشغّل اختبارات Android instrumented بعد.",
       "title": "Factory journal transactional outbox",
       "scope": "Capture each committed factory journal header and immutable line payload in the same transaction as the source journal. Preserve source identity and provide retry/dead-letter state without modifying historical source records.",
       "acceptance_criteria": [
@@ -28,7 +28,8 @@
         "A retry after destination commit but before source acknowledgement returns the same posted entry without duplication",
         "Unknown account mappings, inactive accounts, missing branches, inactive currencies and closed periods do not post",
         "Retries use bounded backoff and eventually enter DEAD_LETTER",
-        "Reconciliation reports source, outbox and destination references and amounts"
+        "Reconciliation reports source, outbox and destination references and amounts",
+        "Legacy reversed source journals and their posted reversal entries are both captured in order"
       ],
       "tests_required": [
         "source transaction rollback",
@@ -39,7 +40,9 @@
         "unknown account mapping",
         "closed financial period",
         "debit-credit balance and totals",
-        "dead-letter after retry limit"
+        "dead-letter after retry limit",
+        "legacy reversal pair backfill",
+        "reverse legacy journal capture before source status changes"
       ]
     },
     {
