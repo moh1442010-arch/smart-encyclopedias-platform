@@ -144,6 +144,12 @@ jobs:
           grep -Fq 'postJournal(d,"SUPPLIER-PAY-"+paymentId' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'postJournal(d,"EXPENSE-"+expenseId' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
           grep -Fq 'postJournal(d,"WASTE-"+wasteId' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'postPairJournal(d,"BATCH-"+batchId+"-FINISHED"' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryActivity.java
+          grep -Fq 'seedReviewedMappings' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
+          grep -Fq 'static ReconciliationReport reconcile' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
+          grep -Fq 'FactoryGlOutbox.reconcile(db,destination)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
+          grep -Fq 'reconciliationDetectsDestinationTransactionAmountMismatch' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxInstrumentedTest.java
+          grep -Fq 'foreignBaseCurrencyRejectsUnverifiedOneToOneFactoryRate' bakery-app/app/src/androidTest/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutboxInstrumentedTest.java
           grep -Fq 'private void glBridge()' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryLedgerActivity.java
           grep -Fq 'GeneralLedger.post(destination,entry)' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
           grep -Fq 'DEAD_LETTER' bakery-app/app/src/main/java/com/mohammedmustafa/almizan/bakery/FactoryGlOutbox.java
