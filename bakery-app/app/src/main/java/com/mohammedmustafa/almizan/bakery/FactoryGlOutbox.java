@@ -68,9 +68,10 @@ final class FactoryGlOutbox {
         source.execSQL("CREATE TABLE IF NOT EXISTS factory_gl_outbox ("+
             "id INTEGER PRIMARY KEY AUTOINCREMENT, event_key TEXT NOT NULL UNIQUE, source_entry_id INTEGER NOT NULL UNIQUE, "+
             "source_entry_ref TEXT NOT NULL UNIQUE, description TEXT NOT NULL, transaction_date TEXT NOT NULL, "+
-            "payload_sha256 TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('PENDING','PROCESSING','POSTED','RETRY','DEAD_LETTER')), "+
+            "payload_sha256 TEXT NOT NULL, payload_version INTEGER NOT NULL DEFAULT 1 CHECK(payload_version>0), status TEXT NOT NULL CHECK(status IN ('PENDING','PROCESSING','POSTED','RETRY','DEAD_LETTER')), "+
             "attempt_count INTEGER NOT NULL DEFAULT 0, next_attempt_at INTEGER NOT NULL DEFAULT 0, last_error TEXT NOT NULL DEFAULT '', "+
             "destination_ref TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, posted_at INTEGER)");
+        ensureColumn(source,"factory_gl_outbox","payload_version","INTEGER NOT NULL DEFAULT 1 CHECK(payload_version>0)");
         source.execSQL("CREATE INDEX IF NOT EXISTS idx_factory_gl_outbox_due ON factory_gl_outbox(status,next_attempt_at,id)");
         source.execSQL("CREATE TABLE IF NOT EXISTS factory_gl_outbox_lines ("+
             "id INTEGER PRIMARY KEY AUTOINCREMENT, outbox_id INTEGER NOT NULL REFERENCES factory_gl_outbox(id) ON DELETE CASCADE, "+
@@ -110,10 +111,11 @@ final class FactoryGlOutbox {
         GeneralLedger.validateBalancedTotals(debitTotal,creditTotal,lines.size());
         String hash=payloadHash(ref,description,date,lines);
         String eventKey=eventKey(ref);
-        Cursor prior=source.rawQuery("SELECT id,payload_sha256 FROM factory_gl_outbox WHERE event_key=?",
+        Cursor prior=source.rawQuery("SELECT id,payload_sha256,payload_version FROM factory_gl_outbox WHERE event_key=?",
             new String[]{eventKey});
         try {
             if(prior.moveToFirst()) {
+                if(prior.getInt(2)!=1)throw new IllegalStateException("إصدار حمولة Outbox غير مدعوم");
                 if(!hash.equals(prior.getString(1)))
                     throw new IllegalStateException("تغير محتوى القيد بعد إنشاء حدث Outbox؛ أوقف الترحيل للمراجعة");
                 return;
@@ -122,7 +124,7 @@ final class FactoryGlOutbox {
         ContentValues event=new ContentValues();
         event.put("event_key",eventKey);event.put("source_entry_id",sourceEntryId);
         event.put("source_entry_ref",ref);event.put("description",description);
-        event.put("transaction_date",date);event.put("payload_sha256",hash);
+        event.put("transaction_date",date);event.put("payload_sha256",hash);event.put("payload_version",1);
         event.put("status","PENDING");event.put("created_at",System.currentTimeMillis());
         event.put("updated_at",System.currentTimeMillis());
         long outboxId=source.insertOrThrow("factory_gl_outbox",null,event);
@@ -201,6 +203,12 @@ final class FactoryGlOutbox {
         } finally {glEvents.close();}
         return new ReconciliationReport(sourceCount,eventCount,posted,pending,processing,retry,dead,
             missingOutbox,orphanOutbox,missingDestination,orphanDestination,unacknowledged,mismatches);
+    }
+
+    private static void ensureColumn(SQLiteDatabase db,String table,String column,String declaration) {
+        Cursor c=db.rawQuery("PRAGMA table_info("+table+")",null);boolean found=false;
+        try{while(c.moveToNext())if(column.equals(c.getString(1))){found=true;break;}}finally{c.close();}
+        if(!found)db.execSQL("ALTER TABLE "+table+" ADD COLUMN "+column+" "+declaration);
     }
 
     private static boolean same(String a,String b){return a==null?b==null:a.equals(b);}
@@ -430,11 +438,12 @@ final class FactoryGlOutbox {
         List<SnapshotLine> lines=new ArrayList<>();
         source.beginTransaction();
         try {
-            Cursor event=source.rawQuery("SELECT source_entry_ref,description,transaction_date,payload_sha256,status "+
+            Cursor event=source.rawQuery("SELECT source_entry_ref,description,transaction_date,payload_sha256,status,payload_version "+
                 "FROM factory_gl_outbox WHERE id=?",new String[]{String.valueOf(outboxId)});
             try {
                 if(!event.moveToFirst())throw new IllegalArgumentException("حدث Outbox غير موجود");
                 ref=event.getString(0);description=event.getString(1);date=event.getString(2);hash=event.getString(3);
+                if(event.getInt(5)!=1)throw new IllegalStateException("إصدار حمولة Outbox غير مدعوم");
                 if("POSTED".equals(event.getString(4))||"DEAD_LETTER".equals(event.getString(4))) {
                     source.setTransactionSuccessful();return false;
                 }
@@ -535,7 +544,7 @@ final class FactoryGlOutbox {
         List<String> canonical=new ArrayList<>();
         for(SnapshotLine line:lines)canonical.add(line.sourceAccount+"\u001f"+line.debit+"\u001f"+line.credit);
         Collections.sort(canonical);
-        StringBuilder payload=new StringBuilder(ref).append('\u001e').append(description).append('\u001e').append(date);
+        StringBuilder payload=new StringBuilder("factory-gl-outbox-v1").append('\u001e').append(ref).append('\u001e').append(description).append('\u001e').append(date);
         for(String line:canonical)payload.append('\u001d').append(line);
         try {
             byte[] digest=MessageDigest.getInstance("SHA-256").digest(payload.toString().getBytes(StandardCharsets.UTF_8));
