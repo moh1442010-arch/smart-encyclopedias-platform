@@ -431,6 +431,8 @@ public class FactoryGlOutboxInstrumentedTest {
             db.beginTransaction();
             db.execSQL("UPDATE journal_lines SET debit=11000,credit=0 WHERE entry_id=? AND account='الصندوق'",
                 new Object[]{entryId});
+            db.execSQL("UPDATE journal_lines SET debit=0,credit=11000 WHERE entry_id=? AND account='المبيعات'",
+                new Object[]{entryId});
             try {
                 FactoryGlOutbox.enqueue(db,entryId);
                 fail("changed source payload must be rejected");
