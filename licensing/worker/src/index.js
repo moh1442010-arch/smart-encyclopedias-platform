@@ -27,7 +27,7 @@ const encoder = new TextEncoder();
 const ADMIN_PRODUCT_REGISTRY = [
   { id: "accounting-android", name: "المحاسب الميزان", platform: "Android", category: "محاسبة", scope: "التطبيق المحاسبي العام" },
   { id: "accounting-windows", name: "المحاسب الميزان", platform: "Windows", category: "محاسبة", scope: "نسخة سطح المكتب" },
-  { id: "bakery-android", name: "الميزان للمخابز", platform: "Android", category: "المخابز", scope: "تراخيص المخابز والإصدار 2.8.2" },
+  { id: "bakery-android", name: "الميزان للمخابز", platform: "Android", category: "المخابز", scope: "تراخيص المخابز والإصدار 2.8.3" },
   { id: "store-website", name: "المتجر والموقع", platform: "Web", category: "منصة", scope: "صفحات المنتجات والتنزيلات والمراجعات" },
   { id: "future-products", name: "منتجات مستقبلية", platform: "Modular", category: "قابل للتوسع", scope: "سجل مفتوح لإضافة منتجات ووحدات جديدة" }
 ];
@@ -240,7 +240,7 @@ async function issueToken(env, deviceId, plan, purchasedAppVersion) {
   const key = await importPrivateKey(env);
   const now = Math.floor(Date.now() / 1000);
   const expires = plan === "lifetime" ? 0 : now + PLAN_SECONDS[plan];
-  const appVersion = cleanText(purchasedAppVersion || env.APP_VERSION || "2.8.2", 32);
+  const appVersion = cleanText(purchasedAppVersion || env.APP_VERSION || "2.8.3", 32);
   // This exact payload format is consumed by MainActivity.verifyLicenseToken().
   const maxVersion = plan === "lifetime" ? appVersion : "any";
   const payload = `app=${APP_ID};device=${deviceId};plan=${plan};max_version=${maxVersion};expires=${expires}`;
@@ -398,7 +398,7 @@ async function handle(request, env) {
       if (!response.ok) throw new Error("GITHUB_API_" + response.status);
       return response.json();
     };
-    const releaseTag = `al-mizan-bakery-${cleanText(env.APP_VERSION || "2.8.2", 32)}-review`;
+    const releaseTag = `al-mizan-bakery-${cleanText(env.APP_VERSION || "2.8.3", 32)}-review`;
     const [runsResult, expertResult, releaseResult] = await Promise.allSettled([
       githubJson("/actions/runs?per_page=12"),
       githubJson("/issues/27"),
@@ -424,7 +424,7 @@ async function handle(request, env) {
       tag: cleanText(releaseResult.value.tag_name, 100),
       name: cleanText(releaseResult.value.name, 180),
       url: `https://github.com/moh1442010-arch/smart-encyclopedias-platform/releases/tag/${releaseTag}`,
-      apk: (releaseResult.value.assets || []).filter(asset => asset.name === `AlMizan-Bakery-${cleanText(env.APP_VERSION || "2.8.2", 32)}-review.apk`).map(asset => ({
+      apk: (releaseResult.value.assets || []).filter(asset => asset.name === `AlMizan-Bakery-${cleanText(env.APP_VERSION || "2.8.3", 32)}-review.apk`).map(asset => ({
         name: asset.name, size: Number(asset.size) || 0,
         sha256: cleanText(asset.digest, 100),
         downloadUrl: typeof asset.browser_download_url === "string" && asset.browser_download_url.startsWith("https://github.com/") ? asset.browser_download_url : ""
@@ -445,14 +445,14 @@ async function handle(request, env) {
       release,
       customerReviews: { channel: "first_party_moderated_form", counts: reviewSummary, url: "https://moh1442010-arch.github.io/smart-encyclopedias-platform/reviews.html" },
       visitorAnalytics: { provider: "first_party_aggregate", integrated: true, totalViews30Days: Number(analyticsTotal && analyticsTotal.views) || 0, pages: analyticsRows.results || [], privacy: "aggregate-only-no-cookie-no-ip-storage" },
-      serviceHealth: { healthEndpoint: "ok", signingReady, appVersion: cleanText(env.APP_VERSION || "2.8.2", 32) }
+      serviceHealth: { healthEndpoint: "ok", signingReady, appVersion: cleanText(env.APP_VERSION || "2.8.3", 32) }
     });
   }
 
   if (url.pathname === "/diagnostics/admin-config" && request.method === "GET") {
     return json({
       adminPasswordConfigured: adminPassword(env).length >= 32,
-      appVersion: cleanText(env.APP_VERSION || "2.8.2", 32)
+      appVersion: cleanText(env.APP_VERSION || "2.8.3", 32)
     });
   }
 
@@ -460,14 +460,14 @@ async function handle(request, env) {
     return json({
       ...signingDiagnostics(env),
       privateKeyFormat: privateKeyFormat(env.LICENSE_PRIVATE_KEY_PKCS8_B64),
-      appVersion: cleanText(env.APP_VERSION || "2.8.2", 32)
+      appVersion: cleanText(env.APP_VERSION || "2.8.3", 32)
     });
   }
 
   if (url.pathname === "/diagnostics/signing-pair" && request.method === "GET") {
     try {
       await importPrivateKey(env);
-      return json({ signingPairMatches: true, signingReady: true, appVersion: cleanText(env.APP_VERSION || "2.8.2", 32) });
+      return json({ signingPairMatches: true, signingReady: true, appVersion: cleanText(env.APP_VERSION || "2.8.3", 32) });
     } catch (e) {
       const code = String(e && e.message || e);
       const allowedCodes = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH", "LICENSE_PRIVATE_KEY_INVALID", "LICENSE_PUBLIC_KEY_INVALID"];
@@ -477,7 +477,7 @@ async function handle(request, env) {
         error: allowedCodes.includes(code) ? code : "LICENSE_SIGNING_INTERNAL_ERROR",
         ...signingDiagnostics(env),
         privateKeyFormat: privateKeyFormat(env.LICENSE_PRIVATE_KEY_PKCS8_B64),
-        appVersion: cleanText(env.APP_VERSION || "2.8.2", 32)
+        appVersion: cleanText(env.APP_VERSION || "2.8.3", 32)
       }, 503);
     }
   }
@@ -497,7 +497,7 @@ async function handle(request, env) {
     const amount = licensePrice(currencyCode, plan);
     const receiptRef = cleanText(body.receiptReference, 100);
     const requestedVersion = cleanText(body.appVersion, 32);
-    const appVersion = cleanText(env.APP_VERSION || "2.8.2", 32);
+    const appVersion = cleanText(env.APP_VERSION || "2.8.3", 32);
     const previousAppVersion = cleanText(env.PREVIOUS_APP_VERSION || "2.8.0", 32);
     const orderAppVersion = requestedVersion || appVersion;
     if (customer.length < 2 || customer.length > 100 ||
@@ -540,7 +540,7 @@ async function handle(request, env) {
     if (!await verifyAdminSession(request,env)) return json({error:"UNAUTHORIZED"},401);
     try {
       await importPrivateKey(env);
-      return json({ ok: true, publicKeyMatchesApp: true, appVersion: cleanText(env.APP_VERSION || "2.8.2", 32) });
+      return json({ ok: true, publicKeyMatchesApp: true, appVersion: cleanText(env.APP_VERSION || "2.8.3", 32) });
     } catch (e) {
       const code = String(e && e.message || e);
       const allowedCodes = ["LICENSE_SIGNING_NOT_CONFIGURED", "LICENSE_PUBLIC_KEY_MISMATCH", "LICENSE_KEY_PAIR_MISMATCH", "LICENSE_PRIVATE_KEY_INVALID", "LICENSE_PUBLIC_KEY_INVALID"];
