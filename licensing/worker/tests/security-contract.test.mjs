@@ -5,6 +5,7 @@ import worker from "../src/index.js";
 
 test("app policy reports optional update while the release gate is disabled", async () => {
   const response = await worker.fetch(new Request("https://bakery-test.local/api/app-policy?versionCode=280001"), {
+    DB: {},
     MIN_SUPPORTED_VERSION_CODE: "0",
     LATEST_VERSION_CODE: "280003",
     LATEST_VERSION_NAME: "2.8.3"
@@ -18,6 +19,7 @@ test("app policy reports optional update while the release gate is disabled", as
 
 test("app policy blocks clients below the configured minimum version code", async () => {
   const response = await worker.fetch(new Request("https://bakery-test.local/api/app-policy?versionCode=280001"), {
+    DB: {},
     MIN_SUPPORTED_VERSION_CODE: "280003",
     LATEST_VERSION_CODE: "280003",
     LATEST_VERSION_NAME: "2.8.3",
