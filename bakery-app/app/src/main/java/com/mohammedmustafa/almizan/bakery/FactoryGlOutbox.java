@@ -28,7 +28,7 @@ final class FactoryGlOutbox {
         ReconciliationReport(int sourceJournals,int outboxEvents,int posted,int pending,int processing,int retry,int deadLetter,
                              int missingOutbox,int orphanOutbox,int missingDestination,int orphanDestination,int unacknowledgedDestination,int amountMismatches) {
             this.sourceJournals=sourceJournals;this.outboxEvents=outboxEvents;this.posted=posted;this.pending=pending;
-            this.processing=processing;this.retry=retry;this.deadLetter=deadLetter;this.missingOutbox=missingOutbox;
+            this.processing=processing;this.retry=retry;this.deadLetter=deadLetter;this.missingOutbox=missingOutbox;this.orphanOutbox=orphanOutbox;
             this.missingDestination=missingDestination;this.orphanDestination=orphanDestination;
             this.unacknowledgedDestination=unacknowledgedDestination;this.amountMismatches=amountMismatches;
         }
