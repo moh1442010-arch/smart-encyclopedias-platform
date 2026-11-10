@@ -2,6 +2,7 @@ package com.mohammedmustafa.almizan.bakery;
 
 import android.content.ContentValues;
 import android.database.Cursor;
+import org.json.JSONObject;
 import net.zetetic.database.sqlcipher.SQLiteDatabase;
 import java.security.MessageDigest;
 import java.math.BigInteger;
