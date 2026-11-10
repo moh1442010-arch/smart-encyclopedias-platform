@@ -470,14 +470,15 @@ public class FactoryGlOutboxInstrumentedTest {
             source.execSQL("UPDATE factory_gl_outbox SET attempt_count=7,next_attempt_at=0 WHERE source_entry_ref='DEAD-LETTER-1'");
             long before=System.currentTimeMillis();
             FactoryGlOutbox.ProcessResult result=FactoryGlOutbox.processPending(source,destination);
+            long after=System.currentTimeMillis();
             assertEquals(1,result.deadLetter);
             Cursor state=source.rawQuery("SELECT status,attempt_count,next_attempt_at FROM factory_gl_outbox WHERE source_entry_ref='DEAD-LETTER-1'",null);
             try {
                 assertTrue(state.moveToFirst());
                 assertEquals("DEAD_LETTER",state.getString(0));
                 assertEquals(8,state.getInt(1));
-                assertTrue(state.getLong(2)>=before);
-                assertTrue(state.getLong(2)<=before+3600000L);
+                assertTrue("Dead-letter retry timestamp must not precede processing",state.getLong(2)>=before);
+                assertTrue("Retry delay must be capped at one hour, allowing processing-time overhead",state.getLong(2)<=after+3600000L);
             } finally {state.close();}
             assertEquals(0,destinationEntryCount(destination,"DEAD-LETTER-1"));
         } finally {
