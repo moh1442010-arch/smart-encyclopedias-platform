@@ -98,12 +98,12 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_2
-          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -no-snapshot-save -memory 2048 -cores 2 -partition-size 4096 -gpu swiftshader_indirect -camera-back none
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -no-snapshot-save -memory 4096 -cores 2 -partition-size 4096 -gpu swiftshader_indirect -camera-back none -no-metrics -no-snapshot-load -wipe-data
           disable-animations: true
           emulator-boot-timeout: 900
           working-directory: bakery-app
           # The emulator action executes script as one sh -c command; keep shell control flow on one line.
-          script: adb wait-for-device && until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r')" = "1" ]; do sleep 5; done && adb shell pm list packages >/dev/null && adb shell settings put global window_animation_scale 0 && adb shell settings put global transition_animation_scale 0 && adb shell settings put global animator_duration_scale 0 && gradle connectedDebugAndroidTest --stacktrace
+          script: adb wait-for-device && until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r')" = "1" ]; do sleep 5; done && for attempt in $(seq 1 24); do adb shell pm list packages >/dev/null 2>&1 && break; sleep 5; done && adb shell pm list packages >/dev/null && (adb shell settings put global package_verifier_enable 0 || true) && (adb shell settings put global verifier_verify_adb_installs 0 || true) && (adb shell settings put global window_animation_scale 0 || true) && (adb shell settings put global transition_animation_scale 0 || true) && (adb shell settings put global animator_duration_scale 0 || true) && gradle connectedDebugAndroidTest --stacktrace
       - name: Record API 28 emulator validation status
         if: always() && matrix.api-level == 28
         run: |
