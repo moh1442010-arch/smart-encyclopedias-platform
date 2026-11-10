@@ -93,21 +93,10 @@ jobs:
           profile: pixel_2
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -no-snapshot-save -memory 4096 -cores 2 -partition-size 4096 -gpu swiftshader_indirect -camera-back none
           disable-animations: true
+          emulator-boot-timeout: 900
           working-directory: bakery-app
-          script: |
-            if gradle connectedDebugAndroidTest --stacktrace; then
-              test_status=0
-            else
-              test_status=$?
-            fi
-            mkdir -p app/build/reports/androidTests/connected/
-            adb logcat -d -v threadtime > app/build/reports/androidTests/connected/emulator-logcat.txt 2>&1 || true
-            adb shell getprop > app/build/reports/androidTests/connected/emulator-getprop.txt 2>&1 || true
-            if [ "$test_status" -ne 0 ]; then
-              echo "Instrumented tests failed with exit code $test_status" >&2
-              exit "$test_status"
-            fi
-            echo "Instrumented tests completed successfully."
+          # Keep this as one command: the emulator action executes the script through sh -c.
+          script: gradle connectedDebugAndroidTest --stacktrace
       - name: Record API 28 emulator validation status
         if: always() && matrix.api-level == 28
         run: |
