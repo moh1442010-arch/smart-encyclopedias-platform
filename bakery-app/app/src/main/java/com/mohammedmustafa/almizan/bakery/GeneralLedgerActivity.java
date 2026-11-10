@@ -161,14 +161,11 @@ public final class GeneralLedgerActivity extends Activity {
         button.setEnabled(false);
         button.setText(AppLanguage.tr(this,"جارٍ مزامنة قيود المصنع..."));
         Thread worker=new Thread(()->{
-            SQLiteDatabase source=null,destination=null;
             String message;
             boolean clean=false;
             try {
                 android.content.Context app=getApplicationContext();
-                source=SecureDatabase.open(app,"almizan_factory_1.db");
-                destination=SecureDatabase.open(app,"almizan_bakery_250.db");
-                FactoryLedgerSyncService.Result result=FactoryLedgerSyncService.synchronize(source,destination);
+                FactoryLedgerSyncService.Result result=FactoryActivity.synchronizeFactoryLedger(app);
                 FactoryGlOutbox.ReconciliationReport report=result.reconciliation;
                 clean=result.clean();
                 message="تم التقاط "+result.legacyCaptured+" قيد تاريخي، وترحيل "+result.posted+
@@ -186,8 +183,7 @@ public final class GeneralLedgerActivity extends Activity {
             } catch(Exception ex) {
                 message="تعذرت مزامنة قيود المصنع: "+String.valueOf(ex.getMessage());
             } finally {
-                if(source!=null&&source.isOpen())source.close();
-                if(destination!=null&&destination.isOpen())destination.close();
+                // FactoryActivity closes its versioned helper and the destination connection.
             }
             final String resultMessage=message;
             runOnUiThread(()->{
