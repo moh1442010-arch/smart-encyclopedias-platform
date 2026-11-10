@@ -182,8 +182,6 @@ public final class GeneralLedgerActivity extends Activity {
                 }
             } catch(Exception ex) {
                 message="تعذرت مزامنة قيود المصنع: "+String.valueOf(ex.getMessage());
-            } finally {
-                // FactoryActivity closes its versioned helper and the destination connection.
             }
             final String resultMessage=message;
             runOnUiThread(()->{
