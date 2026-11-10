@@ -244,7 +244,7 @@ final class GeneralLedger {
            l.fxNumerator<=0||l.fxDenominator<=0)
             throw new IllegalArgumentException("سطر القيد غير صحيح");
     }
-    private static boolean validDate(String d) {
+    static boolean validDate(String d) {
         if(d==null||!d.matches("\\d{4}-\\d{2}-\\d{2}")) return false;
         SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
         format.setLenient(false);

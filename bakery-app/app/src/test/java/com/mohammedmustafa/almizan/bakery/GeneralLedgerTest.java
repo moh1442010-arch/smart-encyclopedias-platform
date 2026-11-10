@@ -6,6 +6,22 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 public class GeneralLedgerTest {
+    @Test public void acceptsValidLeapDay() {
+        assertTrue(GeneralLedger.validDate("2024-02-29"));
+    }
+
+    @Test public void rejectsImpossibleCalendarDate() {
+        assertFalse(GeneralLedger.validDate("2026-02-30"));
+        assertFalse(GeneralLedger.validDate("2026-13-01"));
+        assertFalse(GeneralLedger.validDate("2026-04-31"));
+    }
+
+    @Test public void rejectsNonCanonicalJournalDate() {
+        assertFalse(GeneralLedger.validDate("2026-2-03"));
+        assertFalse(GeneralLedger.validDate("03-02-2026"));
+        assertFalse(GeneralLedger.validDate(""));
+    }
+
     @Test public void acceptsBalancedMultiLineJournal() {
         GeneralLedger.validateBalancedTotals(125000L,125000L,3);
     }
