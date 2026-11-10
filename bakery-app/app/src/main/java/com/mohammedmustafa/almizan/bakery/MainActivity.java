@@ -107,6 +107,10 @@ public class MainActivity extends Activity {
         AppUpdatePolicy.check(this);
         entitlementHandler.removeCallbacks(entitlementWatchdog);
         entitlementHandler.post(entitlementWatchdog);
+        if (store != null) {
+            try { AccountingDocumentService.processPending(store.getWritableDatabase()); }
+            catch (RuntimeException ex) { android.util.Log.e("AlMizanBakery", "Accounting outbox recovery failed", ex); }
+        }
     }
 
     @Override protected void onPause() {
@@ -2247,6 +2251,10 @@ public class MainActivity extends Activity {
             return new JSONObject();
         }
         void put(String date,String module,JSONObject value) {
+            if ("window".equals(module) || "distribution".equals(module)) {
+                AccountingDocumentService.saveSalesSnapshot(getWritableDatabase(),date,module,value);
+                return;
+            }
             ContentValues cv=new ContentValues(); cv.put("day",date); cv.put("module",module); cv.put("payload",value.toString()); cv.put("updated_at",System.currentTimeMillis());
             getWritableDatabase().insertWithOnConflict("records",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
         }
