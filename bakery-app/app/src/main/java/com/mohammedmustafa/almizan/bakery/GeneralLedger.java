@@ -238,7 +238,7 @@ final class GeneralLedger {
            blank(e.sourceId)||blank(e.idempotencyKey)||e.lines==null||e.lines.size()<2)
             throw new IllegalArgumentException("بيانات القيد أو مرجع المصدر غير مكتملة");
     }
-    private static void validateLine(Line l) {
+    static void validateLine(Line l) {
         if(l==null||blank(l.accountCode)||blank(l.branchCode)||blank(l.currencyCode)||
            l.debitMinor<0||l.creditMinor<0||((l.debitMinor>0)==(l.creditMinor>0))||
            l.fxNumerator<=0||l.fxDenominator<=0)
