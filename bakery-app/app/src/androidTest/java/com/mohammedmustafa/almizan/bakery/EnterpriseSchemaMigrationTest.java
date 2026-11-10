@@ -111,6 +111,32 @@ public class EnterpriseSchemaMigrationTest {
         }
     }
 
+    @Test public void ensurePreservesOperatorCurrencyActivationAfterOneTimeWhitelistMigration() throws Exception {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="enterprise_currency_activation_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase db=SecureDatabase.open(context,name);
+        try {
+            EnterpriseSchema.ensure(db);
+            db.execSQL("UPDATE currencies SET active=0 WHERE code='SDG'");
+            db.execSQL("UPDATE currencies SET active=1 WHERE code='USD'");
+            EnterpriseSchema.ensure(db);
+            Cursor states=db.rawQuery("SELECT code,active FROM currencies WHERE code IN ('SDG','USD') ORDER BY code",null);
+            try {
+                assertTrue(states.moveToFirst());
+                assertEquals("SDG",states.getString(0));
+                assertEquals("SDG operator deactivation must survive ensure()",0,states.getInt(1));
+                assertTrue(states.moveToNext());
+                assertEquals("USD",states.getString(0));
+                assertEquals("USD operator activation must not bypass the operational whitelist",0,states.getInt(1));
+            } finally { states.close(); }
+            Cursor version=db.rawQuery("SELECT value FROM enterprise_meta WHERE key='schema_version'",null);
+            try { assertTrue(version.moveToFirst());assertEquals("4",version.getString(0)); }
+            finally { version.close(); }
+        } finally {
+            db.close();context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
+        }
+    }
+
     @Test public void ledgerReportsIncludeEquityAndExcludeDraftsWithCumulativeTrialBalance() throws Exception {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String name="ledger_reports_"+System.currentTimeMillis()+".db";
