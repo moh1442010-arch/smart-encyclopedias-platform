@@ -542,4 +542,40 @@ public class FactoryGlOutboxInstrumentedTest {
             context.deleteDatabase(destinationName);context.deleteDatabase(destinationName+"-wal");context.deleteDatabase(destinationName+"-shm");
         }
     }
+
+    @Test public void legacyReversedJournalAndItsReversalBothPostAndNetToZero() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String sourceName="factory_gl_reverse_pair_source_"+System.currentTimeMillis()+".db";
+        String destinationName="factory_gl_reverse_pair_dest_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase source=openSource(context,sourceName),destination=openDestination(context,destinationName,"OPEN");
+        try {
+            mapCashSale(source,"1000");
+            source.beginTransaction();
+            long original=insertBalancedJournal(source,"LEGACY-PAIR-ORIGINAL",4200);
+            source.execSQL("UPDATE journal_entries SET status='REVERSED' WHERE id=?",new Object[]{original});
+            source.execSQL("INSERT INTO journal_entries(entry_ref,description,status,reversal_of,date) VALUES('LEGACY-PAIR-REVERSAL','عكس القيد التاريخي','POSTED',?,'2026-11-09')",
+                new Object[]{original});
+            Cursor id=source.rawQuery("SELECT last_insert_rowid()",null);
+            long reversal;try{assertTrue(id.moveToFirst());reversal=id.getLong(0);}finally{id.close();}
+            source.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,'المبيعات',4200,0)",new Object[]{reversal});
+            source.execSQL("INSERT INTO journal_lines(entry_id,account,debit,credit) VALUES(?,'الصندوق',0,4200)",new Object[]{reversal});
+            source.setTransactionSuccessful();source.endTransaction();
+
+            FactoryGlOutbox.BackfillResult backfill=FactoryGlOutbox.backfillPostedJournals(source,100);
+            assertEquals(2,backfill.captured);
+            FactoryGlOutbox.ProcessResult posted=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(2,posted.posted);
+            assertEquals(2,destinationEntryCount(destination,"LEGACY-PAIR-ORIGINAL")+destinationEntryCount(destination,"LEGACY-PAIR-REVERSAL"));
+            Cursor totals=destination.rawQuery("SELECT SUM(l.base_debit_minor),SUM(l.base_credit_minor) FROM gl_journal_entries e JOIN gl_journal_lines l ON l.entry_id=e.id WHERE e.source_type='FACTORY_LEDGER' AND e.source_id IN ('LEGACY-PAIR-ORIGINAL','LEGACY-PAIR-REVERSAL')",null);
+            try {assertTrue(totals.moveToFirst());assertEquals(8400,totals.getLong(0));assertEquals(8400,totals.getLong(1));} finally {totals.close();}
+            FactoryGlOutbox.ReconciliationReport report=FactoryGlOutbox.reconcile(source,destination);
+            assertTrue(report.clean());
+            assertEquals(2,report.sourceJournals);
+            assertEquals(2,report.posted);
+        } finally {
+            if(source.isOpen())source.close();if(destination.isOpen())destination.close();
+            context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
+            context.deleteDatabase(destinationName);context.deleteDatabase(destinationName+"-wal");context.deleteDatabase(destinationName+"-shm");
+        }
+    }
 }
