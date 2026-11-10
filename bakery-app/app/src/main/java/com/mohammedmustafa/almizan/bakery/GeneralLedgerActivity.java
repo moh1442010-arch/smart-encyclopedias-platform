@@ -39,6 +39,7 @@ public final class GeneralLedgerActivity extends Activity {
         try {
             db=SecureDatabase.open(this,"almizan_bakery_250.db");
             EnterpriseSchema.ensure(db);
+            AccountingDocumentService.ensureSchema(db);
             render();
         } catch(RuntimeException ex) {
             showFailure(ex);
@@ -97,8 +98,8 @@ public final class GeneralLedgerActivity extends Activity {
         Cursor accounts=db.rawQuery(
             "SELECT a.account_code,a.name_ar,a.name_en,a.normal_side,"+
             "COALESCE(SUM(l.base_debit_minor),0),COALESCE(SUM(l.base_credit_minor),0) "+
-            "FROM chart_of_accounts a LEFT JOIN gl_journal_lines l ON l.account_id=a.id "+
-            "LEFT JOIN gl_journal_entries e ON e.id=l.entry_id AND e.status='POSTED' "+
+            "FROM chart_of_accounts a LEFT JOIN gl_journal_lines l ON l.account_id=a.id AND EXISTS "+
+            "(SELECT 1 FROM gl_journal_entries e WHERE e.id=l.entry_id AND e.status='POSTED') "+
             "WHERE a.active=1 GROUP BY a.id,a.account_code,a.name_ar,a.name_en,a.normal_side "+
             "ORDER BY a.account_code",null);
         try {
