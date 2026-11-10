@@ -9,6 +9,7 @@ public class AccountingDocumentServiceTest {
     @Test public void windowSalesMapCashBankAndReceivableToBalancedJournal() throws Exception {
         JSONObject payload=new JSONObject();
         payload.put("cash","1200");payload.put("debt","300");payload.put("bank","500");
+        payload.put("bank_transfers","500 | TX-500");
         List<AccountingDocumentService.Line> lines=AccountingDocumentService.buildSalesLines("window",payload);
         assertEquals(4,lines.size());
         assertEquals("1000",lines.get(0).account);assertEquals(1200,lines.get(0).debit);
