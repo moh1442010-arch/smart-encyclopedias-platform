@@ -178,12 +178,16 @@ final class AccountingDocumentService {
             debt=nonNegative(payload.optString("debt","0"),"ديون الشباك");
             bank=nonNegative(payload.optString("bank","0"),"تحويلات بنكك");
             String transferRows=payload.optString("bank_transfers","");
+            if(bank>0&&transferRows.trim().isEmpty()&&payload.optString("bank_ref","").trim().isEmpty())
+                throw new IllegalArgumentException("تحويل بنكك القديم بلا رقم عملية؛ أعد إدخاله مع رقم العملية قبل الترحيل");
             if(!transferRows.trim().isEmpty()) {
                 long transferTotal=0;
                 for(String row:transferRows.split("\\r?\\n"))if(!row.trim().isEmpty()) {
                     String[] p=row.split("\\|",-1);
                     if(p.length<2||p[1].trim().isEmpty())throw new IllegalArgumentException("رقم عملية بنكك مفقود");
-                    transferTotal=checkedAdd(transferTotal,nonNegative(p[0],"تحويل بنكك"));
+                    long amount=nonNegative(p[0],"تحويل بنكك");
+                    if(amount<=0)throw new IllegalArgumentException("مبلغ تحويل بنكك يجب أن يكون موجباً");
+                    transferTotal=checkedAdd(transferTotal,amount);
                 }
                 if(bank>0&&bank!=transferTotal)throw new IllegalArgumentException("إجمالي بنكك لا يطابق تفاصيل التحويلات");
                 bank=transferTotal;
@@ -200,6 +204,8 @@ final class AccountingDocumentService {
                 long rowCash=nonNegative(p[2],"نقد التوزيع");
                 long rowBank=nonNegative(p[3],"بنكك التوزيع");
                 long rowDebt=nonNegative(p[5],"ديون التوزيع");
+                long priceDifference=nonNegative(p[6],"فرق السعر");
+                if(priceDifference>0)throw new IllegalArgumentException("فرق السعر يحتاج حساباً محاسبياً معتمداً قبل ترحيل هذا الصف");
                 if(rowBank>0&&p[4].trim().isEmpty())throw new IllegalArgumentException("رقم عملية بنكك مطلوب لكل تحويل");
                 if(rowBank==0&&!p[4].trim().isEmpty())throw new IllegalArgumentException("رقم عملية بنكك لا يقبل دون مبلغ");
                 long partyId=p.length>7?nonNegative(p[7],"معرّف العميل"):0;
