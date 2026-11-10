@@ -100,7 +100,8 @@ jobs:
           target: google_apis
           profile: pixel_2
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -no-snapshot-save -memory 3072 -cores 2 -partition-size 2048 -gpu swiftshader_indirect -camera-back none -no-metrics -no-snapshot-load -wipe-data
-          disable-animations: true
+          # Avoid the action's pre-script adb animation call; apply best-effort settings in script.
+          disable-animations: false
           emulator-boot-timeout: 900
           working-directory: bakery-app
           # The emulator action executes script as one sh -c command; keep shell control flow on one line.
