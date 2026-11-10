@@ -1,5 +1,6 @@
 package com.mohammedmustafa.almizan.bakery;
 
+import android.database.Cursor;
 import net.zetetic.database.sqlcipher.SQLiteDatabase;
 
 /**
@@ -8,12 +9,13 @@ import net.zetetic.database.sqlcipher.SQLiteDatabase;
  * UI workflows and posting services must be added before these tables are presented as complete features.
  */
 final class EnterpriseSchema {
-    static final int VERSION = 3;
+    static final int VERSION = 4;
     private EnterpriseSchema() {}
 
     static void ensure(SQLiteDatabase db) {
         db.execSQL("PRAGMA foreign_keys=ON");
         db.execSQL("CREATE TABLE IF NOT EXISTS enterprise_meta (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)");
+        int previousSchemaVersion=readSchemaVersion(db);
         db.execSQL("CREATE TABLE IF NOT EXISTS company_settings (id INTEGER PRIMARY KEY CHECK(id=1), country_code TEXT NOT NULL DEFAULT 'SD', base_currency TEXT NOT NULL DEFAULT 'SDG', timezone TEXT NOT NULL DEFAULT 'Africa/Khartoum', language TEXT NOT NULL DEFAULT 'ar', fiscal_year_start TEXT NOT NULL DEFAULT '01-01', tax_profile TEXT NOT NULL DEFAULT 'SD_DEFAULT', business_name TEXT NOT NULL DEFAULT '')");
         db.execSQL("INSERT OR IGNORE INTO company_settings(id) VALUES(1)");
         try { db.execSQL("ALTER TABLE company_settings ADD COLUMN business_name TEXT NOT NULL DEFAULT ''"); } catch (Exception ignored) { }
@@ -75,7 +77,6 @@ final class EnterpriseSchema {
         db.execSQL("INSERT OR IGNORE INTO currencies(code,name_ar,name_en,minor_units,active) VALUES('USD','الدولار الأمريكي','US Dollar',2,1),('EUR','اليورو','Euro',2,0),('SAR','الريال السعودي','Saudi Riyal',2,1),('AED','الدرهم الإماراتي','UAE Dirham',2,1)");
         // Only Arab-region business currencies are selectable for operational accounting.
         // USD and EUR are reserved for subscription/payment and must never appear in the company ledger currency picker.
-        db.execSQL("UPDATE currencies SET active=CASE WHEN code IN ('DZD','BHD','KMF','DJF','EGP','IQD','JOD','KWD','LBP','LYD','MRU','MAD','OMR','ILS','QAR','SAR','SOS','SDG','SYP','TND','AED','YER') THEN 1 ELSE 0 END");
         db.execSQL("INSERT OR IGNORE INTO currencies(code,name_ar,name_en,minor_units,active) VALUES" +
             "('EGP','الجنيه المصري','Egyptian Pound',2,1),('LYD','الدينار الليبي','Libyan Dinar',3,1)," +
             "('SDG','الجنيه السوداني','Sudanese Pound',0,1),('SYP','الليرة السورية','Syrian Pound',2,1)," +
@@ -104,8 +105,11 @@ final class EnterpriseSchema {
             "('RUB','الروبل الروسي','Russian Ruble',2,1),('UAH','الهريفنيا الأوكرانية','Ukrainian Hryvnia',2,1)");
         // Sudanese Pound records in the existing bakery ledger use whole SDG units.
         db.execSQL("UPDATE currencies SET minor_units=0 WHERE code='SDG'");
-        // Re-apply the operational whitelist after all currency seeds.
-        db.execSQL("UPDATE currencies SET active=CASE WHEN code IN ('DZD','BHD','KMF','DJF','EGP','IQD','JOD','KWD','LBP','LYD','MRU','MAD','OMR','ILS','QAR','SAR','SOS','SDG','SYP','TND','AED','YER') THEN 1 ELSE 0 END");
+        // Apply the operational whitelist once as a schema migration. Never overwrite
+        // operator-controlled currency activation during subsequent ensure() calls.
+        if(previousSchemaVersion < VERSION) {
+            db.execSQL("UPDATE currencies SET active=CASE WHEN code IN ('DZD','BHD','KMF','DJF','EGP','IQD','JOD','KWD','LBP','LYD','MRU','MAD','OMR','ILS','QAR','SAR','SOS','SDG','SYP','TND','AED','YER') THEN 1 ELSE 0 END");
+        }
         db.execSQL("CREATE TABLE IF NOT EXISTS customers (id INTEGER PRIMARY KEY AUTOINCREMENT, customer_code TEXT NOT NULL UNIQUE, name TEXT NOT NULL COLLATE NOCASE, phone TEXT NOT NULL DEFAULT '', address TEXT NOT NULL DEFAULT '', opening_balance_minor INTEGER NOT NULL DEFAULT 0 CHECK(opening_balance_minor>=0), currency_code TEXT NOT NULL DEFAULT 'SDG' REFERENCES currencies(code), credit_limit_minor INTEGER NOT NULL DEFAULT 0 CHECK(credit_limit_minor>=0), active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0,1)), notes TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL)");
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_name_phone ON customers(name,phone)");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_customers_search ON customers(name,phone,active)");
@@ -135,6 +139,15 @@ final class EnterpriseSchema {
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_sync_outbox_pending ON sync_outbox(synced_at,created_at)");
         TaxJurisdictionProfiles.ensure(db);
         db.execSQL("INSERT OR REPLACE INTO enterprise_meta(key,value) VALUES('schema_version','" + VERSION + "')");
+    }
+
+    private static int readSchemaVersion(SQLiteDatabase db) {
+        Cursor cursor=db.rawQuery("SELECT value FROM enterprise_meta WHERE key='schema_version'",null);
+        try {
+            if(!cursor.moveToFirst())return 0;
+            try{return Integer.parseInt(cursor.getString(0));}
+            catch(NumberFormatException ignored){return 0;}
+        } finally {cursor.close();}
     }
 
     private static void seedRolePermissions(SQLiteDatabase db,String roleCode,String[] permissionCodes) {
