@@ -2411,7 +2411,22 @@ public class MainActivity extends Activity {
             } finally { db.endTransaction(); }
         }
 
-        void delete(String date,String module) { getWritableDatabase().delete("records","day=? AND module=?",new String[]{date,module}); }
+        void delete(String date,String module) {
+            SQLiteDatabase db=getWritableDatabase();
+            if ("window".equals(module) || "distribution".equals(module)) {
+                try {
+                    Cursor posted=db.rawQuery("SELECT COUNT(*) FROM accounting_documents WHERE source_module=? AND source_date=?",
+                        new String[]{module,date});
+                    try {
+                        if(posted.moveToFirst()&&posted.getLong(0)>0)
+                            throw new IllegalStateException("لا يمكن حذف سجل بيع له مستند محاسبي؛ صحّح المبالغ بحفظ تعديل موثق أو اعكس القيد أولاً");
+                    } finally { posted.close(); }
+                } catch (android.database.sqlite.SQLiteException schemaMissing) {
+                    // Older installations without the accounting bridge have no posted journal to protect.
+                }
+            }
+            db.delete("records","day=? AND module=?",new String[]{date,module});
+        }
         boolean has(String date) { Cursor c=getReadableDatabase().rawQuery("SELECT 1 FROM records WHERE day=? LIMIT 1",new String[]{date}); try{return c.moveToFirst();}finally{c.close();} }
 
         JSONArray exportAll() throws Exception {
