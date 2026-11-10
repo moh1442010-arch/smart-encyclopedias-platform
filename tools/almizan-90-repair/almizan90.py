@@ -19,6 +19,16 @@ def load():
             raise ValueError(f"{item['id']}: invalid phase")
         if item.get("status") not in {"OPEN", "IN_PROGRESS", "CLOSED"}:
             raise ValueError(f"{item['id']}: invalid status")
+        if not str(item.get("title", "")).strip():
+            raise ValueError(f"{item['id']}: missing defect title")
+        if not str(item.get("scope", "")).strip():
+            raise ValueError(f"{item['id']}: missing implementation scope")
+        criteria = item.get("acceptance_criteria")
+        tests = item.get("tests_required")
+        if not isinstance(criteria, list) or len(criteria) < 2 or not all(str(x).strip() for x in criteria):
+            raise ValueError(f"{item['id']}: at least two explicit acceptance criteria are required")
+        if not isinstance(tests, list) or not tests or not all(str(x).strip() for x in tests):
+            raise ValueError(f"{item['id']}: reproducible test requirements are missing")
     return data
 
 def valid_evidence(item):
@@ -29,6 +39,7 @@ def valid_evidence(item):
 
 def report(data):
     print("AL-MIZAN 90-DEFECT REPAIR STATUS")
+    print("REGISTER QUALITY: all 90 items have a title, implementation scope, acceptance criteria and test requirements")
     for phase, description in data["phases"].items():
         rows = [x for x in data["defects"] if x["phase"] == phase]
         closed = sum(x["status"] == "CLOSED" and valid_evidence(x) for x in rows)
