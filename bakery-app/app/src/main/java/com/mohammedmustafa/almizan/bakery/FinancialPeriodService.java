@@ -36,7 +36,8 @@ final class FinancialPeriodService {
         } finally {db.endTransaction();}
     }
 
-    static void close(SQLiteDatabase db,String code,String actor) {
+    static void close(SQLiteDatabase db,String code,String actor,String branchCode) {
+        PermissionService.requirePermission(db,actor,branchCode,"PERIOD_CLOSE");
         if(code==null||code.trim().isEmpty())throw new IllegalArgumentException("رمز الفترة مطلوب");
         if(db.inTransaction())throw new IllegalStateException("أغلق الفترة في معاملة مستقلة");
         db.beginTransaction();
@@ -69,6 +70,32 @@ final class FinancialPeriodService {
             ContentValues v=new ContentValues();v.put("status","CLOSED");v.put("closed_at",System.currentTimeMillis());
             db.update("financial_periods",v,"id=?",new String[]{String.valueOf(id)});
             audit(db,actor==null?"SYSTEM":actor,"FINANCIAL_PERIOD_CLOSED",code.trim(),"Closed by authorized actor");
+            db.setTransactionSuccessful();
+        } finally {db.endTransaction();}
+    }
+
+    static void reopen(SQLiteDatabase db,String code,String actor,String branchCode) {
+        PermissionService.requirePermission(db,actor,branchCode,"PERIOD_REOPEN");
+        if(code==null||code.trim().isEmpty())throw new IllegalArgumentException("رمز الفترة مطلوب");
+        if(db.inTransaction())throw new IllegalStateException("أعد فتح الفترة في معاملة مستقلة");
+        db.beginTransaction();
+        try {
+            Cursor p=db.rawQuery("SELECT id,status,start_date,end_date FROM financial_periods WHERE period_code=?",
+                new String[]{code.trim()});
+            long id;String status,start,end;
+            try {
+                if(!p.moveToFirst())throw new IllegalArgumentException("الفترة المالية غير موجودة");
+                id=p.getLong(0);status=p.getString(1);start=p.getString(2);end=p.getString(3);
+            } finally {p.close();}
+            if(!"CLOSED".equals(status))throw new IllegalStateException("لا يمكن إعادة فتح فترة غير مقفلة");
+            Cursor overlap=db.rawQuery("SELECT period_code FROM financial_periods WHERE id<>? AND status='OPEN' AND start_date<=? AND end_date>=? LIMIT 1",
+                new String[]{String.valueOf(id),end,start});
+            try {
+                if(overlap.moveToFirst())throw new IllegalStateException("توجد فترة مفتوحة متداخلة: "+overlap.getString(0));
+            } finally {overlap.close();}
+            ContentValues v=new ContentValues();v.put("status","OPEN");v.putNull("closed_at");
+            db.update("financial_periods",v,"id=? AND status='CLOSED'",new String[]{String.valueOf(id)});
+            audit(db,actor,"FINANCIAL_PERIOD_REOPENED",code.trim(),"Reopened by authorized actor");
             db.setTransactionSuccessful();
         } finally {db.endTransaction();}
     }
