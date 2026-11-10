@@ -2414,15 +2414,16 @@ public class MainActivity extends Activity {
         void delete(String date,String module) {
             SQLiteDatabase db=getWritableDatabase();
             if ("window".equals(module) || "distribution".equals(module)) {
-                try {
+                Cursor schema=db.rawQuery("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='accounting_documents'",null);
+                boolean bridgeExists;
+                try { schema.moveToFirst();bridgeExists=schema.getLong(0)>0; } finally { schema.close(); }
+                if(bridgeExists) {
                     Cursor posted=db.rawQuery("SELECT COUNT(*) FROM accounting_documents WHERE source_module=? AND source_date=?",
                         new String[]{module,date});
                     try {
                         if(posted.moveToFirst()&&posted.getLong(0)>0)
                             throw new IllegalStateException("لا يمكن حذف سجل بيع له مستند محاسبي؛ صحّح المبالغ بحفظ تعديل موثق أو اعكس القيد أولاً");
                     } finally { posted.close(); }
-                } catch (android.database.sqlite.SQLiteException schemaMissing) {
-                    // Older installations without the accounting bridge have no posted journal to protect.
                 }
             }
             db.delete("records","day=? AND module=?",new String[]{date,module});
