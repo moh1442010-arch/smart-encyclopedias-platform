@@ -82,8 +82,15 @@ final class AccountingDocumentService {
             try {count.moveToFirst();existingDocuments=count.getLong(0);} finally {count.close();}
             if(existingDocuments>0&&previousPayload==null)
                 throw new IllegalStateException("توجد قيود بيع سابقة دون سجلها التشغيلي؛ يلزم فحص الاستعادة قبل الحفظ");
+            Cursor reversed=db.rawQuery("SELECT COUNT(*) FROM accounting_documents WHERE source_module=? AND source_date=? AND status='REVERSED'",
+                new String[]{module,date});
+            try {reversed.moveToFirst();if(reversed.getLong(0)>0)
+                throw new IllegalStateException("يوجد مستند بيع معكوس لهذا اليوم؛ أوقفنا التعديل حتى تتم تسوية الرصيد وإعادة تأسيس الرصيد اليومي");}
+            finally {reversed.close();}
 
-            List<Line> previousLines=previousPayload==null?new ArrayList<Line>():buildSalesLines(module,previousPayload);
+            // Pre-bridge legacy rows are not trusted as an accounting baseline.
+            // The first bridged save establishes a new verified financial snapshot.
+            List<Line> previousLines=existingDocuments==0?new ArrayList<Line>():buildSalesLines(module,previousPayload);
             List<Line> delta=deltaLines(previousLines,currentLines);
 
             ContentValues record=new ContentValues();record.put("day",date);record.put("module",module);
