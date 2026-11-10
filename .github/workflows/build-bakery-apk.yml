@@ -25,7 +25,7 @@ concurrency:
 jobs:
   build:
     # Dedicated review branch and the active 2.9 feature branch may build non-commercial review APKs only.
-    if: github.ref == 'refs/heads/review/bakery-2.8.2-device-acceptance' || github.ref == 'refs/heads/feature/almizan-2.9-competitive-localization' || github.event.pull_request.head.ref == 'review/bakery-2.8.2-device-acceptance' || github.event.pull_request.head.ref == 'feature/almizan-2.9-competitive-localization'
+    if: github.ref == 'refs/heads/review/bakery-2.8.2-device-acceptance' || github.ref == 'refs/heads/feature/almizan-2.9-competitive-localization' || github.ref == 'refs/heads/feature/almizan-reversal-authorization-hardening' || github.event.pull_request.head.ref == 'review/bakery-2.8.2-device-acceptance' || github.event.pull_request.head.ref == 'feature/almizan-2.9-competitive-localization' || github.event.pull_request.head.ref == 'feature/almizan-reversal-authorization-hardening'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
