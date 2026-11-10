@@ -26,6 +26,11 @@ public class AccountingDocumentReversalInstrumentedTest {
             EnterpriseSchema.ensure(db);
             db.execSQL("INSERT INTO financial_periods(period_code,start_date,end_date,status) VALUES('REVERSAL-TEST','2026-11-01','2026-11-30','OPEN')");
             AccountingDocumentService.ensureSchema(db);
+            db.execSQL("INSERT INTO users(username,display_name,pin_salt,pin_hash,created_at) VALUES('reversal-owner','Reversal Owner',X'01',X'02',1)");
+            long userId=scalar(db,"SELECT id FROM users WHERE username='reversal-owner'",null);
+            long roleId=scalar(db,"SELECT id FROM roles WHERE role_code='OWNER'",null);
+            long branchId=scalar(db,"SELECT id FROM branches WHERE branch_code='MAIN'",null);
+            db.execSQL("INSERT INTO user_roles(user_id,role_id,branch_id) VALUES(?,?,?)",new Object[]{userId,roleId,branchId});
 
             GeneralLedger.Entry original=new GeneralLedger.Entry(
                 "DOC-REV-ORIGINAL","مستند بيع للاختبار","2026-11-10",
@@ -38,13 +43,20 @@ public class AccountingDocumentReversalInstrumentedTest {
             db.execSQL("INSERT INTO accounting_documents(document_key,document_type,source_module,source_date,currency_code,branch_code,payload_sha256,status,journal_ref,created_at,updated_at) VALUES('DOC-REV-1','SALES_ADJUSTMENT','window','2026-11-10','SDG','MAIN','test-hash','POSTED','DOC-REV-ORIGINAL',1,1)");
             long documentId=scalar(db,"SELECT id FROM accounting_documents WHERE document_key='DOC-REV-1'",null);
 
-            String reversal=AccountingDocumentService.reverseDocument(db,documentId,"2026-11-10","TEST");
+            try {
+                AccountingDocumentService.reverseDocument(db,documentId,"2026-11-10","unauthorized-user");
+                fail("A user without JOURNAL_POST must not reverse a posted document");
+            } catch(SecurityException expected) { }
+            assertEquals(1,scalar(db,"SELECT COUNT(*) FROM gl_journal_entries WHERE entry_ref='DOC-REV-ORIGINAL' AND status='POSTED'",null));
+            assertEquals(0,scalar(db,"SELECT COUNT(*) FROM gl_journal_entries WHERE entry_ref='REV-DOC-REV-ORIGINAL'",null));
+
+            String reversal=AccountingDocumentService.reverseDocument(db,documentId,"2026-11-10","reversal-owner");
             assertEquals("REV-DOC-REV-ORIGINAL",reversal);
             assertEquals("REVERSED",value(db,"SELECT status FROM accounting_documents WHERE id=?",new String[]{String.valueOf(documentId)}));
             assertEquals(reversal,value(db,"SELECT reversal_journal_ref FROM accounting_documents WHERE id=?",new String[]{String.valueOf(documentId)}));
             assertEquals(2,scalar(db,"SELECT COUNT(*) FROM gl_journal_entries WHERE status='POSTED'",null));
 
-            String retry=AccountingDocumentService.reverseDocument(db,documentId,"2026-11-11","TEST-RETRY");
+            String retry=AccountingDocumentService.reverseDocument(db,documentId,"2026-11-11","reversal-owner");
             assertEquals("retry must return the original reversal reference",reversal,retry);
             assertEquals(2,scalar(db,"SELECT COUNT(*) FROM gl_journal_entries WHERE status='POSTED'",null));
             assertEquals(1,scalar(db,"SELECT COUNT(*) FROM gl_journal_entries WHERE entry_ref=? AND reversal_of IS NOT NULL",new String[]{reversal}));

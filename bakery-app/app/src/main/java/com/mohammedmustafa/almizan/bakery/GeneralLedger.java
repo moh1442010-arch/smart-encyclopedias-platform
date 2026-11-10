@@ -173,6 +173,9 @@ final class GeneralLedger {
                 rows.getLong(4),rows.getLong(3),rows.getLong(5),rows.getLong(6)));
         } finally {rows.close();}
         if(reversedLines.size()<2)throw new IllegalStateException("القيد الأصلي لا يحتوي على سطور قابلة للعكس");
+        // Enforce authorization at the service boundary, not only in the UI.
+        for(Line line:reversedLines)
+            PermissionService.requirePermission(db,actor,line.branchCode,"JOURNAL_POST");
         String reversalReference="REV-"+originalReference;
         Entry reversal=new Entry(reversalReference,"عكس القيد "+originalReference+" — "+description,
             reversalDate,"REVERSAL",originalReference,"reverse:"+originalReference,actor,reversedLines);
