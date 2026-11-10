@@ -68,4 +68,39 @@ public class GeneralLedgerTest {
             a.idempotencyKey,a.actor,changed);
         assertFalse(GeneralLedger.samePostingPayload(a,b));
     }
+
+    @Test public void rejectsNegativeJournalAmounts() {
+        try {
+            GeneralLedger.validateLine(new GeneralLedger.Line("CASH","MAIN","SDG",-1,0,1,1));
+            fail("negative debit must be rejected");
+        } catch (IllegalArgumentException expected) { }
+    }
+
+    @Test public void rejectsDebitAndCreditOnSameLine() {
+        try {
+            GeneralLedger.validateLine(new GeneralLedger.Line("CASH","MAIN","SDG",1,1,1,1));
+            fail("a journal line cannot be both debit and credit");
+        } catch (IllegalArgumentException expected) { }
+    }
+
+    @Test public void rejectsEmptyJournalLine() {
+        try {
+            GeneralLedger.validateLine(new GeneralLedger.Line("CASH","MAIN","SDG",0,0,1,1));
+            fail("a journal line must have one positive side");
+        } catch (IllegalArgumentException expected) { }
+    }
+
+    @Test public void rejectsOverflowDuringCurrencyConversion() {
+        try {
+            GeneralLedger.toBaseMinor(Long.MAX_VALUE,Long.MAX_VALUE,1,4,4);
+            fail("overflow must not wrap into a valid ledger amount");
+        } catch (ArithmeticException expected) { }
+    }
+
+    @Test public void rejectsNonPositiveBalancedTotals() {
+        try {
+            GeneralLedger.validateBalancedTotals(-10,-10,2);
+            fail("negative totals must be rejected");
+        } catch (IllegalArgumentException expected) { }
+    }
 }
