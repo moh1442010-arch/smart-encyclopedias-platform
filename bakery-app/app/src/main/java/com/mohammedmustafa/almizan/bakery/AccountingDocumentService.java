@@ -84,6 +84,12 @@ final class AccountingDocumentService {
             try {count.moveToFirst();existingDocuments=count.getLong(0);} finally {count.close();}
             if(existingDocuments>0&&previousPayload==null)
                 throw new IllegalStateException("توجد قيود بيع سابقة دون سجلها التشغيلي؛ يلزم فحص الاستعادة قبل الحفظ");
+            Cursor unresolved=db.rawQuery("SELECT COUNT(*) FROM accounting_outbox o JOIN accounting_documents d ON d.id=o.document_id "+
+                "WHERE d.source_module=? AND d.source_date=? AND o.status<>'POSTED'",
+                new String[]{module,date});
+            try {unresolved.moveToFirst();if(unresolved.getLong(0)>0)
+                throw new IllegalStateException("يوجد ترحيل سابق لم يكتمل لهذا اليوم؛ لا تحفظ تعديلاً جديداً قبل نجاح إعادة المحاولة أو مراجعة سجل الأخطاء");}
+            finally {unresolved.close();}
             Cursor reversed=db.rawQuery("SELECT COUNT(*) FROM accounting_documents WHERE source_module=? AND source_date=? AND status='REVERSED'",
                 new String[]{module,date});
             try {reversed.moveToFirst();if(reversed.getLong(0)>0)
