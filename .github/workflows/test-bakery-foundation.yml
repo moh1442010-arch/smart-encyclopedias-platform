@@ -68,7 +68,10 @@ jobs:
   android-instrumented-tests:
     name: Android instrumented tests (API ${{ matrix.api-level }})
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # API 28 remains a diagnostic lane while GitHub's emulator image intermittently reports Unknown API Level.
+    # API 35 remains gating; API 28 is not considered validated by a runner failure.
+    continue-on-error: ${{ matrix.api-level == 28 }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -92,13 +95,23 @@ jobs:
           disable-animations: true
           working-directory: bakery-app
           script: |
-            set +e
-            gradle connectedDebugAndroidTest --stacktrace
-            test_status=$?
+            if gradle connectedDebugAndroidTest --stacktrace; then
+              test_status=0
+            else
+              test_status=$?
+            fi
             mkdir -p app/build/reports/androidTests/connected/
             adb logcat -d -v threadtime > app/build/reports/androidTests/connected/emulator-logcat.txt 2>&1 || true
             adb shell getprop > app/build/reports/androidTests/connected/emulator-getprop.txt 2>&1 || true
-            exit "$test_status"
+            if [ "$test_status" -ne 0 ]; then
+              echo "Instrumented tests failed with exit code $test_status" >&2
+              exit "$test_status"
+            fi
+            echo "Instrumented tests completed successfully."
+      - name: Record API 28 emulator validation status
+        if: always() && matrix.api-level == 28
+        run: |
+          echo "API 28 emulator execution is diagnostic-only until the runner reports a valid Android API level. A green unit-test job does not replace API 28 device validation." >> "$GITHUB_STEP_SUMMARY"
       - name: Upload instrumented test reports
         if: always()
         uses: actions/upload-artifact@v4
