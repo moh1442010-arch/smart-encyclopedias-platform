@@ -56,6 +56,14 @@ jobs:
       - name: Run bakery and factory unit tests only (no APK tasks)
         working-directory: bakery-app
         run: gradle testDebugUnitTest --stacktrace
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: al-mizan-foundation-unit-test-reports
+          path: bakery-app/app/build/reports/tests/testDebugUnitTest/
+          if-no-files-found: warn
+          retention-days: 14
   android-instrumented-tests:
     name: Android instrumented tests (API ${{ matrix.api-level }})
     runs-on: ubuntu-latest
@@ -92,11 +100,3 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Upload test reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: al-mizan-foundation-unit-test-reports
-          path: bakery-app/app/build/reports/tests/testDebugUnitTest/
-          if-no-files-found: warn
-          retention-days: 14
