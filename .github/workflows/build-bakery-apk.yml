@@ -18,9 +18,9 @@ permissions:
   contents: read
 
 concurrency:
-  # Push and pull_request events for the same PR must not cancel each other's verification.
-  group: al-mizan-bakery-release-${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
-  cancel-in-progress: false
+  # Keep only the newest candidate run per ref; stale commits must not occupy emulator/build capacity.
+  group: al-mizan-bakery-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
