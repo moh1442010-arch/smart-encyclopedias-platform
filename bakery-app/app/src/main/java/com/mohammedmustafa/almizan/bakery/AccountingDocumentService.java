@@ -4,6 +4,7 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import net.zetetic.database.sqlcipher.SQLiteDatabase;
 import java.security.MessageDigest;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -144,9 +145,9 @@ final class AccountingDocumentService {
         for(String key:keys) {
             long before=oldTotals.containsKey(key)?oldTotals.get(key):0L;
             long after=newTotals.containsKey(key)?newTotals.get(key):0L;
-            long change=after-before;
+            long change=EnterpriseMath.toLongExact(BigInteger.valueOf(after).subtract(BigInteger.valueOf(before)));
             if(change>0)result.add(new Line(key.substring(0,key.indexOf('|')),change,0,partyIds.get(key)));
-            else if(change<0)result.add(new Line(key.substring(0,key.indexOf('|')),0,-change,partyIds.get(key)));
+            else if(change<0)result.add(new Line(key.substring(0,key.indexOf('|')),0,EnterpriseMath.toLongExact(BigInteger.valueOf(change).negate()),partyIds.get(key)));
         }
         if(!result.isEmpty()) {
             long debit=0,credit=0;
