@@ -19,7 +19,7 @@ permissions:
 
 concurrency:
   # Push and pull_request events for the same PR must not cancel each other's verification.
-  group: al-mizan-bakery-release-v2-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.event_name }}
+  group: al-mizan-bakery-release-${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
