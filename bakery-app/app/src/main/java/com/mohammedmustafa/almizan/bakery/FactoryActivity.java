@@ -576,4 +576,21 @@ public class FactoryActivity extends Activity {
             d.setTransactionSuccessful();}finally{d.endTransaction();}
         }
     }
+
+    /**
+     * Opens the factory database through its versioned helper before synchronization.
+     * Legacy customer databases therefore receive their additive migrations first.
+     */
+    static FactoryLedgerSyncService.Result synchronizeFactoryLedger(android.content.Context context) {
+        DB helper=new DB(context.getApplicationContext());
+        net.zetetic.database.sqlcipher.SQLiteDatabase destination=null;
+        try {
+            net.zetetic.database.sqlcipher.SQLiteDatabase source=helper.getWritableDatabase();
+            destination=SecureDatabase.open(context.getApplicationContext(),"almizan_bakery_250.db");
+            return FactoryLedgerSyncService.synchronize(source,destination);
+        } finally {
+            if(destination!=null&&destination.isOpen())destination.close();
+            helper.close();
+        }
+    }
 }
