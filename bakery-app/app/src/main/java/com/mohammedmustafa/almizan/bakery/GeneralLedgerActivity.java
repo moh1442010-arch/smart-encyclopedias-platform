@@ -22,6 +22,7 @@ import java.util.Locale;
 public final class GeneralLedgerActivity extends Activity {
     private SQLiteDatabase db;
     private LinearLayout body;
+    private Button factorySyncButton;
     private static final int NAVY=Color.rgb(11,31,58), GOLD=Color.rgb(212,175,55);
     private boolean factorySyncRunning;
 
@@ -42,6 +43,8 @@ public final class GeneralLedgerActivity extends Activity {
             EnterpriseSchema.ensure(db);
             AccountingDocumentService.ensureSchema(db);
             render();
+            if(getDatabasePath("almizan_factory_1.db").exists()&&factorySyncButton!=null)
+                syncFactoryLedger(factorySyncButton);
         } catch(RuntimeException ex) {
             showFailure(ex);
         }
@@ -75,10 +78,10 @@ public final class GeneralLedgerActivity extends Activity {
         back.setText(AppLanguage.tr(this,"العودة إلى الرئيسية"));
         back.setOnClickListener(v->finish());
         root.addView(back);
-        Button syncFactory=new Button(this);
-        syncFactory.setText(AppLanguage.tr(this,"مزامنة قيود المصنع إلى الأستاذ العام"));
-        syncFactory.setOnClickListener(v->syncFactoryLedger(syncFactory));
-        root.addView(syncFactory);
+        factorySyncButton=new Button(this);
+        factorySyncButton.setText(AppLanguage.tr(this,"مزامنة قيود المصنع إلى الأستاذ العام"));
+        factorySyncButton.setOnClickListener(v->syncFactoryLedger(factorySyncButton));
+        root.addView(factorySyncButton);
 
         ScrollView scroll=new ScrollView(this);
         body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);
