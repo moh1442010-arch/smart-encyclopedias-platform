@@ -68,9 +68,7 @@ jobs:
   android-instrumented-tests:
     name: Android instrumented tests (API ${{ matrix.api-level }})
     runs-on: ubuntu-latest
-    # API 28 remains a diagnostic lane while GitHub's emulator image intermittently reports Unknown API Level.
-    # API 35 remains gating; API 28 is not considered validated by a runner failure.
-    continue-on-error: ${{ matrix.api-level == 28 }}
+    # Both supported API levels are gating. Emulator infrastructure failures remain visible.
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -84,6 +82,15 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      - name: Install pinned Gradle 8.9
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
+          unzip -q gradle-8.9-bin.zip
+          echo "$PWD/gradle-8.9/bin" >> "$GITHUB_PATH"
+      - name: Verify pinned Gradle version
+        run: |
+          gradle --version
+          gradle --version | grep -F "Gradle 8.9"
       - name: Run SQLCipher and database instrumented tests on Android API ${{ matrix.api-level }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -96,7 +103,16 @@ jobs:
           emulator-boot-timeout: 900
           working-directory: bakery-app
           # Keep this as one command: the emulator action executes the script through sh -c.
-          script: gradle connectedDebugAndroidTest --stacktrace
+          script: |
+            adb wait-for-device
+            for attempt in $(seq 1 60); do
+              booted="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+              if [ "$booted" = "1" ]; then break; fi
+              sleep 5
+            done
+            test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
+            adb shell pm list packages >/dev/null
+            gradle connectedDebugAndroidTest --stacktrace
       - name: Record API 28 emulator validation status
         if: always() && matrix.api-level == 28
         run: |
