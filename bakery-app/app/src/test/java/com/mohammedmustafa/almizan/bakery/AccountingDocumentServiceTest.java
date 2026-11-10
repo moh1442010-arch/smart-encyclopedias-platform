@@ -22,11 +22,12 @@ public class AccountingDocumentServiceTest {
         JSONObject payload=new JSONObject();
         payload.put("rows","عميل أ | 10 | 100 | 50 | TX-1 | 70 | 0 | 41\nعميل ب | 5 | 80 | 0 |  | 30 | 0 | 42");
         List<AccountingDocumentService.Line> lines=AccountingDocumentService.buildSalesLines("distribution",payload);
-        assertEquals(4,lines.size());
+        assertEquals(5,lines.size());
         assertEquals("1000",lines.get(0).account);assertEquals(180,lines.get(0).debit);
         assertEquals("1010",lines.get(1).account);assertEquals(50,lines.get(1).debit);
         assertEquals("1100",lines.get(2).account);assertEquals(70,lines.get(2).debit);assertEquals(41,lines.get(2).partyId);
         assertEquals("1100",lines.get(3).account);assertEquals(30,lines.get(3).debit);assertEquals(42,lines.get(3).partyId);
+        assertEquals("4000",lines.get(4).account);assertEquals(330,lines.get(4).credit);
         long debit=0,credit=0;for(AccountingDocumentService.Line line:lines){debit+=line.debit;credit+=line.credit;}
         assertEquals(debit,credit);assertEquals(330,credit);
     }
