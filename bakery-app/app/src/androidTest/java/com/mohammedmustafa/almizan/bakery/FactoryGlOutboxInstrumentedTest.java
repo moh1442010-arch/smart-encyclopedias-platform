@@ -578,4 +578,52 @@ public class FactoryGlOutboxInstrumentedTest {
             context.deleteDatabase(destinationName);context.deleteDatabase(destinationName+"-wal");context.deleteDatabase(destinationName+"-shm");
         }
     }
+
+    @Test public void inactiveBranchCannotReceiveFactoryPosting() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String sourceName="factory_gl_branch_source_"+System.currentTimeMillis()+".db";
+        String destinationName="factory_gl_branch_dest_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase source=openSource(context,sourceName),destination=openDestination(context,destinationName,"OPEN");
+        try {
+            FactoryGlOutbox.saveMapping(source,"الصندوق","1000","MISSING-BRANCH","SDG",1,1);
+            FactoryGlOutbox.saveMapping(source,"المبيعات","4000","MAIN","SDG",1,1);
+            source.beginTransaction();
+            FactoryGlOutbox.postSourceJournal(source,"INACTIVE-BRANCH-1","بيع نقدي","2026-11-09",
+                new String[]{"الصندوق","المبيعات"},new long[]{3000,0},new long[]{0,3000});
+            source.setTransactionSuccessful();source.endTransaction();
+            FactoryGlOutbox.ProcessResult result=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(1,result.retried);
+            assertEquals(0,destinationEntryCount(destination,"INACTIVE-BRANCH-1"));
+            Cursor state=source.rawQuery("SELECT status,last_error FROM factory_gl_outbox WHERE source_entry_ref='INACTIVE-BRANCH-1'",null);
+            try {assertTrue(state.moveToFirst());assertEquals("RETRY",state.getString(0));assertTrue(state.getString(1).contains("الفرع غير موجود أو غير نشط"));} finally {state.close();}
+        } finally {
+            if(source.isOpen())source.close();if(destination.isOpen())destination.close();
+            context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
+            context.deleteDatabase(destinationName);context.deleteDatabase(destinationName+"-wal");context.deleteDatabase(destinationName+"-shm");
+        }
+    }
+
+    @Test public void inactiveCurrencyCannotReceiveFactoryPosting() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String sourceName="factory_gl_currency_active_source_"+System.currentTimeMillis()+".db";
+        String destinationName="factory_gl_currency_active_dest_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase source=openSource(context,sourceName),destination=openDestination(context,destinationName,"OPEN");
+        try {
+            mapCashSale(source,"1000");
+            destination.execSQL("UPDATE currencies SET active=0 WHERE code='SDG'");
+            source.beginTransaction();
+            FactoryGlOutbox.postSourceJournal(source,"INACTIVE-CURRENCY-1","بيع نقدي","2026-11-09",
+                new String[]{"الصندوق","المبيعات"},new long[]{2500,0},new long[]{0,2500});
+            source.setTransactionSuccessful();source.endTransaction();
+            FactoryGlOutbox.ProcessResult result=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(1,result.retried);
+            assertEquals(0,destinationEntryCount(destination,"INACTIVE-CURRENCY-1"));
+            Cursor state=source.rawQuery("SELECT status,last_error FROM factory_gl_outbox WHERE source_entry_ref='INACTIVE-CURRENCY-1'",null);
+            try {assertTrue(state.moveToFirst());assertEquals("RETRY",state.getString(0));assertTrue(state.getString(1).contains("عملة غير نشطة"));} finally {state.close();}
+        } finally {
+            if(source.isOpen())source.close();if(destination.isOpen())destination.close();
+            context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
+            context.deleteDatabase(destinationName);context.deleteDatabase(destinationName+"-wal");context.deleteDatabase(destinationName+"-shm");
+        }
+    }
 }
