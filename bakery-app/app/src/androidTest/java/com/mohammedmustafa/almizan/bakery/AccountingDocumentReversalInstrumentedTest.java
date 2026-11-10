@@ -56,6 +56,10 @@ public class AccountingDocumentReversalInstrumentedTest {
             assertEquals(reversal,value(db,"SELECT reversal_journal_ref FROM accounting_documents WHERE id=?",new String[]{String.valueOf(documentId)}));
             assertEquals(2,scalar(db,"SELECT COUNT(*) FROM gl_journal_entries WHERE status='POSTED'",null));
 
+            try {
+                AccountingDocumentService.reverseDocument(db,documentId,"2026-11-11","unauthorized-user");
+                fail("An unauthorized actor must not retrieve an existing reversal reference");
+            } catch(SecurityException expected) { }
             String retry=AccountingDocumentService.reverseDocument(db,documentId,"2026-11-11","reversal-owner");
             assertEquals("retry must return the original reversal reference",reversal,retry);
             assertEquals(2,scalar(db,"SELECT COUNT(*) FROM gl_journal_entries WHERE status='POSTED'",null));
