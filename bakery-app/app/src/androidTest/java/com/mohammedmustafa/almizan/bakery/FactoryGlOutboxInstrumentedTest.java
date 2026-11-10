@@ -455,4 +455,91 @@ public class FactoryGlOutboxInstrumentedTest {
             context.deleteDatabase(name+"-shm");
         }
     }
+
+    @Test public void retryLimitMovesEventToDeadLetterWithCappedBackoff() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String sourceName="factory_gl_dead_source_"+System.currentTimeMillis()+".db";
+        String destinationName="factory_gl_dead_dest_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase source=openSource(context,sourceName),destination=openDestination(context,destinationName,"CLOSED");
+        try {
+            mapCashSale(source,"1000");
+            source.beginTransaction();
+            FactoryGlOutbox.postSourceJournal(source,"DEAD-LETTER-1","بيع نقدي","2026-11-09",
+                new String[]{"الصندوق","المبيعات"},new long[]{7000,0},new long[]{0,7000});
+            source.setTransactionSuccessful();source.endTransaction();
+            source.execSQL("UPDATE factory_gl_outbox SET attempt_count=7,next_attempt_at=0 WHERE source_entry_ref='DEAD-LETTER-1'");
+            long before=System.currentTimeMillis();
+            FactoryGlOutbox.ProcessResult result=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(1,result.deadLetter);
+            Cursor state=source.rawQuery("SELECT status,attempt_count,next_attempt_at FROM factory_gl_outbox WHERE source_entry_ref='DEAD-LETTER-1'",null);
+            try {
+                assertTrue(state.moveToFirst());
+                assertEquals("DEAD_LETTER",state.getString(0));
+                assertEquals(8,state.getInt(1));
+                assertTrue(state.getLong(2)>=before);
+                assertTrue(state.getLong(2)<=before+3600000L);
+            } finally {state.close();}
+            assertEquals(0,destinationEntryCount(destination,"DEAD-LETTER-1"));
+        } finally {
+            if(source.isOpen())source.close();if(destination.isOpen())destination.close();
+            context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
+            context.deleteDatabase(destinationName);context.deleteDatabase(destinationName+"-wal");context.deleteDatabase(destinationName+"-shm");
+        }
+    }
+
+    @Test public void firstResolvedAccountMappingIsFrozenAcrossRetry() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String sourceName="factory_gl_frozen_source_"+System.currentTimeMillis()+".db";
+        String destinationName="factory_gl_frozen_dest_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase source=openSource(context,sourceName),destination=openDestination(context,destinationName,"CLOSED");
+        try {
+            mapCashSale(source,"1000");
+            source.beginTransaction();
+            FactoryGlOutbox.postSourceJournal(source,"MAPPING-FROZEN-1","بيع نقدي","2026-11-09",
+                new String[]{"الصندوق","المبيعات"},new long[]{11000,0},new long[]{0,11000});
+            source.setTransactionSuccessful();source.endTransaction();
+
+            FactoryGlOutbox.ProcessResult first=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(1,first.retried);
+            Cursor snapshot=source.rawQuery("SELECT target_account_code FROM factory_gl_outbox_lines WHERE source_account='الصندوق'",null);
+            try {assertTrue(snapshot.moveToFirst());assertEquals("1000",snapshot.getString(0));} finally {snapshot.close();}
+
+            FactoryGlOutbox.saveMapping(source,"الصندوق","1010","MAIN","SDG",1,1);
+            destination.execSQL("UPDATE financial_periods SET status='OPEN' WHERE period_code='TEST-2026'");
+            FactoryGlOutbox.makeRetriesDueNow(source);
+            FactoryGlOutbox.ProcessResult second=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(1,second.posted);
+
+            Cursor posted=destination.rawQuery("SELECT a.account_code FROM gl_journal_entries e JOIN gl_journal_lines l ON l.entry_id=e.id JOIN chart_of_accounts a ON a.id=l.account_id WHERE e.source_type='FACTORY_LEDGER' AND e.source_id='MAPPING-FROZEN-1' ORDER BY l.id",null);
+            try {assertTrue(posted.moveToFirst());assertEquals("1000",posted.getString(0));} finally {posted.close();}
+        } finally {
+            if(source.isOpen())source.close();if(destination.isOpen())destination.close();
+            context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
+            context.deleteDatabase(destinationName);context.deleteDatabase(destinationName+"-wal");context.deleteDatabase(destinationName+"-shm");
+        }
+    }
+
+    @Test public void inactiveOrUnknownDestinationAccountCannotPostFactoryJournal() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String sourceName="factory_gl_inactive_source_"+System.currentTimeMillis()+".db";
+        String destinationName="factory_gl_inactive_dest_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase source=openSource(context,sourceName),destination=openDestination(context,destinationName,"OPEN");
+        try {
+            mapCashSale(source,"9999");
+            source.beginTransaction();
+            FactoryGlOutbox.postSourceJournal(source,"INACTIVE-ACCOUNT-1","بيع نقدي","2026-11-09",
+                new String[]{"الصندوق","المبيعات"},new long[]{5000,0},new long[]{0,5000});
+            source.setTransactionSuccessful();source.endTransaction();
+
+            FactoryGlOutbox.ProcessResult result=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(1,result.retried);
+            assertEquals(0,destinationEntryCount(destination,"INACTIVE-ACCOUNT-1"));
+            Cursor state=source.rawQuery("SELECT status,last_error FROM factory_gl_outbox WHERE source_entry_ref='INACTIVE-ACCOUNT-1'",null);
+            try {assertTrue(state.moveToFirst());assertEquals("RETRY",state.getString(0));assertTrue(state.getString(1).contains("الحساب غير موجود أو غير نشط"));} finally {state.close();}
+        } finally {
+            if(source.isOpen())source.close();if(destination.isOpen())destination.close();
+            context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
+            context.deleteDatabase(destinationName);context.deleteDatabase(destinationName+"-wal");context.deleteDatabase(destinationName+"-shm");
+        }
+    }
 }
