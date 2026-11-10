@@ -119,4 +119,50 @@ public class GeneralLedgerTest {
             fail("negative totals must be rejected");
         } catch (IllegalArgumentException expected) { }
     }
+
+    @Test public void rejectsNullAndIncompleteJournalLines() {
+        try {
+            GeneralLedger.validateLine(null);
+            fail("null journal line must be rejected");
+        } catch (IllegalArgumentException expected) { }
+        try {
+            GeneralLedger.validateLine(new GeneralLedger.Line("", "MAIN", "SDG", 1, 0, 1, 1));
+            fail("blank account code must be rejected");
+        } catch (IllegalArgumentException expected) { }
+        try {
+            GeneralLedger.validateLine(new GeneralLedger.Line("CASH", "", "SDG", 1, 0, 1, 1));
+            fail("blank branch code must be rejected");
+        } catch (IllegalArgumentException expected) { }
+        try {
+            GeneralLedger.validateLine(new GeneralLedger.Line("CASH", "MAIN", "", 1, 0, 1, 1));
+            fail("blank currency code must be rejected");
+        } catch (IllegalArgumentException expected) { }
+    }
+
+    @Test public void rejectsCreditDebitAndExchangeRateBoundaryViolations() {
+        GeneralLedger.Line[] invalid = new GeneralLedger.Line[] {
+            new GeneralLedger.Line("CASH","MAIN","SDG",0,-1,1,1),
+            new GeneralLedger.Line("CASH","MAIN","SDG",1,0,0,1),
+            new GeneralLedger.Line("CASH","MAIN","SDG",1,0,1,0),
+            new GeneralLedger.Line("CASH","MAIN","SDG",1,0,-1,1),
+            new GeneralLedger.Line("CASH","MAIN","SDG",1,0,1,-1)
+        };
+        for (GeneralLedger.Line line : invalid) {
+            try {
+                GeneralLedger.validateLine(line);
+                fail("invalid amount or FX rate must be rejected");
+            } catch (IllegalArgumentException expected) { }
+        }
+    }
+
+    @Test public void rejectsUnbalancedTotalsAndInsufficientLines() {
+        long[][] invalid = new long[][] {{100,99,2},{100,100,0},{100,100,1},{0,100,2},{100,0,2}};
+        for (long[] values : invalid) {
+            try {
+                GeneralLedger.validateBalancedTotals(values[0],values[1],(int)values[2]);
+                fail("invalid journal totals must be rejected");
+            } catch (IllegalArgumentException expected) { }
+        }
+    }
+
 }
