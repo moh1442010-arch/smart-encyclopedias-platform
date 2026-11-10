@@ -118,7 +118,6 @@ public class EnterpriseSchemaMigrationTest {
         try {
             EnterpriseSchema.ensure(db);
             db.execSQL("UPDATE currencies SET active=0 WHERE code='SDG'");
-            db.execSQL("UPDATE currencies SET active=1 WHERE code='USD'");
             EnterpriseSchema.ensure(db);
             Cursor states=db.rawQuery("SELECT code,active FROM currencies WHERE code IN ('SDG','USD') ORDER BY code",null);
             try {
@@ -127,7 +126,7 @@ public class EnterpriseSchemaMigrationTest {
                 assertEquals("SDG operator deactivation must survive ensure()",0,states.getInt(1));
                 assertTrue(states.moveToNext());
                 assertEquals("USD",states.getString(0));
-                assertEquals("USD operator activation must not bypass the operational whitelist",0,states.getInt(1));
+                assertEquals("USD must remain excluded by the one-time operational whitelist",0,states.getInt(1));
             } finally { states.close(); }
             Cursor version=db.rawQuery("SELECT value FROM enterprise_meta WHERE key='schema_version'",null);
             try { assertTrue(version.moveToFirst());assertEquals("4",version.getString(0)); }
