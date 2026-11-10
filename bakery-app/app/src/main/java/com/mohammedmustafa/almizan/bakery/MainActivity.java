@@ -692,6 +692,7 @@ public class MainActivity extends Activity {
         statusLabel = text("",14); content.addView(statusLabel);
         addDashboardSummary();
         addCard("👥 العملاء والموردون والحسابات البنكية","سجل مركزي للبحث والاختيار، وبيانات IBAN والعملات.",()->startActivity(new Intent(MainActivity.this, PartyDirectoryActivity.class)));
+         addCard("📚 الأستاذ العام وميزان المراجعة","عرض القيود المرحلة وأرصدة الحسابات ومطابقة إجمالي المدين والدائن.",()->startActivity(new Intent(MainActivity.this, GeneralLedgerActivity.class)));
         addCard("🏭 مصنع الخبائز والحلويات والباسطة","نظام مستقل للمخزون والوصفات والإنتاج والتوزيع والمبيعات والتكاليف والحسابات.",()->startActivity(new Intent(MainActivity.this, FactoryActivity.class)));
         addCard("📦 1. المخزن","أرصدة الدقيق والخميرة والأكياس والزيت والملح والوقود والمعدات. يظهر رصيد اليوم السابق تلقائيًا.",()->openModule("stock"));
         addCard("🥖 2. شغل اليوم والإنتاج","عدد جوالات الدقيق المستخدمة، عدد الأرغفة لكل جوال، وقيمة الإنتاج بالجنيه. يُخصم الدقيق تلقائيًا من المخزن.",()->openModule("cuts"));
