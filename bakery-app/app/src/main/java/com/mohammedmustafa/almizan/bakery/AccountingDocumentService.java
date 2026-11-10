@@ -135,13 +135,16 @@ final class AccountingDocumentService {
             cash=nonNegative(payload.optString("cash","0"),"نقد الشباك");
             debt=nonNegative(payload.optString("debt","0"),"ديون الشباك");
             bank=nonNegative(payload.optString("bank","0"),"تحويلات بنكك");
-            if(bank==0) {
-                String raw=payload.optString("bank_transfers","");
-                for(String row:raw.split("\\r?\\n"))if(!row.trim().isEmpty()) {
+            String transferRows=payload.optString("bank_transfers","");
+            if(!transferRows.trim().isEmpty()) {
+                long transferTotal=0;
+                for(String row:transferRows.split("\\r?\\n"))if(!row.trim().isEmpty()) {
                     String[] p=row.split("\\|",-1);
                     if(p.length<2||p[1].trim().isEmpty())throw new IllegalArgumentException("رقم عملية بنكك مفقود");
-                    bank=checkedAdd(bank,nonNegative(p[0],"تحويل بنكك"));
+                    transferTotal=checkedAdd(transferTotal,nonNegative(p[0],"تحويل بنكك"));
                 }
+                if(bank>0&&bank!=transferTotal)throw new IllegalArgumentException("إجمالي بنكك لا يطابق تفاصيل التحويلات");
+                bank=transferTotal;
             }
             if(cash>0)lines.add(new Line("1000",cash,0,0));
             if(bank>0)lines.add(new Line("1010",bank,0,0));
@@ -155,6 +158,8 @@ final class AccountingDocumentService {
                 long rowCash=nonNegative(p[2],"نقد التوزيع");
                 long rowBank=nonNegative(p[3],"بنكك التوزيع");
                 long rowDebt=nonNegative(p[5],"ديون التوزيع");
+                if(rowBank>0&&p[4].trim().isEmpty())throw new IllegalArgumentException("رقم عملية بنكك مطلوب لكل تحويل");
+                if(rowBank==0&&!p[4].trim().isEmpty())throw new IllegalArgumentException("رقم عملية بنكك لا يقبل دون مبلغ");
                 long partyId=p.length>7?nonNegative(p[7],"معرّف العميل"):0;
                 if(rowDebt>0&&partyId<=0)throw new IllegalArgumentException("كل دين توزيع يحتاج عميلاً مسجلاً");
                 cash=checkedAdd(cash,rowCash);bank=checkedAdd(bank,rowBank);debt=checkedAdd(debt,rowDebt);
@@ -193,6 +198,17 @@ final class AccountingDocumentService {
             try {if(!head.moveToFirst())continue;eventKey=head.getString(0);key=head.getString(1);date=head.getString(2);module=head.getString(3);documentStatus=head.getString(4);}
             finally {head.close();}
             if("POSTED".equals(documentStatus))continue;
+            Cursor period=db.rawQuery("SELECT COUNT(*) FROM financial_periods WHERE status='OPEN' AND start_date<=? AND end_date>=?",
+                new String[]{date,date});
+            boolean periodReady;
+            try {period.moveToFirst();periodReady=period.getLong(0)==1;} finally {period.close();}
+            if(!periodReady) {
+                ContentValues wait=new ContentValues();wait.put("status","PENDING");
+                wait.put("last_error","لا توجد فترة مالية مفتوحة واحدة تغطي تاريخ المستند");
+                wait.put("next_attempt_at",System.currentTimeMillis()+300_000L);wait.put("updated_at",System.currentTimeMillis());
+                db.update("accounting_outbox",wait,"id=?",new String[]{String.valueOf(outboxId)});
+                continue;
+            }
             ContentValues processing=new ContentValues();processing.put("status","PROCESSING");processing.put("updated_at",System.currentTimeMillis());
             db.update("accounting_outbox",processing,"id=?",new String[]{String.valueOf(outboxId)});
             try {
