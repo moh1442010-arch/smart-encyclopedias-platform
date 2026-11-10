@@ -235,7 +235,7 @@
     {
       "id": "D12",
       "phase": "P1",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "evidence": null,
       "title": "Financial period close",
       "scope": "Authorized users must close and reopen accounting periods with an audit trail and controlled close checks.",
@@ -247,7 +247,8 @@
         "period close",
         "reopen authorization",
         "audit history"
-      ]
+      ],
+      "work_note": "أضيفت صلاحيات PERIOD_CLOSE وPERIOD_REOPEN للأدوار OWNER وMANAGER، وصلاحية الإقفال للمحاسب، مع فحص صلاحية المستخدم والفرع داخل FinancialPeriodService وسجل تدقيق للإقفال وإعادة الفتح. أضيف اختبار Android instrumented لدورة الإقفال وإعادة الفتح ورفض المستخدم غير المصرح. لم يعتمد البند بعد؛ ينتظر نجاح CI واختبار واجهة الاستخدام ومسار الإقفال الفعلي."
     },
     {
       "id": "D13",
