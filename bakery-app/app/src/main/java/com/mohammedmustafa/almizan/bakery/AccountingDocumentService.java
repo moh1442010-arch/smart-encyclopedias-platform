@@ -54,55 +54,54 @@ final class AccountingDocumentService {
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_accounting_outbox_status ON accounting_outbox(status,next_attempt_at,id)");
     }
 
-    /** Save the operational sales record and its immutable accounting snapshot in one DB transaction. */
+    /**
+     * The UI stores a daily aggregate, not individual invoices. Each save therefore
+     * posts only the financial delta from the previous saved snapshot. Posted revisions
+     * are immutable; corrections become new balanced adjustment documents.
+     */
     static void saveSalesSnapshot(SQLiteDatabase db,String date,String module,org.json.JSONObject payload) {
         if(db==null||!db.isOpen())throw new IllegalStateException("قاعدة بيانات المخبز غير متاحة");
         if(!GeneralLedger.validDate(date)||payload==null||!("window".equals(module)||"distribution".equals(module)))
             throw new IllegalArgumentException("مستند البيع أو تاريخه غير صحيح");
         ensureSchema(db);
-        List<Line> lines=buildSalesLines(module,payload);
-        String key="SALES:"+module+":"+date;
-        String hash=hash(module+"|"+date+"|"+payload.toString()+"|"+canonical(lines));
+        List<Line> currentLines=buildSalesLines(module,payload);
         long now=System.currentTimeMillis();
         long documentId=-1;
         boolean shouldQueue=false;
         db.beginTransaction();
         try {
-            Cursor old=db.rawQuery("SELECT id,payload_sha256,status FROM accounting_documents WHERE document_key=?",new String[]{key});
-            try {
-                if(old.moveToFirst()) {
-                    documentId=old.getLong(0);
-                    String oldHash=old.getString(1),status=old.getString(2);
-                    if(!hash.equals(oldHash)) {
-                        if(!"DRAFT".equals(status))
-                            throw new IllegalStateException("المستند مرحّل أو قيد الترحيل ولا يجوز استبداله. اعكس المستند أولاً ثم أنشئ نسخة جديدة.");
-                        db.delete("accounting_document_lines","document_id=?",new String[]{String.valueOf(documentId)});
-                        db.delete("accounting_outbox","document_id=?",new String[]{String.valueOf(documentId)});
-                        ContentValues update=new ContentValues();update.put("payload_sha256",hash);
-                        update.put("updated_at",now);update.put("status","DRAFT");
-                        db.update("accounting_documents",update,"id=?",new String[]{String.valueOf(documentId)});
-                    }
-                }
-            } finally {old.close();}
+            JSONObject previousPayload=null;
+            Cursor oldRecord=db.rawQuery("SELECT payload FROM records WHERE day=? AND module=?",new String[]{date,module});
+            try {if(oldRecord.moveToFirst())previousPayload=new JSONObject(oldRecord.getString(0));}
+            catch(Exception ex){throw new IllegalStateException("تعذر قراءة سجل البيع السابق؛ أوقفنا الترحيل لحماية الأرصدة",ex);}
+            finally {oldRecord.close();}
+
+            long existingDocuments=0;
+            Cursor count=db.rawQuery("SELECT COUNT(*) FROM accounting_documents WHERE source_module=? AND source_date=?",
+                new String[]{module,date});
+            try {count.moveToFirst();existingDocuments=count.getLong(0);} finally {count.close();}
+            if(existingDocuments>0&&previousPayload==null)
+                throw new IllegalStateException("توجد قيود بيع سابقة دون سجلها التشغيلي؛ يلزم فحص الاستعادة قبل الحفظ");
+
+            List<Line> previousLines=previousPayload==null?new ArrayList<Line>():buildSalesLines(module,previousPayload);
+            List<Line> delta=deltaLines(previousLines,currentLines);
+
             ContentValues record=new ContentValues();record.put("day",date);record.put("module",module);
             record.put("payload",payload.toString());record.put("updated_at",now);
             db.insertWithOnConflict("records",null,record,SQLiteDatabase.CONFLICT_REPLACE);
-            if(documentId<0) {
-                ContentValues head=new ContentValues();head.put("document_key",key);head.put("document_type","SALES_INVOICE");
+
+            // Notes or formatting can change without changing the financial snapshot.
+            // Save the operational data, but never create a zero-value journal.
+            if(!delta.isEmpty()) {
+                String key="SALES:"+module+":"+date+":R"+(existingDocuments+1);
+                String hash=hash(module+"|"+date+"|"+payload.toString()+"|"+canonical(delta));
+                ContentValues head=new ContentValues();head.put("document_key",key);head.put("document_type","SALES_ADJUSTMENT");
                 head.put("source_module",module);head.put("source_date",date);head.put("currency_code",CURRENCY);
-                head.put("branch_code",BRANCH);head.put("payload_sha256",hash);head.put("status","DRAFT");
+                head.put("branch_code",BRANCH);head.put("payload_sha256",hash);head.put("status","QUEUED");
                 head.put("created_at",now);head.put("updated_at",now);
                 documentId=db.insertOrThrow("accounting_documents",null,head);
-            } else {
-                Cursor existing=db.rawQuery("SELECT COUNT(*) FROM accounting_document_lines WHERE document_id=?",new String[]{String.valueOf(documentId)});
-                try {existing.moveToFirst();if(existing.getLong(0)>0&&!hash.equals(scalar(db,"SELECT payload_sha256 FROM accounting_documents WHERE id=?",new String[]{String.valueOf(documentId)})))throw new IllegalStateException("تعذر التحقق من نسخة المستند");}
-                finally {existing.close();}
-            }
-            Cursor lineCount=db.rawQuery("SELECT COUNT(*) FROM accounting_document_lines WHERE document_id=?",new String[]{String.valueOf(documentId)});
-            boolean hasLines;try{lineCount.moveToFirst();hasLines=lineCount.getLong(0)>0;}finally{lineCount.close();}
-            if(!hasLines) {
                 int index=0;
-                for(Line line:lines) {
+                for(Line line:delta) {
                     ContentValues v=new ContentValues();v.put("document_id",documentId);v.put("line_no",index++);
                     v.put("account_code",line.account);v.put("branch_code",BRANCH);v.put("currency_code",CURRENCY);
                     v.put("debit_minor",line.debit);v.put("credit_minor",line.credit);
@@ -110,21 +109,55 @@ final class AccountingDocumentService {
                     v.put("fx_rate_num",1);v.put("fx_rate_den",1);
                     db.insertOrThrow("accounting_document_lines",null,v);
                 }
-            }
-            String base=scalar(db,"SELECT base_currency FROM company_settings WHERE id=1",null);
-            // Current bakery sales inputs are SDG-denominated. Never guess an FX rate.
-            if(CURRENCY.equals(base)&&!lines.isEmpty()) {
+                long debit=0,credit=0;
+                for(Line line:delta){debit=checkedAdd(debit,line.debit);credit=checkedAdd(credit,line.credit);}
+                GeneralLedger.validateBalancedTotals(debit,credit,delta.size());
+
                 String eventKey="ACCOUNTING_POST:"+key+":"+hash;
                 ContentValues event=new ContentValues();event.put("document_id",documentId);event.put("event_key",eventKey);
                 event.put("status","PENDING");event.put("created_at",now);event.put("updated_at",now);
-                db.insertWithOnConflict("accounting_outbox",null,event,SQLiteDatabase.CONFLICT_IGNORE);
-                ContentValues queued=new ContentValues();queued.put("status","QUEUED");queued.put("updated_at",now);
-                db.update("accounting_documents",queued,"id=? AND status='DRAFT'",new String[]{String.valueOf(documentId)});
+                db.insertOrThrow("accounting_outbox",null,event);
                 shouldQueue=true;
             }
             db.setTransactionSuccessful();
         } finally {db.endTransaction();}
         if(shouldQueue)processPending(db);
+    }
+
+    /** Signed debit-minus-credit delta, grouped by account and customer subledger. */
+    static List<Line> deltaLines(List<Line> previous,List<Line> current) {
+        java.util.TreeMap<String,Long> oldTotals=new java.util.TreeMap<>();
+        java.util.TreeMap<String,Long> newTotals=new java.util.TreeMap<>();
+        java.util.TreeMap<String,Long> partyIds=new java.util.TreeMap<>();
+        accumulateSigned(previous,oldTotals,partyIds);
+        accumulateSigned(current,newTotals,partyIds);
+        java.util.TreeSet<String> keys=new java.util.TreeSet<>();
+        keys.addAll(oldTotals.keySet());keys.addAll(newTotals.keySet());
+        List<Line> result=new ArrayList<>();
+        for(String key:keys) {
+            long before=oldTotals.containsKey(key)?oldTotals.get(key):0L;
+            long after=newTotals.containsKey(key)?newTotals.get(key):0L;
+            long change=after-before;
+            if(change>0)result.add(new Line(key.substring(0,key.indexOf('|')),change,0,partyIds.get(key)));
+            else if(change<0)result.add(new Line(key.substring(0,key.indexOf('|')),0,-change,partyIds.get(key)));
+        }
+        if(!result.isEmpty()) {
+            long debit=0,credit=0;
+            for(Line line:result){debit=checkedAdd(debit,line.debit);credit=checkedAdd(credit,line.credit);}
+            GeneralLedger.validateBalancedTotals(debit,credit,result.size());
+        }
+        return result;
+    }
+
+    private static void accumulateSigned(List<Line> lines,java.util.Map<String,Long> totals,java.util.Map<String,Long> partyIds) {
+        for(Line line:lines) {
+            String key=line.account+"|"+line.partyId;
+            long signed=line.debit-line.credit;
+            long old=totals.containsKey(key)?totals.get(key):0L;
+            if(signed>0&&old>Long.MAX_VALUE-signed)throw new ArithmeticException("sales delta overflow");
+            if(signed<0&&old<Long.MIN_VALUE-signed)throw new ArithmeticException("sales delta overflow");
+            totals.put(key,old+signed);partyIds.put(key,line.partyId);
+        }
     }
 
     static List<Line> buildSalesLines(String module,org.json.JSONObject payload) {
@@ -198,6 +231,14 @@ final class AccountingDocumentService {
             try {if(!head.moveToFirst())continue;eventKey=head.getString(0);key=head.getString(1);date=head.getString(2);module=head.getString(3);documentStatus=head.getString(4);}
             finally {head.close();}
             if("POSTED".equals(documentStatus))continue;
+            String baseCurrency=scalar(db,"SELECT base_currency FROM company_settings WHERE id=1",null);
+            if(!CURRENCY.equals(baseCurrency)) {
+                ContentValues wait=new ContentValues();wait.put("status","PENDING");
+                wait.put("last_error","عملة المنشأة الأساسية ليست SDG؛ لم يتم تحويل مبالغ البيع دون سعر صرف موثق");
+                wait.put("next_attempt_at",System.currentTimeMillis()+600_000L);wait.put("updated_at",System.currentTimeMillis());
+                db.update("accounting_outbox",wait,"id=?",new String[]{String.valueOf(outboxId)});
+                continue;
+            }
             Cursor period=db.rawQuery("SELECT COUNT(*) FROM financial_periods WHERE status='OPEN' AND start_date<=? AND end_date>=?",
                 new String[]{date,date});
             boolean periodReady;
@@ -218,7 +259,7 @@ final class AccountingDocumentService {
                 try {while(rows.moveToNext())glLines.add(new GeneralLedger.Line(rows.getString(0),rows.getString(1),rows.getString(2),
                     rows.getLong(3),rows.getLong(4),rows.getLong(5),rows.getLong(6)));}
                 finally {rows.close();}
-                String ref="SALE-"+("window".equals(module)?"WIN":"DIST")+"-"+date.replace("-","");
+                String ref="SALE-"+("window".equals(module)?"WIN":"DIST")+"-"+date.replace("-","")+"-"+key.substring(key.lastIndexOf(":R")+2);
                 GeneralLedger.Entry entry=new GeneralLedger.Entry(ref,"مبيعات "+("window".equals(module)?"الشباك":"التوزيع")+" "+date,
                     date,SOURCE_TYPE,key,eventKey,"SYSTEM",glLines);
                 GeneralLedger.post(db,entry);
