@@ -97,4 +97,19 @@ public class AccountingDocumentServiceTest {
         try {AccountingDocumentService.deltaLines(oldLines,newLines);fail("Expected overflow rejection");}
         catch(ArithmeticException expected) { assertNotNull(expected); }
     }
+
+    @Test public void windowRejectsLegacyBankAmountWithoutTransactionReference() throws Exception {
+        JSONObject payload=new JSONObject();
+        payload.put("cash","0");payload.put("debt","0");payload.put("bank","100");
+        payload.put("bank_transfers","");payload.put("bank_ref","");
+        try {AccountingDocumentService.buildSalesLines("window",payload);fail("Expected missing bank reference");}
+        catch(IllegalArgumentException expected){assertTrue(expected.getMessage().contains("رقم عملية"));}
+    }
+
+    @Test public void distributionPriceDifferenceIsNotPostedToAnUnmappedAccount() throws Exception {
+        JSONObject payload=new JSONObject();
+        payload.put("rows","عميل | 1 | 100 | 0 |  | 0 | 25 | 41");
+        try {AccountingDocumentService.buildSalesLines("distribution",payload);fail("Expected unmapped price difference rejection");}
+        catch(IllegalArgumentException expected){assertTrue(expected.getMessage().contains("حساباً محاسبياً"));}
+    }
 }
