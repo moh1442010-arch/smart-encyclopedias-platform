@@ -254,13 +254,17 @@ jobs:
 
       - name: Smoke test signed APK on minimum Android API 28
         # Run the full SQLCipher/ledger/backup instrumentation suite on the declared minimum API.
-        timeout-minutes: 20
+        # Hosted runners can intermittently expose the emulator before its Android properties are ready.
+        timeout-minutes: 22
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 28
           target: default
           arch: x86_64
           profile: pixel_2
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
           script: |
             (cd bakery-app && gradle connectedDebugAndroidTest)
             adb uninstall com.mohammedmustafa.almizan.bakery || true
