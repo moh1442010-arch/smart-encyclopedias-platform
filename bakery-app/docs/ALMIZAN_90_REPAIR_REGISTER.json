@@ -78,529 +78,1530 @@
       "id": "D03",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Balanced journal validation",
+      "scope": "Every GL posting path must reject journals with fewer than two lines, one-sided lines, negative amounts, overflow, or unequal base-currency debit and credit.",
+      "acceptance_criteria": [
+        "unbalanced and one-line journals are rejected before writes; failed posts leave no journal, lines, idempotency or audit rows.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "GeneralLedger validation tests",
+        "posting rollback tests"
+      ]
     },
     {
       "id": "D04",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Sales-to-GL posting",
+      "scope": "Every completed bakery and factory sale must create one traceable balanced GL journal using configured accounts and the sale's actual payment split.",
+      "acceptance_criteria": [
+        "cash, Bankak, bank, credit and mixed-tender sales post exactly once; source sale and GL references reconcile.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "cash sale",
+        "credit sale",
+        "mixed tender",
+        "duplicate sale posting"
+      ]
     },
     {
       "id": "D05",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Receipt-to-GL posting",
+      "scope": "Customer receipts and allocations must post to cash or bank and reduce receivables without changing the source receipt.",
+      "acceptance_criteria": [
+        "full and partial receipts post once; unallocated and allocated balances reconcile to customer subledger.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "full receipt",
+        "partial receipt",
+        "duplicate receipt",
+        "allocation mismatch"
+      ]
     },
     {
       "id": "D06",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Purchases-to-GL posting",
+      "scope": "Supplier invoices and material purchases must update inventory or expense and accounts payable through a balanced GL journal.",
+      "acceptance_criteria": [
+        "invoice, tax, payable and inventory amounts reconcile; failed posting rolls back all destination rows.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "purchase invoice",
+        "supplier credit",
+        "duplicate purchase",
+        "rollback"
+      ]
     },
     {
       "id": "D07",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Expense-to-GL posting",
+      "scope": "Every approved operating expense must post to the correct expense and cash, bank or payable account.",
+      "acceptance_criteria": [
+        "expense source and GL post once; invalid account, closed period or invalid amount is rejected.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "cash expense",
+        "bank expense",
+        "payable expense",
+        "duplicate expense"
+      ]
     },
     {
       "id": "D08",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Production-to-GL posting",
+      "scope": "Material consumption, WIP, labor, overhead, finished goods and production variances must post with source batch references.",
+      "acceptance_criteria": [
+        "production issue and completion entries balance; WIP and finished inventory reconcile to batch costs.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "production issue",
+        "partial completion",
+        "completion",
+        "variance",
+        "duplicate batch"
+      ]
     },
     {
       "id": "D09",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Idempotent source posting",
+      "scope": "All source posting services must use stable idempotency keys and reject changed payloads under an existing key.",
+      "acceptance_criteria": [
+        "same key and payload returns the original result; same key with changed payload creates no new balances.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "same-payload replay",
+        "changed-payload replay",
+        "concurrent duplicate"
+      ]
     },
     {
       "id": "D10",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Immutable source references",
+      "scope": "Every GL journal must retain a stable source type, source ID, document reference and traceable audit record.",
+      "acceptance_criteria": [
+        "source reference is unique per posting; source-to-GL drill-down resolves the exact source document.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "source reference uniqueness",
+        "audit trace",
+        "orphan source detection"
+      ]
     },
     {
       "id": "D11",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Document-linked reversals",
+      "scope": "Corrections must use full reversing journals and replacement documents rather than deleting or silently editing posted entries.",
+      "acceptance_criteria": [
+        "original remains posted; reversal is equal and opposite; duplicate reversal is prevented; source document status reconciles.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "reverse journal",
+        "duplicate reversal",
+        "reverse-of-reversal rejection"
+      ]
     },
     {
       "id": "D12",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Financial period close",
+      "scope": "Authorized users must close and reopen accounting periods with an audit trail and controlled close checks.",
+      "acceptance_criteria": [
+        "closed status persists; close/reopen actions record actor and timestamp; close is blocked when required controls fail.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "period close",
+        "reopen authorization",
+        "audit history"
+      ]
     },
     {
       "id": "D13",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Closed-period posting block",
+      "scope": "No source or manual posting may create a GL entry in a closed or nonexistent financial period.",
+      "acceptance_criteria": [
+        "posting to closed or missing period is rejected atomically; retryable source event remains visible.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "closed-period rejection",
+        "missing-period rejection",
+        "no partial GL rows"
+      ]
     },
     {
       "id": "D14",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Trial balance reconciliation",
+      "scope": "Trial balance totals must derive only from posted GL lines and balance to the ledger control totals.",
+      "acceptance_criteria": [
+        "debit equals credit in base currency; drafts and reversed entries are treated consistently; report totals match SQL ledger totals.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "trial balance fixture",
+        "draft exclusion",
+        "reversal netting"
+      ]
     },
     {
       "id": "D15",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Customer subledger reconciliation",
+      "scope": "Customer balances, invoices, credits and receipts must reconcile to the GL receivables control account.",
+      "acceptance_criteria": [
+        "per-customer open balance equals subledger movement and GL control total; differences are reported, not hidden.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "customer opening",
+        "invoice",
+        "partial receipt",
+        "credit note",
+        "reconciliation"
+      ]
     },
     {
       "id": "D16",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Supplier subledger reconciliation",
+      "scope": "Supplier invoices, credits, payments and allocations must reconcile to the GL payables control account.",
+      "acceptance_criteria": [
+        "per-supplier payable equals subledger movement and GL control total; unallocated payments remain identifiable.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "supplier invoice",
+        "partial payment",
+        "purchase return",
+        "reconciliation"
+      ]
     },
     {
       "id": "D17",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Cash and Bankak reconciliation",
+      "scope": "Cash drawers, Bankak references, bank transfers and closing balances must reconcile to their GL accounts.",
+      "acceptance_criteria": [
+        "opening plus receipts less payments and adjustments equals closing balance; duplicate references are detected.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "cash close",
+        "Bankak receipt",
+        "transfer",
+        "duplicate reference"
+      ]
     },
     {
       "id": "D18",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Inventory-to-GL reconciliation",
+      "scope": "Inventory quantities and valuation must reconcile to inventory control accounts under one documented costing policy.",
+      "acceptance_criteria": [
+        "quantity and value movements reconcile by item and location; adjustments and cost of goods sold are traceable.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "opening stock",
+        "receipt",
+        "issue",
+        "sale",
+        "return",
+        "stock valuation"
+      ]
     },
     {
       "id": "D19",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Tax control reconciliation",
+      "scope": "Output tax, input tax, payable tax and tax credits must reconcile between source documents and GL control accounts.",
+      "acceptance_criteria": [
+        "tax totals are grouped by jurisdiction and tax code; unposted or mismatched tax is reported.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "taxable sale",
+        "purchase input tax",
+        "credit note",
+        "tax control reconciliation"
+      ]
     },
     {
       "id": "D20",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Returns and credit notes",
+      "scope": "Sales and purchase returns must reverse financial, tax, receivable/payable and stock effects exactly once.",
+      "acceptance_criteria": [
+        "return references original document; quantities and values cannot exceed eligible remainder; repeat return is blocked.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "partial return",
+        "full return",
+        "duplicate return",
+        "stock and GL reconciliation"
+      ]
     },
     {
       "id": "D21",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Supplier partial payments",
+      "scope": "Supplier payments must support allocation across invoices and preserve unapplied balances.",
+      "acceptance_criteria": [
+        "partial and multi-invoice allocations reconcile to cash/bank and payables; over-allocation is rejected.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "partial payment",
+        "multi-invoice allocation",
+        "overpayment"
+      ]
     },
     {
       "id": "D22",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Customer partial settlements",
+      "scope": "Customer receipts must support partial allocation, advance balances and collection history.",
+      "acceptance_criteria": [
+        "allocated and unallocated amounts reconcile; customer balance and aging update without duplication.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "partial receipt",
+        "advance",
+        "multi-invoice allocation",
+        "over-allocation"
+      ]
     },
     {
       "id": "D23",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Income statement",
+      "scope": "The income statement must derive revenue, returns, cost of sales and expenses from posted accounts for a selected period.",
+      "acceptance_criteria": [
+        "report period and account mapping are explicit; net income matches a verified fixture and GL balances.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "income statement fixture",
+        "date boundaries",
+        "account classification"
+      ]
     },
     {
       "id": "D24",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Statement of financial position",
+      "scope": "The balance sheet must report assets, liabilities and equity with retained earnings and a balanced accounting equation.",
+      "acceptance_criteria": [
+        "assets equal liabilities plus equity; opening balances and period profit are handled consistently.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "balance sheet fixture",
+        "retained earnings",
+        "equation validation"
+      ]
     },
     {
       "id": "D25",
       "phase": "P1",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Cash flow statement",
+      "scope": "Cash flows must classify operating, investing and financing movements and reconcile opening to closing cash.",
+      "acceptance_criteria": [
+        "net cash movement equals change in cash and cash equivalents; noncash entries are excluded or adjusted.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "operating flow",
+        "asset purchase",
+        "financing",
+        "cash reconciliation"
+      ]
     },
     {
       "id": "D26",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Inventory valuation policy",
+      "scope": "A single documented and consistently applied costing method must govern receipts, issues, WIP and finished goods.",
+      "acceptance_criteria": [
+        "cost method is explicit per company; item valuation and COGS use the same method; legacy stock is migrated without silent repricing.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "FIFO or weighted-average fixture",
+        "receipt/issue",
+        "migration valuation"
+      ]
     },
     {
       "id": "D27",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Material issue costing",
+      "scope": "Material issues must be linked to production orders and valued using the approved inventory cost method.",
+      "acceptance_criteria": [
+        "issued quantity and value match the batch consumption record and inventory ledger; insufficient stock is rejected.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "material issue",
+        "partial issue",
+        "price variance",
+        "stock shortage"
+      ]
     },
     {
       "id": "D28",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Labor absorption",
+      "scope": "Direct labor time and payroll cost must be allocated to production batches using approved rates.",
+      "acceptance_criteria": [
+        "labor allocation is traceable by employee, period and batch; allocated labor reconciles to payroll and WIP.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "labor time",
+        "wage rate",
+        "split batch",
+        "payroll tie-out"
+      ]
     },
     {
       "id": "D29",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Manufacturing overhead absorption",
+      "scope": "Indirect factory costs such as energy and machine costs must be allocated by a documented driver.",
+      "acceptance_criteria": [
+        "overhead rate and driver are stored; allocated amount reconciles to actual overhead and batch cost.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "overhead driver",
+        "multiple batches",
+        "variance reconciliation"
+      ]
     },
     {
       "id": "D30",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "WIP and finished-goods costing",
+      "scope": "Completion must transfer the actual accumulated WIP cost into finished inventory without duplication.",
+      "acceptance_criteria": [
+        "finished-goods cost equals materials, labor and overhead less scrap/variance treatment; WIP clears correctly.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "full completion",
+        "partial completion",
+        "repeated completion"
+      ]
     },
     {
       "id": "D31",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Partial production amendments",
+      "scope": "Changes to partially completed orders must preserve prior consumption and recalculate only remaining quantities.",
+      "acceptance_criteria": [
+        "amendments retain audit history; prior issues are not replayed; revised plan and actual cost reconcile.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "increase quantity",
+        "decrease quantity",
+        "changed recipe",
+        "partial completion"
+      ]
     },
     {
       "id": "D32",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Production cancellation",
+      "scope": "Cancellation after posting must reverse remaining WIP, material, labor and overhead effects through traceable entries.",
+      "acceptance_criteria": [
+        "posted stages are reversed once; consumed or completed stock is not silently deleted; cancellation leaves reconciled balances.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "cancel before issue",
+        "cancel after issue",
+        "cancel after partial completion"
+      ]
     },
     {
       "id": "D33",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Negative inventory prevention",
+      "scope": "All stock issue, transfer, production and sales paths must enforce available quantity under transaction locks.",
+      "acceptance_criteria": [
+        "concurrent and sequential operations cannot create negative stock unless an explicitly authorized policy allows it.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "insufficient stock",
+        "concurrent issue",
+        "sale/production race"
+      ]
     },
     {
       "id": "D34",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Inventory movement reconciliation",
+      "scope": "Receipts, issues, transfers, production, sales, returns and adjustments must reconcile to item balances.",
+      "acceptance_criteria": [
+        "opening plus movements equals closing quantity and value for each item/location; no movement is counted twice.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "movement roll-forward",
+        "transfer",
+        "production",
+        "return",
+        "adjustment"
+      ]
     },
     {
       "id": "D35",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Single-count waste accounting",
+      "scope": "Production spoilage and waste must reduce stock and affect cost once, with reason and source batch.",
+      "acceptance_criteria": [
+        "waste quantity, value and GL impact occur once; waste is not also included in an unrelated expense deduction.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "waste once",
+        "duplicate waste",
+        "reason code",
+        "cost reconciliation"
+      ]
     },
     {
       "id": "D36",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Production and material returns",
+      "scope": "Unused material and rejected/returned finished goods must reverse the original movement using linked quantities and costs.",
+      "acceptance_criteria": [
+        "return cannot exceed issued/produced quantity; cost and inventory are restored at original valuation; duplicate return blocked.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "unused material return",
+        "finished goods rejection",
+        "duplicate return"
+      ]
     },
     {
       "id": "D37",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Bakery-factory stock reconciliation",
+      "scope": "Shared items and inter-unit transfers must reconcile between separate bakery and factory databases.",
+      "acceptance_criteria": [
+        "each transfer has paired source/destination references; both ledgers agree on quantity and value after retries.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "transfer out/in",
+        "interrupted transfer",
+        "duplicate delivery",
+        "reconciliation"
+      ]
     },
     {
       "id": "D38",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Sales currency model",
+      "scope": "Sales documents must store transaction currency, functional currency, dated exchange rate and base-currency values.",
+      "acceptance_criteria": [
+        "currency and rate are persisted per document; historic documents retain original values after rate changes.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "SDG sale",
+        "foreign currency sale",
+        "rate change",
+        "historic read"
+      ]
     },
     {
       "id": "D39",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Receipt currency model",
+      "scope": "Receipts and allocations must retain received currency, invoice currency, exchange rate and realized difference.",
+      "acceptance_criteria": [
+        "cross-currency allocations are traceable and calculate realized FX differences correctly.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "same currency receipt",
+        "cross currency receipt",
+        "partial allocation"
+      ]
     },
     {
       "id": "D40",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Cash and bank currency model",
+      "scope": "Cash and bank accounts must maintain currency-specific balances and base-currency valuation.",
+      "acceptance_criteria": [
+        "foreign-currency movements retain currency and dated rate; account balances reconcile by currency and base currency.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "cash foreign currency",
+        "bank transfer",
+        "revaluation"
+      ]
     },
     {
       "id": "D41",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Expense currency model",
+      "scope": "Expenses must retain source currency, tax currency where applicable, exchange rate and base amount.",
+      "acceptance_criteria": [
+        "expense amount is not overwritten by conversion; base value and rate are auditable.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "foreign currency expense",
+        "changed rate",
+        "tax-inclusive expense"
+      ]
     },
     {
       "id": "D42",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Foreign-exchange differences",
+      "scope": "Realized and unrealized exchange differences must post to designated gain/loss accounts using dated rates.",
+      "acceptance_criteria": [
+        "difference is calculated without floating point; GL postings balance and are traceable to source rates.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "realized settlement",
+        "period revaluation",
+        "rounding boundary"
+      ]
     },
     {
       "id": "D43",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Historical currency preservation",
+      "scope": "Currency schema upgrades must preserve every historical amount and original currency meaning.",
+      "acceptance_criteria": [
+        "migration is additive and idempotent; no historical amount is reinterpreted or silently converted.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "legacy migration",
+        "repeated migration",
+        "before/after totals"
+      ]
     },
     {
       "id": "D44",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Tax engine on sales",
+      "scope": "Tax calculation must be attached to sales lines and invoice totals with effective-dated jurisdiction rules.",
+      "acceptance_criteria": [
+        "line and invoice tax are reproducible from saved rule/version; exemptions and rounding are explicit.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "taxable sale",
+        "exempt item",
+        "zero-rated item",
+        "rounding"
+      ]
     },
     {
       "id": "D45",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Tax engine on purchases",
+      "scope": "Input tax calculation must be attached to supplier invoice lines and retained for recoverability rules.",
+      "acceptance_criteria": [
+        "purchase tax and recoverable portion are explicit; unsupported jurisdiction rules cannot auto-apply.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "taxable purchase",
+        "nonrecoverable tax",
+        "unknown profile"
+      ]
     },
     {
       "id": "D46",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Output tax GL posting",
+      "scope": "Sales output tax must post to the correct tax liability account and reconcile to tax reports.",
+      "acceptance_criteria": [
+        "tax liability is separated from revenue and posted once per invoice/credit note.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "output tax posting",
+        "duplicate invoice",
+        "credit note"
+      ]
     },
     {
       "id": "D47",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Input tax GL posting",
+      "scope": "Recoverable input tax must post to the designated tax receivable account and reconcile to purchase documents.",
+      "acceptance_criteria": [
+        "recoverable and nonrecoverable tax are distinguished; GL and tax report totals agree.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "input tax posting",
+        "mixed recoverability",
+        "purchase return"
+      ]
     },
     {
       "id": "D48",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Unverified jurisdiction enforcement",
+      "scope": "REVIEW_REQUIRED or UNVERIFIED tax profiles must prevent automatic compliance claims and unsupported tax calculation.",
+      "acceptance_criteria": [
+        "unverified profiles are visibly marked and tax auto-posting is blocked or requires explicit configured rule.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "unverified profile",
+        "missing rule",
+        "reviewed profile"
+      ]
     },
     {
       "id": "D49",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Country tax configuration",
+      "scope": "Each supported country must have documented effective dates, rates, thresholds, exemptions and invoice requirements before activation.",
+      "acceptance_criteria": [
+        "only reviewed country profiles can be enabled; unsupported tax treatment remains disabled.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "country profile completeness",
+        "effective-date switch",
+        "threshold"
+      ]
     },
     {
       "id": "D50",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Tax on returns and credit notes",
+      "scope": "Returns and credit notes must reverse the original tax treatment and preserve original jurisdiction/rate.",
+      "acceptance_criteria": [
+        "tax reversal matches returned quantity and original invoice tax; repeat credit note is blocked.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "partial taxed return",
+        "full return",
+        "rate changed after invoice"
+      ]
     },
     {
       "id": "D51",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Payroll lifecycle",
+      "scope": "Payroll must cover periods, attendance, advances, deductions, approval, payment and employee statements.",
+      "acceptance_criteria": [
+        "payroll totals reconcile to employee lines and payment records; edits after approval require controlled reversal.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "attendance",
+        "advance",
+        "deductions",
+        "approval",
+        "payment"
+      ]
     },
     {
       "id": "D52",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Payroll GL posting",
+      "scope": "Approved payroll must post gross wages, deductions, advances and net payable/cash to GL once.",
+      "acceptance_criteria": [
+        "payroll posting balances and reconciles by period and employee control totals.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "payroll posting",
+        "duplicate posting",
+        "reversal",
+        "closed period"
+      ]
     },
     {
       "id": "D53",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Fixed asset lifecycle",
+      "scope": "Assets must support acquisition, useful life, depreciation schedule, impairment or disposal and audit history.",
+      "acceptance_criteria": [
+        "asset register reconciles to cost and accumulated depreciation; disposal gain/loss is calculated correctly.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "asset acquisition",
+        "depreciation",
+        "disposal",
+        "partial disposal"
+      ]
     },
     {
       "id": "D54",
       "phase": "P2",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Depreciation and disposal GL posting",
+      "scope": "Depreciation and disposal must create balanced traceable GL journals in open periods.",
+      "acceptance_criteria": [
+        "monthly depreciation posts once; disposal clears cost and accumulated depreciation and posts gain/loss.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "depreciation run",
+        "duplicate run",
+        "disposal",
+        "closed period"
+      ]
     },
     {
       "id": "D55",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Current APK and guide alignment",
+      "scope": "The user guide and download page must identify the actual supported APK version and must not advertise an obsolete build as current.",
+      "acceptance_criteria": [
+        "store, guide and artifact version agree; withdrawn versions are clearly marked and not offered as current.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "store version guard",
+        "guide metadata check"
+      ]
     },
     {
       "id": "D56",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Release change history",
+      "scope": "Each release must include a complete user-facing change log with migration and compatibility notes.",
+      "acceptance_criteria": [
+        "version history is ordered and identifies changes, fixes, data migration and known limitations.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "changelog completeness",
+        "version sequence"
+      ]
     },
     {
       "id": "D57",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Implemented-versus-planned documentation",
+      "scope": "Documentation must distinguish working features, partial features, planned features and unavailable features.",
+      "acceptance_criteria": [
+        "no planned feature is described as released; each claimed capability links to evidence or is labeled planned.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "documentation claim audit",
+        "feature-evidence links"
+      ]
     },
     {
       "id": "D58",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Reproducible accounting acceptance report",
+      "scope": "A standalone acceptance report must document fixtures, expected values, actual values, test commands and evidence.",
+      "acceptance_criteria": [
+        "independent reviewer can reproduce accounting acceptance from the report and CI artifacts.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "report schema validation",
+        "reproduce fixture calculations"
+      ]
     },
     {
       "id": "D59",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "English user guide",
+      "scope": "Provide complete English guidance for setup, daily operations, accounting, backup, licensing and troubleshooting.",
+      "acceptance_criteria": [
+        "English guide covers every released workflow and matches current UI labels.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "English guide coverage",
+        "link and terminology check"
+      ]
     },
     {
       "id": "D60",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Complete bilingual localization",
+      "scope": "All screens, dialogs, validation messages, invoices, reports and exports must support Arabic and English.",
+      "acceptance_criteria": [
+        "no user-facing hard-coded untranslated strings remain; both language suites pass.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "resource audit",
+        "language switching",
+        "screen coverage"
+      ]
     },
     {
       "id": "D61",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "RTL and LTR layout",
+      "scope": "Arabic and English layouts must render correctly across forms, tables, dialogs, numbers and printed output.",
+      "acceptance_criteria": [
+        "RTL and LTR layouts preserve alignment, field order and numeric readability on supported screen sizes.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "RTL screenshot/layout tests",
+        "LTR tests",
+        "long text"
+      ]
     },
     {
       "id": "D62",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "SQLCipher database encryption",
+      "scope": "Every operational and enterprise database must use SQLCipher rather than plaintext SQLite.",
+      "acceptance_criteria": [
+        "database opens only through encrypted helper; all app DB files are encrypted at rest.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "database header inspection",
+        "SQLCipher open",
+        "plaintext rejection"
+      ]
     },
     {
       "id": "D63",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Plain SQLite rejection",
+      "scope": "Encrypted database files must not be readable through ordinary SQLite without the application key.",
+      "acceptance_criteria": [
+        "SQLite CLI cannot read protected database content; SQLCipher with correct key can.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "plain SQLite rejection",
+        "wrong-key rejection"
+      ]
     },
     {
       "id": "D64",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Android Keystore key protection",
+      "scope": "Database encryption keys must be protected using Android Keystore-backed key material and not stored as plaintext secrets.",
+      "acceptance_criteria": [
+        "key material is not present in source, preferences or logs; keystore invalidation is handled safely.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "keystore inspection",
+        "backup/restore key behavior",
+        "log scan"
+      ]
     },
     {
       "id": "D65",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Legacy database migration safety",
+      "scope": "Database upgrades must be additive, transactional and preserve historical rows, indexes and balances.",
+      "acceptance_criteria": [
+        "upgrade from each supported baseline completes once; rollback or recovery is available on failure.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "2.8.0 migration",
+        "repeated migration",
+        "row and balance comparison"
+      ]
     },
     {
       "id": "D66",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Encrypted backup tamper detection",
+      "scope": "Encrypted backup files must detect wrong passwords, truncation and modified ciphertext before restore.",
+      "acceptance_criteria": [
+        "authentication failure occurs before database mutation; no partial restore is possible.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "wrong password",
+        "bit flip",
+        "truncation",
+        "header tamper"
+      ]
     },
     {
       "id": "D67",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Unified restore policy",
+      "scope": "Bakery, factory and enterprise database restore must follow one documented validation and recovery policy.",
+      "acceptance_criteria": [
+        "all included DBs are validated together; unsupported versions are rejected consistently.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "legacy backup",
+        "partial backup",
+        "mixed schema versions"
+      ]
     },
     {
       "id": "D68",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Atomic pre-restore snapshot",
+      "scope": "A complete pre-restore snapshot must cover every database and required metadata before any restore begins.",
+      "acceptance_criteria": [
+        "snapshot is created and verified before mutation; failure to snapshot aborts restore.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "snapshot completeness",
+        "snapshot write failure"
+      ]
     },
     {
       "id": "D69",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Atomic restore rollback",
+      "scope": "A failed restore of any database must restore all databases to their pre-restore state.",
+      "acceptance_criteria": [
+        "forced failure at each restore stage leaves original DBs intact and records recovery outcome.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "fail bakery restore",
+        "fail factory restore",
+        "fail enterprise restore"
+      ]
     },
     {
       "id": "D70",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Complete enterprise data restore",
+      "scope": "Restore must include users, roles, branches, periods, currencies, tax profiles, audit logs, payroll and assets.",
+      "acceptance_criteria": [
+        "restored record counts and relationships match backup; foreign keys and access controls remain valid.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "full enterprise backup round trip",
+        "integrity checks"
+      ]
     },
     {
       "id": "D71",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Server-backed trial identity",
+      "scope": "Trial entitlement must be anchored to server-side account/device state, not only deletable local preferences.",
+      "acceptance_criteria": [
+        "trial start and expiry are signed or server-verified and survive app data clearing/reinstall within policy.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "first trial",
+        "app data clear",
+        "offline grace"
+      ]
     },
     {
       "id": "D72",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Trial reset prevention",
+      "scope": "Reinstalling or clearing local data must not grant a new seven-day trial.",
+      "acceptance_criteria": [
+        "same device/license identity cannot restart trial; server outage follows documented offline policy.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "reinstall replay",
+        "clock rollback",
+        "offline restart"
+      ]
     },
     {
       "id": "D73",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "License gate on every route",
+      "scope": "Every protected Activity, deep link, notification and navigation path must enforce the same entitlement gate.",
+      "acceptance_criteria": [
+        "expired or unlicensed user cannot reach protected screens by back/home/direct Activity intents.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "direct Activity",
+        "home button",
+        "back stack",
+        "deep link",
+        "notification"
+      ]
     },
     {
       "id": "D74",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "License continuity across upgrades and restore",
+      "scope": "Valid license and entitlement state must survive compatible app upgrades and approved backup restoration.",
+      "acceptance_criteria": [
+        "upgrade and restore retain valid license without extending or shortening term improperly.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "upgrade valid license",
+        "restore",
+        "revoked license",
+        "offline grace"
+      ]
     },
     {
       "id": "D75",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Installed-version upgrade preservation",
+      "scope": "Upgrade from withdrawn 2.8.1/2.8.2 or supported baseline must preserve records and signing identity while applying security policy.",
+      "acceptance_criteria": [
+        "same package and signing certificate; row counts and balances preserved; unsupported old version receives update block when online.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "upgrade install",
+        "signature verification",
+        "data comparison",
+        "policy endpoint"
+      ]
     },
     {
       "id": "D76",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Signing certificate continuity",
+      "scope": "Review and release APKs must use the approved long-term signing certificate and package identity.",
+      "acceptance_criteria": [
+        "certificate SHA-256 equals approved fingerprint; package/version metadata match; update install succeeds.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "apksigner fingerprint",
+        "package identity",
+        "update install"
+      ]
     },
     {
       "id": "D77",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Modern Android compatibility",
+      "scope": "The app must install and launch on Android 15/API 35 and supported target configurations.",
+      "acceptance_criteria": [
+        "API 35 install, launch and core navigation complete without crash or permission regression.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "API 35 emulator smoke",
+        "permission checks",
+        "navigation"
+      ]
     },
     {
       "id": "D78",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Abrupt shutdown durability",
+      "scope": "Transactions and backup operations must survive process termination or power interruption without partial records.",
+      "acceptance_criteria": [
+        "database integrity passes after forced process kill; transaction is wholly committed or rolled back.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "kill during journal save",
+        "kill during backup",
+        "reopen integrity"
+      ]
     },
     {
       "id": "D79",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Low-storage backup and restore",
+      "scope": "Low storage must not corrupt source databases or leave partially restored files.",
+      "acceptance_criteria": [
+        "insufficient-space errors occur before destructive mutation or trigger full rollback.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "quota/low-storage simulation",
+        "restore rollback"
+      ]
     },
     {
       "id": "D80",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Financial report source reconciliation",
+      "scope": "Every report total must be traceable to underlying documents, subledgers and posted GL entries.",
+      "acceptance_criteria": [
+        "report fixture totals equal independently computed source totals; drafts and duplicates excluded.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "sales report tie-out",
+        "stock valuation",
+        "GL report tie-out"
+      ]
     },
     {
       "id": "D81",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "End-to-end daily operation",
+      "scope": "A full bakery and factory operating day must complete from opening stock through production, sales, collections, returns, waste and close.",
+      "acceptance_criteria": [
+        "quantities, cash, Bankak, credit, expenses, stock and GL reconcile at day close.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "daily bakery workflow",
+        "factory workflow",
+        "close report"
+      ]
     },
     {
       "id": "D82",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Independent accounting review",
+      "scope": "A qualified reviewer must inspect accounting policies, mappings, financial statements, edge cases and evidence before release.",
+      "acceptance_criteria": [
+        "review findings are resolved or formally accepted; reviewer report and version hash are retained.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "independent review checklist",
+        "evidence pack"
+      ]
     },
     {
       "id": "D83",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Multi-currency product price lists",
+      "scope": "Product price lists must store a currency per price and support separate lists without overwriting base prices.",
+      "acceptance_criteria": [
+        "each list retains currency and effective date; displayed price matches selected list.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "create SDG/SAR/AED list",
+        "edit",
+        "switch list"
+      ]
     },
     {
       "id": "D84",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Multi-currency sales invoice",
+      "scope": "Sales invoices must support selecting transaction currency and a dated exchange rate while retaining base-currency values.",
+      "acceptance_criteria": [
+        "invoice stores currency, rate, transaction amount and base amount; historical invoice remains unchanged after rate updates.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "foreign currency sale",
+        "rate change",
+        "total reconciliation"
+      ]
     },
     {
       "id": "D85",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Direct warehouse item adjustment",
+      "scope": "Warehouse item rows must provide a controlled adjustment action with a reason, user and stock movement record.",
+      "acceptance_criteria": [
+        "adjustment changes quantity through a ledger movement, not direct balance overwrite; audit record is created.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "increase",
+        "decrease",
+        "negative stock rejection",
+        "audit"
+      ]
     },
     {
       "id": "D86",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Correct prior goods receipt",
+      "scope": "Prior goods receipt corrections must use reversal or adjustment documents instead of silent edits.",
+      "acceptance_criteria": [
+        "posted receipt remains immutable; correction links to original and recalculates stock and GL once.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "partial receipt correction",
+        "full reversal",
+        "duplicate correction"
+      ]
     },
     {
       "id": "D87",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Item movement and valuation card",
+      "scope": "Each material must expose quantity, value, average cost, receipts, issues, consumption, waste and linked movements.",
+      "acceptance_criteria": [
+        "item card totals reconcile to stock ledger and GL valuation; filters preserve item identity.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "item card fixture",
+        "movement drilldown",
+        "valuation tie-out"
+      ]
     },
     {
       "id": "D88",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Foreign-currency supplier invoice",
+      "scope": "Supplier invoices must support non-SDG transaction currency and a documented dated FX rate.",
+      "acceptance_criteria": [
+        "invoice retains original currency and rate; stock cost and payable base value reconcile.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "foreign currency purchase",
+        "FX update",
+        "supplier payable tie-out"
+      ]
     },
     {
       "id": "D89",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Live warehouse movement view",
+      "scope": "Warehouse screen must show current receipts, issues, adjustments and post-movement balances immediately after save.",
+      "acceptance_criteria": [
+        "saved movement refreshes all affected rows and balances without stale cache or duplicate application.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "receive",
+        "issue",
+        "adjustment",
+        "screen refresh",
+        "repeated refresh"
+      ]
     },
     {
       "id": "D90",
       "phase": "P3",
       "status": "OPEN",
-      "evidence": null
+      "evidence": null,
+      "title": "Warehouse edit and production synchronization",
+      "scope": "Warehouse edits, production consumption and stock views must remain synchronized with audit trails and concurrency controls.",
+      "acceptance_criteria": [
+        "concurrent edits cannot overwrite movements; production sees current stock; every adjustment has actor and source reference.",
+        "Operation is atomic and auditable; source records and balances remain unchanged on failure."
+      ],
+      "tests_required": [
+        "warehouse edit",
+        "concurrent production issue",
+        "audit and reconciliation"
+      ]
     }
-  ]
+  ],
+  "metadata": {
+    "requirements_expanded_on": "2026-11-10",
+    "requirements_source": "bakery-app/docs/REHABILITATION_REGISTER_2_8_2_AR.md",
+    "note": "D03-D90 descriptions and acceptance tests are expanded from the approved Arabic rehabilitation register. Statuses remain unchanged until evidence gates pass."
+  }
 }
