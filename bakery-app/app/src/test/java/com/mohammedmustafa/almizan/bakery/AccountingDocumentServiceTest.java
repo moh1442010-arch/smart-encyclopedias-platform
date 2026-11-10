@@ -43,4 +43,39 @@ public class AccountingDocumentServiceTest {
         try {AccountingDocumentService.buildSalesLines("window",payload);fail("Expected negative amount rejection");}
         catch(IllegalArgumentException expected){assertTrue(expected.getMessage().contains("سالب"));}
     }
+
+    @Test public void laterDailySavePostsOnlyPositiveFinancialDelta() throws Exception {
+        List<AccountingDocumentService.Line> oldLines=AccountingDocumentService.buildSalesLines("window",new JSONObject("{\"cash\":\"100\",\"debt\":\"20\",\"bank\":\"0\"}"));
+        List<AccountingDocumentService.Line> newLines=AccountingDocumentService.buildSalesLines("window",new JSONObject("{\"cash\":\"150\",\"debt\":\"20\",\"bank\":\"0\"}"));
+        List<AccountingDocumentService.Line> delta=AccountingDocumentService.deltaLines(oldLines,newLines);
+        assertEquals(2,delta.size());
+        assertEquals("1000",delta.get(0).account);assertEquals(50,delta.get(0).debit);
+        assertEquals("4000",delta.get(1).account);assertEquals(50,delta.get(1).credit);
+    }
+
+    @Test public void dailyCorrectionDownwardPostsBalancedReclassification() throws Exception {
+        List<AccountingDocumentService.Line> oldLines=AccountingDocumentService.buildSalesLines("window",new JSONObject("{\"cash\":\"150\",\"debt\":\"0\",\"bank\":\"0\"}"));
+        List<AccountingDocumentService.Line> newLines=AccountingDocumentService.buildSalesLines("window",new JSONObject("{\"cash\":\"100\",\"debt\":\"0\",\"bank\":\"0\"}"));
+        List<AccountingDocumentService.Line> delta=AccountingDocumentService.deltaLines(oldLines,newLines);
+        assertEquals(2,delta.size());
+        assertEquals("1000",delta.get(0).account);assertEquals(50,delta.get(0).credit);
+        assertEquals("4000",delta.get(1).account);assertEquals(50,delta.get(1).debit);
+        long debit=0,credit=0;for(AccountingDocumentService.Line line:delta){debit+=line.debit;credit+=line.credit;}
+        assertEquals(debit,credit);
+    }
+
+    @Test public void sameFinancialSnapshotCreatesNoJournalDelta() throws Exception {
+        List<AccountingDocumentService.Line> oldLines=AccountingDocumentService.buildSalesLines("window",new JSONObject("{\"cash\":\"100\",\"debt\":\"0\",\"bank\":\"0\"}"));
+        List<AccountingDocumentService.Line> newLines=AccountingDocumentService.buildSalesLines("window",new JSONObject("{\"cash\":\"100\",\"debt\":\"0\",\"bank\":\"0\",\"notes\":\"updated\"}"));
+        assertTrue(AccountingDocumentService.deltaLines(oldLines,newLines).isEmpty());
+    }
+
+    @Test public void distributionCustomerSubledgerChangeCreatesCustomerSpecificDelta() throws Exception {
+        List<AccountingDocumentService.Line> oldLines=AccountingDocumentService.buildSalesLines("distribution",new JSONObject("{\"rows\":\"عميل أ | 1 | 0 | 0 |  | 100 | 0 | 41\"}"));
+        List<AccountingDocumentService.Line> newLines=AccountingDocumentService.buildSalesLines("distribution",new JSONObject("{\"rows\":\"عميل ب | 1 | 0 | 0 |  | 100 | 0 | 42\"}"));
+        List<AccountingDocumentService.Line> delta=AccountingDocumentService.deltaLines(oldLines,newLines);
+        assertEquals(2,delta.size());
+        assertEquals(41,delta.get(0).partyId);assertEquals(100,delta.get(0).credit);
+        assertEquals(42,delta.get(1).partyId);assertEquals(100,delta.get(1).debit);
+    }
 }
