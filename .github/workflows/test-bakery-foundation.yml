@@ -23,9 +23,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: al-mizan-foundation-tests-${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
-  # Preserve emulator matrix runs; newer commits queue instead of cancelling API 28/35 validation.
-  cancel-in-progress: false
+  # Cancel stale commits on the same ref so the latest source receives the emulator capacity.
+  group: al-mizan-foundation-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   unit-tests:
