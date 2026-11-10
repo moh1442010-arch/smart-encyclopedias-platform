@@ -42,7 +42,7 @@ final class AccountingDocumentService {
         db.execSQL("CREATE TABLE IF NOT EXISTS accounting_outbox ("+
             "id INTEGER PRIMARY KEY AUTOINCREMENT,document_id INTEGER NOT NULL UNIQUE REFERENCES accounting_documents(id),"+
             "event_key TEXT NOT NULL UNIQUE,status TEXT NOT NULL CHECK(status IN ('PENDING','PROCESSING','RETRY','POSTED','DEAD_LETTER')),"+
-            "attempts INTEGER NOT NULL DEFAULT 0,last_error TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL)");
+            "attempts INTEGER NOT NULL DEFAULT 0,last_error TEXT NOT NULL DEFAULT '',next_attempt_at INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS accounting_posting_links ("+
             "document_id INTEGER PRIMARY KEY REFERENCES accounting_documents(id),journal_ref TEXT NOT NULL UNIQUE,"+
             "linked_at INTEGER NOT NULL)");
@@ -50,7 +50,8 @@ final class AccountingDocumentService {
             "id INTEGER PRIMARY KEY AUTOINCREMENT,document_id INTEGER NOT NULL REFERENCES accounting_documents(id),"+
             "old_payload_sha256 TEXT NOT NULL,new_payload_sha256 TEXT NOT NULL,reason TEXT NOT NULL,actor TEXT NOT NULL,"+
             "created_at INTEGER NOT NULL)");
-        db.execSQL("CREATE INDEX IF NOT EXISTS idx_accounting_outbox_status ON accounting_outbox(status,id)");
+        try { db.execSQL("ALTER TABLE accounting_outbox ADD COLUMN next_attempt_at INTEGER NOT NULL DEFAULT 0"); } catch (Exception ignored) { }
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_accounting_outbox_status ON accounting_outbox(status,next_attempt_at,id)");
     }
 
     /** Save the operational sales record and its immutable accounting snapshot in one DB transaction. */
@@ -126,8 +127,9 @@ final class AccountingDocumentService {
         if(shouldQueue)processPending(db);
     }
 
-    private static List<Line> buildSalesLines(String module,org.json.JSONObject payload) {
+    static List<Line> buildSalesLines(String module,org.json.JSONObject payload) {
         List<Line> lines=new ArrayList<>();
+        List<Line> receivables=new ArrayList<>();
         long cash=0,bank=0,debt=0;
         if("window".equals(module)) {
             cash=nonNegative(payload.optString("cash","0"),"نقد الشباك");
@@ -156,10 +158,11 @@ final class AccountingDocumentService {
                 long partyId=p.length>7?nonNegative(p[7],"معرّف العميل"):0;
                 if(rowDebt>0&&partyId<=0)throw new IllegalArgumentException("كل دين توزيع يحتاج عميلاً مسجلاً");
                 cash=checkedAdd(cash,rowCash);bank=checkedAdd(bank,rowBank);debt=checkedAdd(debt,rowDebt);
+                if(rowDebt>0)receivables.add(new Line("1100",rowDebt,0,partyId));
             }
             if(cash>0)lines.add(new Line("1000",cash,0,0));
             if(bank>0)lines.add(new Line("1010",bank,0,0));
-            if(debt>0)lines.add(new Line("1100",debt,0,0));
+            if(debt>0)lines.addAll(receivables);
         }
         long revenue=checkedAdd(checkedAdd(cash,bank),debt);
         if(revenue>0)lines.add(new Line("4000",0,revenue,0));
@@ -172,9 +175,11 @@ final class AccountingDocumentService {
         // Recover events left PROCESSING by an abrupt process stop.
         ContentValues recover=new ContentValues();recover.put("status","RETRY");recover.put("updated_at",System.currentTimeMillis());
         db.update("accounting_outbox",recover,"status='PROCESSING'",null);
+        long now=System.currentTimeMillis();
         Cursor pending=db.rawQuery("SELECT o.id,o.document_id,o.event_key,d.document_key,d.source_date,d.source_module,d.status "+
             "FROM accounting_outbox o JOIN accounting_documents d ON d.id=o.document_id "+
-            "WHERE o.status IN ('PENDING','RETRY') ORDER BY o.id LIMIT 100",null);
+            "WHERE o.status IN ('PENDING','RETRY') AND o.next_attempt_at<=? ORDER BY o.id LIMIT 100",
+            new String[]{String.valueOf(now)});
         List<long[]> ids=new ArrayList<>();
         try {while(pending.moveToNext())ids.add(new long[]{pending.getLong(0),pending.getLong(1)});}
         finally {pending.close();}
@@ -217,8 +222,10 @@ final class AccountingDocumentService {
                 try {
                     Cursor attempt=db.rawQuery("SELECT attempts FROM accounting_outbox WHERE id=?",new String[]{String.valueOf(outboxId)});
                     int count;try{attempt.moveToFirst();count=attempt.getInt(0)+1;}finally{attempt.close();}
+                    long delay=Math.min(6L*60L*60L*1000L,30_000L*(1L<<Math.min(count-1,10)));
                     ContentValues retry=new ContentValues();retry.put("attempts",count);
                     retry.put("status",count>=8?"DEAD_LETTER":"RETRY");retry.put("last_error",String.valueOf(ex.getMessage()));
+                    retry.put("next_attempt_at",System.currentTimeMillis()+delay);
                     retry.put("updated_at",System.currentTimeMillis());db.update("accounting_outbox",retry,"id=?",new String[]{String.valueOf(outboxId)});
                     db.setTransactionSuccessful();
                 } finally {db.endTransaction();}
