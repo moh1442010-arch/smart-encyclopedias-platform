@@ -56,7 +56,7 @@ jobs:
           fi
       - name: Run bakery and factory unit tests only (no APK tasks)
         working-directory: bakery-app
-        run: gradle testDebugUnitTest --stacktrace
+        run: gradle testDebugUnitTest compileDebugAndroidTestJavaWithJavac --stacktrace
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -88,10 +88,17 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_2
-          emulator-options: -no-window -no-audio -no-boot-anim -camera-back none
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -no-snapshot-save -memory 4096 -cores 2 -partition-size 4096 -gpu swiftshader_indirect -camera-back none
           disable-animations: true
           working-directory: bakery-app
-          script: gradle connectedDebugAndroidTest --stacktrace
+          script: |
+            set +e
+            gradle connectedDebugAndroidTest --stacktrace
+            test_status=$?
+            mkdir -p app/build/reports/androidTests/connected/
+            adb logcat -d -v threadtime > app/build/reports/androidTests/connected/emulator-logcat.txt 2>&1 || true
+            adb shell getprop > app/build/reports/androidTests/connected/emulator-getprop.txt 2>&1 || true
+            exit "$test_status"
       - name: Upload instrumented test reports
         if: always()
         uses: actions/upload-artifact@v4
