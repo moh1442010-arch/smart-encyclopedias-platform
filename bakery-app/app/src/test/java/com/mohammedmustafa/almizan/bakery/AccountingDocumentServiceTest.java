@@ -78,4 +78,23 @@ public class AccountingDocumentServiceTest {
         assertEquals(41,delta.get(0).partyId);assertEquals(100,delta.get(0).credit);
         assertEquals(42,delta.get(1).partyId);assertEquals(100,delta.get(1).debit);
     }
+
+    @Test public void windowRejectsBankTransferTotalMismatch() throws Exception {
+        JSONObject payload=new JSONObject();
+        payload.put("cash","0");payload.put("debt","0");payload.put("bank","100");
+        payload.put("bank_transfers","90 | TX-90");
+        try {AccountingDocumentService.buildSalesLines("window",payload);fail("Expected bank total mismatch");}
+        catch(IllegalArgumentException expected){assertTrue(expected.getMessage().contains("لا يطابق"));}
+    }
+
+    @Test public void correctionDeltaOverflowIsRejected() {
+        List<AccountingDocumentService.Line> oldLines=java.util.Arrays.asList(
+            new AccountingDocumentService.Line("1000",Long.MAX_VALUE,0,0),
+            new AccountingDocumentService.Line("4000",0,Long.MAX_VALUE,0));
+        List<AccountingDocumentService.Line> newLines=java.util.Arrays.asList(
+            new AccountingDocumentService.Line("1000",0,Long.MAX_VALUE,0),
+            new AccountingDocumentService.Line("4000",Long.MAX_VALUE,0,0));
+        try {AccountingDocumentService.deltaLines(oldLines,newLines);fail("Expected overflow rejection");}
+        catch(ArithmeticException expected) { assertNotNull(expected); }
+    }
 }
