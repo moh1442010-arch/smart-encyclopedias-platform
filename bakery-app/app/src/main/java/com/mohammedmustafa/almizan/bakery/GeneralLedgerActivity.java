@@ -190,7 +190,6 @@ public final class GeneralLedgerActivity extends Activity {
                 if(destination!=null&&destination.isOpen())destination.close();
             }
             final String resultMessage=message;
-            final boolean resultClean=clean;
             runOnUiThread(()->{
                 if(isFinishing()||isDestroyed())return;
                 factorySyncRunning=false;
