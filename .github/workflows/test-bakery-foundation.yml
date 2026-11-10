@@ -23,7 +23,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: al-mizan-foundation-tests-${{ github.event.pull_request.head.ref || github.ref }}
+  group: al-mizan-foundation-tests-v2-${{ github.event.pull_request.head.ref || github.ref }}
   # Preserve emulator matrix runs; newer commits queue instead of cancelling API 28/35 validation.
   cancel-in-progress: false
 
@@ -71,7 +71,7 @@ jobs:
     # API 28 remains a diagnostic lane while GitHub's emulator image intermittently reports Unknown API Level.
     # API 35 remains gating; API 28 is not considered validated by a runner failure.
     continue-on-error: ${{ matrix.api-level == 28 }}
-    timeout-minutes: 60
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
