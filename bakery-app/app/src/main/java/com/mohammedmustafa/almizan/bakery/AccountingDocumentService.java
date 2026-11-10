@@ -21,7 +21,7 @@ final class AccountingDocumentService {
 
     private AccountingDocumentService() {}
 
-    private static final class Line {
+    static final class Line {
         final String account;
         final long debit, credit, partyId;
         Line(String account,long debit,long credit,long partyId) {
