@@ -34,7 +34,7 @@ final class AccountingDocumentService {
             "id INTEGER PRIMARY KEY AUTOINCREMENT,document_key TEXT NOT NULL UNIQUE,document_type TEXT NOT NULL,"+
             "source_module TEXT NOT NULL,source_date TEXT NOT NULL,currency_code TEXT NOT NULL,branch_code TEXT NOT NULL,"+
             "payload_sha256 TEXT NOT NULL,status TEXT NOT NULL CHECK(status IN ('DRAFT','QUEUED','POSTED','REVERSED','ERROR')),"+
-            "journal_ref TEXT,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL)");
+            "journal_ref TEXT,reversal_journal_ref TEXT,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS accounting_document_lines ("+
             "id INTEGER PRIMARY KEY AUTOINCREMENT,document_id INTEGER NOT NULL REFERENCES accounting_documents(id) ON DELETE CASCADE,"+
             "line_no INTEGER NOT NULL,account_code TEXT NOT NULL,branch_code TEXT NOT NULL,currency_code TEXT NOT NULL,"+
@@ -53,6 +53,8 @@ final class AccountingDocumentService {
             "old_payload_sha256 TEXT NOT NULL,new_payload_sha256 TEXT NOT NULL,reason TEXT NOT NULL,actor TEXT NOT NULL,"+
             "created_at INTEGER NOT NULL)");
         try { db.execSQL("ALTER TABLE accounting_outbox ADD COLUMN next_attempt_at INTEGER NOT NULL DEFAULT 0"); } catch (Exception ignored) { }
+        try { db.execSQL("ALTER TABLE accounting_documents ADD COLUMN reversal_journal_ref TEXT"); } catch (Exception ignored) { }
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_accounting_document_reversal_ref ON accounting_documents(reversal_journal_ref)");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_accounting_outbox_status ON accounting_outbox(status,next_attempt_at,id)");
     }
 
@@ -314,16 +316,18 @@ final class AccountingDocumentService {
 
     static String reverseDocument(SQLiteDatabase db,long documentId,String reversalDate,String actor) {
         ensureSchema(db);
-        String ref;
-        Cursor c=db.rawQuery("SELECT journal_ref,status FROM accounting_documents WHERE id=?",new String[]{String.valueOf(documentId)});
+        String ref,existingReversal=null,status;
+        Cursor c=db.rawQuery("SELECT journal_ref,status,reversal_journal_ref FROM accounting_documents WHERE id=?",new String[]{String.valueOf(documentId)});
         try {
-            if(!c.moveToFirst()||!"POSTED".equals(c.getString(1)))throw new IllegalStateException("المستند غير مرحّل أو غير موجود");
-            ref=c.getString(0);
+            if(!c.moveToFirst())throw new IllegalStateException("المستند غير مرحّل أو غير موجود");
+            ref=c.getString(0);status=c.getString(1);existingReversal=c.getString(2);
+            if("REVERSED".equals(status)&&existingReversal!=null&&!existingReversal.trim().isEmpty())return existingReversal;
+            if(!"POSTED".equals(status))throw new IllegalStateException("المستند غير مرحّل أو غير موجود");
         } finally {c.close();}
         GeneralLedger.Result reversal=GeneralLedger.reverse(db,ref,reversalDate,actor);
         db.beginTransaction();
         try {
-            ContentValues v=new ContentValues();v.put("status","REVERSED");v.put("updated_at",System.currentTimeMillis());
+            ContentValues v=new ContentValues();v.put("status","REVERSED");v.put("reversal_journal_ref",reversal.reference);v.put("updated_at",System.currentTimeMillis());
             db.update("accounting_documents",v,"id=?",new String[]{String.valueOf(documentId)});
             ContentValues audit=new ContentValues();audit.put("actor",actor==null?"SYSTEM":actor);audit.put("action","ACCOUNTING_DOCUMENT_REVERSED");
             audit.put("entity_type","ACCOUNTING_DOCUMENT");audit.put("entity_ref",String.valueOf(documentId));
