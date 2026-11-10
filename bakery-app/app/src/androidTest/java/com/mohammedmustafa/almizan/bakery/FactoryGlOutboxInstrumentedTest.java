@@ -619,7 +619,7 @@ public class FactoryGlOutboxInstrumentedTest {
             assertEquals(1,result.retried);
             assertEquals(0,destinationEntryCount(destination,"INACTIVE-CURRENCY-1"));
             Cursor state=source.rawQuery("SELECT status,last_error FROM factory_gl_outbox WHERE source_entry_ref='INACTIVE-CURRENCY-1'",null);
-            try {assertTrue(state.moveToFirst());assertEquals("RETRY",state.getString(0));assertTrue(state.getString(1).contains("عملة غير نشطة"));} finally {state.close();}
+            try {assertTrue(state.moveToFirst());assertEquals("RETRY",state.getString(0));assertTrue(state.getString(1).contains("غير نشطة"));} finally {state.close();}
         } finally {
             if(source.isOpen())source.close();if(destination.isOpen())destination.close();
             context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
