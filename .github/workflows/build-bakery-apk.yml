@@ -19,7 +19,7 @@ permissions:
 
 concurrency:
   # Push and pull_request events for the same PR must not cancel each other's verification.
-  group: al-mizan-bakery-release-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.event_name }}
+  group: al-mizan-bakery-release-v2-${{ github.event.pull_request.head.ref || github.ref_name }}-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
@@ -265,8 +265,9 @@ jobs:
           emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true
+          # Full database instrumentation is owned by test-bakery-foundation.yml.
+          # This step only verifies installation and launch of the exact signed review APK.
           script: |
-            (cd bakery-app && gradle connectedDebugAndroidTest)
             adb uninstall com.mohammedmustafa.almizan.bakery || true
             adb install -r bakery-app/release/AlMizan-Bakery-2.8.3-review.apk
             adb logcat -c
