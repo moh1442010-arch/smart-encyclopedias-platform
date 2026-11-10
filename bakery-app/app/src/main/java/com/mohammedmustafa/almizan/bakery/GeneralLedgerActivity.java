@@ -23,6 +23,7 @@ public final class GeneralLedgerActivity extends Activity {
     private SQLiteDatabase db;
     private LinearLayout body;
     private static final int NAVY=Color.rgb(11,31,58), GOLD=Color.rgb(212,175,55);
+    private boolean factorySyncRunning;
 
     @Override protected void attachBaseContext(android.content.Context base) {
         super.attachBaseContext(AppLanguage.wrap(base));
@@ -74,6 +75,10 @@ public final class GeneralLedgerActivity extends Activity {
         back.setText(AppLanguage.tr(this,"العودة إلى الرئيسية"));
         back.setOnClickListener(v->finish());
         root.addView(back);
+        Button syncFactory=new Button(this);
+        syncFactory.setText(AppLanguage.tr(this,"مزامنة قيود المصنع إلى الأستاذ العام"));
+        syncFactory.setOnClickListener(v->syncFactoryLedger(syncFactory));
+        root.addView(syncFactory);
 
         ScrollView scroll=new ScrollView(this);
         body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);
@@ -143,6 +148,59 @@ public final class GeneralLedgerActivity extends Activity {
             else do body.addView(label(outbox.getString(0)+" : "+outbox.getLong(1),13,false));while(outbox.moveToNext());
         } finally {outbox.close();}
         body.addView(label("هذه شاشة عرض فقط. لا تسمح بتعديل أرصدة الأستاذ يدوياً. التصحيح يتم من المستند الأصلي أو بقيد عكسي موثق.",13,false));
+    }
+
+    /**
+     * Runs the factory outbox bridge from the general-ledger screen so the accountant
+     * can reconcile factory postings without navigating to a separate maintenance page.
+     * Database work stays off the UI thread and uses independent SQLCipher connections.
+     */
+    private void syncFactoryLedger(Button button) {
+        if(factorySyncRunning)return;
+        factorySyncRunning=true;
+        button.setEnabled(false);
+        button.setText(AppLanguage.tr(this,"جارٍ مزامنة قيود المصنع..."));
+        Thread worker=new Thread(()->{
+            SQLiteDatabase source=null,destination=null;
+            String message;
+            boolean clean=false;
+            try {
+                android.content.Context app=getApplicationContext();
+                source=SecureDatabase.open(app,"almizan_factory_1.db");
+                destination=SecureDatabase.open(app,"almizan_bakery_250.db");
+                FactoryLedgerSyncService.Result result=FactoryLedgerSyncService.synchronize(source,destination);
+                FactoryGlOutbox.ReconciliationReport report=result.reconciliation;
+                clean=result.clean();
+                message="تم التقاط "+result.legacyCaptured+" قيد تاريخي، وترحيل "+result.posted+
+                    " قيداً جديداً. إعادة المحاولة "+result.retried+"، متوقف "+result.deadLetter+
+                    "، غير مرحل "+result.skipped+".";
+                if(result.legacyFailed>0||!clean) {
+                    message+=" المطابقة غير مكتملة: بلا Outbox "+report.missingOutbox+
+                        "، بلا قيد وجهة "+report.missingDestination+
+                        "، أحداث معلقة "+(report.pending+report.processing+report.retry)+
+                        "، متوقفة "+report.deadLetter+"، فروقات "+report.amountMismatches+
+                        "، أخطاء التقاط التاريخ "+result.legacyFailed+".";
+                } else {
+                    message+=" مطابقة المصنع مع الأستاذ العام سليمة.";
+                }
+            } catch(Exception ex) {
+                message="تعذرت مزامنة قيود المصنع: "+String.valueOf(ex.getMessage());
+            } finally {
+                if(source!=null&&source.isOpen())source.close();
+                if(destination!=null&&destination.isOpen())destination.close();
+            }
+            final String resultMessage=message;
+            final boolean resultClean=clean;
+            runOnUiThread(()->{
+                if(isFinishing()||isDestroyed())return;
+                factorySyncRunning=false;
+                button.setEnabled(true);
+                button.setText(AppLanguage.tr(this,"مزامنة قيود المصنع إلى الأستاذ العام"));
+                android.widget.Toast.makeText(this,resultMessage,android.widget.Toast.LENGTH_LONG).show();
+                if(db!=null&&db.isOpen())render();
+            });
+        },"almizan-factory-gl-sync");
+        worker.start();
     }
 
     private long scalar(String sql) {
