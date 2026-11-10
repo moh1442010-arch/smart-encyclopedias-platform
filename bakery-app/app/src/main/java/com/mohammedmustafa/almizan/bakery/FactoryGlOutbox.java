@@ -6,10 +6,13 @@ import android.database.Cursor;
 import net.zetetic.database.sqlcipher.SQLiteDatabase;
 
 import java.nio.charset.StandardCharsets;
+import java.text.ParsePosition;
+import java.text.SimpleDateFormat;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Durable bridge from the isolated factory ledger database to the bakery general ledger.
@@ -104,6 +107,7 @@ final class FactoryGlOutbox {
                 finally{reversal.close();}
             }
         } finally {head.close();}
+        if(!validDate(date))throw new IllegalStateException("تاريخ قيد المصنع يجب أن يكون تاريخًا صحيحًا بصيغة YYYY-MM-DD");
         List<SnapshotLine> lines=new ArrayList<>();
         Cursor rows=source.rawQuery("SELECT account,debit,credit FROM journal_lines WHERE entry_id=? ORDER BY account,debit,credit,id",
             new String[]{String.valueOf(sourceEntryId)});
@@ -242,6 +246,7 @@ final class FactoryGlOutbox {
            accounts==null||debits==null||credits==null||accounts.length!=debits.length||
            accounts.length!=credits.length||accounts.length<2)
             throw new IllegalArgumentException("بيانات قيد المصنع غير مكتملة");
+        if(!validDate(date))throw new IllegalArgumentException("تاريخ قيد المصنع يجب أن يكون تاريخًا صحيحًا بصيغة YYYY-MM-DD");
         long totalDebit=0,totalCredit=0;int count=0;
         for(int i=0;i<accounts.length;i++) {
             if(accounts[i]==null||accounts[i].trim().isEmpty()||debits[i]<0||credits[i]<0||
@@ -602,6 +607,15 @@ final class FactoryGlOutbox {
     private static String scalar(SQLiteDatabase db,String sql,String[] args) {
         Cursor c=db.rawQuery(sql,args);
         try{return c.moveToFirst()?c.getString(0):null;}finally{c.close();}
+    }
+
+    private static boolean validDate(String value) {
+        if(value==null||!value.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))return false;
+        SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
+        format.setLenient(false);
+        ParsePosition position=new ParsePosition(0);
+        java.util.Date parsed=format.parse(value,position);
+        return parsed!=null&&position.getIndex()==value.length();
     }
 
     private static long checkedAdd(long a,long b) {

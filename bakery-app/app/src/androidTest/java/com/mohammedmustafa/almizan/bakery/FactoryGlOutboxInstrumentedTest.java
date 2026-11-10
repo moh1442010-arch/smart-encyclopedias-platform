@@ -181,6 +181,29 @@ public class FactoryGlOutboxInstrumentedTest {
         }
     }
 
+    @Test public void sourceJournalWriterRejectsInvalidCalendarDatesBeforeWriting() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="factory_gl_outbox_bad_date_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase db=openSource(context,name);
+        try {
+            db.beginTransaction();
+            try {
+                FactoryGlOutbox.postSourceJournal(db,"WRITER-BAD-DATE","تاريخ غير صالح","2026-02-30",
+                    new String[]{"الصندوق","المبيعات"},new long[]{5000,0},new long[]{0,5000});
+                fail("invalid calendar date must be rejected before source journal creation");
+            } catch(IllegalArgumentException expected) {
+                // The caller transaction is rolled back; no invalid source document may survive.
+            } finally { db.endTransaction(); }
+            assertEquals(0,count(db,"journal_entries"));
+            assertEquals(0,count(db,"factory_gl_outbox"));
+        } finally {
+            if(db.isOpen())db.close();
+            context.deleteDatabase(name);
+            context.deleteDatabase(name+"-wal");
+            context.deleteDatabase(name+"-shm");
+        }
+    }
+
     private SQLiteDatabase openDestination(Context context,String name,String periodStatus) {
         SQLiteDatabase db=SecureDatabase.open(context,name);
         EnterpriseSchema.ensure(db);
