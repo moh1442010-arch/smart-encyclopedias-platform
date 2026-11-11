@@ -14,9 +14,9 @@ from pathlib import Path
 
 GITHUB_API = "https://api.github.com"
 GEMINI_API = "https://generativelanguage.googleapis.com/v1beta"
-MAX_DIFF_CHARS = 120_000
-MAX_FILES = 100
-MAX_METADATA_CHARS = 12_000
+MAX_DIFF_CHARS = 60_000
+MAX_FILES = 60
+MAX_METADATA_CHARS = 8_000
 MAX_REQUEST_ATTEMPTS = 4
 RETRYABLE_HTTP_CODES = {429, 500, 502, 503, 504}
 
@@ -240,7 +240,7 @@ You are a reviewer only. Do not claim to have changed files, run builds, or merg
         "input": user_prompt,
         "system_instruction": system_instruction,
         "store": False,
-        "generation_config": {"max_output_tokens": 8192},
+        "generation_config": {"max_output_tokens": 4096},
     }
     url = f"{GEMINI_API}/interactions"
     gemini_headers = {
