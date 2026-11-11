@@ -48,6 +48,23 @@ class RedactionTests(unittest.TestCase):
     def test_empty_interactions_response_returns_empty_text(self):
         self.assertEqual(MODULE.extract_interaction_text({"steps": []}), "")
 
+    def test_incomplete_review_is_rejected(self):
+        with self.assertRaises(RuntimeError):
+            MODULE.validate_review_text("تضمن التعديل إضافة فحص هوية الطرف.")
+
+    def test_review_without_verdict_is_rejected(self):
+        report = ("نتائج وملاحظات هندسية " * 100) + "\n## النتائج\nلا توجد ملاحظات."
+        with self.assertRaises(RuntimeError):
+            MODULE.validate_review_text(report)
+
+    def test_complete_review_with_verdict_is_accepted(self):
+        report = (
+            ("مراجعة هندسية تفصيلية للملفات والتغييرات. " * 60)
+            + "\n## النتائج\nتم فحص التغييرات والاختبارات المقترحة."
+            + "\n## الحكم النهائي\nNEEDS CHANGES"
+        )
+        MODULE.validate_review_text(report)
+
 
 if __name__ == "__main__":
     unittest.main()
