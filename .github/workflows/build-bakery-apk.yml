@@ -252,13 +252,13 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Smoke test signed APK on minimum Android API 29
-        # Run the signed APK launch check on the declared minimum supported API, Android 10.
+      - name: Smoke test signed APK on Android 11 (API 30)
+        # Run the signed APK launch check on the declared current validation baseline, Android 11.
         # Hosted runners can intermittently expose the emulator before its Android properties are ready.
         timeout-minutes: 22
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 29
+          api-level: 30
           target: default
           arch: x86_64
           profile: pixel_2
