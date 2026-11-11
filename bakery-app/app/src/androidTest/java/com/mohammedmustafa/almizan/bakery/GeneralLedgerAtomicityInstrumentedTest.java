@@ -199,8 +199,11 @@ public class GeneralLedgerAtomicityInstrumentedTest {
             assertEquals("Reversal must link to the original journal",1,count(db,
                 "SELECT COUNT(*) FROM gl_journal_entries r JOIN gl_journal_entries o ON r.reversal_of=o.id WHERE r.entry_ref=? AND o.entry_ref=? AND r.status='POSTED'",
                 new String[]{"REV-"+originalRef,originalRef}));
-            assertEquals("Reversal must contain the equal opposite debit and credit",1,count(db,
-                "SELECT COUNT(*) FROM gl_journal_entries r JOIN gl_journal_lines l ON l.entry_id=r.id WHERE r.entry_ref=? AND l.base_debit_minor=0 AND l.base_credit_minor=4200",
+            assertEquals("Reversal must credit the original cash debit",1,count(db,
+                "SELECT COUNT(*) FROM gl_journal_entries r JOIN gl_journal_lines l ON l.entry_id=r.id JOIN chart_of_accounts a ON a.id=l.account_id WHERE r.entry_ref=? AND a.account_code='1000' AND l.base_debit_minor=0 AND l.base_credit_minor=4200",
+                new String[]{"REV-"+originalRef}));
+            assertEquals("Reversal must debit the original revenue credit",1,count(db,
+                "SELECT COUNT(*) FROM gl_journal_entries r JOIN gl_journal_lines l ON l.entry_id=r.id JOIN chart_of_accounts a ON a.id=l.account_id WHERE r.entry_ref=? AND a.account_code='4000' AND l.base_debit_minor=4200 AND l.base_credit_minor=0",
                 new String[]{"REV-"+originalRef}));
             assertEquals("Original debit must remain unchanged",1,count(db,
                 "SELECT COUNT(*) FROM gl_journal_entries e JOIN gl_journal_lines l ON l.entry_id=e.id WHERE e.entry_ref=? AND l.base_debit_minor=4200",
