@@ -326,7 +326,7 @@
     {
       "id": "D17",
       "phase": "P1",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "evidence": null,
       "title": "Cash and Bankak reconciliation",
       "scope": "Cash drawers, Bankak references, bank transfers and closing balances must reconcile to their GL accounts.",
@@ -339,7 +339,8 @@
         "Bankak receipt",
         "transfer",
         "duplicate reference"
-      ]
+      ],
+      "work_note": "Added CashBankReconciliationService to compare factory cashbook net movements with posted FACTORY_LEDGER movements in GL accounts 1000 (CASH) and 1010 (BANKAK), scoped to MAIN/SDG and an explicit date range. Added instrumented cases for balanced movements, sale returns, positive/negative differences, and rejection of unknown movement kinds. Pending API 28/API 35 execution; do not mark DONE until both pass."
     },
     {
       "id": "D18",
