@@ -58,8 +58,8 @@ public class CashBankReconciliationInstrumentedTest {
             gl(db,"FACTORY_LEDGER",START,1,2,"SDG",6000,0);
             gl(db,"FACTORY_LEDGER",START,1,1,"USD",5000,0);
 
-            CashBankReconciliationService.Report report=CashBankReconciliationService.reconcile(
-                db,db,"MAIN","SDG",START,END);
+            CashBankReconciliationService.Report report=CashBankReconciliationService.reconcileAllHistory(
+                db,db,"MAIN","SDG");
             assertTrue(report.cash.balanced());
             assertTrue(report.bankak.balanced());
             assertEquals(60L,report.cash.cashbookMinor);
