@@ -287,12 +287,39 @@ jobs:
           arch: x86_64
           profile: pixel_2
           emulator-boot-timeout: 900
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          disable-animations: true
+          # API 35 package manager startup is memory-sensitive on hosted runners.
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -no-snapshot-save -memory 4096 -cores 2
+          disable-animations: false
           script: |
-            adb install -r bakery-app/release/AlMizan-Bakery-2.8.3-review.apk
+            set -euo pipefail
+            adb wait-for-device
+            boot_state=''
+            for attempt in $(seq 1 180); do
+              boot_state="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"
+              [ "$boot_state" = "1" ] && break
+              sleep 5
+            done
+            test "$boot_state" = "1"
+            package_manager_ready=''
+            for attempt in $(seq 1 36); do
+              if adb shell pm list packages >/dev/null 2>&1; then package_manager_ready=1; break; fi
+              adb reconnect offline >/dev/null 2>&1 || true
+              sleep 5
+            done
+            test "$package_manager_ready" = "1"
+            mkdir -p bakery-app/release/diagnostics
+            trap 'adb logcat -d -t 8000 > bakery-app/release/diagnostics/api35-logcat.txt 2>&1 || true; adb shell dumpsys meminfo > bakery-app/release/diagnostics/api35-meminfo.txt 2>&1 || true; adb shell df -h > bakery-app/release/diagnostics/api35-storage.txt 2>&1 || true' EXIT
+            adb uninstall com.mohammedmustafa.almizan.bakery >/dev/null 2>&1 || true
+            installed=''
+            for attempt in 1 2 3; do
+              if adb install -r bakery-app/release/AlMizan-Bakery-2.8.3-review.apk; then installed=1; break; fi
+              adb reconnect offline >/dev/null 2>&1 || true
+              sleep 10
+            done
+            test "$installed" = "1"
+            adb shell pm path com.mohammedmustafa.almizan.bakery | grep -F "package:"
             adb logcat -c
             adb shell monkey -p com.mohammedmustafa.almizan.bakery 1
             sleep 8
-            if adb logcat -d -t 3000 | grep -E 'FATAL EXCEPTION|Process: com.mohammedmustafa.almizan.bakery'; then echo "Application crash detected"; exit 1; fi
+            if adb logcat -d -t 8000 | grep -E 'FATAL EXCEPTION|Process: com.mohammedmustafa.almizan.bakery'; then echo "Application crash detected"; exit 1; fi
             adb shell dumpsys package com.mohammedmustafa.almizan.bakery | grep -F "versionName=2.8.3"
