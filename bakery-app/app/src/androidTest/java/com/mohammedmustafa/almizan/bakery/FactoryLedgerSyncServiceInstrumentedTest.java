@@ -15,6 +15,7 @@ public class FactoryLedgerSyncServiceInstrumentedTest {
         SQLiteDatabase db=SecureDatabase.open(context,name);
         db.execSQL("CREATE TABLE journal_entries(id INTEGER PRIMARY KEY,entry_ref TEXT UNIQUE,description TEXT,status TEXT NOT NULL,reversal_of INTEGER,date TEXT)");
         db.execSQL("CREATE TABLE journal_lines(id INTEGER PRIMARY KEY,entry_id INTEGER NOT NULL,account TEXT NOT NULL,debit INTEGER NOT NULL DEFAULT 0,credit INTEGER NOT NULL DEFAULT 0)");
+        db.execSQL("CREATE TABLE cashbook(id INTEGER PRIMARY KEY,account TEXT,kind TEXT,amount INTEGER NOT NULL,ref TEXT,date TEXT)");
         FactoryGlOutbox.ensureSchema(db);
         return db;
     }
@@ -55,6 +56,7 @@ public class FactoryLedgerSyncServiceInstrumentedTest {
         SQLiteDatabase destination=destination(context,destinationName);
         try {
             insertSourceJournal(source,"SYNC-SALE-001",24500L);
+            source.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('CASH','SALE',24500,'sale','2026-11-10')");
             FactoryLedgerSyncService.Result first=FactoryLedgerSyncService.synchronize(source,destination);
             assertEquals(15,first.mappingsSeeded);
             assertEquals(1,first.legacyCaptured);
@@ -88,6 +90,7 @@ public class FactoryLedgerSyncServiceInstrumentedTest {
         try {
             destination.execSQL("UPDATE company_settings SET base_currency='SAR' WHERE id=1");
             insertSourceJournal(source,"SYNC-FX-001",10000L);
+            source.execSQL("INSERT INTO cashbook(account,kind,amount,ref,date) VALUES('CASH','SALE',10000,'sale','2026-11-10')");
             FactoryLedgerSyncService.Result result=FactoryLedgerSyncService.synchronize(source,destination);
             assertEquals(0,result.mappingsSeeded);
             assertEquals(0,result.posted);
