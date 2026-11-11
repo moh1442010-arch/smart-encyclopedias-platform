@@ -190,7 +190,7 @@
     {
       "id": "D09",
       "phase": "P1",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "evidence": null,
       "title": "Idempotent source posting",
       "scope": "All source posting services must use stable idempotency keys and reject changed payloads under an existing key.",
@@ -202,7 +202,8 @@
         "same-payload replay",
         "changed-payload replay",
         "concurrent duplicate"
-      ]
+      ],
+      "work_note": "أضيف اختبار Android instrumented لإعادة enqueue للقيد المصدر نفسه والتحقق من بقاء حدث Outbox واحد وسطرين فقط، ثم تغيير حمولة القيد تحت مفتاح الحدث نفسه والتحقق من رفضها دون إنشاء حدث أو أسطر إضافية. الاختبار لم يثبت بعد على API 29 وAPI 35، ولا يغطي التزامن المتوازي حتى الآن؛ لذلك يبقى D09 قيد التنفيذ."
     },
     {
       "id": "D10",
