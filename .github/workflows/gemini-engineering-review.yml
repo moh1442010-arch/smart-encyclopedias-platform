@@ -1,6 +1,8 @@
 name: Gemini engineering review
 
 on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
       pr_number:
@@ -13,16 +15,16 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: gemini-review-${{ inputs.pr_number }}
+  group: gemini-review-${{ github.event.pull_request.number || inputs.pr_number }}
   cancel-in-progress: false
 
 jobs:
   review:
     name: Review pull request with Gemini
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - name: Checkout trusted default branch
+      - name: Checkout trusted default branch only
         uses: actions/checkout@v4
         with:
           ref: main
@@ -42,13 +44,13 @@ jobs:
           GEMINI_MODEL: gemini-3.8-flash
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          PR_NUMBER: ${{ inputs.pr_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
         run: python .github/scripts/gemini_pr_review.py
 
       - name: Upload review report
         uses: actions/upload-artifact@v4
         with:
-          name: gemini-engineering-review-pr-${{ inputs.pr_number }}
+          name: gemini-engineering-review-pr-${{ github.event.pull_request.number || inputs.pr_number }}
           path: gemini-review-report.md
           if-no-files-found: error
           retention-days: 14
