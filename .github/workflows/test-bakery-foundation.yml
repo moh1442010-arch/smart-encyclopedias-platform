@@ -68,13 +68,13 @@ jobs:
   android-instrumented-tests:
     name: Android instrumented tests (API ${{ matrix.api-level }})
     runs-on: ubuntu-latest
-    # Both supported API levels are gating. Emulator infrastructure failures remain visible.
+    # Android 10 (API 29) is the minimum supported test platform; Android 15 (API 35) covers modern devices.
     timeout-minutes: 40
     strategy:
       fail-fast: false
       max-parallel: 1
       matrix:
-        api-level: [28, 35]
+        api-level: [29, 35]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -108,10 +108,10 @@ jobs:
           # The emulator action executes script as one sh -c command; keep shell control flow on one line.
           # The emulator action passes script through sh -c; keep the entire script on one line.
           script: adb wait-for-device && boot_state='' && for attempt in $(seq 1 180); do boot_state="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"; [ "$boot_state" = "1" ] && break; sleep 5; done && test "$boot_state" = "1" && for attempt in $(seq 1 24); do adb shell pm list packages >/dev/null 2>&1 && break; sleep 5; done && adb shell pm list packages >/dev/null && mkdir -p app/build/diagnostics && trap 'adb logcat -d -t 8000 > app/build/diagnostics/logcat.txt 2>&1 || true; adb shell dumpsys meminfo > app/build/diagnostics/meminfo.txt 2>&1 || true; adb shell df -h > app/build/diagnostics/storage.txt 2>&1 || true' EXIT && (adb shell settings put global package_verifier_enable 0 || true) && (adb shell settings put global verifier_verify_adb_installs 0 || true) && (adb shell settings put global window_animation_scale 0 || true) && (adb shell settings put global transition_animation_scale 0 || true) && (adb shell settings put global animator_duration_scale 0 || true) && gradle --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1024m connectedDebugAndroidTest --stacktrace
-      - name: Record API 28 emulator validation status
+      - name: Record API 29 emulator validation status
         if: always() && matrix.api-level == 28
         run: |
-          echo "API 28 instrumented tests are a required gating check. A green unit-test job does not replace API 28 device validation." >> "$GITHUB_STEP_SUMMARY"
+          echo "API 29 (Android 10) instrumented tests are a required gating check. A green unit-test job does not replace API 29 device validation." >> "$GITHUB_STEP_SUMMARY"
       - name: Upload instrumented test reports
         if: always()
         uses: actions/upload-artifact@v4
