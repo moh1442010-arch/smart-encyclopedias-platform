@@ -52,4 +52,13 @@ public class GeneralLedgerValidationTest {
     public void rejectsZeroExchangeRateDenominator() {
         GeneralLedger.validateLine(new GeneralLedger.Line("1000", "MAIN", "SDG", 100L, 0L, 1L, 0L));
     }
+
+    @Test public void acceptsOnlyRealCalendarDates() {
+        assertTrue(GeneralLedger.validDate("2026-11-11"));
+        assertFalse(GeneralLedger.validDate("2026-02-29"));
+        assertFalse(GeneralLedger.validDate("2026-04-31"));
+        assertFalse(GeneralLedger.validDate("2026-13-01"));
+        assertFalse(GeneralLedger.validDate("2026-00-10"));
+        assertFalse(GeneralLedger.validDate("2026-11-1"));
+    }
 }
