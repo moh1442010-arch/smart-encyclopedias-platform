@@ -58,6 +58,20 @@ def extract_interaction_text(result: dict) -> str:
                     chunks.append(text_value)
     return "\n".join(chunks).strip()
 
+def validate_review_text(answer: str) -> None:
+    """Reject truncated or non-actionable model output before publishing an artifact."""
+    normalized = answer.strip()
+    if len(normalized) < 1800:
+        raise RuntimeError("Gemini review is incomplete: response is shorter than the minimum report length.")
+    verdict_markers = (
+        "الحكم النهائي", "القرار النهائي", "التقييم النهائي",
+        "BLOCK", "NEEDS CHANGES", "REVIEWABLE",
+    )
+    if not any(marker.casefold() in normalized.casefold() for marker in verdict_markers):
+        raise RuntimeError("Gemini review is incomplete: final engineering verdict is missing.")
+    if not re.search(r"(?im)^\s*(?:#{1,4}\s*)?(?:النتائج|الملاحظات|المخاطر|التوصيات|findings|risks|recommendations)", normalized):
+        raise RuntimeError("Gemini review is incomplete: findings or recommendations section is missing.")
+
 
 def main() -> int:
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
@@ -159,7 +173,7 @@ anything. Do not request or reveal credentials. Never repeat possible secrets.
         "input": user_prompt,
         "system_instruction": system_instruction,
         "store": False,
-        "generation_config": {"max_output_tokens": 4096},
+        "generation_config": {"max_output_tokens": 8192},
     }
     url = f"{GEMINI_API}/interactions"
     gemini_headers = {
@@ -177,6 +191,7 @@ anything. Do not request or reveal credentials. Never repeat possible secrets.
         )
 
     answer = redact_secrets(answer)
+    validate_review_text(answer)
     report = (
         "# تقرير مراجعة Gemini الهندسية\n\n"
         f"- المستودع: `{repo}`\n"
