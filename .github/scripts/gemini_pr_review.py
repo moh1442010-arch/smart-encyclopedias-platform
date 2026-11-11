@@ -17,7 +17,7 @@ GEMINI_API = "https://generativelanguage.googleapis.com/v1beta"
 MAX_DIFF_CHARS = 30_000
 MAX_FILES = 40
 MAX_METADATA_CHARS = 5_000
-MAX_REGISTER_CONTEXT_CHARS = 45_000
+MAX_REGISTER_CONTEXT_CHARS = 55_000
 MAX_REQUEST_ATTEMPTS = 5
 RETRYABLE_HTTP_CODES = {429, 500, 502, 503, 504}
 
@@ -111,7 +111,13 @@ def load_repair_register(repo: str, head_sha: str, headers: dict[str, str]) -> s
             for d in defects
         ],
     }
-    return json.dumps(summary, ensure_ascii=False, separators=(",", ":"))[:MAX_REGISTER_CONTEXT_CHARS]
+    serialized = json.dumps(summary, ensure_ascii=False, separators=(",", ":"))
+    if len(serialized) > MAX_REGISTER_CONTEXT_CHARS:
+        raise RuntimeError(
+            "The complete 90-defect register exceeds the safe context limit; "
+            "refusing to send a silently truncated review context."
+        )
+    return serialized
 
 
 def validate_review_text(answer: str) -> None:
