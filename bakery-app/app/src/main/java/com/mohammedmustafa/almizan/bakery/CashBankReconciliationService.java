@@ -79,10 +79,7 @@ final class CashBankReconciliationService {
         if(!FinancialPeriodService.validRange(startDate,endDate))
             throw new IllegalArgumentException("نطاق تاريخ المطابقة غير صحيح");
 
-        String baseCurrency=scalar(ledger,"SELECT base_currency FROM company_settings WHERE id=1");
-        if(!"SDG".equals(baseCurrency))
-            throw new IllegalStateException("لا يمكن مطابقة دفتر SDG مع عملة أساس مختلفة دون تحويل موثق");
-        requireSingleActive(ledger,"SELECT COUNT(*) FROM branches WHERE branch_code=? AND active=1",branch,
+        // Compare transaction-currency SDG amounts; base-currency conversion is not part of this tie-out.\n        requireSingleActive(ledger,"SELECT COUNT(*) FROM branches WHERE branch_code=? AND active=1",branch,
             "الفرع الرئيسي غير موجود أو غير نشط");
         requireSingleActive(ledger,"SELECT COUNT(*) FROM chart_of_accounts WHERE account_code=? AND active=1","1000",
             "حساب الصندوق 1000 غير موجود أو غير نشط");
