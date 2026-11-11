@@ -127,11 +127,12 @@ class RequestRetryTests(unittest.TestCase):
             "https://example.invalid", 503, "Unavailable",
             {"Retry-After": "20"}, io.BytesIO(b"")
         )
-        with patch.object(MODULE.urllib.request, "urlopen", side_effect=[temporary, io.BytesIO(b'{"ok": true}')]), \\
+        with patch.object(MODULE.urllib.request, "urlopen",
+                          side_effect=[temporary, io.BytesIO(b'{"ok": true}')]) as urlopen:
             with patch.object(MODULE.time, "sleep") as sleep:
                 result = MODULE.request_json("https://example.invalid", {})
-            result = MODULE.request_json("https://example.invalid", {})
         self.assertEqual(result, {"ok": True})
+        self.assertEqual(urlopen.call_count, 2)
         sleep.assert_called_once_with(20.0)
 
     def test_retry_after_is_capped_at_thirty_seconds(self):
@@ -139,10 +140,10 @@ class RequestRetryTests(unittest.TestCase):
             "https://example.invalid", 503, "Unavailable",
             {"Retry-After": "120"}, io.BytesIO(b"")
         )
-        with patch.object(MODULE.urllib.request, "urlopen", side_effect=[temporary, io.BytesIO(b'{"ok": true}')]), \\
+        with patch.object(MODULE.urllib.request, "urlopen",
+                          side_effect=[temporary, io.BytesIO(b'{"ok": true}')]):
             with patch.object(MODULE.time, "sleep") as sleep:
                 MODULE.request_json("https://example.invalid", {})
-            MODULE.request_json("https://example.invalid", {})
         sleep.assert_called_once_with(30.0)
 
     def test_timed_out_post_is_not_replayed(self):
