@@ -18,7 +18,7 @@ MAX_DIFF_CHARS = 30_000
 MAX_FILES = 40
 MAX_METADATA_CHARS = 5_000
 MAX_REGISTER_CONTEXT_CHARS = 45_000
-MAX_REQUEST_ATTEMPTS = 4
+MAX_REQUEST_ATTEMPTS = 5
 RETRYABLE_HTTP_CODES = {429, 500, 502, 503, 504}
 
 
@@ -37,9 +37,9 @@ def request_json(url: str, headers: dict[str, str], data: bytes | None = None):
                 ) from None
             retry_after = exc.headers.get("Retry-After", "")
             try:
-                delay = min(max(float(retry_after), 0.0), 8.0) if retry_after else 2 ** attempt
+                delay = min(max(float(retry_after), 0.0), 30.0) if retry_after else 2 ** attempt
             except ValueError:
-                delay = 2 ** attempt
+                delay = min(2 ** attempt, 30.0)
             time.sleep(delay)
         except (urllib.error.URLError, TimeoutError) as exc:
             # A timed-out POST may already have reached Gemini. Do not replay it:
