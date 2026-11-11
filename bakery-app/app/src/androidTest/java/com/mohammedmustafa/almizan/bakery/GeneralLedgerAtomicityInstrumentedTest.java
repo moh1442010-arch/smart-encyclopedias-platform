@@ -39,8 +39,8 @@ public class GeneralLedgerAtomicityInstrumentedTest {
                 GeneralLedger.post(db,entry);
             } catch(RuntimeException expected) {
                 assertNotNull("Injected failure must include a database error",expected.getMessage());
-                assertTrue("Failure must come from the injected journal-line trigger: "+expected.getMessage(),
-                    expected.getMessage().contains("forced_atomicity_test_failure"));
+                assertTrue("Failure must come from the injected journal-line trigger: "+expected,
+                    containsMessage(expected, "forced_atomicity_test_failure"));
                 failed=true;
             }
             assertTrue("Injected journal-line failure must reach the caller",failed);
@@ -284,6 +284,13 @@ public class GeneralLedgerAtomicityInstrumentedTest {
         assertEquals(label+" must not create an audit row",0,count(db,
             "SELECT COUNT(*) FROM enterprise_audit_log WHERE entity_ref=? AND action='JOURNAL_POSTED'",
             new String[]{reference}));
+    }
+
+    private static boolean containsMessage(Throwable error, String expected) {
+        for (Throwable current = error; current != null; current = current.getCause()) {
+            if (current.getMessage() != null && current.getMessage().contains(expected)) return true;
+        }
+        return false;
     }
 
     private static long count(SQLiteDatabase db,String sql,String[] args) {
