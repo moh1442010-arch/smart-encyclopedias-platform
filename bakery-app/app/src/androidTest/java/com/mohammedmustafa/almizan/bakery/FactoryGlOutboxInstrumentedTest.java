@@ -181,6 +181,18 @@ public class FactoryGlOutboxInstrumentedTest {
         }
     }
 
+    @Test public void factoryOutboxUsesStrictProlepticGregorianCalendarDates() {
+        assertTrue(FactoryGlOutbox.validDate("2024-02-29"));
+        assertTrue(FactoryGlOutbox.validDate("2000-02-29"));
+        assertTrue(FactoryGlOutbox.validDate("1582-10-10"));
+        assertTrue(FactoryGlOutbox.validDate("1500-02-28"));
+        assertFalse(FactoryGlOutbox.validDate("1500-02-29"));
+        assertFalse(FactoryGlOutbox.validDate("1900-02-29"));
+        assertFalse(FactoryGlOutbox.validDate("2026-02-30"));
+        assertFalse(FactoryGlOutbox.validDate("0000-01-01"));
+        assertFalse(FactoryGlOutbox.validDate(null));
+    }
+
     @Test public void sourceJournalWriterRejectsInvalidCalendarDatesBeforeWriting() {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String name="factory_gl_outbox_bad_date_"+System.currentTimeMillis()+".db";
