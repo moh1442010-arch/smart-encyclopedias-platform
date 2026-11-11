@@ -33,6 +33,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Test reviewer redaction and safety helpers
+        run: python -m unittest .github/scripts/test_gemini_pr_review.py
+
       - name: Run read-only engineering review
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
