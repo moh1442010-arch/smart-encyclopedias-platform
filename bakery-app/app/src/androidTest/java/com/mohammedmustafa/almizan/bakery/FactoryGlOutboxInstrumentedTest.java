@@ -439,6 +439,76 @@ public class FactoryGlOutboxInstrumentedTest {
         }
     }
 
+    @Test public void realProductionBatchPostsRawLaborOverheadAndFinishedInventoryToGeneralLedger() throws Exception {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String factoryName="almizan_factory_1.db";
+        String destinationName="factory_gl_real_production_dest_"+System.currentTimeMillis()+".db";
+        context.deleteDatabase(factoryName);
+        context.deleteDatabase(factoryName+"-wal");
+        context.deleteDatabase(factoryName+"-shm");
+        SQLiteOpenHelper helper=null;
+        SQLiteDatabase source=null,destination=null;
+        try {
+            Class<?> dbClass=Class.forName("com.mohammedmustafa.almizan.bakery.FactoryActivity$DB");
+            Constructor<?> constructor=dbClass.getDeclaredConstructor(Context.class);
+            constructor.setAccessible(true);
+            helper=(SQLiteOpenHelper)constructor.newInstance(context);
+            source=helper.getWritableDatabase();
+            destination=openDestination(context,destinationName,"OPEN");
+            assertEquals(15,FactoryGlOutbox.seedReviewedMappings(source,"MAIN","SDG"));
+
+            source.execSQL("INSERT INTO products(name,category,unit_price,unit) VALUES('منتج دفعة اختبار','اختبار',20000,'قطعة')");
+            Cursor product=source.rawQuery("SELECT last_insert_rowid()",null);
+            long productId;
+            try{assertTrue(product.moveToFirst());productId=product.getLong(0);}
+            finally{product.close();}
+
+            source.execSQL("INSERT INTO materials(name,unit,qty,value) VALUES('خامة وصفة اختبار','كجم',10000,50000)");
+            Cursor material=source.rawQuery("SELECT last_insert_rowid()",null);
+            long materialId;
+            try{assertTrue(material.moveToFirst());materialId=material.getLong(0);}
+            finally{material.close();}
+            source.execSQL("INSERT INTO recipe(product_id,material_id,qty) VALUES(?,?,?)",
+                new Object[]{productId,materialId,1000L});
+
+            java.lang.reflect.Method finalizeProduction=dbClass.getDeclaredMethod("finalizeProduction",
+                long.class,String.class,long.class,long.class,long.class,long.class,long.class);
+            finalizeProduction.setAccessible(true);
+            finalizeProduction.invoke(helper,productId,"BATCH-TEST-1",1L,1000L,10000L,5000L,20000L);
+
+            assertEquals("one finalized batch must be saved",1,count(source,"batches"));
+            assertEquals("one raw material issue must be recorded",1,count(source,"movements"));
+            assertEquals("four production stages must create four source journals",4,count(source,"journal_entries"));
+            assertEquals("each production journal must have a durable outbox event",4,count(source,"factory_gl_outbox"));
+            assertEquals("each production transfer must preserve two balanced lines",8,
+                count(source,"factory_gl_outbox_lines"));
+
+            FactoryGlOutbox.ProcessResult posted=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(4,posted.posted);
+            assertEquals(0,posted.retried);
+            assertEquals(1,destinationEntryCount(destination,"BATCH-1-RAW-WIP"));
+            assertEquals(1,destinationEntryCount(destination,"BATCH-1-LABOR-WIP"));
+            assertEquals(1,destinationEntryCount(destination,"BATCH-1-OVERHEAD-WIP"));
+            assertEquals(1,destinationEntryCount(destination,"BATCH-1-FINISHED"));
+
+            FactoryGlOutbox.ReconciliationReport report=FactoryGlOutbox.reconcile(source,destination);
+            assertTrue("production batch postings must reconcile",report.clean());
+            assertEquals(0,report.missingOutbox);
+            assertEquals(0,report.missingDestination);
+            assertEquals(0,report.amountMismatches);
+        } finally {
+            if(source!=null&&source.isOpen())source.close();
+            if(destination!=null&&destination.isOpen())destination.close();
+            if(helper!=null)helper.close();
+            context.deleteDatabase(factoryName);
+            context.deleteDatabase(factoryName+"-wal");
+            context.deleteDatabase(factoryName+"-shm");
+            context.deleteDatabase(destinationName);
+            context.deleteDatabase(destinationName+"-wal");
+            context.deleteDatabase(destinationName+"-shm");
+        }
+    }
+
     @Test public void mappedFactoryJournalPostsToGlAndCrashReplayDoesNotDuplicate() {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String sourceName="factory_gl_delivery_source_"+System.currentTimeMillis()+".db";
