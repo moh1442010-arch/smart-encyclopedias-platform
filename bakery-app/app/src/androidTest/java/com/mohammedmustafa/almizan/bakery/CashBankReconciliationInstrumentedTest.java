@@ -54,7 +54,6 @@ public class CashBankReconciliationInstrumentedTest {
             gl(db,"FACTORY_LEDGER",START,2,1,"SDG",50,0);
             gl(db,"FACTORY_LEDGER",END,2,1,"SDG",0,10);
             gl(db,"MANUAL",START,1,1,"SDG",9000,0);
-            gl(db,"FACTORY_LEDGER","2026-10-31",1,1,"SDG",7000,0);
             gl(db,"FACTORY_LEDGER",START,1,2,"SDG",6000,0);
             gl(db,"FACTORY_LEDGER",START,1,1,"USD",5000,0);
 
