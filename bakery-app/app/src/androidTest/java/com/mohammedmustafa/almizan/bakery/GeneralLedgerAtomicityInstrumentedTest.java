@@ -166,6 +166,70 @@ public class GeneralLedgerAtomicityInstrumentedTest {
         }
     }
 
+
+    @Test public void reversalKeepsOriginalAndIsIdempotentAndCannotReverseReversal() throws Exception {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="gl_reversal_"+System.currentTimeMillis()+".db";
+        File file=context.getDatabasePath(name);
+        File parent=file.getParentFile();
+        assertNotNull(parent);
+        if(!parent.exists())assertTrue(parent.mkdirs());
+        if(file.exists())assertTrue(file.delete());
+        SQLiteDatabase db=SecureDatabase.open(context,name);
+        String suffix=String.valueOf(System.currentTimeMillis());
+        String originalRef="GL-REV-ORIGINAL-"+suffix;
+        try {
+            EnterpriseSchema.ensure(db);
+            db.execSQL("INSERT INTO financial_periods(period_code,start_date,end_date,status) VALUES('GL-REV-"+suffix+"','2026-11-01','2026-11-30','OPEN')");
+            db.execSQL("INSERT INTO users(username,display_name,pin_salt,pin_hash,active,created_at) VALUES('d11-owner','D11 Owner',X'00',X'00',1,"+System.currentTimeMillis()+")");
+            db.execSQL("INSERT INTO user_roles(user_id,role_id,branch_id) SELECT u.id,r.id,b.id FROM users u,roles r,branches b WHERE u.username='d11-owner' AND r.role_code='OWNER' AND b.branch_code='MAIN'");
+            List<GeneralLedger.Line> lines=new ArrayList<>();
+            lines.add(new GeneralLedger.Line("1000","MAIN","SDG",4200L,0L,1L,1L));
+            lines.add(new GeneralLedger.Line("4000","MAIN","SDG",0L,4200L,1L,1L));
+            GeneralLedger.Entry original=new GeneralLedger.Entry(originalRef,"D11 original posting","2026-11-11",
+                "TEST_REVERSAL","SOURCE-D11-"+suffix,"D11-ORIGINAL-"+suffix,"d11-owner",lines);
+            GeneralLedger.post(db,original);
+
+            GeneralLedger.Result reversal=GeneralLedger.reverse(db,originalRef,"2026-11-12","d11-owner");
+            assertEquals("REV-"+originalRef,reversal.reference);
+            assertFalse("First reversal must be newly posted",reversal.alreadyPosted);
+            assertEquals("Original journal must remain posted",1,count(db,
+                "SELECT COUNT(*) FROM gl_journal_entries WHERE entry_ref=? AND status='POSTED'",
+                new String[]{originalRef}));
+            assertEquals("Reversal must link to the original journal",1,count(db,
+                "SELECT COUNT(*) FROM gl_journal_entries r JOIN gl_journal_entries o ON r.reversal_of=o.id WHERE r.entry_ref=? AND o.entry_ref=? AND r.status='POSTED'",
+                new String[]{"REV-"+originalRef,originalRef}));
+            assertEquals("Reversal must contain the equal opposite debit and credit",1,count(db,
+                "SELECT COUNT(*) FROM gl_journal_entries r JOIN gl_journal_lines l ON l.entry_id=r.id WHERE r.entry_ref=? AND l.base_debit_minor=0 AND l.base_credit_minor=4200",
+                new String[]{"REV-"+originalRef}));
+            assertEquals("Original debit must remain unchanged",1,count(db,
+                "SELECT COUNT(*) FROM gl_journal_entries e JOIN gl_journal_lines l ON l.entry_id=e.id WHERE e.entry_ref=? AND l.base_debit_minor=4200",
+                new String[]{originalRef}));
+
+            GeneralLedger.Result retry=GeneralLedger.reverse(db,originalRef,"2026-11-12","d11-owner");
+            assertTrue("Retry must reuse the same reversal",retry.alreadyPosted);
+            assertEquals("Retry must not create a second reversal",1,count(db,
+                "SELECT COUNT(*) FROM gl_journal_entries WHERE entry_ref=?",
+                new String[]{"REV-"+originalRef}));
+            assertEquals("Reversal audit record must remain singular",1,count(db,
+                "SELECT COUNT(*) FROM enterprise_audit_log WHERE entity_ref=? AND action='JOURNAL_POSTED'",
+                new String[]{"REV-"+originalRef}));
+
+            boolean rejected=false;
+            try {
+                GeneralLedger.reverse(db,"REV-"+originalRef,"2026-11-13","d11-owner");
+            } catch(IllegalArgumentException expected) {
+                rejected=true;
+            }
+            assertTrue("A reversal journal must not itself be reversed",rejected);
+        } finally {
+            db.close();
+            context.deleteDatabase(name);
+            context.deleteDatabase(name+"-wal");
+            context.deleteDatabase(name+"-shm");
+        }
+    }
+
     private static long count(SQLiteDatabase db,String sql,String[] args) {
         Cursor cursor=db.rawQuery(sql,args);
         try {
