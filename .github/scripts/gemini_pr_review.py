@@ -26,7 +26,7 @@ def request_json(url: str, headers: dict[str, str], data: bytes | None = None):
     for attempt in range(MAX_REQUEST_ATTEMPTS):
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
         try:
-            with urllib.request.urlopen(req, timeout=60) as response:
+            with urllib.request.urlopen(req, timeout=180) as response:
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             # Never print remote response bodies: they are untrusted and may echo input.
@@ -41,8 +41,12 @@ def request_json(url: str, headers: dict[str, str], data: bytes | None = None):
                 delay = 2 ** attempt
             time.sleep(delay)
         except urllib.error.URLError as exc:
-            if attempt + 1 >= MAX_REQUEST_ATTEMPTS:
-                raise RuntimeError(f"Network request failed: {exc.reason}") from None
+            # A timed-out POST may already have reached Gemini. Do not replay it:
+            # that could create a second billable interaction for the same review.
+            if data is not None or attempt + 1 >= MAX_REQUEST_ATTEMPTS:
+                raise RuntimeError(
+                    f"Network request failed: {exc.reason}. Ambiguous POSTs are not retried."
+                ) from None
             time.sleep(2 ** attempt)
     raise RuntimeError("Remote request exhausted its retry attempts.")
 
