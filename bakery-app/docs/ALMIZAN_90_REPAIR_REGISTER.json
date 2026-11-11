@@ -113,7 +113,7 @@
     {
       "id": "D05",
       "phase": "P1",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "evidence": null,
       "title": "Receipt-to-GL posting",
       "scope": "Customer receipts and allocations must post to cash or bank and reduce receivables without changing the source receipt.",
@@ -126,7 +126,8 @@
         "partial receipt",
         "duplicate receipt",
         "allocation mismatch"
-      ]
+      ],
+      "work_note": "أُضيف اختبار Android instrumented لمسار التحصيل الجزئي الفعلي من عميل لديه مديونية، ويتحقق من إنشاء قيد التحصيل وترحيله إلى الأستاذ العام ومطابقته مع البيع الأصلي. الاختبار لم يُنفذ بعد على المحاكي؛ لا يُغلق قبل نجاح API 29 وAPI 35."
     },
     {
       "id": "D06",
@@ -149,7 +150,7 @@
     {
       "id": "D07",
       "phase": "P1",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "evidence": null,
       "title": "Expense-to-GL posting",
       "scope": "Every approved operating expense must post to the correct expense and cash, bank or payable account.",
@@ -162,7 +163,8 @@
         "bank expense",
         "payable expense",
         "duplicate expense"
-      ]
+      ],
+      "work_note": "أُضيف اختبار Android instrumented لمسار تسجيل مصروف تشغيلي نقدي الفعلي، ويتحقق من إنشاء قيد المصروف وترحيله إلى الأستاذ العام ومطابقته مع مصدره. الاختبار لم يُنفذ بعد على المحاكي؛ لا يُغلق قبل نجاح API 29 وAPI 35."
     },
     {
       "id": "D08",
