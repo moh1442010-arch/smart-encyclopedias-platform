@@ -100,7 +100,7 @@ jobs:
           target: google_apis
           profile: pixel_2
           # Reserve memory for Android system services; keep Gradle heap bounded to reduce emulator OOM kills.
-          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -no-snapshot-save -memory 4096 -cores 2 -partition-size 2048 -gpu swiftshader_indirect -camera-back none -no-metrics -no-snapshot-load -wipe-data
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -no-snapshot-save -memory 3072 -cores 2 -partition-size 2048 -gpu swiftshader_indirect -camera-back none -no-metrics -no-snapshot-load -wipe-data
           # Avoid the action's pre-script adb animation call; apply best-effort settings in script.
           disable-animations: false
           emulator-boot-timeout: 900
@@ -117,7 +117,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: al-mizan-instrumented-api-${{ matrix.api-level }}-reports
-          path: bakery-app/app/build/reports/androidTests/connected/
+          path: |
+            bakery-app/app/build/reports/androidTests/connected/
+            bakery-app/app/build/diagnostics/
           if-no-files-found: warn
           retention-days: 14
 
