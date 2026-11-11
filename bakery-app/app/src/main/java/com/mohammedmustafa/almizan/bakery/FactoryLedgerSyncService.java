@@ -23,10 +23,12 @@ final class FactoryLedgerSyncService {
         final int deadLetter;
         final int skipped;
         final FactoryGlOutbox.ReconciliationReport reconciliation;
+        final CashBankReconciliationService.Report cashBankReconciliation;
 
         Result(int mappingsSeeded, FactoryGlOutbox.BackfillResult backfill, int retriesMadeDue,
                int posted, int retried, int deadLetter, int skipped,
-               FactoryGlOutbox.ReconciliationReport reconciliation) {
+               FactoryGlOutbox.ReconciliationReport reconciliation,
+               CashBankReconciliationService.Report cashBankReconciliation) {
             this.mappingsSeeded=mappingsSeeded;
             this.legacyCaptured=backfill.captured;
             this.legacyFailed=backfill.failed;
@@ -36,10 +38,12 @@ final class FactoryLedgerSyncService {
             this.deadLetter=deadLetter;
             this.skipped=skipped;
             this.reconciliation=reconciliation;
+            this.cashBankReconciliation=cashBankReconciliation;
         }
 
         boolean clean() {
-            return legacyFailed==0 && reconciliation!=null && reconciliation.clean();
+            return legacyFailed==0 && reconciliation!=null && reconciliation.clean() &&
+                cashBankReconciliation!=null && cashBankReconciliation.balanced();
         }
     }
 
@@ -72,7 +76,9 @@ final class FactoryLedgerSyncService {
             if(batch.posted==0)break;
         }
         FactoryGlOutbox.ReconciliationReport report=FactoryGlOutbox.reconcile(source,destination);
-        return new Result(seeded,backfill,due,posted,retried,dead,skipped,report);
+        CashBankReconciliationService.Report cashBankReport=
+            CashBankReconciliationService.reconcileAllHistory(source,destination,"MAIN",baseCurrency);
+        return new Result(seeded,backfill,due,posted,retried,dead,skipped,report,cashBankReport);
     }
 
     private static void requireActiveMainBranch(SQLiteDatabase db) {
