@@ -107,6 +107,75 @@ class RedactionTests(unittest.TestCase):
 
 
 
+class ReviewScopeTests(unittest.TestCase):
+    def test_reviewer_prompt_covers_three_stages_and_five_axes(self):
+        source = SCRIPT.read_text(encoding="utf-8")
+        required_sections = [
+            "PROGRAM FRAMEWORK — THREE PHASES",
+            "FIVE REVIEW AXES",
+            "Stage 1 closes the accounting foundation",
+            "Stage 2 integrates accounts and operational data",
+            "Stage 3 completes quality, security, usability",
+            "Accounting integrity",
+            "Bakery/factory operations",
+            "Enterprise finance",
+            "Security and data continuity",
+            "Product quality and market readiness",
+            "D01-D90",
+        ]
+        for marker in required_sections:
+            with self.subTest(marker=marker):
+                self.assertIn(marker, source)
+
+    def test_register_context_limit_is_above_measured_full_register_size(self):
+        self.assertEqual(MODULE.MAX_REGISTER_CONTEXT_CHARS, 55_000)
+
+    def test_register_loader_preserves_all_90_records_including_d90(self):
+        register = {
+            "baseline": "2.8.0",
+            "candidate": "2.8.3",
+            "phases": {"P1": "Accounting", "P2": "Operations", "P3": "Quality"},
+            "defects": [
+                {
+                    "id": f"D{i:02}", "phase": "P3", "status": "OPEN",
+                    "title": f"Defect {i}", "scope": "Scope detail " * 45,
+                    "acceptance_criteria": ["criterion " * 8],
+                    "tests_required": ["test " * 8],
+                }
+                for i in range(1, 91)
+            ],
+        }
+        encoded = base64.b64encode(json.dumps(register).encode()).decode()
+        with patch.object(MODULE, "request_json", return_value={
+            "encoding": "base64", "content": encoded
+        }):
+            result = json.loads(MODULE.load_repair_register(
+                "owner/repo", "abc123", {"Authorization": "Bearer test"}
+            ))
+        self.assertEqual(len(result["defects"]), 90)
+        self.assertEqual(result["defects"][-1]["id"], "D90")
+
+    def test_register_loader_fails_closed_when_full_context_exceeds_limit(self):
+        register = {
+            "baseline": "2.8.0",
+            "candidate": "2.8.3",
+            "phases": {},
+            "defects": [
+                {"id": f"D{i:02}", "phase": "P3", "status": "OPEN",
+                 "title": "x" * 900, "scope": "y" * 900}
+                for i in range(1, 91)
+            ],
+        }
+        encoded = base64.b64encode(json.dumps(register).encode()).decode()
+        with patch.object(MODULE, "request_json", return_value={
+            "encoding": "base64", "content": encoded
+        }):
+            with self.assertRaisesRegex(RuntimeError, "silently truncated"):
+                MODULE.load_repair_register(
+                    "owner/repo", "abc123", {"Authorization": "Bearer test"}
+                )
+
+
 class RequestRetryTests(unittest.TestCase):
     def test_request_retries_transient_503_then_succeeds(self):
         temporary = urllib.error.HTTPError(
@@ -166,7 +235,7 @@ class RequestRetryTests(unittest.TestCase):
         source = SCRIPT.read_text(encoding="utf-8")
         self.assertIn('"generation_config": {"max_output_tokens": 3072}', source)
         self.assertEqual(MODULE.MAX_DIFF_CHARS, 30_000)
-        self.assertEqual(MODULE.MAX_REGISTER_CONTEXT_CHARS, 45_000)
+        self.assertEqual(MODULE.MAX_REGISTER_CONTEXT_CHARS, 55_000)
 
     def test_request_does_not_retry_permanent_400(self):
         permanent = urllib.error.HTTPError(
