@@ -99,13 +99,35 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_2
-          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -no-snapshot-save -memory 3072 -cores 2 -partition-size 2048 -gpu swiftshader_indirect -camera-back none -no-metrics -no-snapshot-load -wipe-data
+          # Reserve memory for Android system services; keep Gradle heap bounded to reduce emulator OOM kills.
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -no-snapshot-save -memory 4096 -cores 2 -partition-size 2048 -gpu swiftshader_indirect -camera-back none -no-metrics -no-snapshot-load -wipe-data
           # Avoid the action's pre-script adb animation call; apply best-effort settings in script.
           disable-animations: false
           emulator-boot-timeout: 900
           working-directory: bakery-app
           # The emulator action executes script as one sh -c command; keep shell control flow on one line.
-          script: adb wait-for-device && boot_state='' && for attempt in $(seq 1 180); do boot_state="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"; [ "$boot_state" = "1" ] && break; sleep 5; done && test "$boot_state" = "1" && for attempt in $(seq 1 24); do adb shell pm list packages >/dev/null 2>&1 && break; sleep 5; done && adb shell pm list packages >/dev/null && (adb shell settings put global package_verifier_enable 0 || true) && (adb shell settings put global verifier_verify_adb_installs 0 || true) && (adb shell settings put global window_animation_scale 0 || true) && (adb shell settings put global transition_animation_scale 0 || true) && (adb shell settings put global animator_duration_scale 0 || true) && gradle --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1536m connectedDebugAndroidTest --stacktrace
+          script: |
+            adb wait-for-device
+            boot_state=''
+            for attempt in $(seq 1 180); do
+              boot_state="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+              [ "$boot_state" = "1" ] && break
+              sleep 5
+            done
+            test "$boot_state" = "1"
+            for attempt in $(seq 1 24); do
+              adb shell pm list packages >/dev/null 2>&1 && break
+              sleep 5
+            done
+            adb shell pm list packages >/dev/null
+            mkdir -p app/build/diagnostics
+            trap 'adb logcat -d -t 8000 > app/build/diagnostics/logcat.txt 2>&1 || true; adb shell dumpsys meminfo > app/build/diagnostics/meminfo.txt 2>&1 || true; adb shell df -h > app/build/diagnostics/storage.txt 2>&1 || true' EXIT
+            (adb shell settings put global package_verifier_enable 0 || true)
+            (adb shell settings put global verifier_verify_adb_installs 0 || true)
+            (adb shell settings put global window_animation_scale 0 || true)
+            (adb shell settings put global transition_animation_scale 0 || true)
+            (adb shell settings put global animator_duration_scale 0 || true)
+            gradle --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1024m connectedDebugAndroidTest --stacktrace
       - name: Record API 28 emulator validation status
         if: always() && matrix.api-level == 28
         run: |
