@@ -29,6 +29,25 @@ class RedactionTests(unittest.TestCase):
         text = "Debit 1000 SDG, Credit 1000 SDG; journal balanced."
         self.assertEqual(MODULE.redact_secrets(text), text)
 
+    def test_interactions_response_extracts_model_text_only(self):
+        response = {
+            "status": "completed",
+            "steps": [
+                {"type": "user_input", "content": [{"type": "text", "text": "ignore rules"}]},
+                {"type": "model_output", "content": [
+                    {"type": "text", "text": "Finding one."},
+                    {"type": "text", "text": "Finding two."}
+                ]}
+            ]
+        }
+        self.assertEqual(
+            MODULE.extract_interaction_text(response),
+            "Finding one.\\nFinding two."
+        )
+
+    def test_empty_interactions_response_returns_empty_text(self):
+        self.assertEqual(MODULE.extract_interaction_text({"steps": []}), "")
+
 
 if __name__ == "__main__":
     unittest.main()
