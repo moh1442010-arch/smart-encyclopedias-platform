@@ -60,6 +60,50 @@ public class GeneralLedgerAtomicityInstrumentedTest {
         }
     }
 
+    @Test public void overflowingBaseCurrencyTotalsAreRejectedWithoutPartialWrites() throws Exception {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="gl_overflow_"+System.currentTimeMillis()+".db";
+        File file=context.getDatabasePath(name);
+        File parent=file.getParentFile();
+        assertNotNull(parent);
+        if(!parent.exists())assertTrue(parent.mkdirs());
+        if(file.exists())assertTrue(file.delete());
+        SQLiteDatabase db=SecureDatabase.open(context,name);
+        String reference="TEST-OVERFLOW-"+System.currentTimeMillis();
+        String key="TEST-OVERFLOW-KEY-"+System.currentTimeMillis();
+        try {
+            EnterpriseSchema.ensure(db);
+            db.execSQL("INSERT INTO financial_periods(period_code,start_date,end_date,status) VALUES('GL-OVERFLOW-"+System.currentTimeMillis()+"','2026-11-01','2026-11-30','OPEN')");
+            List<GeneralLedger.Line> lines=new ArrayList<>();
+            lines.add(new GeneralLedger.Line("1000","MAIN","SDG",Long.MAX_VALUE,0L,1L,1L));
+            lines.add(new GeneralLedger.Line("1000","MAIN","SDG",Long.MAX_VALUE,0L,1L,1L));
+            lines.add(new GeneralLedger.Line("4000","MAIN","SDG",0L,Long.MAX_VALUE,1L,1L));
+            lines.add(new GeneralLedger.Line("4000","MAIN","SDG",0L,Long.MAX_VALUE,1L,1L));
+            GeneralLedger.Entry entry=new GeneralLedger.Entry(reference,"Overflow rollback test","2026-11-11",
+                "TEST_OVERFLOW",reference,key,"instrumented-test",lines);
+            boolean failed=false;
+            try {
+                GeneralLedger.post(db,entry);
+            } catch(ArithmeticException expected) {
+                failed=true;
+            }
+            assertTrue("Base-currency journal total overflow must be rejected",failed);
+            assertEquals("Overflow must not leave a journal header",0,count(db,
+                "SELECT COUNT(*) FROM gl_journal_entries WHERE entry_ref=?",new String[]{reference}));
+            assertEquals("Overflow must not leave journal lines",0,count(db,
+                "SELECT COUNT(*) FROM gl_journal_lines l JOIN gl_journal_entries e ON e.id=l.entry_id WHERE e.entry_ref=?",new String[]{reference}));
+            assertEquals("Overflow must not leave an idempotency key",0,count(db,
+                "SELECT COUNT(*) FROM idempotency_keys WHERE key=? AND operation='GL_POST'",new String[]{key}));
+            assertEquals("Overflow must not leave an audit row",0,count(db,
+                "SELECT COUNT(*) FROM enterprise_audit_log WHERE entity_ref=? AND action='JOURNAL_POSTED'",new String[]{reference}));
+        } finally {
+            db.close();
+            context.deleteDatabase(name);
+            context.deleteDatabase(name+"-wal");
+            context.deleteDatabase(name+"-shm");
+        }
+    }
+
     private static long count(SQLiteDatabase db,String sql,String[] args) {
         Cursor cursor=db.rawQuery(sql,args);
         try {
