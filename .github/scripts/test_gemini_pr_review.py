@@ -122,6 +122,27 @@ class RequestRetryTests(unittest.TestCase):
         sleep.assert_called_once_with(0.0)
 
 
+    def test_retry_after_header_allows_longer_bounded_wait(self):
+        temporary = urllib.error.HTTPError(
+            "https://example.invalid", 503, "Unavailable",
+            {"Retry-After": "20"}, io.BytesIO(b"")
+        )
+        with patch.object(MODULE.urllib.request, "urlopen", side_effect=[temporary, io.BytesIO(b'{"ok": true}')]), \\
+             patch.object(MODULE.time, "sleep") as sleep:
+            result = MODULE.request_json("https://example.invalid", {})
+        self.assertEqual(result, {"ok": True})
+        sleep.assert_called_once_with(20.0)
+
+    def test_retry_after_is_capped_at_thirty_seconds(self):
+        temporary = urllib.error.HTTPError(
+            "https://example.invalid", 503, "Unavailable",
+            {"Retry-After": "120"}, io.BytesIO(b"")
+        )
+        with patch.object(MODULE.urllib.request, "urlopen", side_effect=[temporary, io.BytesIO(b'{"ok": true}')]), \\
+             patch.object(MODULE.time, "sleep") as sleep:
+            MODULE.request_json("https://example.invalid", {})
+        sleep.assert_called_once_with(30.0)
+
     def test_timed_out_post_is_not_replayed(self):
         timeout = urllib.error.URLError("The read operation timed out")
         with patch.object(MODULE.urllib.request, "urlopen", side_effect=timeout) as urlopen, \
@@ -155,19 +176,19 @@ class RequestRetryTests(unittest.TestCase):
         self.assertEqual(urlopen.call_count, 1)
         sleep.assert_not_called()
 
-    def test_request_stops_after_four_transient_failures(self):
+    def test_request_stops_after_five_transient_failures(self):
         failures = [
             urllib.error.HTTPError(
                 "https://example.invalid", 503, "Unavailable", {}, io.BytesIO(b"")
             )
-            for _ in range(4)
+            for _ in range(5)
         ]
         with patch.object(MODULE.urllib.request, "urlopen", side_effect=failures) as urlopen, \
              patch.object(MODULE.time, "sleep") as sleep:
             with self.assertRaisesRegex(RuntimeError, "HTTP 503"):
                 MODULE.request_json("https://example.invalid", {})
-        self.assertEqual(urlopen.call_count, 4)
-        self.assertEqual(sleep.call_count, 3)
+        self.assertEqual(urlopen.call_count, 5)
+        self.assertEqual(sleep.call_count, 4)
 
 
 if __name__ == "__main__":
