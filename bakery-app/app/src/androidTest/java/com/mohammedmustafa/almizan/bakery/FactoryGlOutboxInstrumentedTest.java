@@ -287,7 +287,7 @@ public class FactoryGlOutboxInstrumentedTest {
             assertEquals(1,destinationEntryCount(destination,"SALE-1-COGS"));
 
             FactoryGlOutbox.ReconciliationReport report=FactoryGlOutbox.reconcile(source,destination);
-            assertTrue("real sale revenue and cost postings must reconcile: "+report.clean());
+            assertTrue("real sale revenue and cost postings must reconcile",report.clean());
             assertEquals(0,report.missingOutbox);
             assertEquals(0,report.missingDestination);
             assertEquals(0,report.amountMismatches);
