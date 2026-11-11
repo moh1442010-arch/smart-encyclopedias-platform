@@ -38,6 +38,9 @@ public class GeneralLedgerAtomicityInstrumentedTest {
             try {
                 GeneralLedger.post(db,entry);
             } catch(RuntimeException expected) {
+                assertNotNull("Injected failure must include a database error",expected.getMessage());
+                assertTrue("Failure must come from the injected journal-line trigger: "+expected.getMessage(),
+                    expected.getMessage().contains("forced_atomicity_test_failure"));
                 failed=true;
             }
             assertTrue("Injected journal-line failure must reach the caller",failed);
