@@ -38,6 +38,8 @@ Run **Actions → Gemini engineering review → Run workflow**, supply a pull-re
 number, and download the report artifact. The workflow uses the repository secret
 `GEMINI_API_KEY` and the stable model ID `gemini-3.8-flash`.
 
-Gemini API availability and free-tier quotas depend on the Google AI Studio project,
-model, region, and current rate limits. A configured key is not proof that a request
-will succeed; the first workflow run is the integration test.
+The selected Gemini 3.8 Flash model is not assumed to be free. Google's current
+published introductory API price is $0.75 per 1M input tokens and $3.75 per 1M
+output tokens through December 31, 2026; pricing may change. Check the live pricing
+page before repeated use. The first workflow run verifies whether this key, project,
+region, and quota can call the API.
