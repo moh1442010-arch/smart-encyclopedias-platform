@@ -35,6 +35,6 @@ public class TaxEngineMathTest {
     @Test public void inclusiveRateDenominatorUsesLongArithmetic() {
         long denominator=(long)Integer.MAX_VALUE+(long)Integer.MAX_VALUE;
         assertEquals(4294967294L,denominator);
-        assertEquals(1L,TaxEngine.roundedRatio(4294967294L,Integer.MAX_VALUE,denominator));
+        assertEquals((long)Integer.MAX_VALUE,TaxEngine.roundedRatio(4294967294L,Integer.MAX_VALUE,denominator));
     }
 }
