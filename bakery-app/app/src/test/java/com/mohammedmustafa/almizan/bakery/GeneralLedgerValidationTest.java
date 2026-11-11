@@ -57,6 +57,9 @@ public class GeneralLedgerValidationTest {
         assertTrue(GeneralLedger.validDate("2026-11-11"));
         assertTrue("Leap day in a leap year must be accepted", GeneralLedger.validDate("2024-02-29"));
         assertTrue("Century leap year divisible by 400 must be accepted", GeneralLedger.validDate("2000-02-29"));
+        assertTrue("Dates around the Gregorian cutover remain valid ISO dates", GeneralLedger.validDate("1582-10-10"));
+        assertTrue("A non-leap century year must accept its valid February date", GeneralLedger.validDate("1500-02-28"));
+        assertFalse("A Julian-only leap day must be rejected by the proleptic Gregorian calendar", GeneralLedger.validDate("1500-02-29"));
         assertFalse("Non-leap century year must be rejected", GeneralLedger.validDate("1900-02-29"));
         assertFalse(GeneralLedger.validDate("2026-02-29"));
         assertFalse(GeneralLedger.validDate("2026-04-31"));
