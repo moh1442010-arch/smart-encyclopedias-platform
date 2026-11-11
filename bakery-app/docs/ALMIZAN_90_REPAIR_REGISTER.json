@@ -280,7 +280,7 @@
     {
       "id": "D14",
       "phase": "P1",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "evidence": null,
       "title": "Trial balance reconciliation",
       "scope": "Trial balance totals must derive only from posted GL lines and balance to the ledger control totals.",
@@ -292,7 +292,8 @@
         "trial balance fixture",
         "draft exclusion",
         "reversal netting"
-      ]
+      ],
+      "work_note": "أضيف اختبار Android instrumented يقرأ ميزان المراجعة من الأستاذ العام الفعلي باستخدام قيود مرحّلة قبل بداية الفترة وقيد عكسي مرحّل ومستند مسودة. يتحقق من استبعاد المسودة، وإدراج الحركات المرحّلة حتى تاريخ التقرير، وتساوي المدين والدائن، وتصفير رصيد الصندوق والإيراد بعد العكس. الاختبار مضاف ولم يُنفذ بعد على API 29 وAPI 35؛ يبقى D14 قيد التنفيذ حتى نجاح المحاكيين ومراجعة التقرير."
     },
     {
       "id": "D15",
