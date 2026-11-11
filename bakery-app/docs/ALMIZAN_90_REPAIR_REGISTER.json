@@ -132,7 +132,7 @@
     {
       "id": "D06",
       "phase": "P1",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "evidence": null,
       "title": "Purchases-to-GL posting",
       "scope": "Supplier invoices and material purchases must update inventory or expense and accounts payable through a balanced GL journal.",
@@ -145,7 +145,8 @@
         "supplier credit",
         "duplicate purchase",
         "rollback"
-      ]
+      ],
+      "work_note": "أضيف اختبار Android instrumented لمسار فاتورة شراء المورد الفعلي عبر FactoryActivity.DB.receive. يختبر إدخال خامات المخزون، وفصل السداد النقدي وبنكك، وإثبات الجزء الآجل للمورد، ثم قيد المخزون/الصندوق/بنكك/الموردين وترحيله عبر Outbox إلى الأستاذ العام ومطابقته. لم يُنفذ الاختبار بعد على API 29 وAPI 35؛ لذلك يبقى D06 قيد التنفيذ ولا يُغلق قبل نجاح المحاكيين."
     },
     {
       "id": "D07",
