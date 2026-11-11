@@ -121,6 +121,16 @@ class RequestRetryTests(unittest.TestCase):
         self.assertEqual(urlopen.call_count, 2)
         sleep.assert_called_once_with(0.0)
 
+
+    def test_timed_out_post_is_not_replayed(self):
+        timeout = urllib.error.URLError("The read operation timed out")
+        with patch.object(MODULE.urllib.request, "urlopen", side_effect=timeout) as urlopen, \
+             patch.object(MODULE.time, "sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError, "POSTs are not retried"):
+                MODULE.request_json("https://example.invalid", {}, data=b'{"review": true}')
+        self.assertEqual(urlopen.call_count, 1)
+        sleep.assert_not_called()
+
     def test_request_does_not_retry_permanent_400(self):
         permanent = urllib.error.HTTPError(
             "https://example.invalid", 400, "Bad Request", {}, io.BytesIO(b"")
