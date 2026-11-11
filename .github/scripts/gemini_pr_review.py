@@ -141,11 +141,13 @@ anything. Do not request or reveal credentials. Never repeat possible secrets.
     )
 
     payload = {
-        "systemInstruction": {"parts": [{"text": system_instruction}]},
-        "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
-        "generationConfig": {"maxOutputTokens": 8192},
+        "model": model,
+        "input": user_prompt,
+        "system_instruction": system_instruction,
+        "store": False,
+        "generation_config": {"max_output_tokens": 4096},
     }
-    url = f"{GEMINI_API}/models/{model}:generateContent"
+    url = f"{GEMINI_API}/interactions"
     gemini_headers = {
         "Content-Type": "application/json",
         "x-goog-api-key": api_key,
