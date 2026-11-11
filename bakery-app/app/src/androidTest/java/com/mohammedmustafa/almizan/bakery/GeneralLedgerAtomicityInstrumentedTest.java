@@ -104,6 +104,68 @@ public class GeneralLedgerAtomicityInstrumentedTest {
         }
     }
 
+
+    @Test public void sourceReferenceIsUniqueAndAuditableForExactSourceDocument() throws Exception {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="gl_source_identity_"+System.currentTimeMillis()+".db";
+        File file=context.getDatabasePath(name);
+        File parent=file.getParentFile();
+        assertNotNull(parent);
+        if(!parent.exists())assertTrue(parent.mkdirs());
+        if(file.exists())assertTrue(file.delete());
+        SQLiteDatabase db=SecureDatabase.open(context,name);
+        String sourceType="FACTORY_PURCHASE";
+        String sourceId="PURCHASE-D10-"+System.currentTimeMillis();
+        String firstRef="GL-D10-FIRST-"+System.currentTimeMillis();
+        String firstKey="GL-D10-KEY-FIRST-"+System.currentTimeMillis();
+        String secondRef="GL-D10-SECOND-"+System.currentTimeMillis();
+        String secondKey="GL-D10-KEY-SECOND-"+System.currentTimeMillis();
+        try {
+            EnterpriseSchema.ensure(db);
+            db.execSQL("INSERT INTO financial_periods(period_code,start_date,end_date,status) VALUES('GL-D10-"+System.currentTimeMillis()+"','2026-11-01','2026-11-30','OPEN')");
+            List<GeneralLedger.Line> lines=new ArrayList<>();
+            lines.add(new GeneralLedger.Line("1200","MAIN","SDG",2500L,0L,1L,1L));
+            lines.add(new GeneralLedger.Line("2000","MAIN","SDG",0L,2500L,1L,1L));
+            GeneralLedger.Entry first=new GeneralLedger.Entry(firstRef,"D10 source identity","2026-11-11",
+                sourceType,sourceId,firstKey,"instrumented-test",lines);
+            GeneralLedger.Result posted=GeneralLedger.post(db,first);
+            assertEquals(firstRef,posted.reference);
+            assertEquals("Exact source must resolve to exactly one posted journal",1,count(db,
+                "SELECT COUNT(*) FROM gl_journal_entries WHERE source_type=? AND source_id=? AND status='POSTED'",
+                new String[]{sourceType,sourceId}));
+            assertEquals("Audit row must point to the same immutable GL reference",1,count(db,
+                "SELECT COUNT(*) FROM enterprise_audit_log WHERE entity_type='GL_JOURNAL' AND entity_ref=? AND action='JOURNAL_POSTED'",
+                new String[]{firstRef}));
+            assertEquals("Audit row must retain the exact source document identity",1,count(db,
+                "SELECT COUNT(*) FROM enterprise_audit_log WHERE entity_ref=? AND details LIKE ?",
+                new String[]{firstRef,sourceType+":"+sourceId+":%"}));
+
+            GeneralLedger.Entry duplicateSource=new GeneralLedger.Entry(secondRef,"Duplicate D10 source","2026-11-11",
+                sourceType,sourceId,secondKey,"instrumented-test",lines);
+            boolean rejected=false;
+            try {
+                GeneralLedger.post(db,duplicateSource);
+            } catch(RuntimeException expected) {
+                rejected=true;
+            }
+            assertTrue("A second GL posting for the same source type and source ID must be rejected",rejected);
+            assertEquals("Duplicate source must not create a second journal",1,count(db,
+                "SELECT COUNT(*) FROM gl_journal_entries WHERE source_type=? AND source_id=?",
+                new String[]{sourceType,sourceId}));
+            assertEquals("Duplicate source must not leave a second idempotency key",0,count(db,
+                "SELECT COUNT(*) FROM idempotency_keys WHERE key=? AND operation='GL_POST'",
+                new String[]{secondKey}));
+            assertEquals("Duplicate source must not leave a second audit row",0,count(db,
+                "SELECT COUNT(*) FROM enterprise_audit_log WHERE entity_ref=? AND action='JOURNAL_POSTED'",
+                new String[]{secondRef}));
+        } finally {
+            db.close();
+            context.deleteDatabase(name);
+            context.deleteDatabase(name+"-wal");
+            context.deleteDatabase(name+"-shm");
+        }
+    }
+
     private static long count(SQLiteDatabase db,String sql,String[] args) {
         Cursor cursor=db.rawQuery(sql,args);
         try {
