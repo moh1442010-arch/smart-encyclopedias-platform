@@ -241,6 +241,69 @@ public class FactoryGlOutboxInstrumentedTest {
         }
     }
 
+    @Test public void realFactorySalePostsRevenueAndCogsThroughOutboxToGeneralLedger() throws Exception {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String factoryName="almizan_factory_1.db";
+        String destinationName="factory_gl_real_sale_dest_"+System.currentTimeMillis()+".db";
+        context.deleteDatabase(factoryName);
+        context.deleteDatabase(factoryName+"-wal");
+        context.deleteDatabase(factoryName+"-shm");
+        SQLiteOpenHelper helper=null;
+        SQLiteDatabase source=null,destination=null;
+        try {
+            Class<?> dbClass=Class.forName("com.mohammedmustafa.almizan.bakery.FactoryActivity$DB");
+            Constructor<?> constructor=dbClass.getDeclaredConstructor(Context.class);
+            constructor.setAccessible(true);
+            helper=(SQLiteOpenHelper)constructor.newInstance(context);
+            source=helper.getWritableDatabase();
+            destination=openDestination(context,destinationName,"OPEN");
+
+            assertEquals("reviewed account mappings must be seeded before posting",15,
+                FactoryGlOutbox.seedReviewedMappings(source,"MAIN","SDG"));
+            source.execSQL("INSERT INTO products(name,category,unit_price,unit) VALUES('منتج اختبار','اختبار',10000,'قطعة')");
+            Cursor product=source.rawQuery("SELECT last_insert_rowid()",null);
+            long productId;try{assertTrue(product.moveToFirst());productId=product.getLong(0);}finally{product.close();}
+            source.execSQL("INSERT INTO finished(product_id,qty,value,unit_cost) VALUES(?,10000,50000,5000)",
+                new Object[]{productId});
+            source.execSQL("INSERT INTO factory_customers(name) VALUES('عميل اختبار')");
+            Cursor customer=source.rawQuery("SELECT id FROM factory_customers WHERE name='عميل اختبار'",null);
+            long customerId;try{assertTrue(customer.moveToFirst());customerId=customer.getLong(0);}finally{customer.close();}
+
+            java.lang.reflect.Method sell=dbClass.getDeclaredMethod("sell",long.class,long.class,long.class,long.class,
+                long.class,long.class,String.class,String.class,String.class);
+            sell.setAccessible(true);
+            sell.invoke(helper,productId,customerId,1000L,10000L,5000L,0L,"عميل اختبار","",
+                "POINT_OF_SALE");
+
+            assertEquals("one operational sale must create one source sales row",1,count(source,"sales"));
+            assertEquals("sale revenue and COGS must each create a source journal",2,count(source,"journal_entries"));
+            assertEquals("both source journals must have durable outbox events",2,count(source,"factory_gl_outbox"));
+            assertEquals("both events must be balanced snapshots",4,count(source,"factory_gl_outbox_lines"));
+
+            FactoryGlOutbox.ProcessResult posted=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(2,posted.posted);
+            assertEquals(0,posted.retried);
+            assertEquals(2,destinationEntryCount(destination,"SALE-1-REVENUE"));
+            assertEquals(2,destinationEntryCount(destination,"SALE-1-COGS"));
+
+            FactoryGlOutbox.ReconciliationReport report=FactoryGlOutbox.reconcile(source,destination);
+            assertTrue("real sale revenue and cost postings must reconcile: "+report.describe(),report.clean());
+            assertEquals(0,report.missingOutbox);
+            assertEquals(0,report.missingDestination);
+            assertEquals(0,report.amountMismatches);
+        } finally {
+            if(source!=null&&source.isOpen())source.close();
+            if(destination!=null&&destination.isOpen())destination.close();
+            if(helper!=null)helper.close();
+            context.deleteDatabase(factoryName);
+            context.deleteDatabase(factoryName+"-wal");
+            context.deleteDatabase(factoryName+"-shm");
+            context.deleteDatabase(destinationName);
+            context.deleteDatabase(destinationName+"-wal");
+            context.deleteDatabase(destinationName+"-shm");
+        }
+    }
+
     @Test public void mappedFactoryJournalPostsToGlAndCrashReplayDoesNotDuplicate() {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String sourceName="factory_gl_delivery_source_"+System.currentTimeMillis()+".db";
