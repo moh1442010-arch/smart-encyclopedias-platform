@@ -1,0 +1,30 @@
+name: Test Gemini reviewer
+
+on:
+  pull_request:
+    paths:
+      - ".github/scripts/gemini_pr_review.py"
+      - ".github/scripts/test_gemini_pr_review.py"
+      - ".github/workflows/gemini-engineering-review.yml"
+      - ".github/workflows/test-gemini-reviewer.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  reviewer-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile reviewer
+        run: python -m py_compile .github/scripts/gemini_pr_review.py .github/scripts/test_gemini_pr_review.py
+      - name: Run safety tests
+        run: python .github/scripts/test_gemini_pr_review.py
