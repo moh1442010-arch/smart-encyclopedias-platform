@@ -1,6 +1,7 @@
 name: Al-Mizan foundation tests (no APK)
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - "feature/**"
