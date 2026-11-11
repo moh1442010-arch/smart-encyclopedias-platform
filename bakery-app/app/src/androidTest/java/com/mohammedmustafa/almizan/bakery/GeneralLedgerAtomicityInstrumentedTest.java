@@ -233,6 +233,59 @@ public class GeneralLedgerAtomicityInstrumentedTest {
         }
     }
 
+
+    @Test public void postingIntoClosedOrMissingPeriodLeavesNoPartialLedgerRows() throws Exception {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="gl_closed_period_"+System.currentTimeMillis()+".db";
+        File file=context.getDatabasePath(name);
+        File parent=file.getParentFile();
+        assertNotNull(parent);
+        if(!parent.exists())assertTrue(parent.mkdirs());
+        if(file.exists())assertTrue(file.delete());
+        SQLiteDatabase db=SecureDatabase.open(context,name);
+        String suffix=String.valueOf(System.currentTimeMillis());
+        try {
+            EnterpriseSchema.ensure(db);
+            db.execSQL("INSERT INTO financial_periods(period_code,start_date,end_date,status,closed_at) VALUES('GL-CLOSED-"+suffix+"','2026-11-01','2026-11-30','CLOSED',"+System.currentTimeMillis()+")");
+            List<GeneralLedger.Line> lines=new ArrayList<>();
+            lines.add(new GeneralLedger.Line("1000","MAIN","SDG",1800L,0L,1L,1L));
+            lines.add(new GeneralLedger.Line("4000","MAIN","SDG",0L,1800L,1L,1L));
+
+            assertPostingRejectedWithoutPartialRows(db,"GL-D13-CLOSED-"+suffix,"GL-D13-CLOSED-KEY-"+suffix,
+                "2026-11-11","closed period",lines);
+            assertPostingRejectedWithoutPartialRows(db,"GL-D13-MISSING-"+suffix,"GL-D13-MISSING-KEY-"+suffix,
+                "2026-12-11","missing period",lines);
+        } finally {
+            db.close();
+            context.deleteDatabase(name);
+            context.deleteDatabase(name+"-wal");
+            context.deleteDatabase(name+"-shm");
+        }
+    }
+
+    private static void assertPostingRejectedWithoutPartialRows(SQLiteDatabase db,String reference,
+            String key,String date,String label,List<GeneralLedger.Line> lines) {
+        GeneralLedger.Entry entry=new GeneralLedger.Entry(reference,"D13 "+label,date,
+            "TEST_PERIOD_GUARD",reference,key,"instrumented-test",lines);
+        boolean rejected=false;
+        try {
+            GeneralLedger.post(db,entry);
+        } catch(IllegalStateException expected) {
+            rejected=true;
+        }
+        assertTrue(label+" must be rejected",rejected);
+        assertEquals(label+" must not create a journal header",0,count(db,
+            "SELECT COUNT(*) FROM gl_journal_entries WHERE entry_ref=?",new String[]{reference}));
+        assertEquals(label+" must not create journal lines",0,count(db,
+            "SELECT COUNT(*) FROM gl_journal_lines l JOIN gl_journal_entries e ON e.id=l.entry_id WHERE e.entry_ref=?",
+            new String[]{reference}));
+        assertEquals(label+" must not consume its idempotency key",0,count(db,
+            "SELECT COUNT(*) FROM idempotency_keys WHERE key=? AND operation='GL_POST'",new String[]{key}));
+        assertEquals(label+" must not create an audit row",0,count(db,
+            "SELECT COUNT(*) FROM enterprise_audit_log WHERE entity_ref=? AND action='JOURNAL_POSTED'",
+            new String[]{reference}));
+    }
+
     private static long count(SQLiteDatabase db,String sql,String[] args) {
         Cursor cursor=db.rawQuery(sql,args);
         try {
