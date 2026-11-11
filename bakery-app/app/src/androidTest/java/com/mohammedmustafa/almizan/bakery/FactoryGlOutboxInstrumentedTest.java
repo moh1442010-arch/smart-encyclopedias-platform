@@ -569,6 +569,51 @@ public class FactoryGlOutboxInstrumentedTest {
         }
     }
 
+    @Test public void sourceOutboxEnqueueIsIdempotentAndRejectsChangedSourcePayload() {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String sourceName="factory_gl_source_idempotency_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase source=openSource(context,sourceName);
+        try {
+            mapCashSale(source,"1000");
+            long sourceEntryId;
+            source.beginTransaction();
+            try {
+                sourceEntryId=FactoryGlOutbox.postSourceJournal(source,"IDEMPOTENCY-SOURCE-1","بيع نقدي",
+                    "2026-11-09",new String[]{"الصندوق","المبيعات"},
+                    new long[]{19000,0},new long[]{0,19000});
+                source.setTransactionSuccessful();
+            } finally {source.endTransaction();}
+
+            source.beginTransaction();
+            try {
+                FactoryGlOutbox.enqueue(source,sourceEntryId);
+                source.setTransactionSuccessful();
+            } finally {source.endTransaction();}
+
+            assertEquals("same source journal must retain one outbox event",1,count(source,"factory_gl_outbox"));
+            assertEquals("same source journal must retain its original snapshot lines",2,
+                count(source,"factory_gl_outbox_lines"));
+
+            source.execSQL("UPDATE journal_lines SET credit=19001 WHERE entry_id=? AND credit>0",
+                new Object[]{sourceEntryId});
+            boolean changedPayloadRejected=false;
+            source.beginTransaction();
+            try {
+                FactoryGlOutbox.enqueue(source,sourceEntryId);
+                source.setTransactionSuccessful();
+            } catch(IllegalStateException expected) {
+                changedPayloadRejected=expected.getMessage()!=null&&expected.getMessage().contains("تغير محتوى القيد");
+            } finally {source.endTransaction();}
+
+            assertTrue("changed source payload under an existing event key must be rejected",changedPayloadRejected);
+            assertEquals("changed payload must not create a second outbox event",1,count(source,"factory_gl_outbox"));
+            assertEquals("changed payload must not append snapshot lines",2,count(source,"factory_gl_outbox_lines"));
+        } finally {
+            if(source.isOpen())source.close();
+            context.deleteDatabase(sourceName);context.deleteDatabase(sourceName+"-wal");context.deleteDatabase(sourceName+"-shm");
+        }
+    }
+
     @Test public void reconciliationDetectsDestinationTransactionAmountMismatch() {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String sourceName="factory_gl_reconcile_source_"+System.currentTimeMillis()+".db";
