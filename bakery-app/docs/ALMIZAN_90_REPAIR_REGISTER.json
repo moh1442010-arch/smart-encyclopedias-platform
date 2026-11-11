@@ -170,7 +170,7 @@
     {
       "id": "D08",
       "phase": "P1",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "evidence": null,
       "title": "Production-to-GL posting",
       "scope": "Material consumption, WIP, labor, overhead, finished goods and production variances must post with source batch references.",
@@ -184,7 +184,8 @@
         "completion",
         "variance",
         "duplicate batch"
-      ]
+      ],
+      "work_note": "أضيف اختبار Android instrumented لمسار finalizeProduction الفعلي. ينشئ منتجاً ووصفة ومخزون خام، ثم ينفذ دفعة إنتاج تشمل تكلفة المواد والأجور والتكاليف الصناعية، ويتحقق من أربعة قيود مستقلة لتحويل الخام إلى تحت التشغيل وإثبات الأجور والتكاليف ثم تحويل التكلفة إلى مخزون الإنتاج التام، وترحيلها ومطابقتها عبر Outbox. لم يُنفذ الاختبار بعد على API 29 وAPI 35؛ لذلك يبقى D08 قيد التنفيذ."
     },
     {
       "id": "D09",
