@@ -226,7 +226,7 @@
     {
       "id": "D11",
       "phase": "P1",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "evidence": null,
       "title": "Document-linked reversals",
       "scope": "Corrections must use full reversing journals and replacement documents rather than deleting or silently editing posted entries.",
@@ -238,7 +238,8 @@
         "reverse journal",
         "duplicate reversal",
         "reverse-of-reversal rejection"
-      ]
+      ],
+      "notes": "Added Android instrumented coverage for original journal preservation, both opposite reversal lines, reversal_of linkage, idempotent retry, audit singularity, and rejection of reversing a reversal. Closure awaits API 29/API 35 results and source-document status reconciliation."
     },
     {
       "id": "D12",
