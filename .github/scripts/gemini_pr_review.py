@@ -45,6 +45,20 @@ def redact_secrets(value: str) -> str:
     return value
 
 
+def extract_interaction_text(result: dict) -> str:
+    """Extract only model-generated text from the Interactions API response."""
+    chunks: list[str] = []
+    for step in result.get("steps", []):
+        if not isinstance(step, dict) or step.get("type") != "model_output":
+            continue
+        for part in step.get("content", []):
+            if isinstance(part, dict) and part.get("type") == "text":
+                text_value = part.get("text")
+                if isinstance(text_value, str):
+                    chunks.append(text_value)
+    return "\\n".join(chunks).strip()
+
+
 def main() -> int:
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     github_token = os.environ.get("GITHUB_TOKEN", "").strip()
@@ -155,14 +169,11 @@ anything. Do not request or reveal credentials. Never repeat possible secrets.
     }
     result = request_json(url, gemini_headers, json.dumps(payload).encode("utf-8"))
 
-    candidates = result.get("candidates") or []
-    parts = (candidates[0].get("content") or {}).get("parts") or [] if candidates else []
-    answer = "\n".join(p.get("text", "") for p in parts if isinstance(p, dict))
+    answer = extract_interaction_text(result)
     if not answer.strip():
-        feedback = result.get("promptFeedback", {})
         raise RuntimeError(
-            f"Gemini returned no review text. Feedback category: "
-            f"{feedback.get('blockReason', 'unspecified')}"
+            f"Gemini returned no review text. Interaction status: "
+            f"{result.get('status', 'unspecified')}"
         )
 
     answer = redact_secrets(answer)
