@@ -199,7 +199,7 @@ public class EnterpriseSchemaMigrationTest {
             GeneralLedger.post(db,original);
             GeneralLedger.Result first=GeneralLedger.reverse(db,"TEST-ORIGINAL","2026-11-09","ledger-owner");
             assertFalse("First reversal must create a new journal",first.alreadyPosted);
-            GeneralLedger.Result retry=GeneralLedger.reverse(db,"TEST-ORIGINAL","2026-11-09","tester");
+            GeneralLedger.Result retry=GeneralLedger.reverse(db,"TEST-ORIGINAL","2026-11-09","ledger-owner");
             assertTrue("Repeated reversal must be idempotent",retry.alreadyPosted);
             assertEquals(first.reference,retry.reference);
             Cursor count=db.rawQuery("SELECT COUNT(*) FROM gl_journal_entries WHERE source_type='REVERSAL' AND source_id='TEST-ORIGINAL'",null);
