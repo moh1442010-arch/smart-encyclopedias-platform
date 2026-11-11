@@ -24,15 +24,17 @@ final class TaxEngine {
     static Result calculate(SQLiteDatabase db,String countryCode,String taxCode,String date,
                             long amountMinor,boolean registered,boolean taxInclusive) {
         if(amountMinor<0)throw new IllegalArgumentException("Amount cannot be negative");
-        if(countryCode==null||date==null||taxCode==null)throw new IllegalArgumentException("Missing tax jurisdiction input");
+        if(blank(countryCode)||blank(date)||blank(taxCode)||!GeneralLedger.validDate(date))throw new IllegalArgumentException("Missing or invalid tax jurisdiction input");
         String profileStatus="",taxType="";
         Cursor profile=db.rawQuery("SELECT profile_status,indirect_tax_type FROM tax_jurisdiction_profiles WHERE country_code=?",new String[]{countryCode});
         try {
             if(!profile.moveToFirst())return new Result("REVIEW_REQUIRED",amountMinor,0,amountMinor,0,1);
             profileStatus=profile.getString(0);taxType=profile.getString(1);
         } finally { profile.close(); }
-        if("NO_VAT".equals(taxType))return new Result("NO_VAT_IN_JURISDICTION",amountMinor,0,amountMinor,0,1);
-        if(!"VERIFIED_BASELINE".equals(profileStatus)||"SALES_TAX_LOCAL".equals(taxType))
+        // A no-VAT outcome is allowed only for an explicitly confirmed profile.
+        // Unverified jurisdictions must never bypass tax review by setting taxType=NO_VAT.
+        if(isConfirmedNoVat(profileStatus,taxType))return new Result("NO_VAT_IN_JURISDICTION",amountMinor,0,amountMinor,0,1);
+        if(!"VERIFIED_BASELINE".equals(profileStatus)||"SALES_TAX_LOCAL".equals(taxType)||"NO_VAT".equals(taxType))
             return new Result("LOCAL_RULES_REQUIRED",amountMinor,0,amountMinor,0,1);
         if(!registered)return new Result("REGISTRATION_STATUS_REQUIRED",amountMinor,0,amountMinor,0,1);
         int numerator=0,denominator=1;boolean found=false;
@@ -41,14 +43,22 @@ final class TaxEngine {
         try { if(rule.moveToFirst()){numerator=rule.getInt(0);denominator=rule.getInt(1);found=true;} }
         finally { rule.close(); }
         if(!found)return new Result("RULE_NOT_FOUND",amountMinor,0,amountMinor,0,1);
+        if(numerator<0||denominator<=0)throw new IllegalStateException("Invalid persisted tax rate");
         if(taxInclusive) {
-            long net=roundedRatio(amountMinor,denominator,denominator+numerator);
+            long inclusiveDenominator=(long)denominator+(long)numerator;
+            long net=roundedRatio(amountMinor,denominator,inclusiveDenominator);
             return new Result("CALCULATED",net,amountMinor-net,amountMinor,numerator,denominator);
         }
         long tax=roundedRatio(amountMinor,numerator,denominator);
         if(amountMinor>Long.MAX_VALUE-tax)throw new ArithmeticException("Tax-inclusive total exceeds supported amount");
         return new Result("CALCULATED",amountMinor,tax,amountMinor+tax,numerator,denominator);
     }
+
+    static boolean isConfirmedNoVat(String profileStatus,String taxType) {
+        return "NO_VAT_CONFIRMED".equals(profileStatus)&&"NO_VAT".equals(taxType);
+    }
+
+    private static boolean blank(String value){return value==null||value.trim().isEmpty();}
 
     static long roundedRatio(long amount,long numerator,long denominator) {
         if(amount<0||numerator<0||denominator<=0)throw new IllegalArgumentException("Invalid tax calculation operands");
