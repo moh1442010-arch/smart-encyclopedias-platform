@@ -258,7 +258,18 @@ public class FactoryLedgerActivity extends Activity {
             body.addView(label("قيود المصنع: "+report.sourceJournals+" — أحداث Outbox: "+report.outboxEvents+" — مرحل: "+report.posted,13));
             body.addView(label("معلق: "+report.pending+" — قيد المعالجة: "+report.processing+" — إعادة محاولة: "+report.retry+" — متوقف: "+report.deadLetter,13));
             body.addView(label("بلا Outbox: "+report.missingOutbox+" — أحداث Outbox يتيمة: "+report.orphanOutbox+" — بلا قيد وجهة: "+report.missingDestination+" — قيد وجهة يتيم: "+report.orphanDestination+" — غير مؤكد: "+report.unacknowledgedDestination+" — فروقات الحساب/الفرع/العملة/المبالغ: "+report.amountMismatches,13));
-            body.addView(label(report.clean()?"مطابقة الأحداث المرحّلة سليمة حسب البيانات المتاحة.":"توجد أحداث أو فروقات تتطلب المعالجة قبل اعتماد الإغلاق.",13));
+            CashBankReconciliationService.Report cashBank=
+                CashBankReconciliationService.reconcileAllHistory(db,destination,"MAIN","SDG");
+            body.addView(label("مطابقة الصندوق وبنكك مع الأستاذ العام",16));
+            body.addView(label("الصندوق — دفتر الحركات: "+cashBank.cash.cashbookMinor+
+                " | الأستاذ 1000: "+cashBank.cash.ledgerMinor+
+                " | الفرق: "+cashBank.cash.differenceMinor,13));
+            body.addView(label("بنكك — دفتر الحركات: "+cashBank.bankak.cashbookMinor+
+                " | الأستاذ 1010: "+cashBank.bankak.ledgerMinor+
+                " | الفرق: "+cashBank.bankak.differenceMinor,13));
+            body.addView(label(report.clean()&&cashBank.balanced()?
+                "مطابقة الأستاذ ودفتر النقدية وبنكك سليمة ضمن النطاق المتاح.":
+                "توجد أحداث معلقة أو فروقات نقدية/مصرفية. لا تعتمد الإغلاق قبل معالجتها.",13));
             appendReferenceRows(destination,"SELECT account_code||' — '||name_ar||' / '||name_en FROM chart_of_accounts WHERE active=1 ORDER BY account_code","الحسابات");
             appendReferenceRows(destination,"SELECT branch_code||' — '||name FROM branches WHERE active=1 ORDER BY branch_code","الفروع");
             appendReferenceRows(destination,"SELECT code||' — '||name_ar FROM currencies WHERE active=1 ORDER BY code","العملات");
