@@ -378,6 +378,67 @@ public class FactoryGlOutboxInstrumentedTest {
         }
     }
 
+    @Test public void realSupplierPurchasePostsInventoryCashBankAndPayableThroughOutbox() throws Exception {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String factoryName="almizan_factory_1.db";
+        String destinationName="factory_gl_real_purchase_dest_"+System.currentTimeMillis()+".db";
+        context.deleteDatabase(factoryName);
+        context.deleteDatabase(factoryName+"-wal");
+        context.deleteDatabase(factoryName+"-shm");
+        SQLiteOpenHelper helper=null;
+        SQLiteDatabase source=null,destination=null;
+        try {
+            Class<?> dbClass=Class.forName("com.mohammedmustafa.almizan.bakery.FactoryActivity$DB");
+            Constructor<?> constructor=dbClass.getDeclaredConstructor(Context.class);
+            constructor.setAccessible(true);
+            helper=(SQLiteOpenHelper)constructor.newInstance(context);
+            source=helper.getWritableDatabase();
+            destination=openDestination(context,destinationName,"OPEN");
+            assertEquals(15,FactoryGlOutbox.seedReviewedMappings(source,"MAIN","SDG"));
+
+            source.execSQL("INSERT INTO factory_suppliers(name,phone,iban) VALUES('مورد اختبار','', '')");
+            Cursor supplier=source.rawQuery("SELECT id FROM factory_suppliers WHERE name='مورد اختبار'",null);
+            long supplierId;
+            try{assertTrue(supplier.moveToFirst());supplierId=supplier.getLong(0);}
+            finally{supplier.close();}
+
+            java.lang.reflect.Method receive=dbClass.getDeclaredMethod("receive",String.class,String.class,
+                long.class,long.class,long.class,String.class,long.class,long.class,String.class);
+            receive.setAccessible(true);
+            receive.invoke(helper,"دقيق اختبار","كجم",5000L,25000L,supplierId,"مورد اختبار",
+                5000L,5000L,"BANKAK-RAW-1");
+
+            assertEquals("purchase invoice must be saved once",1,count(source,"supplier_purchase_records"));
+            assertEquals("raw stock movement must be traceable",1,count(source,"movements"));
+            assertEquals("cash and bank payments must be recorded separately",2,count(source,"cashbook"));
+            assertEquals("purchase must create one source journal",1,count(source,"journal_entries"));
+            assertEquals("purchase journal must have one durable outbox event",1,count(source,"factory_gl_outbox"));
+            assertEquals("inventory debit and cash, bank, payable credits must be retained",4,
+                count(source,"factory_gl_outbox_lines"));
+
+            FactoryGlOutbox.ProcessResult posted=FactoryGlOutbox.processPending(source,destination);
+            assertEquals(1,posted.posted);
+            assertEquals(0,posted.retried);
+            assertEquals(1,destinationEntryCount(destination,"RAW-IN-1"));
+
+            FactoryGlOutbox.ReconciliationReport report=FactoryGlOutbox.reconcile(source,destination);
+            assertTrue("supplier purchase must reconcile to the general ledger",report.clean());
+            assertEquals(0,report.missingOutbox);
+            assertEquals(0,report.missingDestination);
+            assertEquals(0,report.amountMismatches);
+        } finally {
+            if(source!=null&&source.isOpen())source.close();
+            if(destination!=null&&destination.isOpen())destination.close();
+            if(helper!=null)helper.close();
+            context.deleteDatabase(factoryName);
+            context.deleteDatabase(factoryName+"-wal");
+            context.deleteDatabase(factoryName+"-shm");
+            context.deleteDatabase(destinationName);
+            context.deleteDatabase(destinationName+"-wal");
+            context.deleteDatabase(destinationName+"-shm");
+        }
+    }
+
     @Test public void mappedFactoryJournalPostsToGlAndCrashReplayDoesNotDuplicate() {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String sourceName="factory_gl_delivery_source_"+System.currentTimeMillis()+".db";
