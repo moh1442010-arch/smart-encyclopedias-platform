@@ -7,9 +7,8 @@ import net.zetetic.database.sqlcipher.SQLiteDatabase;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
-import java.text.ParsePosition;
-import java.text.SimpleDateFormat;
-import java.util.Locale;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 
 /**
  * Atomic double-entry posting service for the bakery enterprise ledger.
@@ -249,11 +248,13 @@ final class GeneralLedger {
     }
     static boolean validDate(String d) {
         if(d==null||!d.matches("\\d{4}-\\d{2}-\\d{2}")) return false;
-        SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
-        format.setLenient(false);
-        ParsePosition position=new ParsePosition(0);
-        java.util.Date parsed=format.parse(d,position);
-        return parsed!=null && position.getIndex()==d.length();
+        try {
+            // LocalDate uses the proleptic Gregorian calendar, avoiding the legacy
+            // GregorianCalendar Julian/Gregorian cutover for historical dates.
+            return LocalDate.parse(d).getYear()>=1;
+        } catch(DateTimeParseException invalidDate) {
+            return false;
+        }
     }
     private static boolean blank(String s){return s==null||s.trim().isEmpty();}
     private static String scalar(SQLiteDatabase db,String sql,String[] args) {
