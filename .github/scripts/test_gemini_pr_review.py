@@ -132,8 +132,7 @@ class RequestRetryTests(unittest.TestCase):
         sleep.assert_not_called()
 
     def test_socket_read_timeout_on_post_is_not_replayed(self):
-        with patch.object(MODULE.urllib.request, "urlopen", side_effect=TimeoutError("The read operation timed out")) as urlopen, \\
-             patch.object(MODULE.time, "sleep") as sleep:
+        with patch.object(MODULE.urllib.request, "urlopen", side_effect=TimeoutError("The read operation timed out")) as urlopen, patch.object(MODULE.time, "sleep") as sleep:
             with self.assertRaisesRegex(RuntimeError, "POSTs are not retried"):
                 MODULE.request_json("https://example.invalid", {}, data=b'{"review": true}')
         self.assertEqual(urlopen.call_count, 1)
