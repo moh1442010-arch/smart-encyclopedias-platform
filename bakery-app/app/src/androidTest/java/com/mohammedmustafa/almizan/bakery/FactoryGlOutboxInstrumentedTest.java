@@ -278,7 +278,7 @@ public class FactoryGlOutboxInstrumentedTest {
             assertEquals("one operational sale must create one source sales row",1,count(source,"sales"));
             assertEquals("sale revenue and COGS must each create a source journal",2,count(source,"journal_entries"));
             assertEquals("both source journals must have durable outbox events",2,count(source,"factory_gl_outbox"));
-            assertEquals("both events must be balanced snapshots",4,count(source,"factory_gl_outbox_lines"));
+            assertEquals("revenue has cash, receivable and sales lines; COGS has two lines",5,count(source,"factory_gl_outbox_lines"));
 
             FactoryGlOutbox.ProcessResult posted=FactoryGlOutbox.processPending(source,destination);
             assertEquals(2,posted.posted);
@@ -594,6 +594,8 @@ public class FactoryGlOutboxInstrumentedTest {
             assertEquals("same source journal must retain its original snapshot lines",2,
                 count(source,"factory_gl_outbox_lines"));
 
+            source.execSQL("UPDATE journal_lines SET debit=19001 WHERE entry_id=? AND debit>0",
+                new Object[]{sourceEntryId});
             source.execSQL("UPDATE journal_lines SET credit=19001 WHERE entry_id=? AND credit>0",
                 new Object[]{sourceEntryId});
             boolean changedPayloadRejected=false;
