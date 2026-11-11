@@ -138,7 +138,7 @@ class ReviewScopeTests(unittest.TestCase):
             "defects": [
                 {
                     "id": f"D{i:02}", "phase": "P3", "status": "OPEN",
-                    "title": f"Defect {i}", "scope": "Scope detail " * 45,
+                    "title": f"Defect {i}", "scope": "Scope detail " * 20,
                     "acceptance_criteria": ["criterion " * 8],
                     "tests_required": ["test " * 8],
                 }
