@@ -208,7 +208,7 @@
     {
       "id": "D10",
       "phase": "P1",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "evidence": null,
       "title": "Immutable source references",
       "scope": "Every GL journal must retain a stable source type, source ID, document reference and traceable audit record.",
@@ -220,7 +220,8 @@
         "source reference uniqueness",
         "audit trace",
         "orphan source detection"
-      ]
+      ],
+      "notes": "Added an Android instrumented test for unique source_type/source_id posting, exact source-to-GL lookup, audit trace, and rollback on duplicate source. Closure awaits API 29 and API 35 instrumented test results."
     },
     {
       "id": "D11",
