@@ -128,7 +128,8 @@ class RequestRetryTests(unittest.TestCase):
             {"Retry-After": "20"}, io.BytesIO(b"")
         )
         with patch.object(MODULE.urllib.request, "urlopen", side_effect=[temporary, io.BytesIO(b'{"ok": true}')]), \\
-             patch.object(MODULE.time, "sleep") as sleep:
+            with patch.object(MODULE.time, "sleep") as sleep:
+                result = MODULE.request_json("https://example.invalid", {})
             result = MODULE.request_json("https://example.invalid", {})
         self.assertEqual(result, {"ok": True})
         sleep.assert_called_once_with(20.0)
@@ -139,7 +140,8 @@ class RequestRetryTests(unittest.TestCase):
             {"Retry-After": "120"}, io.BytesIO(b"")
         )
         with patch.object(MODULE.urllib.request, "urlopen", side_effect=[temporary, io.BytesIO(b'{"ok": true}')]), \\
-             patch.object(MODULE.time, "sleep") as sleep:
+            with patch.object(MODULE.time, "sleep") as sleep:
+                MODULE.request_json("https://example.invalid", {})
             MODULE.request_json("https://example.invalid", {})
         sleep.assert_called_once_with(30.0)
 
