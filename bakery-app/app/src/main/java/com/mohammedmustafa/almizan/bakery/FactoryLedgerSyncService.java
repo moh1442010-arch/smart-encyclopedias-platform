@@ -77,7 +77,7 @@ final class FactoryLedgerSyncService {
         }
         FactoryGlOutbox.ReconciliationReport report=FactoryGlOutbox.reconcile(source,destination);
         CashBankReconciliationService.Report cashBankReport=
-            CashBankReconciliationService.reconcileAllHistory(source,destination,"MAIN",baseCurrency);
+            CashBankReconciliationService.reconcileAllHistory(source,destination,"MAIN","SDG");
         return new Result(seeded,backfill,due,posted,retried,dead,skipped,report,cashBankReport);
     }
 
