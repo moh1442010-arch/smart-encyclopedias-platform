@@ -56,7 +56,7 @@ def extract_interaction_text(result: dict) -> str:
                 text_value = part.get("text")
                 if isinstance(text_value, str):
                     chunks.append(text_value)
-    return "\\n".join(chunks).strip()
+    return "\n".join(chunks).strip()
 
 
 def main() -> int:
