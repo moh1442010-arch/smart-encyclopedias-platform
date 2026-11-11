@@ -3,8 +3,9 @@ package com.mohammedmustafa.almizan.bakery;
 import android.database.Cursor;
 import net.zetetic.database.sqlcipher.SQLiteDatabase;
 import java.math.BigInteger;
-import java.util.HashMap;
-import java.util.Map;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 /**
  * Reconciles factory cashbook movement totals with posted factory-origin GL lines.
@@ -38,6 +39,33 @@ final class CashBankReconciliationService {
             this.cash=cash;this.bankak=bankak;
         }
         boolean balanced(){return cash.balanced()&&bankak.balanced();}
+    }
+
+    static Report reconcileAllHistory(SQLiteDatabase source,SQLiteDatabase ledger,String branch,String currency) {
+        if(source==null||!source.isOpen()||ledger==null||!ledger.isOpen())
+            throw new IllegalStateException("قاعدتا المصنع والأستاذ العام مطلوبتان للمطابقة");
+        String sourceMin=scalar(source,"SELECT MIN(date) FROM cashbook WHERE date IS NOT NULL AND date<>''");
+        String sourceMax=scalar(source,"SELECT MAX(date) FROM cashbook WHERE date IS NOT NULL AND date<>''");
+        String ledgerMin=scalar(ledger,"SELECT MIN(transaction_date) FROM gl_journal_entries WHERE source_type='FACTORY_LEDGER' AND status='POSTED'");
+        String ledgerMax=scalar(ledger,"SELECT MAX(transaction_date) FROM gl_journal_entries WHERE source_type='FACTORY_LEDGER' AND status='POSTED'");
+        String start=minDate(sourceMin,ledgerMin),end=maxDate(sourceMax,ledgerMax);
+        if(start==null||end==null) {
+            String today=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
+            start=today;end=today;
+        }
+        return reconcile(source,ledger,branch,currency,start,end);
+    }
+
+    private static String minDate(String a,String b) {
+        if(a==null||a.trim().isEmpty())return b;
+        if(b==null||b.trim().isEmpty())return a;
+        return a.compareTo(b)<=0?a:b;
+    }
+
+    private static String maxDate(String a,String b) {
+        if(a==null||a.trim().isEmpty())return b;
+        if(b==null||b.trim().isEmpty())return a;
+        return a.compareTo(b)>=0?a:b;
     }
 
     static Report reconcile(SQLiteDatabase source,SQLiteDatabase ledger,String branch,
