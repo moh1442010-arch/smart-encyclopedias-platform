@@ -89,7 +89,7 @@
         "GeneralLedger validation tests",
         "posting rollback tests"
       ],
-      "work_note": "أضيف اختبار وحدات مستقل GeneralLedgerValidationTest يغطي القيد المتوازن، الحد الأدنى لعدد السطور، انعدام إجمالي المدين أو الدائن، عدم تساوي الإجماليين، الإجماليات السالبة، وصحة السطر أحادي الجانب ورفض السطر ذي المدين والدائن معاً أو المبلغ السالب أو مقام سعر الصرف الصفري. هذا يغطي قواعد التحقق الخالصة فقط؛ لا يُغلق D03 قبل إضافة اختبار قاعدة بيانات يثبت rollback وعدم إنشاء رأس/سطور/مفتاح idempotency/audit عند فشل الترحيل، ثم نجاح API 29 وAPI 35. أضيف اختبار Android instrumented ينشئ قاعدة SQLCipher مستقلة، ثم يحقن فشلًا مضبوطًا عند إدخال أول سطر GL بعد إدخال رأس القيد؛ ويتحقق من rollback الكامل لعدم بقاء رأس أو سطور أو مفتاح idempotency أو سجل تدقيق. لم يُعتمد الاختبار بعد وينتظر تشغيل CI على API 29 وAPI 35. أضيف أيضًا اختبار Android instrumented يمرر إجماليات مدين ودائن تتجاوز Long.MAX_VALUE بعد تحويل كل سطر على حدة، ويتحقق من رفض overflow دون إنشاء رأس أو سطور أو مفتاح idempotency أو سجل تدقيق."
+      "work_note": "أضيف اختبار وحدات مستقل GeneralLedgerValidationTest يغطي القيد المتوازن، الحد الأدنى لعدد السطور، انعدام إجمالي المدين أو الدائن، عدم تساوي الإجماليين، الإجماليات السالبة، وصحة السطر أحادي الجانب ورفض السطر ذي المدين والدائن معاً أو المبلغ السالب أو مقام سعر الصرف الصفري. هذا يغطي قواعد التحقق الخالصة فقط؛ لا يُغلق D03 قبل إضافة اختبار قاعدة بيانات يثبت rollback وعدم إنشاء رأس/سطور/مفتاح idempotency/audit عند فشل الترحيل، ثم نجاح API 30–35. أضيف اختبار Android instrumented ينشئ قاعدة SQLCipher مستقلة، ثم يحقن فشلًا مضبوطًا عند إدخال أول سطر GL بعد إدخال رأس القيد؛ ويتحقق من rollback الكامل لعدم بقاء رأس أو سطور أو مفتاح idempotency أو سجل تدقيق. لم يُعتمد الاختبار بعد وينتظر تشغيل CI على API 30–35. أضيف أيضًا اختبار Android instrumented يمرر إجماليات مدين ودائن تتجاوز Long.MAX_VALUE بعد تحويل كل سطر على حدة، ويتحقق من رفض overflow دون إنشاء رأس أو سطور أو مفتاح idempotency أو سجل تدقيق."
     },
     {
       "id": "D04",
@@ -108,7 +108,7 @@
         "mixed tender",
         "duplicate sale posting"
       ],
-      "work_note": "أُضيف اختبار Android instrumented يستدعي مسار البيع الفعلي في FactoryActivity.DB عبر نقطة البيع، ويتحقق من إنشاء قيدين مستقلين للإيراد وتكلفة البضاعة المباعة، ثم ترحيلهما عبر Outbox إلى الأستاذ العام ومطابقتهما. الاختبار لم يُنفذ بعد على المحاكي؛ لذلك لا يُغلق D04 قبل نجاح API 29 وAPI 35 والتحقق من نتائج المطابقة."
+      "work_note": "أُضيف اختبار Android instrumented يستدعي مسار البيع الفعلي في FactoryActivity.DB عبر نقطة البيع، ويتحقق من إنشاء قيدين مستقلين للإيراد وتكلفة البضاعة المباعة، ثم ترحيلهما عبر Outbox إلى الأستاذ العام ومطابقتهما. الاختبار لم يُنفذ بعد على المحاكي؛ لذلك لا يُغلق D04 قبل نجاح API 30–35 والتحقق من نتائج المطابقة."
     },
     {
       "id": "D05",
@@ -127,7 +127,7 @@
         "duplicate receipt",
         "allocation mismatch"
       ],
-      "work_note": "أُضيف اختبار Android instrumented لمسار التحصيل الجزئي الفعلي من عميل لديه مديونية، ويتحقق من إنشاء قيد التحصيل وترحيله إلى الأستاذ العام ومطابقته مع البيع الأصلي. الاختبار لم يُنفذ بعد على المحاكي؛ لا يُغلق قبل نجاح API 29 وAPI 35."
+      "work_note": "أُضيف اختبار Android instrumented لمسار التحصيل الجزئي الفعلي من عميل لديه مديونية، ويتحقق من إنشاء قيد التحصيل وترحيله إلى الأستاذ العام ومطابقته مع البيع الأصلي. الاختبار لم يُنفذ بعد على المحاكي؛ لا يُغلق قبل نجاح API 30–35."
     },
     {
       "id": "D06",
@@ -146,7 +146,7 @@
         "duplicate purchase",
         "rollback"
       ],
-      "work_note": "أضيف اختبار Android instrumented لمسار فاتورة شراء المورد الفعلي عبر FactoryActivity.DB.receive. يختبر إدخال خامات المخزون، وفصل السداد النقدي وبنكك، وإثبات الجزء الآجل للمورد، ثم قيد المخزون/الصندوق/بنكك/الموردين وترحيله عبر Outbox إلى الأستاذ العام ومطابقته. لم يُنفذ الاختبار بعد على API 29 وAPI 35؛ لذلك يبقى D06 قيد التنفيذ ولا يُغلق قبل نجاح المحاكيين."
+      "work_note": "أضيف اختبار Android instrumented لمسار فاتورة شراء المورد الفعلي عبر FactoryActivity.DB.receive. يختبر إدخال خامات المخزون، وفصل السداد النقدي وبنكك، وإثبات الجزء الآجل للمورد، ثم قيد المخزون/الصندوق/بنكك/الموردين وترحيله عبر Outbox إلى الأستاذ العام ومطابقته. لم يُنفذ الاختبار بعد على API 30–35؛ لذلك يبقى D06 قيد التنفيذ ولا يُغلق قبل نجاح المحاكيين."
     },
     {
       "id": "D07",
@@ -165,7 +165,7 @@
         "payable expense",
         "duplicate expense"
       ],
-      "work_note": "أُضيف اختبار Android instrumented لمسار تسجيل مصروف تشغيلي نقدي الفعلي، ويتحقق من إنشاء قيد المصروف وترحيله إلى الأستاذ العام ومطابقته مع مصدره. الاختبار لم يُنفذ بعد على المحاكي؛ لا يُغلق قبل نجاح API 29 وAPI 35."
+      "work_note": "أُضيف اختبار Android instrumented لمسار تسجيل مصروف تشغيلي نقدي الفعلي، ويتحقق من إنشاء قيد المصروف وترحيله إلى الأستاذ العام ومطابقته مع مصدره. الاختبار لم يُنفذ بعد على المحاكي؛ لا يُغلق قبل نجاح API 30–35."
     },
     {
       "id": "D08",
@@ -185,7 +185,7 @@
         "variance",
         "duplicate batch"
       ],
-      "work_note": "أضيف اختبار Android instrumented لمسار finalizeProduction الفعلي. ينشئ منتجاً ووصفة ومخزون خام، ثم ينفذ دفعة إنتاج تشمل تكلفة المواد والأجور والتكاليف الصناعية، ويتحقق من أربعة قيود مستقلة لتحويل الخام إلى تحت التشغيل وإثبات الأجور والتكاليف ثم تحويل التكلفة إلى مخزون الإنتاج التام، وترحيلها ومطابقتها عبر Outbox. لم يُنفذ الاختبار بعد على API 29 وAPI 35؛ لذلك يبقى D08 قيد التنفيذ."
+      "work_note": "أضيف اختبار Android instrumented لمسار finalizeProduction الفعلي. ينشئ منتجاً ووصفة ومخزون خام، ثم ينفذ دفعة إنتاج تشمل تكلفة المواد والأجور والتكاليف الصناعية، ويتحقق من أربعة قيود مستقلة لتحويل الخام إلى تحت التشغيل وإثبات الأجور والتكاليف ثم تحويل التكلفة إلى مخزون الإنتاج التام، وترحيلها ومطابقتها عبر Outbox. لم يُنفذ الاختبار بعد على API 30–35؛ لذلك يبقى D08 قيد التنفيذ."
     },
     {
       "id": "D09",
@@ -203,7 +203,7 @@
         "changed-payload replay",
         "concurrent duplicate"
       ],
-      "work_note": "أضيف اختبار Android instrumented لإعادة enqueue للقيد المصدر نفسه والتحقق من بقاء حدث Outbox واحد وسطرين فقط، ثم تغيير حمولة القيد تحت مفتاح الحدث نفسه والتحقق من رفضها دون إنشاء حدث أو أسطر إضافية. الاختبار لم يثبت بعد على API 29 وAPI 35، ولا يغطي التزامن المتوازي حتى الآن؛ لذلك يبقى D09 قيد التنفيذ."
+      "work_note": "أضيف اختبار Android instrumented لإعادة enqueue للقيد المصدر نفسه والتحقق من بقاء حدث Outbox واحد وسطرين فقط، ثم تغيير حمولة القيد تحت مفتاح الحدث نفسه والتحقق من رفضها دون إنشاء حدث أو أسطر إضافية. الاختبار لم يثبت بعد على API 30–35، ولا يغطي التزامن المتوازي حتى الآن؛ لذلك يبقى D09 قيد التنفيذ."
     },
     {
       "id": "D10",
@@ -221,7 +221,7 @@
         "audit trace",
         "orphan source detection"
       ],
-      "notes": "Added an Android instrumented test for unique source_type/source_id posting, exact source-to-GL lookup, audit trace, and rollback on duplicate source. Closure awaits API 29 and API 35 instrumented test results."
+      "notes": "Added an Android instrumented test for unique source_type/source_id posting, exact source-to-GL lookup, audit trace, and rollback on duplicate source. Closure awaits API 30–35 instrumented test results."
     },
     {
       "id": "D11",
@@ -239,7 +239,7 @@
         "duplicate reversal",
         "reverse-of-reversal rejection"
       ],
-      "notes": "Added Android instrumented coverage for original journal preservation, both opposite reversal lines, reversal_of linkage, idempotent retry, audit singularity, and rejection of reversing a reversal. Closure awaits API 29/API 35 results and source-document status reconciliation."
+      "notes": "Added Android instrumented coverage for original journal preservation, both opposite reversal lines, reversal_of linkage, idempotent retry, audit singularity, and rejection of reversing a reversal. Closure awaits API 30–35 results and source-document status reconciliation."
     },
     {
       "id": "D12",
@@ -275,7 +275,7 @@
         "missing-period rejection",
         "no partial GL rows"
       ],
-      "notes": "Added Android instrumented coverage proving GL posting is rejected for both closed and missing financial periods, with no journal header, lines, idempotency key, or audit row left behind. Closure awaits API 29/API 35 CI and verification that operational source outbox events remain retryable."
+      "notes": "Added Android instrumented coverage proving GL posting is rejected for both closed and missing financial periods, with no journal header, lines, idempotency key, or audit row left behind. Closure awaits API 30–35 CI and verification that operational source outbox events remain retryable."
     },
     {
       "id": "D14",
@@ -293,7 +293,7 @@
         "draft exclusion",
         "reversal netting"
       ],
-      "work_note": "أضيف اختبار Android instrumented يقرأ ميزان المراجعة من الأستاذ العام الفعلي باستخدام قيود مرحّلة قبل بداية الفترة وقيد عكسي مرحّل ومستند مسودة. يتحقق من استبعاد المسودة، وإدراج الحركات المرحّلة حتى تاريخ التقرير، وتساوي المدين والدائن، وتصفير رصيد الصندوق والإيراد بعد العكس. الاختبار مضاف ولم يُنفذ بعد على API 29 وAPI 35؛ يبقى D14 قيد التنفيذ حتى نجاح المحاكيين ومراجعة التقرير."
+      "work_note": "أضيف اختبار Android instrumented يقرأ ميزان المراجعة من الأستاذ العام الفعلي باستخدام قيود مرحّلة قبل بداية الفترة وقيد عكسي مرحّل ومستند مسودة. يتحقق من استبعاد المسودة، وإدراج الحركات المرحّلة حتى تاريخ التقرير، وتساوي المدين والدائن، وتصفير رصيد الصندوق والإيراد بعد العكس. الاختبار مضاف ولم يُنفذ بعد على API 30–35؛ يبقى D14 قيد التنفيذ حتى نجاح المحاكيين ومراجعة التقرير."
     },
     {
       "id": "D15",
