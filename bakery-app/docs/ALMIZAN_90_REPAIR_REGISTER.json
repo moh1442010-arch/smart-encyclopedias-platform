@@ -3,7 +3,7 @@
   "product": "Al-Mizan Bakery",
   "baseline": "2.8.0",
   "candidate": "2.8.3",
-  "policy": "No defect is closed without a source commit, reproducible passing test, result, and evidence reference. Android 9 (API 28) is the minimum supported platform. No commercial release until all 90 defects and device acceptance gates pass.",
+  "policy": "No defect is closed without a source commit, reproducible passing test, result, and evidence reference. Android 10 (API 29) is the minimum supported platform; Android 9 (API 28) is outside the support matrix. No commercial release until all 90 defects and device acceptance gates pass.",
   "phases": {
     "P1": "Core accounting, unified posting, subledger reconciliation and financial statements",
     "P2": "Bakery/factory operations, costing, inventory, tax, payroll, assets and currencies",
@@ -77,7 +77,7 @@
     {
       "id": "D03",
       "phase": "P1",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "evidence": null,
       "title": "Balanced journal validation",
       "scope": "Every GL posting path must reject journals with fewer than two lines, one-sided lines, negative amounts, overflow, or unequal base-currency debit and credit.",
@@ -88,7 +88,8 @@
       "tests_required": [
         "GeneralLedger validation tests",
         "posting rollback tests"
-      ]
+      ],
+      "work_note": "أضيف اختبار وحدات مستقل GeneralLedgerValidationTest يغطي القيد المتوازن، الحد الأدنى لعدد السطور، انعدام إجمالي المدين أو الدائن، عدم تساوي الإجماليين، الإجماليات السالبة، وصحة السطر أحادي الجانب ورفض السطر ذي المدين والدائن معاً أو المبلغ السالب أو مقام سعر الصرف الصفري. هذا يغطي قواعد التحقق الخالصة فقط؛ لا يُغلق D03 قبل إضافة اختبار قاعدة بيانات يثبت rollback وعدم إنشاء رأس/سطور/مفتاح idempotency/audit عند فشل الترحيل، ثم نجاح API 28 وAPI 35. أضيف اختبار Android instrumented ينشئ قاعدة SQLCipher مستقلة، ثم يحقن فشلًا مضبوطًا عند إدخال أول سطر GL بعد إدخال رأس القيد؛ ويتحقق من rollback الكامل لعدم بقاء رأس أو سطور أو مفتاح idempotency أو سجل تدقيق. لم يُعتمد الاختبار بعد وينتظر تشغيل CI على API 29 وAPI 35."
     },
     {
       "id": "D04",
