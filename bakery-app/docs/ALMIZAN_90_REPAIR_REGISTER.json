@@ -262,7 +262,7 @@
     {
       "id": "D13",
       "phase": "P1",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "evidence": null,
       "title": "Closed-period posting block",
       "scope": "No source or manual posting may create a GL entry in a closed or nonexistent financial period.",
@@ -274,7 +274,8 @@
         "closed-period rejection",
         "missing-period rejection",
         "no partial GL rows"
-      ]
+      ],
+      "notes": "Added Android instrumented coverage proving GL posting is rejected for both closed and missing financial periods, with no journal header, lines, idempotency key, or audit row left behind. Closure awaits API 29/API 35 CI and verification that operational source outbox events remain retryable."
     },
     {
       "id": "D14",
