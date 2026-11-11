@@ -6,8 +6,8 @@ import android.database.Cursor;
 import net.zetetic.database.sqlcipher.SQLiteDatabase;
 
 import java.nio.charset.StandardCharsets;
-import java.text.ParsePosition;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -609,13 +609,13 @@ final class FactoryGlOutbox {
         try{return c.moveToFirst()?c.getString(0):null;}finally{c.close();}
     }
 
-    private static boolean validDate(String value) {
+    static boolean validDate(String value) {
         if(value==null||!value.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))return false;
-        SimpleDateFormat format=new SimpleDateFormat("yyyy-MM-dd",Locale.US);
-        format.setLenient(false);
-        ParsePosition position=new ParsePosition(0);
-        java.util.Date parsed=format.parse(value,position);
-        return parsed!=null&&position.getIndex()==value.length();
+        try {
+            return LocalDate.parse(value).getYear()>=1;
+        } catch(DateTimeParseException invalidDate) {
+            return false;
+        }
     }
 
     private static long checkedAdd(long a,long b) {
