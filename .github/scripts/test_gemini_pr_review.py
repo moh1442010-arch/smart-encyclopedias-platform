@@ -131,6 +131,20 @@ class RequestRetryTests(unittest.TestCase):
         self.assertEqual(urlopen.call_count, 1)
         sleep.assert_not_called()
 
+    def test_socket_read_timeout_on_post_is_not_replayed(self):
+        with patch.object(MODULE.urllib.request, "urlopen", side_effect=TimeoutError("The read operation timed out")) as urlopen, \\
+             patch.object(MODULE.time, "sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError, "POSTs are not retried"):
+                MODULE.request_json("https://example.invalid", {}, data=b'{"review": true}')
+        self.assertEqual(urlopen.call_count, 1)
+        sleep.assert_not_called()
+
+    def test_review_request_uses_bounded_output_budget(self):
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn('"generation_config": {"max_output_tokens": 3072}', source)
+        self.assertEqual(MODULE.MAX_DIFF_CHARS, 30_000)
+        self.assertEqual(MODULE.MAX_REGISTER_CONTEXT_CHARS, 45_000)
+
     def test_request_does_not_retry_permanent_400(self):
         permanent = urllib.error.HTTPError(
             "https://example.invalid", 400, "Bad Request", {}, io.BytesIO(b"")
