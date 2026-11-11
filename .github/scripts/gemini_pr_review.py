@@ -7,6 +7,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -16,20 +17,34 @@ GEMINI_API = "https://generativelanguage.googleapis.com/v1beta"
 MAX_DIFF_CHARS = 120_000
 MAX_FILES = 100
 MAX_METADATA_CHARS = 12_000
+MAX_REQUEST_ATTEMPTS = 4
+RETRYABLE_HTTP_CODES = {429, 500, 502, 503, 504}
 
 
 def request_json(url: str, headers: dict[str, str], data: bytes | None = None):
-    req = urllib.request.Request(
-        url, data=data, headers=headers, method="POST" if data is not None else "GET"
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=60) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        # Never print remote response bodies: they are untrusted and may echo input.
-        raise RuntimeError(f"Remote service returned HTTP {exc.code}. Check API access and quota.") from None
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Network request failed: {exc.reason}") from None
+    method = "POST" if data is not None else "GET"
+    for attempt in range(MAX_REQUEST_ATTEMPTS):
+        req = urllib.request.Request(url, data=data, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=60) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            # Never print remote response bodies: they are untrusted and may echo input.
+            if exc.code not in RETRYABLE_HTTP_CODES or attempt + 1 >= MAX_REQUEST_ATTEMPTS:
+                raise RuntimeError(
+                    f"Remote service returned HTTP {exc.code}. Check API access and quota."
+                ) from None
+            retry_after = exc.headers.get("Retry-After", "")
+            try:
+                delay = min(max(float(retry_after), 0.0), 8.0) if retry_after else 2 ** attempt
+            except ValueError:
+                delay = 2 ** attempt
+            time.sleep(delay)
+        except urllib.error.URLError as exc:
+            if attempt + 1 >= MAX_REQUEST_ATTEMPTS:
+                raise RuntimeError(f"Network request failed: {exc.reason}") from None
+            time.sleep(2 ** attempt)
+    raise RuntimeError("Remote request exhausted its retry attempts.")
 
 
 def redact_secrets(value: str) -> str:
