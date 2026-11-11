@@ -14,9 +14,10 @@ from pathlib import Path
 
 GITHUB_API = "https://api.github.com"
 GEMINI_API = "https://generativelanguage.googleapis.com/v1beta"
-MAX_DIFF_CHARS = 60_000
-MAX_FILES = 60
-MAX_METADATA_CHARS = 8_000
+MAX_DIFF_CHARS = 30_000
+MAX_FILES = 40
+MAX_METADATA_CHARS = 5_000
+MAX_REGISTER_CONTEXT_CHARS = 45_000
 MAX_REQUEST_ATTEMPTS = 4
 RETRYABLE_HTTP_CODES = {429, 500, 502, 503, 504}
 
@@ -40,12 +41,13 @@ def request_json(url: str, headers: dict[str, str], data: bytes | None = None):
             except ValueError:
                 delay = 2 ** attempt
             time.sleep(delay)
-        except urllib.error.URLError as exc:
+        except (urllib.error.URLError, TimeoutError) as exc:
             # A timed-out POST may already have reached Gemini. Do not replay it:
             # that could create a second billable interaction for the same review.
+            reason = getattr(exc, "reason", exc)
             if data is not None or attempt + 1 >= MAX_REQUEST_ATTEMPTS:
                 raise RuntimeError(
-                    f"Network request failed: {exc.reason}. Ambiguous POSTs are not retried."
+                    f"Network request failed: {reason}. Ambiguous POSTs are not retried."
                 ) from None
             time.sleep(2 ** attempt)
     raise RuntimeError("Remote request exhausted its retry attempts.")
@@ -109,7 +111,7 @@ def load_repair_register(repo: str, head_sha: str, headers: dict[str, str]) -> s
             for d in defects
         ],
     }
-    return json.dumps(summary, ensure_ascii=False, separators=(",", ":"))[:80000]
+    return json.dumps(summary, ensure_ascii=False, separators=(",", ":"))[:MAX_REGISTER_CONTEXT_CHARS]
 
 
 def validate_review_text(answer: str) -> None:
@@ -240,7 +242,7 @@ You are a reviewer only. Do not claim to have changed files, run builds, or merg
         "input": user_prompt,
         "system_instruction": system_instruction,
         "store": False,
-        "generation_config": {"max_output_tokens": 4096},
+        "generation_config": {"max_output_tokens": 3072},
     }
     url = f"{GEMINI_API}/interactions"
     gemini_headers = {
