@@ -42,7 +42,7 @@ class RedactionTests(unittest.TestCase):
         }
         self.assertEqual(
             MODULE.extract_interaction_text(response),
-            "Finding one.\\nFinding two."
+            "Finding one.\nFinding two."
         )
 
     def test_empty_interactions_response_returns_empty_text(self):
