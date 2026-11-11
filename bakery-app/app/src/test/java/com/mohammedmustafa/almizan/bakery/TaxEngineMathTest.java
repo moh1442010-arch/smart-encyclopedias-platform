@@ -24,4 +24,17 @@ public class TaxEngineMathTest {
     public void rejectsNegativeAmounts() {
         TaxEngine.roundedRatio(-1L,17L,100L);
     }
+
+    @Test public void noVatRequiresAnExplicitlyConfirmedJurisdiction() {
+        assertTrue(TaxEngine.isConfirmedNoVat("NO_VAT_CONFIRMED","NO_VAT"));
+        assertFalse(TaxEngine.isConfirmedNoVat("REVIEW_REQUIRED","NO_VAT"));
+        assertFalse(TaxEngine.isConfirmedNoVat("LOCAL_RULES_REQUIRED","NO_VAT"));
+        assertFalse(TaxEngine.isConfirmedNoVat("NO_VAT_CONFIRMED","VAT"));
+    }
+
+    @Test public void inclusiveRateDenominatorUsesLongArithmetic() {
+        long denominator=(long)Integer.MAX_VALUE+(long)Integer.MAX_VALUE;
+        assertEquals(4294967294L,denominator);
+        assertEquals((long)Integer.MAX_VALUE,TaxEngine.roundedRatio(4294967294L,Integer.MAX_VALUE,denominator));
+    }
 }

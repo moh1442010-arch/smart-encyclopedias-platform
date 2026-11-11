@@ -186,16 +186,20 @@ public class EnterpriseSchemaMigrationTest {
         SQLiteDatabase db=SecureDatabase.open(context,name);
         try {
             EnterpriseSchema.ensure(db);
+            // Reversal now enforces JOURNAL_POST at the service boundary.
+            // Give the test actor an explicit OWNER role in the MAIN branch.
+            db.execSQL("INSERT INTO users(username,display_name,pin_salt,pin_hash,active,created_at) VALUES('ledger-owner','Ledger Owner',X'01',X'02',1,1)");
+            db.execSQL("INSERT INTO user_roles(user_id,role_id,branch_id) SELECT u.id,r.id,b.id FROM users u,roles r,branches b WHERE u.username='ledger-owner' AND r.role_code='OWNER' AND b.branch_code='MAIN'");
             db.execSQL("INSERT INTO financial_periods(period_code,start_date,end_date,status) VALUES('FY26-11','2026-11-01','2026-11-30','OPEN')");
             java.util.List<GeneralLedger.Line> lines=new java.util.ArrayList<>();
             lines.add(new GeneralLedger.Line("1000","MAIN","SDG",12500,0,1,1));
             lines.add(new GeneralLedger.Line("4000","MAIN","SDG",0,12500,1,1));
             GeneralLedger.Entry original=new GeneralLedger.Entry("TEST-ORIGINAL","اختبار بيع نقدي","2026-11-09",
-                "TEST_SALE","TEST-ORIGINAL","test-sale:original","tester",lines);
+                "TEST_SALE","TEST-ORIGINAL","test-sale:original","ledger-owner",lines);
             GeneralLedger.post(db,original);
-            GeneralLedger.Result first=GeneralLedger.reverse(db,"TEST-ORIGINAL","2026-11-09","tester");
+            GeneralLedger.Result first=GeneralLedger.reverse(db,"TEST-ORIGINAL","2026-11-09","ledger-owner");
             assertFalse("First reversal must create a new journal",first.alreadyPosted);
-            GeneralLedger.Result retry=GeneralLedger.reverse(db,"TEST-ORIGINAL","2026-11-09","tester");
+            GeneralLedger.Result retry=GeneralLedger.reverse(db,"TEST-ORIGINAL","2026-11-09","ledger-owner");
             assertTrue("Repeated reversal must be idempotent",retry.alreadyPosted);
             assertEquals(first.reference,retry.reference);
             Cursor count=db.rawQuery("SELECT COUNT(*) FROM gl_journal_entries WHERE source_type='REVERSAL' AND source_id='TEST-ORIGINAL'",null);

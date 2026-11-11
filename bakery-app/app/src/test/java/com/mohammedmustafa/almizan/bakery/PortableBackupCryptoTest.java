@@ -33,4 +33,22 @@ public class PortableBackupCryptoTest {
     @Test public void recognizesLegacyPlaintextBackupForCompatibility() {
         assertFalse(PortableBackupCrypto.isEncrypted("[]".getBytes()));
     }
+
+    @Test public void rejectsTruncatedEncryptedBackup() throws Exception {
+        byte[] encrypted=PortableBackupCrypto.encrypt("complete-ledger-backup".getBytes("UTF-8"),"StrongPass2026".toCharArray());
+        byte[] truncated=java.util.Arrays.copyOf(encrypted,encrypted.length-8);
+        try {
+            PortableBackupCrypto.decrypt(truncated,"StrongPass2026".toCharArray());
+            fail("truncated authenticated ciphertext must be rejected");
+        } catch (IllegalArgumentException expected) { }
+    }
+
+    @Test public void rejectsModifiedAuthenticatedHeader() throws Exception {
+        byte[] encrypted=PortableBackupCrypto.encrypt("complete-ledger-backup".getBytes("UTF-8"),"StrongPass2026".toCharArray());
+        encrypted[9]^=1;
+        try {
+            PortableBackupCrypto.decrypt(encrypted,"StrongPass2026".toCharArray());
+            fail("modified backup header must be rejected");
+        } catch (IllegalArgumentException expected) { }
+    }
 }

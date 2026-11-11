@@ -287,7 +287,7 @@
     {
       "id": "D15",
       "phase": "P1",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "evidence": null,
       "title": "Customer subledger reconciliation",
       "scope": "Customer balances, invoices, credits and receipts must reconcile to the GL receivables control account.",
@@ -301,12 +301,13 @@
         "partial receipt",
         "credit note",
         "reconciliation"
-      ]
+      ],
+      "work_note": "أضيف تحقق مركزي داخل قاعدة المصنع يطابق معرّف العميل/المورد بالاسم قبل البيع والتحصيل وفاتورة الشراء وسداد المورد. أصبح تجميع مديونية العميل والتحصيل والمرتجعات يعتمد على customer_master_id مع توافق للسجلات التاريخية ذات المعرّف صفر. أضيف اختبار Android instrumented يرفض تمرير اسم طرف مختلف عن المعرّف في العمليات الأربع ويتحقق من عدم إنشاء مستندات جزئية. commits: d5878d316a268db3a2c12918517bcae7dba8795e وa7a219656846c6ce381ee7ae54f22ce41f8f2049. لم تُعتمد النتيجة بعد؛ ينتظر اختبار API 28 وAPI 35، لذلك لا يوجد evidence ولا إغلاق للبند."
     },
     {
       "id": "D16",
       "phase": "P1",
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "evidence": null,
       "title": "Supplier subledger reconciliation",
       "scope": "Supplier invoices, credits, payments and allocations must reconcile to the GL payables control account.",
@@ -319,7 +320,8 @@
         "partial payment",
         "purchase return",
         "reconciliation"
-      ]
+      ],
+      "work_note": "أضيف تحقق مركزي داخل قاعدة المصنع يطابق معرّف العميل/المورد بالاسم قبل البيع والتحصيل وفاتورة الشراء وسداد المورد. أصبح تجميع مديونية العميل والتحصيل والمرتجعات يعتمد على customer_master_id مع توافق للسجلات التاريخية ذات المعرّف صفر. أضيف اختبار Android instrumented يرفض تمرير اسم طرف مختلف عن المعرّف في العمليات الأربع ويتحقق من عدم إنشاء مستندات جزئية. commits: d5878d316a268db3a2c12918517bcae7dba8795e وa7a219656846c6ce381ee7ae54f22ce41f8f2049. لم تُعتمد النتيجة بعد؛ ينتظر اختبار API 28 وAPI 35، لذلك لا يوجد evidence ولا إغلاق للبند."
     },
     {
       "id": "D17",

@@ -25,7 +25,7 @@ concurrency:
 jobs:
   build:
     # Dedicated review branch and the active 2.9 feature branch may build non-commercial review APKs only.
-    if: github.ref == 'refs/heads/review/bakery-2.8.2-device-acceptance' || github.ref == 'refs/heads/feature/almizan-2.9-competitive-localization' || github.event.pull_request.head.ref == 'review/bakery-2.8.2-device-acceptance' || github.event.pull_request.head.ref == 'feature/almizan-2.9-competitive-localization'
+    if: github.ref == 'refs/heads/review/bakery-2.8.2-device-acceptance' || github.ref == 'refs/heads/feature/almizan-2.9-competitive-localization' || github.ref == 'refs/heads/feature/almizan-reversal-authorization-hardening' || github.event.pull_request.head.ref == 'review/bakery-2.8.2-device-acceptance' || github.event.pull_request.head.ref == 'feature/almizan-2.9-competitive-localization' || github.event.pull_request.head.ref == 'feature/almizan-reversal-authorization-hardening'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -161,7 +161,7 @@ jobs:
               'FactoryBackup.restore(context,legacySnapshot)',
             ],
             "bakery-app/app/src/main/AndroidManifest.xml": ['FactoryLedgerActivity'],
-            "bakery-app/app/build.gradle": ['minSdk 28', 'targetSdk 35'],
+            "bakery-app/app/build.gradle": ['minSdk 29', 'targetSdk 35'],
           }
           for filename, needles in checks.items():
               content = Path(filename).read_text(encoding="utf-8")
@@ -171,7 +171,7 @@ jobs:
           print("Factory outbox, backfill, reconciliation, backup migration and API declarations verified.")
           PY
           if grep -R -E 'Math\.(addExact|subtractExact|multiplyExact)\(' bakery-app/app/src/main/java; then
-            echo "Checked arithmetic must remain compatible with Android API 28."
+            echo "Checked arithmetic must remain compatible with Android API 29."
             exit 1
           fi
 
@@ -252,13 +252,13 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Smoke test signed APK on minimum Android API 28
+      - name: Smoke test signed APK on minimum Android API 29
         # Run the full SQLCipher/ledger/backup instrumentation suite on the declared minimum API.
         # Hosted runners can intermittently expose the emulator before its Android properties are ready.
         timeout-minutes: 22
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 28
+          api-level: 29
           target: default
           arch: x86_64
           profile: pixel_2

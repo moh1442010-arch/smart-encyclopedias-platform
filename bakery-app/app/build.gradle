@@ -1,5 +1,5 @@
 plugins { id 'com.android.application' }
-// Android 9 (API 28) minimum. Version 2.8.3 is a review candidate; release remains blocked by acceptance gates.
+// Android 10 (API 29) minimum; Android 9 is no longer supported. Version 2.8.3 is a review candidate; release remains blocked by acceptance gates.
 // Preserve applicationId and SQLite database names across updates; versionCode must increase monotonically.
 android {
     buildFeatures { buildConfig true }
@@ -7,7 +7,7 @@ android {
     compileSdk 36
     defaultConfig {
         applicationId 'com.mohammedmustafa.almizan.bakery'
-        minSdk 28
+        minSdk 29
         targetSdk 35
         versionCode 280003
         versionName '2.8.3'

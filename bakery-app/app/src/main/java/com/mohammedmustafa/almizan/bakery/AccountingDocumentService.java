@@ -321,9 +321,13 @@ final class AccountingDocumentService {
         try {
             if(!c.moveToFirst())throw new IllegalStateException("المستند غير مرحّل أو غير موجود");
             ref=c.getString(0);status=c.getString(1);existingReversal=c.getString(2);
-            if("REVERSED".equals(status)&&existingReversal!=null&&!existingReversal.trim().isEmpty())return existingReversal;
-            if(!"POSTED".equals(status))throw new IllegalStateException("المستند غير مرحّل أو غير موجود");
+            if(!"POSTED".equals(status)&&!("REVERSED".equals(status)&&existingReversal!=null&&!existingReversal.trim().isEmpty()))
+                throw new IllegalStateException("المستند غير مرحّل أو غير موجود");
         } finally {c.close();}
+        // Authorize before both a new reversal and an idempotent retry; the latter
+        // must not disclose protected journal references to an unauthorized actor.
+        requireReversalPermission(db,ref,actor);
+        if("REVERSED".equals(status))return existingReversal;
         GeneralLedger.Result reversal=GeneralLedger.reverse(db,ref,reversalDate,actor);
         db.beginTransaction();
         try {
@@ -336,6 +340,21 @@ final class AccountingDocumentService {
             db.setTransactionSuccessful();
         } finally {db.endTransaction();}
         return reversal.reference;
+    }
+
+    private static void requireReversalPermission(SQLiteDatabase db,String journalRef,String actor) {
+        Cursor branches=db.rawQuery("SELECT DISTINCT b.branch_code FROM gl_journal_lines l "+
+            "JOIN gl_journal_entries e ON e.id=l.entry_id "+
+            "JOIN branches b ON b.id=l.branch_id WHERE e.entry_ref=? AND e.status='POSTED'",
+            new String[]{journalRef});
+        int checked=0;
+        try {
+            while(branches.moveToNext()) {
+                PermissionService.requirePermission(db,actor,branches.getString(0),"JOURNAL_POST");
+                checked++;
+            }
+        } finally {branches.close();}
+        if(checked==0)throw new IllegalStateException("لا توجد فروع مرتبطة بالقيد الأصلي");
     }
 
     private static long nonNegative(String value,String field) {
