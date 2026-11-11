@@ -55,10 +55,15 @@ public class GeneralLedgerValidationTest {
 
     @Test public void acceptsOnlyRealCalendarDates() {
         assertTrue(GeneralLedger.validDate("2026-11-11"));
+        assertTrue("Leap day in a leap year must be accepted", GeneralLedger.validDate("2024-02-29"));
+        assertTrue("Century leap year divisible by 400 must be accepted", GeneralLedger.validDate("2000-02-29"));
+        assertFalse("Non-leap century year must be rejected", GeneralLedger.validDate("1900-02-29"));
         assertFalse(GeneralLedger.validDate("2026-02-29"));
         assertFalse(GeneralLedger.validDate("2026-04-31"));
         assertFalse(GeneralLedger.validDate("2026-13-01"));
         assertFalse(GeneralLedger.validDate("2026-00-10"));
         assertFalse(GeneralLedger.validDate("2026-11-1"));
+        assertFalse("Year zero is outside the supported accounting date format", GeneralLedger.validDate("0000-01-01"));
+        assertFalse(GeneralLedger.validDate(null));
     }
 }
