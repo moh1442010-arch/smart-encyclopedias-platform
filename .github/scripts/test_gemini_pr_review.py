@@ -1,4 +1,6 @@
 import base64
+import io
+import urllib.error
 import importlib.util
 import json
 import unittest
@@ -102,6 +104,47 @@ class RedactionTests(unittest.TestCase):
             + "\n## الحكم النهائي\nNEEDS CHANGES"
         )
         MODULE.validate_review_text(report)
+
+
+
+class RequestRetryTests(unittest.TestCase):
+    def test_request_retries_transient_503_then_succeeds(self):
+        temporary = urllib.error.HTTPError(
+            "https://example.invalid", 503, "Unavailable",
+            {"Retry-After": "0"}, io.BytesIO(b"")
+        )
+        with patch.object(MODULE.urllib.request, "urlopen",
+                          side_effect=[temporary, io.BytesIO(b'{"ok": true}')]) as urlopen, \
+             patch.object(MODULE.time, "sleep") as sleep:
+            result = MODULE.request_json("https://example.invalid", {})
+        self.assertEqual(result, {"ok": True})
+        self.assertEqual(urlopen.call_count, 2)
+        sleep.assert_called_once_with(0.0)
+
+    def test_request_does_not_retry_permanent_400(self):
+        permanent = urllib.error.HTTPError(
+            "https://example.invalid", 400, "Bad Request", {}, io.BytesIO(b"")
+        )
+        with patch.object(MODULE.urllib.request, "urlopen", side_effect=permanent) as urlopen, \
+             patch.object(MODULE.time, "sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError, "HTTP 400"):
+                MODULE.request_json("https://example.invalid", {})
+        self.assertEqual(urlopen.call_count, 1)
+        sleep.assert_not_called()
+
+    def test_request_stops_after_four_transient_failures(self):
+        failures = [
+            urllib.error.HTTPError(
+                "https://example.invalid", 503, "Unavailable", {}, io.BytesIO(b"")
+            )
+            for _ in range(4)
+        ]
+        with patch.object(MODULE.urllib.request, "urlopen", side_effect=failures) as urlopen, \
+             patch.object(MODULE.time, "sleep") as sleep:
+            with self.assertRaisesRegex(RuntimeError, "HTTP 503"):
+                MODULE.request_json("https://example.invalid", {})
+        self.assertEqual(urlopen.call_count, 4)
+        self.assertEqual(sleep.call_count, 3)
 
 
 if __name__ == "__main__":
