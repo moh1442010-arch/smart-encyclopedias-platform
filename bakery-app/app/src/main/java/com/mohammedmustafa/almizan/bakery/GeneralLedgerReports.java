@@ -63,8 +63,8 @@ final class GeneralLedgerReports {
             "FROM chart_of_accounts a LEFT JOIN gl_journal_lines l ON l.account_id=a.id "+
             "LEFT JOIN gl_journal_entries e ON e.id=l.entry_id AND e.status='POSTED' AND e.transaction_date<=? "+
             "LEFT JOIN branches b ON b.id=l.branch_id "+
-            "WHERE a.active=1 AND (?='' OR b.branch_code=?) "+
-            "GROUP BY a.id,a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side ORDER BY a.account_code";
+            "WHERE (?='' OR b.branch_code=?) "+
+            "GROUP BY a.id,a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side HAVING a.active=1 OR COUNT(e.id)>0 ORDER BY a.account_code";
         String branch=branchArg(branchCode);
         Cursor c=db.rawQuery(sql,new String[]{to,branch,branch});
         try {
@@ -125,9 +125,9 @@ final class GeneralLedgerReports {
             "FROM chart_of_accounts a LEFT JOIN gl_journal_lines l ON l.account_id=a.id "+
             "LEFT JOIN gl_journal_entries e ON e.id=l.entry_id AND e.status='POSTED' AND e.transaction_date>=? AND e.transaction_date<=? "+
             "LEFT JOIN branches b ON b.id=l.branch_id "+
-            "WHERE a.active=1 AND a.account_type IN ("+placeholders+") "+
+            "WHERE a.account_type IN ("+placeholders+") "+
             "AND (?='' OR b.branch_code=?) "+
-            "GROUP BY a.id,a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side ORDER BY a.account_code";
+            "GROUP BY a.id,a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side HAVING a.active=1 OR COUNT(e.id)>0 ORDER BY a.account_code";
         String[] queryArgs=new String[types.length+4];
         queryArgs[0]=from;queryArgs[1]=to;
         System.arraycopy(types,0,queryArgs,2,types.length);
@@ -166,8 +166,7 @@ final class GeneralLedgerReports {
     }
     private static boolean blank(String s){return s==null||s.trim().isEmpty();}
     private static void validateRange(String from,String to) {
-        if(from==null||to==null||!from.matches("\\d{4}-\\d{2}-\\d{2}")||
-           !to.matches("\\d{4}-\\d{2}-\\d{2}")||from.compareTo(to)>0)
+        if(!GeneralLedger.validDate(from)||!GeneralLedger.validDate(to)||from.compareTo(to)>0)
             throw new IllegalArgumentException("نطاق تاريخ التقرير غير صحيح");
     }
 }

@@ -4,6 +4,15 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class TaxEngineMathTest {
+    @Test(expected=IllegalArgumentException.class)
+    public void rejectsImpossibleTaxEffectiveDatesBeforeDatabaseAccess() {
+        TaxEngine.calculate(null,"SD","VAT_STANDARD","2026-02-30",100L,false,false);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void rejectsBlankTaxJurisdictionInputsBeforeDatabaseAccess() {
+        TaxEngine.calculate(null," ","VAT_STANDARD","2026-11-13",100L,false,false);
+    }
     @Test public void roundsStandardVatWithoutFloatingPointDrift() {
         assertEquals(1700L,TaxEngine.roundedRatio(10000L,17L,100L));
         assertEquals(750L,TaxEngine.roundedRatio(10000L,15L,200L));

@@ -71,7 +71,14 @@ final class GeneralLedger {
     }
 
     static Result post(SQLiteDatabase db, Entry entry) {
+        return postInternal(db,entry,false);
+    }
+
+    private static Result postInternal(SQLiteDatabase db,Entry entry,boolean reversalOfHistoricalPosting) {
         validateEntry(entry);
+        if(reversalOfHistoricalPosting&&(!"REVERSAL".equals(entry.sourceType)||
+            !entry.reference.equals("REV-"+entry.sourceId)||!entry.idempotencyKey.equals("reverse:"+entry.sourceId)))
+            throw new SecurityException("Historical inactive-dimension bypass is restricted to original-entry reversals");
         if (db.inTransaction()) throw new IllegalStateException("يجب ترحيل القيد داخل معاملة مستقلة لمنع اعتماد جزء من القيد");
         boolean ownTransaction=true;
         db.beginTransaction();
@@ -105,8 +112,14 @@ final class GeneralLedger {
                     if(baseCredits[i]<=0) throw new IllegalArgumentException("قيمة السطر بعد التحويل إلى العملة الأساسية تساوي صفرًا");
                     totalCredit=EnterpriseMath.toLongExact(BigInteger.valueOf(totalCredit).add(BigInteger.valueOf(baseCredits[i])));
                 }
-                accountIds[i]=requiredId(db,"SELECT id FROM chart_of_accounts WHERE account_code=? AND active=1",line.accountCode,"الحساب غير موجود أو غير نشط: "+line.accountCode);
-                branchIds[i]=requiredId(db,"SELECT id FROM branches WHERE branch_code=? AND active=1",line.branchCode,"الفرع غير موجود أو غير نشط: "+line.branchCode);
+                accountIds[i]=requiredId(db,reversalOfHistoricalPosting
+                    ?"SELECT id FROM chart_of_accounts WHERE account_code=?"
+                    :"SELECT id FROM chart_of_accounts WHERE account_code=? AND active=1",
+                    line.accountCode,"الحساب غير موجود أو غير نشط: "+line.accountCode);
+                branchIds[i]=requiredId(db,reversalOfHistoricalPosting
+                    ?"SELECT id FROM branches WHERE branch_code=?"
+                    :"SELECT id FROM branches WHERE branch_code=? AND active=1",
+                    line.branchCode,"الفرع غير موجود أو غير نشط: "+line.branchCode);
             }
             validateBalancedTotals(totalDebit,totalCredit,entry.lines.size());
             long periodId=openPeriod(db,entry.date);
@@ -176,7 +189,7 @@ final class GeneralLedger {
         String reversalReference="REV-"+originalReference;
         Entry reversal=new Entry(reversalReference,"عكس القيد "+originalReference+" — "+description,
             reversalDate,"REVERSAL",originalReference,"reverse:"+originalReference,actor,reversedLines);
-        Result result=post(db,reversal);
+        Result result=postInternal(db,reversal,true);
         db.beginTransaction();
         try {
             long reversalId=requiredId(db,"SELECT id FROM gl_journal_entries WHERE entry_ref=? AND status='POSTED'",

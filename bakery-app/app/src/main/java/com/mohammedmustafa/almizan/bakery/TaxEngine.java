@@ -24,7 +24,10 @@ final class TaxEngine {
     static Result calculate(SQLiteDatabase db,String countryCode,String taxCode,String date,
                             long amountMinor,boolean registered,boolean taxInclusive) {
         if(amountMinor<0)throw new IllegalArgumentException("Amount cannot be negative");
-        if(countryCode==null||date==null||taxCode==null)throw new IllegalArgumentException("Missing tax jurisdiction input");
+        if(countryCode==null||countryCode.trim().isEmpty()||date==null||taxCode==null||taxCode.trim().isEmpty())
+            throw new IllegalArgumentException("Missing tax jurisdiction input");
+        if(!GeneralLedger.validDate(date))
+            throw new IllegalArgumentException("Tax effective date must be a real calendar date in YYYY-MM-DD format");
         String profileStatus="",taxType="";
         Cursor profile=db.rawQuery("SELECT profile_status,indirect_tax_type FROM tax_jurisdiction_profiles WHERE country_code=?",new String[]{countryCode});
         try {

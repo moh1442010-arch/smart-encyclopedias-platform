@@ -136,6 +136,21 @@ public class EnterpriseSchemaMigrationTest {
         }
     }
 
+    @Test public void taxJurisdictionEnsurePreservesOperatorProfileAndCountryOverrides() throws Exception {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="tax_profile_preserve_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase db=SecureDatabase.open(context,name);
+        try {
+            EnterpriseSchema.ensure(db);
+            db.execSQL("UPDATE tax_jurisdiction_profiles SET profile_status='LOCAL_RULES_REQUIRED',notes='OPERATOR_NOTE',registration_threshold='OPERATOR_THRESHOLD' WHERE country_code='AE'");
+            db.execSQL("UPDATE countries SET tax_profile='OPERATOR_PROFILE',active=0 WHERE code='AE'");
+            TaxJurisdictionProfiles.ensure(db);
+            Cursor profile=db.rawQuery("SELECT profile_status,notes,registration_threshold FROM tax_jurisdiction_profiles WHERE country_code='AE'",null);
+            try { assertTrue(profile.moveToFirst());assertEquals("LOCAL_RULES_REQUIRED",profile.getString(0));assertEquals("OPERATOR_NOTE",profile.getString(1));assertEquals("OPERATOR_THRESHOLD",profile.getString(2)); } finally { profile.close(); }
+            Cursor country=db.rawQuery("SELECT tax_profile,active FROM countries WHERE code='AE'",null);
+            try { assertTrue(country.moveToFirst());assertEquals("OPERATOR_PROFILE",country.getString(0));assertEquals(0,country.getInt(1)); } finally { country.close(); }
+        } finally { db.close();context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm"); }
+    }
     @Test public void ledgerReportsIncludeEquityAndExcludeDraftsWithCumulativeTrialBalance() throws Exception {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String name="ledger_reports_"+System.currentTimeMillis()+".db";
@@ -146,24 +161,37 @@ public class EnterpriseSchemaMigrationTest {
                 "(101,'TST-A101','النقدية','Cash','ASSET','DEBIT',1),"+
                 "(102,'TST-E102','رأس المال','Capital','EQUITY','CREDIT',1),"+
                 "(103,'TST-R103','الإيرادات','Revenue','REVENUE','CREDIT',1),"+
-                "(104,'TST-X104','المصروفات','Expenses','EXPENSE','DEBIT',1)");
+                "(104,'TST-X104','المصروفات','Expenses','EXPENSE','DEBIT',1),"+
+                "(105,'TST-A105','أصل متوقف','Inactive asset','ASSET','DEBIT',0),"+
+                "(106,'TST-A106','أصل بلا حركة','Inactive unused asset','ASSET','DEBIT',0)");
             db.execSQL("INSERT INTO gl_journal_entries(id,entry_ref,description,transaction_date,source_type,source_id,status,created_at) VALUES"+
                 "(201,'OPEN-1','Opening capital','2026-10-01','TEST','OPEN-1','POSTED',1),"+
                 "(202,'SALE-1','Posted sale','2026-11-05','TEST','SALE-1','POSTED',2),"+
-                "(203,'DRAFT-1','Draft expense','2026-11-10','TEST','DRAFT-1','DRAFT',3)");
+                "(203,'DRAFT-1','Draft expense','2026-11-10','TEST','DRAFT-1','DRAFT',3),"+
+                "(204,'HIST-INACTIVE','Historical inactive account','2026-10-15','TEST','HIST-INACTIVE','POSTED',4)");
             db.execSQL("INSERT INTO gl_journal_lines(entry_id,account_id,branch_id,base_currency_code,base_debit_minor,base_credit_minor,transaction_currency_code,transaction_debit_minor,transaction_credit_minor) VALUES"+
                 "(201,101,1,'SDG',1000,0,'SDG',1000,0),"+
                 "(201,102,1,'SDG',0,1000,'SDG',0,1000),"+
                 "(202,101,1,'SDG',500,0,'SDG',500,0),"+
                 "(202,103,1,'SDG',0,500,'SDG',0,500),"+
                 "(203,104,1,'SDG',700,0,'SDG',700,0),"+
-                "(203,101,1,'SDG',0,700,'SDG',0,700)");
+                "(203,101,1,'SDG',0,700,'SDG',0,700),"+
+                "(204,105,1,'SDG',300,0,'SDG',300,0),"+
+                "(204,101,1,'SDG',0,300,'SDG',0,300)");
             GeneralLedgerReports.TrialBalance trial=GeneralLedgerReports.trialBalance(db,"2026-11-01","2026-11-30",null);
-            assertTrue("Trial balance must include opening entries before report start",trial.debitMinor==1500&&trial.creditMinor==1500);
+            assertTrue("Trial balance must include opening entries before report start",trial.debitMinor==1800&&trial.creditMinor==1800);
             assertTrue(trial.isBalanced());
             GeneralLedgerReports.TrialBalance position=GeneralLedgerReports.balanceSheetAccounts(db,"2026-11-30",null);
             boolean equity=false;for(GeneralLedgerReports.Line line:position.lines)if("TST-E102".equals(line.code))equity=true;
             assertTrue("Balance sheet account query must include EQUITY",equity);
+            boolean inactiveHistorical=false;
+            for(GeneralLedgerReports.Line line:position.lines)
+                if("TST-A105".equals(line.code))inactiveHistorical=line.debitMinor==300;
+            assertTrue("Historical balances must remain visible after an account is deactivated",inactiveHistorical);
+            boolean inactiveWithoutHistory=false;
+            for(GeneralLedgerReports.Line line:position.lines)
+                if("TST-A106".equals(line.code))inactiveWithoutHistory=true;
+            assertFalse("Inactive accounts with no posted history must not clutter reports",inactiveWithoutHistory);
             GeneralLedgerReports.TrialBalance income=GeneralLedgerReports.incomeStatement(db,"2026-11-01","2026-11-30",null);
             boolean revenue=false,draftExpense=false;
             for(GeneralLedgerReports.Line line:income.lines){
@@ -180,6 +208,18 @@ public class EnterpriseSchemaMigrationTest {
             db.close();context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
         }
     }
+    @Test public void financialReportsRejectImpossibleCalendarDates() {
+        boolean invalidStartRejected=false;
+        try { GeneralLedgerReports.trialBalance(null,"2026-02-30","2026-03-01",null); }
+        catch(IllegalArgumentException expected) { invalidStartRejected=true; }
+        assertTrue("Report must reject impossible start dates before querying the database",invalidStartRejected);
+
+        boolean invalidEndRejected=false;
+        try { GeneralLedgerReports.balanceSheetAccounts(null,"2026-04-31",null); }
+        catch(IllegalArgumentException expected) { invalidEndRejected=true; }
+        assertTrue("Report must reject impossible end dates before querying the database",invalidEndRejected);
+    }
+
     @Test public void generalLedgerReversalPostsOnceAndKeepsBothSidesInTrialBalance() throws Exception {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String name="ledger_reversal_"+System.currentTimeMillis()+".db";
@@ -193,6 +233,8 @@ public class EnterpriseSchemaMigrationTest {
             GeneralLedger.Entry original=new GeneralLedger.Entry("TEST-ORIGINAL","اختبار بيع نقدي","2026-11-09",
                 "TEST_SALE","TEST-ORIGINAL","test-sale:original","tester",lines);
             GeneralLedger.post(db,original);
+            db.execSQL("UPDATE chart_of_accounts SET active=0 WHERE account_code='1000'");
+            db.execSQL("UPDATE branches SET active=0 WHERE branch_code='MAIN'");
             GeneralLedger.Result first=GeneralLedger.reverse(db,"TEST-ORIGINAL","2026-11-09","tester");
             assertFalse("First reversal must create a new journal",first.alreadyPosted);
             GeneralLedger.Result retry=GeneralLedger.reverse(db,"TEST-ORIGINAL","2026-11-09","tester");
