@@ -13,6 +13,16 @@ Status: Working engineering contract; not a declaration of completed implementat
 
 The Android and Windows clients are not yet financially equivalent to the bakery/factory accounting core. A matching screen or report label is not evidence of equivalent posting, valuation, or reconciliation behavior.
 
+### Specific confirmed differences in the inspected source
+
+- General Android `MainActivity.java` contains 31 SQL `REAL` declarations and 106 Java `double` occurrences in the inspected source file. These are source-pattern counts, not a complete repository-wide inventory.
+- Windows `Program.cs` contains 38 SQL `REAL` declarations and 78 C# `double` occurrences in the inspected source file. Its schema includes monetary REAL fields in products, sales, purchases, payroll, expenses, fixed assets, depreciation, and factory-stage costs.
+- Windows `gl_entries` stores source type/id and a `created_at` text field; `gl_lines` stores debit/credit as REAL. The inspected schema does not put transaction currency, base currency, branch, FX evidence, or a distinct accounting date on the journal lines/header.
+- Windows `JournalAccounting.PostEntry` receives double values and accepts a debit/credit difference up to 0.005. Its API does not carry a currency precision, exchange-rate evidence, actor, or immutable payload hash. `PostEntryAt` writes the accounting date into `created_at`, so this field is carrying more than one semantic responsibility.
+- Windows project dependencies show Microsoft.Data.Sqlite without a database-encryption provider. The Windows README independently describes encryption-at-rest as an open security blocker.
+
+These findings make a direct file/database merge unsafe. The clients need independent additive migrations and contract-level reconciliation before any shared accounting behavior is claimed.
+
 ## 2. Target architecture
 
 1. **Shared accounting contract** — currency-aware money values, account codes, branch identity, source-document identity, posting date, actor, exchange-rate evidence, idempotency key, immutable payload hash, and reversal relationship.
