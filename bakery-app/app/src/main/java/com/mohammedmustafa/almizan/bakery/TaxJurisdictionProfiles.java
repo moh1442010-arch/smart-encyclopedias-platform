@@ -139,7 +139,7 @@ final class TaxJurisdictionProfiles {
     private static void seed(SQLiteDatabase db,String code,String ar,String en,String profile,String type,String status,String notesAr,String notesEn,String source,String checked,int num,int den,String effective) {
         boolean profileExists=hasProfile(db,code);
         db.execSQL("INSERT OR IGNORE INTO countries(code,name_ar,name_en,tax_profile,active) VALUES(?,?,?,?,1)",new Object[]{code,ar,en,profile});
-        if(!profileExists)db.execSQL("UPDATE countries SET tax_profile=?,active=1 WHERE code=?",new Object[]{profile,code});
+        if(!profileExists)db.execSQL("UPDATE countries SET tax_profile=? WHERE code=?",new Object[]{profile,code});
         db.execSQL("INSERT OR IGNORE INTO tax_jurisdiction_profiles(country_code,indirect_tax_type,profile_status,registration_threshold,notes,source_url,verified_on,profile_version) VALUES(?,?,?,?,?,?,?,1)",
             new Object[]{code,type,status,"",notesAr+" "+notesEn,source,checked});
     }
