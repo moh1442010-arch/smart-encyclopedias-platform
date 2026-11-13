@@ -93,12 +93,12 @@ final class TaxJurisdictionProfiles {
         markLocalTaxOnly(db,"SY","CONSUMPTION_TAX","سوريا: توجد رسوم وضرائب استهلاك؛ يلزم توثيق النظام الساري ومعدلاته حسب السلعة.");
         markLocalTaxOnly(db,"SO","LOCAL_SALES_TAX","الصومال: تختلف الضرائب والرسوم بحسب المستوى الاتحادي والولاية؛ لا توجد نسبة VAT موحدة معتمدة هنا.");
         markLocalTaxOnly(db,"PS","VAT","فلسطين: توجد ضريبة قيمة مضافة؛ يجب تأكيد النسبة والمعاملة حسب المنطقة والتوريد قبل التفعيل.");
-        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='AED 375000 mandatory; AED 187500 voluntary' WHERE country_code='AE'");
-        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='SAR 375000 mandatory; SAR 187500 voluntary' WHERE country_code='SA'");
-        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='EGP 500000 mandatory' WHERE country_code='EG'");
-        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='BHD 37500 mandatory' WHERE country_code='BH'");
-        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='OMR 38500 mandatory; OMR 19250 voluntary' WHERE country_code='OM'");
-        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='ZAR 2300000 mandatory; ZAR 120000 voluntary' WHERE country_code='ZA'");
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='AED 375000 mandatory; AED 187500 voluntary' WHERE registration_threshold='' AND country_code='AE'");
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='SAR 375000 mandatory; SAR 187500 voluntary' WHERE registration_threshold='' AND country_code='SA'");
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='EGP 500000 mandatory' WHERE registration_threshold='' AND country_code='EG'");
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='BHD 37500 mandatory' WHERE registration_threshold='' AND country_code='BH'");
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='OMR 38500 mandatory; OMR 19250 voluntary' WHERE registration_threshold='' AND country_code='OM'");
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET registration_threshold='ZAR 2300000 mandatory; ZAR 120000 voluntary' WHERE registration_threshold='' AND country_code='ZA'");
         // Currency-to-country relationships are persisted in the encrypted database.
         for(String[] mapping:CURRENCY_COUNTRY_MAP)mapCurrency(db,mapping[0],mapping[1],"1".equals(mapping[2]));
         db.execSQL("UPDATE company_settings SET tax_profile='SD_VAT_17' WHERE country_code='SD' AND tax_profile='SD_DEFAULT'");
@@ -114,26 +114,33 @@ final class TaxJurisdictionProfiles {
     }
 
     private static void seedReference(SQLiteDatabase db,String country,String type,String taxCode,String name,int rateNum,int rateDen,String effective,String source) {
-        db.execSQL("UPDATE tax_jurisdiction_profiles SET indirect_tax_type=?,profile_status='REVIEW_REQUIRED',notes=?,source_url=?,verified_on='2026-11-09',profile_version=2 WHERE country_code=?",
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET indirect_tax_type=?,profile_status='REVIEW_REQUIRED',notes=?,source_url=?,verified_on='2026-11-09',profile_version=2 "+
+            "WHERE country_code=? AND indirect_tax_type='UNVERIFIED' AND profile_status='REVIEW_REQUIRED' AND source_url=''",
             new Object[]{type,name,source,country});
         db.execSQL("INSERT OR IGNORE INTO tax_rules(country_code,tax_code,name,rate_num,rate_den,inclusive,exempt_category,effective_from,active) VALUES(?,?,?,?,?,0,?,?,0)",
             new Object[]{country,taxCode,name,rateNum,rateDen,"راجع الاستثناءات والتصنيفات المحلية قبل التفعيل",effective});
     }
 
     private static void markLocalTaxOnly(SQLiteDatabase db,String country,String type,String notes) {
-        db.execSQL("UPDATE tax_jurisdiction_profiles SET indirect_tax_type=?,profile_status='REVIEW_REQUIRED',notes=?,verified_on='2026-11-09',profile_version=2 WHERE country_code=?",
+        db.execSQL("UPDATE tax_jurisdiction_profiles SET indirect_tax_type=?,profile_status='REVIEW_REQUIRED',notes=?,verified_on='2026-11-09',profile_version=2 "+
+            "WHERE country_code=? AND indirect_tax_type='UNVERIFIED' AND profile_status='REVIEW_REQUIRED' AND source_url=''",
             new Object[]{type,notes,country});
     }
 
+    private static boolean hasProfile(SQLiteDatabase db,String country) {
+        android.database.Cursor c=db.rawQuery("SELECT 1 FROM tax_jurisdiction_profiles WHERE country_code=? LIMIT 1",new String[]{country});
+        try{return c.moveToFirst();}finally{c.close();}
+    }
     private static void seedReview(SQLiteDatabase db,String code,String ar,String en,String currency) {
         db.execSQL("INSERT OR IGNORE INTO countries(code,name_ar,name_en,tax_profile,active) VALUES(?,?,?,'CUSTOM_REVIEW_REQUIRED',1)",new Object[]{code,ar,en});
         db.execSQL("INSERT OR IGNORE INTO tax_jurisdiction_profiles(country_code,indirect_tax_type,profile_status,registration_threshold,notes,source_url,verified_on,profile_version) VALUES(?,'UNVERIFIED','REVIEW_REQUIRED','','No tax rate has been preloaded. Confirm current national and subnational rules before enabling tax calculation.','','2026-11-08',1)",new Object[]{code});
     }
 
     private static void seed(SQLiteDatabase db,String code,String ar,String en,String profile,String type,String status,String notesAr,String notesEn,String source,String checked,int num,int den,String effective) {
+        boolean profileExists=hasProfile(db,code);
         db.execSQL("INSERT OR IGNORE INTO countries(code,name_ar,name_en,tax_profile,active) VALUES(?,?,?,?,1)",new Object[]{code,ar,en,profile});
-        db.execSQL("UPDATE countries SET tax_profile=?,active=1 WHERE code=?",new Object[]{profile,code});
-        db.execSQL("INSERT OR REPLACE INTO tax_jurisdiction_profiles(country_code,indirect_tax_type,profile_status,registration_threshold,notes,source_url,verified_on,profile_version) VALUES(?,?,?,?,?,?,?,1)",
+        if(!profileExists)db.execSQL("UPDATE countries SET tax_profile=?,active=1 WHERE code=?",new Object[]{profile,code});
+        db.execSQL("INSERT OR IGNORE INTO tax_jurisdiction_profiles(country_code,indirect_tax_type,profile_status,registration_threshold,notes,source_url,verified_on,profile_version) VALUES(?,?,?,?,?,?,?,1)",
             new Object[]{code,type,status,"",notesAr+" "+notesEn,source,checked});
     }
 
