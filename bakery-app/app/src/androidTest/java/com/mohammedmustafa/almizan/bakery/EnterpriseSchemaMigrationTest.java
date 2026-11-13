@@ -146,24 +146,32 @@ public class EnterpriseSchemaMigrationTest {
                 "(101,'TST-A101','النقدية','Cash','ASSET','DEBIT',1),"+
                 "(102,'TST-E102','رأس المال','Capital','EQUITY','CREDIT',1),"+
                 "(103,'TST-R103','الإيرادات','Revenue','REVENUE','CREDIT',1),"+
-                "(104,'TST-X104','المصروفات','Expenses','EXPENSE','DEBIT',1)");
+                "(104,'TST-X104','المصروفات','Expenses','EXPENSE','DEBIT',1),"+
+                "(105,'TST-A105','أصل متوقف','Inactive asset','ASSET','DEBIT',0)");
             db.execSQL("INSERT INTO gl_journal_entries(id,entry_ref,description,transaction_date,source_type,source_id,status,created_at) VALUES"+
                 "(201,'OPEN-1','Opening capital','2026-10-01','TEST','OPEN-1','POSTED',1),"+
                 "(202,'SALE-1','Posted sale','2026-11-05','TEST','SALE-1','POSTED',2),"+
-                "(203,'DRAFT-1','Draft expense','2026-11-10','TEST','DRAFT-1','DRAFT',3)");
+                "(203,'DRAFT-1','Draft expense','2026-11-10','TEST','DRAFT-1','DRAFT',3),"+
+                "(204,'HIST-INACTIVE','Historical inactive account','2026-10-15','TEST','HIST-INACTIVE','POSTED',4)");
             db.execSQL("INSERT INTO gl_journal_lines(entry_id,account_id,branch_id,base_currency_code,base_debit_minor,base_credit_minor,transaction_currency_code,transaction_debit_minor,transaction_credit_minor) VALUES"+
                 "(201,101,1,'SDG',1000,0,'SDG',1000,0),"+
                 "(201,102,1,'SDG',0,1000,'SDG',0,1000),"+
                 "(202,101,1,'SDG',500,0,'SDG',500,0),"+
                 "(202,103,1,'SDG',0,500,'SDG',0,500),"+
                 "(203,104,1,'SDG',700,0,'SDG',700,0),"+
-                "(203,101,1,'SDG',0,700,'SDG',0,700)");
+                "(203,101,1,'SDG',0,700,'SDG',0,700),"+
+                "(204,105,1,'SDG',300,0,'SDG',300,0),"+
+                "(204,101,1,'SDG',0,300,'SDG',0,300)");
             GeneralLedgerReports.TrialBalance trial=GeneralLedgerReports.trialBalance(db,"2026-11-01","2026-11-30",null);
-            assertTrue("Trial balance must include opening entries before report start",trial.debitMinor==1500&&trial.creditMinor==1500);
+            assertTrue("Trial balance must include opening entries before report start",trial.debitMinor==1800&&trial.creditMinor==1800);
             assertTrue(trial.isBalanced());
             GeneralLedgerReports.TrialBalance position=GeneralLedgerReports.balanceSheetAccounts(db,"2026-11-30",null);
             boolean equity=false;for(GeneralLedgerReports.Line line:position.lines)if("TST-E102".equals(line.code))equity=true;
             assertTrue("Balance sheet account query must include EQUITY",equity);
+            boolean inactiveHistorical=false;
+            for(GeneralLedgerReports.Line line:position.lines)
+                if("TST-A105".equals(line.code))inactiveHistorical=line.debitMinor==300;
+            assertTrue("Historical balances must remain visible after an account is deactivated",inactiveHistorical);
             GeneralLedgerReports.TrialBalance income=GeneralLedgerReports.incomeStatement(db,"2026-11-01","2026-11-30",null);
             boolean revenue=false,draftExpense=false;
             for(GeneralLedgerReports.Line line:income.lines){
