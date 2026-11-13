@@ -147,7 +147,8 @@ public class EnterpriseSchemaMigrationTest {
                 "(102,'TST-E102','رأس المال','Capital','EQUITY','CREDIT',1),"+
                 "(103,'TST-R103','الإيرادات','Revenue','REVENUE','CREDIT',1),"+
                 "(104,'TST-X104','المصروفات','Expenses','EXPENSE','DEBIT',1),"+
-                "(105,'TST-A105','أصل متوقف','Inactive asset','ASSET','DEBIT',0)");
+                "(105,'TST-A105','أصل متوقف','Inactive asset','ASSET','DEBIT',0),"+
+                "(106,'TST-A106','أصل بلا حركة','Inactive unused asset','ASSET','DEBIT',0)");
             db.execSQL("INSERT INTO gl_journal_entries(id,entry_ref,description,transaction_date,source_type,source_id,status,created_at) VALUES"+
                 "(201,'OPEN-1','Opening capital','2026-10-01','TEST','OPEN-1','POSTED',1),"+
                 "(202,'SALE-1','Posted sale','2026-11-05','TEST','SALE-1','POSTED',2),"+
@@ -172,6 +173,10 @@ public class EnterpriseSchemaMigrationTest {
             for(GeneralLedgerReports.Line line:position.lines)
                 if("TST-A105".equals(line.code))inactiveHistorical=line.debitMinor==300;
             assertTrue("Historical balances must remain visible after an account is deactivated",inactiveHistorical);
+            boolean inactiveWithoutHistory=false;
+            for(GeneralLedgerReports.Line line:position.lines)
+                if("TST-A106".equals(line.code))inactiveWithoutHistory=true;
+            assertFalse("Inactive accounts with no posted history must not clutter reports",inactiveWithoutHistory);
             GeneralLedgerReports.TrialBalance income=GeneralLedgerReports.incomeStatement(db,"2026-11-01","2026-11-30",null);
             boolean revenue=false,draftExpense=false;
             for(GeneralLedgerReports.Line line:income.lines){
