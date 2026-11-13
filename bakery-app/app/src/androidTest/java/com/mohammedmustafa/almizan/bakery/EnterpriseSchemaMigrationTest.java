@@ -136,6 +136,21 @@ public class EnterpriseSchemaMigrationTest {
         }
     }
 
+    @Test public void taxJurisdictionEnsurePreservesOperatorProfileAndCountryOverrides() throws Exception {
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name="tax_profile_preserve_"+System.currentTimeMillis()+".db";
+        SQLiteDatabase db=SecureDatabase.open(context,name);
+        try {
+            EnterpriseSchema.ensure(db);
+            db.execSQL("UPDATE tax_jurisdiction_profiles SET profile_status='LOCAL_RULES_REQUIRED',notes='OPERATOR_NOTE',registration_threshold='OPERATOR_THRESHOLD' WHERE country_code='AE'");
+            db.execSQL("UPDATE countries SET tax_profile='OPERATOR_PROFILE',active=0 WHERE code='AE'");
+            TaxJurisdictionProfiles.ensure(db);
+            Cursor profile=db.rawQuery("SELECT profile_status,notes,registration_threshold FROM tax_jurisdiction_profiles WHERE country_code='AE'",null);
+            try { assertTrue(profile.moveToFirst());assertEquals("LOCAL_RULES_REQUIRED",profile.getString(0));assertEquals("OPERATOR_NOTE",profile.getString(1));assertEquals("OPERATOR_THRESHOLD",profile.getString(2)); } finally { profile.close(); }
+            Cursor country=db.rawQuery("SELECT tax_profile,active FROM countries WHERE code='AE'",null);
+            try { assertTrue(country.moveToFirst());assertEquals("OPERATOR_PROFILE",country.getString(0));assertEquals(0,country.getInt(1)); } finally { country.close(); }
+        } finally { db.close();context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm"); }
+    }
     @Test public void ledgerReportsIncludeEquityAndExcludeDraftsWithCumulativeTrialBalance() throws Exception {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String name="ledger_reports_"+System.currentTimeMillis()+".db";
