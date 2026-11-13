@@ -193,6 +193,18 @@ public class EnterpriseSchemaMigrationTest {
             db.close();context.deleteDatabase(name);context.deleteDatabase(name+"-wal");context.deleteDatabase(name+"-shm");
         }
     }
+    @Test public void financialReportsRejectImpossibleCalendarDates() {
+        boolean invalidStartRejected=false;
+        try { GeneralLedgerReports.trialBalance(null,"2026-02-30","2026-03-01",null); }
+        catch(IllegalArgumentException expected) { invalidStartRejected=true; }
+        assertTrue("Report must reject impossible start dates before querying the database",invalidStartRejected);
+
+        boolean invalidEndRejected=false;
+        try { GeneralLedgerReports.balanceSheetAccounts(null,"2026-04-31",null); }
+        catch(IllegalArgumentException expected) { invalidEndRejected=true; }
+        assertTrue("Report must reject impossible end dates before querying the database",invalidEndRejected);
+    }
+
     @Test public void generalLedgerReversalPostsOnceAndKeepsBothSidesInTrialBalance() throws Exception {
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         String name="ledger_reversal_"+System.currentTimeMillis()+".db";
