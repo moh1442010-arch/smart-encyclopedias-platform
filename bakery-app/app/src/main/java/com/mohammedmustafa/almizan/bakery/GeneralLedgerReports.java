@@ -166,8 +166,7 @@ final class GeneralLedgerReports {
     }
     private static boolean blank(String s){return s==null||s.trim().isEmpty();}
     private static void validateRange(String from,String to) {
-        if(from==null||to==null||!from.matches("\\d{4}-\\d{2}-\\d{2}")||
-           !to.matches("\\d{4}-\\d{2}-\\d{2}")||from.compareTo(to)>0)
+        if(!GeneralLedger.validDate(from)||!GeneralLedger.validDate(to)||from.compareTo(to)>0)
             throw new IllegalArgumentException("نطاق تاريخ التقرير غير صحيح");
     }
 }
