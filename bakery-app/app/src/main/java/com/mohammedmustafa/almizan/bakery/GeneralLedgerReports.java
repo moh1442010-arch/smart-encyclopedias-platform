@@ -63,7 +63,7 @@ final class GeneralLedgerReports {
             "FROM chart_of_accounts a LEFT JOIN gl_journal_lines l ON l.account_id=a.id "+
             "LEFT JOIN gl_journal_entries e ON e.id=l.entry_id AND e.status='POSTED' AND e.transaction_date<=? "+
             "LEFT JOIN branches b ON b.id=l.branch_id "+
-            "WHERE a.active=1 AND (?='' OR b.branch_code=?) "+
+            "WHERE (?='' OR b.branch_code=?) "+
             "GROUP BY a.id,a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side ORDER BY a.account_code";
         String branch=branchArg(branchCode);
         Cursor c=db.rawQuery(sql,new String[]{to,branch,branch});
@@ -125,7 +125,7 @@ final class GeneralLedgerReports {
             "FROM chart_of_accounts a LEFT JOIN gl_journal_lines l ON l.account_id=a.id "+
             "LEFT JOIN gl_journal_entries e ON e.id=l.entry_id AND e.status='POSTED' AND e.transaction_date>=? AND e.transaction_date<=? "+
             "LEFT JOIN branches b ON b.id=l.branch_id "+
-            "WHERE a.active=1 AND a.account_type IN ("+placeholders+") "+
+            "WHERE a.account_type IN ("+placeholders+") "+
             "AND (?='' OR b.branch_code=?) "+
             "GROUP BY a.id,a.account_code,a.name_ar,a.name_en,a.account_type,a.normal_side ORDER BY a.account_code";
         String[] queryArgs=new String[types.length+4];

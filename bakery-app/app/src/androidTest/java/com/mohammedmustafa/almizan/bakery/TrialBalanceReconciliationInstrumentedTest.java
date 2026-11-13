@@ -72,4 +72,59 @@ public class TrialBalanceReconciliationInstrumentedTest {
             context.deleteDatabase(name + "-shm");
         }
     }
+    @Test public void inactiveAccountsRemainVisibleInHistoricalTrialBalance() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name = "trial_balance_inactive_" + System.currentTimeMillis() + ".db";
+        SQLiteDatabase db = openLedger(context, name);
+        try {
+            GeneralLedger.post(db, entry("TB-INACTIVE-CASH", "TB_INACTIVE", "INACTIVE-CASH",
+                "2026-11-12", 700L, 0L, 0L, 700L));
+            db.execSQL("UPDATE chart_of_accounts SET active=0 WHERE account_code='1000'");
+
+            GeneralLedgerReports.TrialBalance report =
+                GeneralLedgerReports.trialBalance(db, "2026-11-01", "2026-11-30", "MAIN");
+
+            assertTrue("Inactive accounts with posted history must remain in trial balance", report.isBalanced());
+            assertEquals(700L, report.debitMinor);
+            assertEquals(700L, report.creditMinor);
+            assertEquals("Inactive cash account must remain visible", 700L, line(report, "1000").debitMinor);
+        } finally {
+            if (db.isOpen()) db.close();
+            context.deleteDatabase(name);
+            context.deleteDatabase(name + "-wal");
+            context.deleteDatabase(name + "-shm");
+        }
+    }
+
+    @Test public void inactiveAccountsRemainVisibleInHistoricalBalanceSheetAccounts() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        String name = "balance_sheet_inactive_" + System.currentTimeMillis() + ".db";
+        SQLiteDatabase db = openLedger(context, name);
+        try {
+            GeneralLedger.Entry entry = new GeneralLedger.Entry("BS-INACTIVE-BANK",
+                "Inactive balance-sheet account fixture", "2026-11-12", "BS_INACTIVE",
+                "INACTIVE-BANK", "bs:inactive-bank", "TEST",
+                Arrays.asList(
+                    new GeneralLedger.Line("1010", "MAIN", "SDG", 500L, 0L, 1L, 1L),
+                    new GeneralLedger.Line("2000", "MAIN", "SDG", 0L, 500L, 1L, 1L)
+                ));
+            GeneralLedger.post(db, entry);
+            db.execSQL("UPDATE chart_of_accounts SET active=0 WHERE account_code='1010'");
+
+            GeneralLedgerReports.TrialBalance report =
+                GeneralLedgerReports.balanceSheetAccounts(db, "2026-11-30", "MAIN");
+
+            assertTrue("Historical asset and liability balances must remain visible", report.isBalanced());
+            assertEquals(500L, report.debitMinor);
+            assertEquals(500L, report.creditMinor);
+            assertEquals("Inactive bank asset must remain visible", 500L, line(report, "1010").debitMinor);
+            assertEquals("Liability counterpart must remain visible", 500L, line(report, "2000").creditMinor);
+        } finally {
+            if (db.isOpen()) db.close();
+            context.deleteDatabase(name);
+            context.deleteDatabase(name + "-wal");
+            context.deleteDatabase(name + "-shm");
+        }
+    }
+
 }
