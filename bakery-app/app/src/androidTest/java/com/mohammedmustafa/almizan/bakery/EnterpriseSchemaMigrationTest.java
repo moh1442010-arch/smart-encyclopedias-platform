@@ -218,6 +218,8 @@ public class EnterpriseSchemaMigrationTest {
             GeneralLedger.Entry original=new GeneralLedger.Entry("TEST-ORIGINAL","اختبار بيع نقدي","2026-11-09",
                 "TEST_SALE","TEST-ORIGINAL","test-sale:original","tester",lines);
             GeneralLedger.post(db,original);
+            db.execSQL("UPDATE chart_of_accounts SET active=0 WHERE account_code='1000'");
+            db.execSQL("UPDATE branches SET active=0 WHERE branch_code='MAIN'");
             GeneralLedger.Result first=GeneralLedger.reverse(db,"TEST-ORIGINAL","2026-11-09","tester");
             assertFalse("First reversal must create a new journal",first.alreadyPosted);
             GeneralLedger.Result retry=GeneralLedger.reverse(db,"TEST-ORIGINAL","2026-11-09","tester");
