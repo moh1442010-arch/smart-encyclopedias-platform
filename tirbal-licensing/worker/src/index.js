@@ -30,6 +30,14 @@ async function loadSettings(env) {
       else values[row.setting_key]=raw;
     }
   }
+  // One-time migration of the previous bundled price defaults. Preserve any
+  // administrator-customized price set that does not exactly match the old trio.
+  if(values.monthlyPrice===25000 && values.annualPrice===250000 && values.lifetimePrice===500000) {
+    values.monthlyPrice=70000;
+    values.annualPrice=650000;
+    values.lifetimePrice=1300000;
+    await saveSettings(env,{monthlyPrice:70000,annualPrice:650000,lifetimePrice:1300000});
+  }
   return values;
 }
 const priceFor = (settings,plan) => plan==="monthly"?settings.monthlyPrice:plan==="annual"?settings.annualPrice:settings.lifetimePrice;
