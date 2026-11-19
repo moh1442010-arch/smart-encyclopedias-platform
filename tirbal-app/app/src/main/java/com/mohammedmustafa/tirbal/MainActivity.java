@@ -539,7 +539,7 @@ public class MainActivity extends Activity {
 
     private void showSales() {
         base("السوق والمبيعات");
-        content.addView(text("الصافي = قيمة البيع − التكلفة المخصصة − منصرفات السوق",14,DARK,false));
+        content.addView(text("التكلفة المخصصة للمباع ومنصرفات السوق تخصم من نصيب التربال إذا دفعها التاجر. لا تسجل المبلغ نفسه مرة ثانية في دفتر التكلفة.",14,DARK,false));
         Button add=button("＋ تسجيل فاتورة بيع"); content.addView(add); add.setOnClickListener(v->saleDialog());
         tableHeader(new String[]{"الفاتورة","التاريخ","قيمة البيع","التكلفة","منصرفات السوق","الصافي"});
         try(Cursor c=db.recent("sales","sale_date")) {
@@ -617,18 +617,18 @@ public class MainActivity extends Activity {
         reportLine("إجمالي البنود المشتركة المسجلة",sharedTotal);
         reportLine("حصة التاجر من البنود المشتركة (50%)",sharedTotal / 2);
         reportLine("حصة التربال من البنود المشتركة (50%)",sharedTotal - (sharedTotal / 2));
-        long workerDeductions = db.totalByDeduction("من نصيب التربال") + db.total("sales","market_expenses");
+        long directAllocated = db.total("sales","allocated_cost");
+        long marketExpenses = db.total("sales","market_expenses");
+        long workerDeductions = db.totalByDeduction("من نصيب التربال") + directAllocated + marketExpenses;
         long traderOnly = db.totalBySettlement("trader_only");
         long grossHarvest = db.total("sales","gross");
-        long directAllocated = db.total("sales","allocated_cost");
-        long distributable = grossHarvest - directAllocated;
-        long traderNet = distributable / 2 - sharedTotal / 2 - traderOnly;
-        long workerNet = distributable - distributable / 2 - (sharedTotal - sharedTotal / 2) - workerDeductions;
+        long traderNet = grossHarvest / 2 - sharedTotal / 2 - traderOnly;
+        long workerNet = grossHarvest - grossHarvest / 2 - (sharedTotal - sharedTotal / 2) - workerDeductions;
         reportLine("إجمالي ما يخصم من نصيب التربال",workerDeductions);
         reportLine("إجمالي ما يتحمله التاجر وحده",traderOnly);
         content.addView(text("التسوية التقديرية بعد الإنتاج",18,GREEN,true));
         reportLine("إجمالي إيراد الإنتاج/المبيعات",grossHarvest);
-        reportLine("تكلفة مباشرة مخصصة للمحصول المباع",directAllocated);
+        reportLine("التكلفة المباشرة ومنصرفات السوق المخصومة من نصيب التربال",directAllocated + marketExpenses);
         reportLine("صافي نصيب التاجر بعد حصته من المشترك والتزاماته",traderNet);
         reportLine("صافي نصيب التربال بعد حصته من المشترك والميز والمنصرفات والسلفيات",workerNet);
         content.addView(text("الحساب يفترض أن كل المصروفات مسجلة مرة واحدة، وأن ما يخص التربال دفعه التاجر. ضريبة المياه وإيجار الأرض على التاجر ولا تخصم من التربال.",13,Color.DKGRAY,false));
