@@ -39,6 +39,9 @@ public final class DbHelper extends SQLiteOpenHelper {
         }
 
         if (legacy.exists() && !done) {
+            moveSidecar(current, legacy, "-wal");
+            moveSidecar(current, legacy, "-shm");
+            moveSidecar(current, legacy, "-journal");
             if (current.exists()) deleteDatabaseFiles(current);
             SQLiteDatabase encrypted = getWritableDatabase();
             android.database.sqlite.SQLiteDatabase plain = null;
