@@ -116,8 +116,8 @@ async function handle(request,env) {
     let row=await env.DB.prepare("SELECT * FROM tirbal_devices WHERE device_id=?").bind(device).first();
     if(!row) {
       const expires=now+15*86400;
-      await env.DB.prepare("INSERT INTO tirbal_devices(device_id,first_seen,trial_expires,updated_at) VALUES(?,?,?,?)").bind(device,now,expires,now).run();
-      row={device_id:device,first_seen:now,trial_expires:expires,plan:null,license_expires:null,activation_token:null};
+      await env.DB.prepare("INSERT OR IGNORE INTO tirbal_devices(device_id,first_seen,trial_expires,updated_at) VALUES(?,?,?,?)").bind(device,now,expires,now).run();
+      row=await env.DB.prepare("SELECT * FROM tirbal_devices WHERE device_id=?").bind(device).first();
     }
     if(row.activation_token && (row.license_expires===0 || row.license_expires>now)) return json({status:"licensed",token:row.activation_token,serverTime:now});
     if(row.trial_expires>now) {
