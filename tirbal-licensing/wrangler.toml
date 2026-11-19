@@ -1,0 +1,15 @@
+name = "hisab-al-tirbal-licensing"
+main = "worker/src/index.js"
+compatibility_date = "2026-10-25"
+
+[vars]
+APP_VERSION = "1.2.0"
+PAYMENT_BANK_NAME = ""
+PAYMENT_ACCOUNT_NAME = ""
+PAYMENT_ACCOUNT_NUMBER = ""
+PAYMENT_WHATSAPP = ""
+
+[[d1_databases]]
+binding = "DB"
+database_name = "al-mizan-bakery-licenses"
+database_id = "690347da-5de8-41de-b9c0-b2421db66f57"
