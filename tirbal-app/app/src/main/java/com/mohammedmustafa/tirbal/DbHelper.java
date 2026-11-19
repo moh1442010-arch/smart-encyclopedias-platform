@@ -34,7 +34,10 @@ public final class DbHelper extends SQLiteOpenHelper {
             db.execSQL("CREATE TABLE partnership_terms (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, category TEXT NOT NULL UNIQUE, responsible_party TEXT NOT NULL, default_payer TEXT NOT NULL, settlement_type TEXT NOT NULL, deduction_from TEXT NOT NULL, note TEXT)");
             seedPartnershipTerms(db);
         }
-        if (oldVersion < 3) seedPartnershipTerms(db);
+        if (oldVersion < 3) {
+            seedPartnershipTerms(db);
+            migrateLegacyPartnershipRules(db);
+        }
     }
 
     private void seedPartnershipTerms(SQLiteDatabase db) {
@@ -57,6 +60,30 @@ public final class DbHelper extends SQLiteOpenHelper {
             v.put("category",row[0]); v.put("responsible_party",row[1]); v.put("default_payer",row[2]);
             v.put("settlement_type",row[3]); v.put("deduction_from",row[4]); v.put("note",row[5]);
             db.insertWithOnConflict("partnership_terms",null,v,SQLiteDatabase.CONFLICT_IGNORE);
+        }
+    }
+    private void migrateLegacyPartnershipRules(SQLiteDatabase db) {
+        String[][] rows = {
+            {"تحضير الأرض","مشترك","shared_half","مناصفة"},
+            {"التقاوي","مشترك","shared_half","مناصفة"},
+            {"الأسمدة","مشترك","shared_half","مناصفة"},
+            {"المبيدات","مشترك","shared_half","مناصفة"},
+            {"الميز","التربال","deduct_worker","من نصيب التربال"},
+            {"الخدمة داخل الزراعة","التربال","deduct_worker","من نصيب التربال"},
+            {"الري","التربال","deduct_worker","من نصيب التربال"},
+            {"أجور العمال","التربال","deduct_worker","من نصيب التربال"},
+            {"المصروفات العامة","التربال","deduct_worker","من نصيب التربال"},
+            {"السلفيات","التربال","deduct_worker","من نصيب التربال"},
+            {"ضريبة المياه","التاجر","trader_only","لا يوجد خصم"},
+            {"إيجار الأرض","التاجر","trader_only","لا يوجد خصم"}
+        };
+        for (String[] row : rows) {
+            ContentValues term = new ContentValues();
+            term.put("responsible_party", row[1]); term.put("settlement_type", row[2]); term.put("deduction_from", row[3]);
+            db.update("partnership_terms", term, "category=? AND settlement_type='agreement_pending'", new String[]{row[0]});
+            ContentValues cost = new ContentValues();
+            cost.put("responsible_party", row[1]); cost.put("settlement_type", row[2]); cost.put("deduction_from", row[3]);
+            db.update("costs", cost, "category=? AND settlement_type='agreement_pending' AND payer='التاجر'", new String[]{row[0]});
         }
     }
     public boolean hasProject() {
