@@ -115,7 +115,7 @@ jobs:
       - name: Verify live service and signing pair
         run: |
           set -euo pipefail
-          base="https://hisab-al-tirbal-licensing.mohammedmustafa.workers.dev"
+          base="https://hisab-al-tirbal-licensing.moh1442010.workers.dev"
           curl --fail --silent --show-error "$base/health" | tee "$RUNNER_TEMP/tirbal-health.json"
           curl --fail --silent --show-error "$base/diagnostics/signing-pair" | tee "$RUNNER_TEMP/tirbal-signing.json"
           node -e 'const h=require(process.argv[1]),s=require(process.argv[2]);if(h.ok!==true||h.service!=="hisab-al-tirbal-licensing"||h.appVersion!=="1.3.0"||s.signingReady!==true)process.exit(1)' "$RUNNER_TEMP/tirbal-health.json" "$RUNNER_TEMP/tirbal-signing.json"
