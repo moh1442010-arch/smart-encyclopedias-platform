@@ -188,7 +188,7 @@ async function handle(request,env) {
     const id=crypto.randomUUID(),now=Math.floor(Date.now()/1000);
     await env.DB.prepare("INSERT INTO tirbal_orders(id,created_at,customer_name,contact,device_id,plan,amount_sdg,receipt_reference,status,app_version) VALUES(?,?,?,?,?,?,?,?,?,?)").bind(id,now,name,contact,device,plan,priceFor(settings,plan),receipt,"pending",APP_VERSION).run();
     await audit(env,id,"order_created","customer","Payment requires manual verification.");
-    return json({orderId:id,status:"pending",amountSdg:PLANS[plan].amount,message:"تم تسجيل طلبك. التفعيل بعد تأكيد الدفع ومراجعة الإدارة."},201);
+    return json({orderId:id,status:"pending",amountSdg:priceFor(settings,plan),message:"تم تسجيل طلبك. التفعيل بعد تأكيد الدفع ومراجعة الإدارة."},201);
   }
   if(u.pathname==="/admin/login"&&request.method==="POST") {
     if(!sameOriginPost(request,u))return json({error:"INVALID_ORIGIN"},403);
