@@ -16,7 +16,7 @@ public final class DbHelper extends SQLiteOpenHelper {
     static { System.loadLibrary("sqlcipher"); }
 
     public DbHelper(Context context) {
-        super(context, DB_NAME, DbKeyStore.getOrCreate(context), null, DB_VERSION, 0, null, null, true);
+        super(context, DB_NAME, DbKeyStore.getOrCreate(context), null, DB_VERSION, 0, null, null, false);
     }
 
     /**
@@ -39,10 +39,15 @@ public final class DbHelper extends SQLiteOpenHelper {
         }
 
         if (legacy.exists() && !done) {
-            moveSidecar(current, legacy, "-wal");
-            moveSidecar(current, legacy, "-shm");
-            moveSidecar(current, legacy, "-journal");
-            if (current.exists()) deleteDatabaseFiles(current);
+            if (!current.exists()) {
+                // Complete sidecar moves if the process stopped immediately after renaming the plaintext file.
+                moveSidecar(current, legacy, "-wal");
+                moveSidecar(current, legacy, "-shm");
+                moveSidecar(current, legacy, "-journal");
+            } else {
+                // This is an interrupted encrypted target, never move its journal into the plaintext source.
+                deleteDatabaseFiles(current);
+            }
             SQLiteDatabase encrypted = getWritableDatabase();
             android.database.sqlite.SQLiteDatabase plain = null;
             try {
