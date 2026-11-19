@@ -59,7 +59,7 @@ public final class DbHelper extends SQLiteOpenHelper {
                 } finally {
                     encrypted.endTransaction();
                 }
-                prefs.edit().putBoolean("encrypted_migration_done", true).commit();
+                if (!prefs.edit().putBoolean("encrypted_migration_done", true).commit()) throw new IllegalStateException("تعذر تثبيت حالة ترحيل قاعدة البيانات");
             } catch (Exception e) {
                 close();
                 throw new IllegalStateException("فشل ترحيل البيانات إلى قاعدة مشفرة. احتفظنا بالنسخة القديمة ولم نحذفها.", e);
@@ -72,8 +72,15 @@ public final class DbHelper extends SQLiteOpenHelper {
             new File(legacy.getAbsolutePath() + "-journal").delete();
         } else {
             getWritableDatabase();
-            if (!done) prefs.edit().putBoolean("encrypted_migration_done", true).commit();
-            if (legacy.exists() && done) legacy.delete();
+            if (!done && !prefs.edit().putBoolean("encrypted_migration_done", true).commit()) {
+                throw new IllegalStateException("تعذر حفظ حالة تشفير قاعدة البيانات");
+            }
+            if (legacy.exists() && done) {
+                legacy.delete();
+                new File(legacy.getAbsolutePath() + "-wal").delete();
+                new File(legacy.getAbsolutePath() + "-shm").delete();
+                new File(legacy.getAbsolutePath() + "-journal").delete();
+            }
         }
     }
 
