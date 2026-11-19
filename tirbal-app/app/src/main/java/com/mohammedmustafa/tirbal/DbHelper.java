@@ -1,0 +1,78 @@
+package com.mohammedmustafa.tirbal;
+
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+
+public final class DbHelper extends SQLiteOpenHelper {
+    private static final String DB_NAME = "tirbal.db";
+    private static final int DB_VERSION = 1;
+
+    public DbHelper(Context context) { super(context, DB_NAME, null, DB_VERSION); }
+
+    @Override public void onCreate(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE project (id INTEGER PRIMARY KEY CHECK(id=1), name TEXT NOT NULL, crop TEXT NOT NULL, trader TEXT NOT NULL, owner TEXT NOT NULL, accountant TEXT NOT NULL, area REAL NOT NULL DEFAULT 0, start_date TEXT NOT NULL, region TEXT)");
+        db.execSQL("CREATE TABLE costs (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, entry_date TEXT NOT NULL, worker TEXT NOT NULL, category TEXT NOT NULL, item TEXT NOT NULL, quantity REAL NOT NULL, unit_price INTEGER NOT NULL, total INTEGER NOT NULL, notes TEXT, FOREIGN KEY(project_id) REFERENCES project(id))");
+        db.execSQL("CREATE TABLE sales (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, invoice TEXT NOT NULL, sale_date TEXT NOT NULL, gross INTEGER NOT NULL, allocated_cost INTEGER NOT NULL DEFAULT 0, market_expenses INTEGER NOT NULL DEFAULT 0, net INTEGER NOT NULL, trader TEXT, notes TEXT, FOREIGN KEY(project_id) REFERENCES project(id))");
+        db.execSQL("CREATE TABLE calendar_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, task_date TEXT NOT NULL, title TEXT NOT NULL, details TEXT, completed INTEGER NOT NULL DEFAULT 0, FOREIGN KEY(project_id) REFERENCES project(id))");
+        db.execSQL("CREATE INDEX idx_costs_date ON costs(entry_date)");
+        db.execSQL("CREATE INDEX idx_sales_date ON sales(sale_date)");
+        db.execSQL("CREATE INDEX idx_tasks_date ON calendar_tasks(task_date)");
+    }
+
+    @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        // Versioned migrations are added here. Never drop user accounting data.
+    }
+
+    public boolean hasProject() {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT 1 FROM project WHERE id=1", null)) { return c.moveToFirst(); }
+    }
+
+    public void saveProject(String name, String crop, String trader, String owner, String accountant, double area, String startDate, String region) {
+        ContentValues v = new ContentValues();
+        v.put("id", 1); v.put("name", name); v.put("crop", crop); v.put("trader", trader);
+        v.put("owner", owner); v.put("accountant", accountant); v.put("area", area);
+        v.put("start_date", startDate); v.put("region", region);
+        getWritableDatabase().insertWithOnConflict("project", null, v, SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    public void addCost(String date, String worker, String category, String item, double quantity, long price, String notes) {
+        ContentValues v = new ContentValues();
+        v.put("project_id", 1); v.put("entry_date", date); v.put("worker", worker);
+        v.put("category", category); v.put("item", item); v.put("quantity", quantity);
+        v.put("unit_price", price); v.put("total", Math.round(quantity * price)); v.put("notes", notes);
+        getWritableDatabase().insertOrThrow("costs", null, v);
+    }
+
+    public void addSale(String invoice, String date, long gross, long allocatedCost, long marketExpenses, String trader, String notes) {
+        ContentValues v = new ContentValues();
+        v.put("project_id", 1); v.put("invoice", invoice); v.put("sale_date", date);
+        v.put("gross", gross); v.put("allocated_cost", allocatedCost); v.put("market_expenses", marketExpenses);
+        v.put("net", gross - allocatedCost - marketExpenses); v.put("trader", trader); v.put("notes", notes);
+        getWritableDatabase().insertOrThrow("sales", null, v);
+    }
+
+    public void addTask(String date, String title, String details) {
+        ContentValues v = new ContentValues();
+        v.put("project_id", 1); v.put("task_date", date); v.put("title", title); v.put("details", details);
+        getWritableDatabase().insertOrThrow("calendar_tasks", null, v);
+    }
+
+    public long total(String table, String column) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT COALESCE(SUM(" + column + "),0) FROM " + table + " WHERE project_id=1", null)) {
+            return c.moveToFirst() ? c.getLong(0) : 0L;
+        }
+    }
+
+    public Cursor recent(String table, String orderColumn) {
+        return getReadableDatabase().rawQuery("SELECT * FROM " + table + " WHERE project_id=1 ORDER BY " + orderColumn + " DESC, id DESC LIMIT 100", null);
+    }
+
+    public String projectName() {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT name FROM project WHERE id=1", null)) {
+            return c.moveToFirst() ? c.getString(0) : "";
+        }
+    }
+}
