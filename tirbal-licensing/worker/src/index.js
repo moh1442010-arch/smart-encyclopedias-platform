@@ -21,7 +21,7 @@ async function schema(env) {
     env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_orders (id TEXT PRIMARY KEY, created_at INTEGER NOT NULL, customer_name TEXT NOT NULL, contact TEXT NOT NULL, device_id TEXT NOT NULL, plan TEXT NOT NULL, amount_sdg INTEGER NOT NULL, receipt_reference TEXT NOT NULL, status TEXT NOT NULL, reviewed_at INTEGER, reviewer_note TEXT, activation_token TEXT, token_expires INTEGER, app_version TEXT NOT NULL)"),
     env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_tirbal_receipt_active ON tirbal_orders(receipt_reference) WHERE status IN ('pending','approved')"),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_tirbal_orders_status ON tirbal_orders(status,created_at DESC)"),
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id TEXT NOT NULL, event TEXT NOT NULL, actor TEXT NOT NULL, created_at INTEGER NOT NULL, detail TEXT)")
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id TEXT NOT NULL, event TEXT NOT NULL, actor TEXT NOT NULL, created_at INTEGER NOT NULL, detail TEXT)"),\n    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_admin_attempts (ip_hash TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL)")
   ]);
 }
 function privateDer(value) {
@@ -56,6 +56,22 @@ async function session(env) {
   const p=b64url(enc.encode(JSON.stringify({exp:Math.floor(Date.now()/1000)+28800,nonce:b64url(crypto.getRandomValues(new Uint8Array(16)))})));
   const s=b64url(await crypto.subtle.sign("HMAC",await hmacKey(env),enc.encode(p)));
   return p+"."+s;
+}
+function constantEqual(a,b) {
+  const x=enc.encode(String(a)),y=enc.encode(String(b));let d=x.length^y.length;
+  for(let i=0;i<Math.max(x.length,y.length);i++)d|=(x[i]||0)^(y[i]||0);
+  return d===0;
+}
+function sameOriginPost(request,url) { return request.method==="POST" && request.headers.get("Origin")===url.origin; }
+async function loginState(request,env) {
+  const ip=request.headers.get("CF-Connecting-IP")||"unknown";
+  const digest=await crypto.subtle.digest("SHA-256",enc.encode(ip+"|"+adminPassword(env)));
+  const hash=b64url(digest),now=Math.floor(Date.now()/1000);
+  const row=await env.DB.prepare("SELECT window_start,attempts FROM tirbal_admin_attempts WHERE ip_hash=?").bind(hash).first();
+  return {hash,now,blocked:Boolean(row&&row.window_start>now-900&&row.attempts>=8)};
+}
+async function recordLoginFailure(env,s) {
+  await env.DB.prepare("INSERT INTO tirbal_admin_attempts(ip_hash,window_start,attempts) VALUES(?,?,1) ON CONFLICT(ip_hash) DO UPDATE SET attempts=CASE WHEN tirbal_admin_attempts.window_start<=? THEN 1 ELSE tirbal_admin_attempts.attempts+1 END,window_start=CASE WHEN tirbal_admin_attempts.window_start<=? THEN ? ELSE tirbal_admin_attempts.window_start END").bind(s.hash,s.now,s.now-900,s.now-900,s.now).run();
 }
 async function admin(request,env) {
   if(adminPassword(env).length<32) return false;
@@ -133,8 +149,15 @@ async function handle(request,env) {
     return json({orderId:id,status:"pending",amountSdg:PLANS[plan].amount,message:"تم تسجيل طلبك. التفعيل بعد تأكيد الدفع ومراجعة الإدارة."},201);
   }
   if(u.pathname==="/admin/login"&&request.method==="POST") {
+    if(!sameOriginPost(request,u))return json({error:"INVALID_ORIGIN"},403);
     let b;try{b=await request.json();}catch{return json({error:"INVALID_JSON"},400);}
-    if(adminPassword(env).length<32||clean(b.password,256)!==adminPassword(env)) return json({error:"INVALID_CREDENTIALS"},401);
+    if(adminPassword(env).length<32)return json({error:"ADMIN_NOT_CONFIGURED"},503);
+    const state=await loginState(request,env);
+    if(state.blocked)return json({error:"TOO_MANY_ATTEMPTS"},429);
+    if(!constantEqual(typeof b.password==="string"?b.password:"",adminPassword(env))) {
+      await recordLoginFailure(env,state);return json({error:"INVALID_CREDENTIALS"},401);
+    }
+    await env.DB.prepare("DELETE FROM tirbal_admin_attempts WHERE ip_hash=?").bind(state.hash).run();
     return json({ok:true},200,{"set-cookie":"tirbal_admin="+await session(env)+"; Path=/admin; HttpOnly; Secure; SameSite=Strict; Max-Age=28800"});
   }
   if(u.pathname==="/admin/orders"&&request.method==="GET") {
@@ -146,6 +169,7 @@ async function handle(request,env) {
   }
   const review=u.pathname.match(/^\/admin\/orders\/([0-9a-f-]{36})\/(approve|reject)$/i);
   if(review&&request.method==="POST") {
+    if(!sameOriginPost(request,u))return json({error:"INVALID_ORIGIN"},403);
     if(!await admin(request,env)) return json({error:"UNAUTHORIZED"},401);
     let b={};try{b=await request.json();}catch{}
     const order=await env.DB.prepare("SELECT * FROM tirbal_orders WHERE id=?").bind(review[1]).first();
