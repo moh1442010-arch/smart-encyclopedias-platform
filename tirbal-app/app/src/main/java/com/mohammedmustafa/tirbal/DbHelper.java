@@ -56,7 +56,7 @@ public final class DbHelper extends SQLiteOpenHelper {
             ContentValues v = new ContentValues();
             v.put("category",row[0]); v.put("responsible_party",row[1]); v.put("default_payer",row[2]);
             v.put("settlement_type",row[3]); v.put("deduction_from",row[4]); v.put("note",row[5]);
-            db.insertWithOnConflict("partnership_terms",null,v,SQLiteDatabase.CONFLICT_REPLACE);
+            db.insertWithOnConflict("partnership_terms",null,v,SQLiteDatabase.CONFLICT_IGNORE);
         }
     }
     public boolean hasProject() {
