@@ -201,16 +201,6 @@ public class MainActivity extends Activity {
                     "\nرقم الحساب: "+p.optString("accountNumber","لم يُضبط بعد")+
                     "\nواتساب الدعم: "+(whatsappNumber.isEmpty()?"لم يُضبط بعد":whatsappNumber);
             payment.setText(details);
-            String whatsapp = p.optString("whatsapp", "").replaceAll("[^0-9]", "");
-            if (!whatsapp.isEmpty()) {
-                Button contactSupport = button("التواصل مع الدعم عبر واتساب");
-                content.addView(contactSupport);
-                contactSupport.setOnClickListener(v -> {
-                    String message = "مرحباً، أحتاج مساعدة في ترخيص تطبيق حساب التربال.\\nمعرّف الجهاز: " + currentDeviceId;
-                    android.net.Uri uri = android.net.Uri.parse("https://wa.me/" + whatsapp + "?text=" + android.net.Uri.encode(message));
-                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
-                });
-            }
             String digits=whatsappNumber.replaceAll("[^0-9]","");
             if(!digits.isEmpty()){
                 whatsapp.setEnabled(true);
