@@ -30,7 +30,7 @@ test("trial and prices are consistent across app and Worker", () => {
 });
 
 test("licensing is device-bound and signed, not a local date-only trial", () => {
-  assert.match(worker, /app=\+APP_ID\+";device="/);
+  assert.match(worker, /enc\.encode\("app="\+APP_ID\+";device="\+device/);
   assert.match(worker, /await crypto\.subtle\.sign\("RSASSA-PKCS1-v1_5"/);
   assert.match(license, /SHA256withRSA/);
   assert.match(license, /Settings\.Secure\.ANDROID_ID/);
