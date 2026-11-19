@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.os.Bundle;
 import android.graphics.Typeface;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.*;
@@ -36,7 +37,7 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(BG);
         TextView header = new TextView(this);
-        header.setText(title);
+        header.setText("🌾  " + title);
         header.setTextColor(Color.WHITE);
         header.setTextSize(21);
         header.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
@@ -86,7 +87,8 @@ public class MainActivity extends Activity {
     private void showHome() {
         base("حساب التربال");
         content.addView(text(db.projectName(), 23, DARK, true));
-        content.addView(text("لوحة المشروع الزراعي · الجنيه السوداني", 14, Color.DKGRAY, false));
+        content.addView(text("لوحة المشروع الزراعي  •  الجنيه السوداني", 14, Color.DKGRAY, false));
+        content.addView(text("🤝 شراكة مناصفة 50% للتاجر و50% للتربال", 16, GOLD, true));
         long costs = db.total("costs", "total");
         long sales = db.total("sales", "gross");
         long net = db.total("sales", "net");
@@ -98,23 +100,23 @@ public class MainActivity extends Activity {
         stats.addView(text("إجمالي المبيعات  " + money.format(sales) + " ج.س", 17, GREEN, true));
         stats.addView(text("صافي نتائج المبيعات  " + money.format(net) + " ج.س", 17, net >= 0 ? GREEN : Color.RED, true));
         content.addView(stats, margin(-1, -2, 0, 12, 0, 14));
-        addTile("بيانات المشروع", "اسم المشروع والمحصول والتاجر والمساحة", v -> showProjectForm(true));
-        addTile("التكلفة", "التقاوي والأسمدة والمبيدات والميز والعمال والمصروفات والسلفيات", v -> showCosts());
-        addTile("السوق والمبيعات", "الفواتير والتاريخ والتكلفة ومنصرفات السوق والصافي", v -> showSales());
-        addTile("الرزنامة الزراعية", "مواعيد الزراعة والري والتسميد والرش والحصاد", v -> showCalendar());
-        addTile("مدخلات الزراعة", "تسجيل كميات وأسعار التقاوي والأسمدة والمبيدات في دفتر التكلفة", v -> showCosts());
-        addTile("العمال والتربال", "تسجيل اسم التربال وربط اسمه ببنود التكلفة", v -> showCosts());
-        addTile("الأرباح والخسائر", "ملخص الموسم ونتائج المبيعات والتكاليف", v -> showReports());
-        addTile("الديون والسلفيات", "السلفيات تسجل كبند تكلفة قابل للتصنيف", v -> showCosts());
-        addTile("اتفاق الشراكة والتسوية", "مسؤوليات التاجر والتربال والخصومات بعد الحصاد", v -> showPartnership());
-        addTile("تغيير كلمة المرور", "تحديث كلمة مرور التطبيق", v -> changePassword());
+        addTile("📁 بيانات المشروع", "اسم المشروع والمحصول والتاجر والمساحة", v -> showProjectForm(true));
+        addTile("🧾 دفتر التكلفة", "التقاوي والأسمدة والمبيدات والميز والعمال والمصروفات والسلفيات", v -> showCosts());
+        addTile("🛒 السوق والمبيعات", "الفواتير والتاريخ والتكلفة ومنصرفات السوق والصافي", v -> showSales());
+        addTile("📅 الرزنامة الزراعية", "مواعيد الزراعة والري والتسميد والرش والحصاد", v -> showCalendar());
+        addTile("🌱 مدخلات الزراعة", "تسجيل كميات وأسعار التقاوي والأسمدة والمبيدات في دفتر التكلفة", v -> showCosts());
+        addTile("👨‍🌾 العمال والتربال", "تسجيل اسم التربال وربط اسمه ببنود التكلفة", v -> showCosts());
+        addTile("📊 الأرباح والخسائر", "ملخص الموسم ونتائج المبيعات والتكاليف", v -> showReports());
+        addTile("💳 الديون والسلفيات", "السلفيات تسجل كبند تكلفة قابل للتصنيف", v -> showCosts());
+        addTile("🤝 اتفاق الشراكة والتسوية", "مسؤوليات التاجر والتربال والخصومات بعد الحصاد", v -> showPartnership());
+        addTile("🔐 تغيير كلمة المرور", "تحديث كلمة مرور التطبيق", v -> changePassword());
     }
 
     private void addTile(String title, String subtitle, View.OnClickListener click) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(16, 13, 16, 13);
-        card.setBackgroundColor(Color.WHITE);
+        card.setBackground(rounded(Color.WHITE, 18, Color.rgb(225,232,222)));
         TextView t = text(title, 18, GREEN, true);
         TextView s = text(subtitle, 13, Color.DKGRAY, false);
         card.addView(t); card.addView(s);
