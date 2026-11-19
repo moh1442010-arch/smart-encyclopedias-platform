@@ -32,16 +32,10 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(DARK);
         getWindow().setNavigationBarColor(DARK);
-        LicenseManager.check(this, result -> runOnUiThread(() -> {
-            currentDeviceId = result.deviceId;
-            if (result.unlocked) {
-                if (!openDatabaseSafely()) return;
-                licenseReady = true;
-                showGate();
-                startLicenseMonitor();
-            } else {
-                showSubscription(result);
-            }
+        LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
+            if(config!=null && isMandatoryUpdate(config)) {
+                showMandatoryUpdate(config);
+            } else continueLicenseCheck();
         }));
     }
 
@@ -96,6 +90,89 @@ public class MainActivity extends Activity {
             })));
             return false;
         }
+    }
+
+
+    private void continueLicenseCheck() {
+        LicenseManager.check(this, result -> runOnUiThread(() -> {
+            currentDeviceId = result.deviceId;
+            if (result.unlocked) {
+                if (!openDatabaseSafely()) return;
+                licenseReady = true;
+                showGate();
+                startLicenseMonitor();
+            } else showSubscription(result);
+        }));
+    }
+
+    private int compareVersions(String a,String b) {
+        try {
+            String[] x=a.split("\\."),y=b.split("\\.");
+            for(int i=0;i<3;i++){int n=i<x.length?Integer.parseInt(x[i]):0;int m=i<y.length?Integer.parseInt(y[i]):0;if(n!=m)return Integer.compare(n,m);}
+        } catch(Exception ignored) {}
+        return 0;
+    }
+
+    private boolean isMandatoryUpdate(JSONObject config) {
+        String minimum=config.optString("minSupportedVersion","1.0.0");
+        return compareVersions(BuildConfig.VERSION_NAME,minimum)<0;
+    }
+
+    private void showMandatoryUpdate(JSONObject config) {
+        base("تحديث مطلوب");
+        content.addView(text("هذا الإصدار لم يعد مدعوماً. حدّث التطبيق لمواصلة استخدام حساب التربال.",17,DARK,true));
+        String notes=config.optString("releaseNotes","");
+        if(!notes.isEmpty())content.addView(text(notes,14,Color.DKGRAY,false));
+        String url=config.optString("downloadUrl","");
+        Button update=button("تنزيل الإصدار الجديد");
+        content.addView(update);
+        update.setEnabled(url.startsWith("https://"));
+        update.setOnClickListener(v->{if(url.startsWith("https://"))startActivity(new Intent(Intent.ACTION_VIEW,android.net.Uri.parse(url)));});
+        Button retry=button("إعادة فحص التحديث");
+        content.addView(retry);
+        retry.setOnClickListener(v->LicenseManager.loadConfig((cfg,error)->runOnUiThread(()->{
+            if(cfg!=null&&isMandatoryUpdate(cfg))showMandatoryUpdate(cfg);else continueLicenseCheck();
+        })));
+    }
+
+    private void showUpdateCenter() {
+        base("مركز التحديثات والإعدادات");
+        content.addView(text("يتصل هذا المركز بنواة حساب التربال على الموقع لتحميل الأسعار والإعلانات ومعلومات الإصدارات.",15,DARK,false));
+        TextView status=text("جارٍ الاتصال بنواة الموقع...",14,Color.DKGRAY,false);
+        content.addView(status);
+        Button refresh=button("فحص الآن");
+        content.addView(refresh);
+        refresh.setOnClickListener(v->{
+            refresh.setEnabled(false);status.setText("جارٍ فحص الخادم...");
+            LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
+                refresh.setEnabled(true);
+                if(config==null){status.setText(error);return;}
+                String current=BuildConfig.VERSION_NAME,latest=config.optString("latestVersion",current);
+                String announcement=config.optString("announcement","");
+                String notes=config.optString("releaseNotes","");
+                StringBuilder info=new StringBuilder();
+                info.append("الإصدار المثبت: ").append(current).append("\\nأحدث إصدار: ").append(latest);
+                if(compareVersions(current,latest)<0)info.append("\\nيتوفر تحديث جديد.");
+                else info.append("\\nالتطبيق على أحدث إصدار معلن.");
+                info.append("\\nمدة التجربة: ").append(config.optInt("trialDays",15)).append(" يوماً");
+                JSONObject plans=config.optJSONObject("plans");
+                if(plans!=null)info.append("\\nالشهري: ").append(plans.optJSONObject("monthly").optLong("amount")).append(" ج.س")
+                        .append("\\nالسنوي: ").append(plans.optJSONObject("annual").optLong("amount")).append(" ج.س")
+                        .append("\\nالدائم: ").append(plans.optJSONObject("lifetime").optLong("amount")).append(" ج.س");
+                if(!announcement.isEmpty())info.append("\\n\\nإعلان الإدارة\\n").append(announcement);
+                if(!notes.isEmpty())info.append("\\n\\nملاحظات الإصدار\\n").append(notes);
+                status.setText(info.toString());
+                String url=config.optString("downloadUrl","");
+                if(compareVersions(current,latest)<0&&url.startsWith("https://")){
+                    Button download=button("تنزيل التحديث");
+                    content.addView(download);
+                    download.setOnClickListener(x->startActivity(new Intent(Intent.ACTION_VIEW,android.net.Uri.parse(url))));
+                }
+                if(config.optBoolean("maintenanceMode",false))toast("الموقع أعلن وضع الصيانة. قد تتأثر خدمات الترخيص.");
+            }));
+        });
+        refresh.performClick();
+        addBack();
     }
 
     private void showSubscription(LicenseManager.Result result) {
@@ -234,7 +311,7 @@ public class MainActivity extends Activity {
         addTile("📊 الأرباح والخسائر", "ملخص الموسم ونتائج المبيعات والتكاليف", v -> showReports());
         addTile("💳 الديون والسلفيات", "السلفيات تسجل كبند تكلفة قابل للتصنيف", v -> showCosts());
         addTile("🤝 اتفاق الشراكة والتسوية", "مسؤوليات التاجر والتربال والخصومات بعد الحصاد", v -> showPartnership());
-        addTile("🔐 تغيير كلمة المرور", "تحديث كلمة مرور التطبيق", v -> changePassword());
+        addTile("🔐 تغيير كلمة المرور", "تحديث كلمة مرور التطبيق", v -> changePassword());\n        addTile("🌐 مركز التحديثات والإعدادات", "فحص التحديثات والإعلانات والأسعار الحالية", v -> showUpdateCenter());
     }
 
     private void addTile(String title, String subtitle, View.OnClickListener click) {
