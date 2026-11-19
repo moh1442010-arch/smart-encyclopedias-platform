@@ -58,16 +58,9 @@ final class LicenseManager {
                 } else callback.complete(new Result(false,false,device,"تعذر التحقق من الترخيص.",0));
             } catch(Exception network) {
                 String cached=prefs(app).getString("token","");
-                long lastWall=prefs(app).getLong("last_wall",0);
-                long now=System.currentTimeMillis()/1000;
-                try {
-                    if (!cached.isEmpty() && now>=lastWall && verifyToken(cached,device,now)) {
-                        prefs(app).edit().putLong("last_wall",now).apply();
-                        callback.complete(new Result(true,false,device,"وضع عدم الاتصال. يلزم الاتصال دورياً للتحقق من الاشتراك.",tokenExpiry(cached)));
-                    } else callback.complete(new Result(false,false,device,"يلزم الاتصال بالإنترنت لأول تحقق من الترخيص أو لتحديثه.",0));
-                } catch(Exception invalid) {
-                    callback.complete(new Result(false,false,device,"تعذر التحقق من الترخيص. اتصل بالإنترنت ثم أعد المحاولة.",0));
-                }
+                if (!cached.isEmpty() && cachedValid(app)) {
+                    callback.complete(new Result(true,false,device,"وضع عدم الاتصال. يلزم الاتصال دورياً للتحقق من الاشتراك.",tokenExpiry(cached)));
+                } else callback.complete(new Result(false,false,device,"يلزم الاتصال بالإنترنت لأول تحقق من الترخيص أو بعد إعادة تشغيل الهاتف.",0));
             }
         });
     }
@@ -148,16 +141,30 @@ final class LicenseManager {
     private static SharedPreferences prefs(Context c){return c.getSharedPreferences(PREF,Context.MODE_PRIVATE);}
     static boolean cachedValid(Context context) {
         String token=prefs(context).getString("token","");
-        long lastWall=prefs(context).getLong("last_wall",0);
-        long now=System.currentTimeMillis()/1000;
-        if(token.isEmpty()||now<lastWall)return false;
-        prefs(context).edit().putLong("last_wall",now).apply();
-        try{return verifyToken(token,deviceId(context),now);}catch(Exception e){return false;}
+        if(token.isEmpty())return false;
+        try {
+            if(tokenExpiry(token)==0)return verifyToken(token,deviceId(context),0);
+            long serverTime=prefs(context).getLong("server_time",0);
+            long savedElapsed=prefs(context).getLong("elapsed",-1);
+            long currentElapsed=SystemClock.elapsedRealtime();
+            long savedBoot=prefs(context).getLong("boot_count",-1);
+            long currentBoot=bootCount(context);
+            if(serverTime<=0||savedElapsed<0||currentElapsed<savedElapsed)return false;
+            if(savedBoot>=0&&currentBoot>=0&&savedBoot!=currentBoot)return false;
+            long trustedNow=serverTime+(currentElapsed-savedElapsed)/1000;
+            return verifyToken(token,deviceId(context),trustedNow);
+        } catch(Exception e) { return false; }
+    }
+
+    private static long bootCount(Context context) {
+        if(android.os.Build.VERSION.SDK_INT<24)return -1;
+        try{return android.provider.Settings.Global.getInt(context.getContentResolver(),"boot_count",-1);}
+        catch(Exception e){return -1;}
     }
 
     private static void save(Context c,String token,long serverTime) {
         long wall=System.currentTimeMillis()/1000;
         prefs(c).edit().putString("token",token).putLong("server_time",serverTime)
-                .putLong("last_wall",Math.max(wall,serverTime)).putLong("elapsed",SystemClock.elapsedRealtime()).apply();
+                .putLong("elapsed",SystemClock.elapsedRealtime()).putLong("boot_count",bootCount(c)).apply();
     }
 }
