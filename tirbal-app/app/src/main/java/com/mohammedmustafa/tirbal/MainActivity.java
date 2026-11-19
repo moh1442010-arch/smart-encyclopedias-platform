@@ -188,15 +188,28 @@ public class MainActivity extends Activity {
         Spinner plan=spinner(new String[]{"جارٍ تحميل الخطة الشهرية...","جارٍ تحميل الخطة السنوية...","جارٍ تحميل الخطة الدائمة..."});
         TextView payment=text("جارٍ تحميل بيانات التحويل...",14,Color.DKGRAY,false);
         content.addView(payment);
+        Button whatsapp=button("التواصل مع الدعم عبر واتساب");
+        whatsapp.setEnabled(false);
+        content.addView(whatsapp);
         LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
             if(config==null){payment.setText(error);return;}
             JSONObject p=config.optJSONObject("payment");
             if(p==null){payment.setText("بيانات التحويل غير متاحة حالياً.");return;}
+            String whatsappNumber=p.optString("whatsapp","");
             String details="بنك التحويل: "+p.optString("bankName","غير محدد")+
                     "\nاسم الحساب: "+p.optString("accountName","غير محدد")+
                     "\nرقم الحساب: "+p.optString("accountNumber","لم يُضبط بعد")+
-                    "\nواتساب الدعم: "+p.optString("whatsapp","لم يُضبط بعد");
+                    "\nواتساب الدعم: "+(whatsappNumber.isEmpty()?"لم يُضبط بعد":whatsappNumber);
             payment.setText(details);
+            String digits=whatsappNumber.replaceAll("[^0-9]","");
+            if(!digits.isEmpty()){
+                whatsapp.setEnabled(true);
+                whatsapp.setOnClickListener(v->{
+                    String message="مرحباً، أحتاج مساعدة بخصوص ترخيص تطبيق حساب التربال.";
+                    Intent intent=new Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://wa.me/"+digits+"?text="+android.net.Uri.encode(message)));
+                    try{startActivity(intent);}catch(Exception ex){toast("تعذر فتح واتساب أو المتصفح.");}
+                });
+            }
             JSONObject plans=config.optJSONObject("plans");
             if(plans!=null) {
                 JSONObject monthly=plans.optJSONObject("monthly"),annual=plans.optJSONObject("annual"),lifetime=plans.optJSONObject("lifetime");
