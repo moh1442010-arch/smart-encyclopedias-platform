@@ -22,7 +22,8 @@ async function schema(env) {
     env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_tirbal_receipt_active ON tirbal_orders(receipt_reference) WHERE status IN ('pending','approved')"),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_tirbal_orders_status ON tirbal_orders(status,created_at DESC)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id TEXT NOT NULL, event TEXT NOT NULL, actor TEXT NOT NULL, created_at INTEGER NOT NULL, detail TEXT)"),
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_admin_attempts (ip_hash TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL)")
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_admin_attempts (ip_hash TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_order_attempts (ip_hash TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL)")
   ]);
 }
 function privateDer(value) {
@@ -40,6 +41,13 @@ async function issue(env,device,plan,expires) {
   const payload=enc.encode("app="+APP_ID+";device="+device+";plan="+plan+";expires="+expires);
   const signature=await crypto.subtle.sign("RSASSA-PKCS1-v1_5",await signingKey(env),payload);
   return b64url(payload)+"."+b64url(signature);
+}
+async function allowOrder(request,env) {
+  const ip=request.headers.get("CF-Connecting-IP")||"unknown";
+  const digest=await crypto.subtle.digest("SHA-256",enc.encode(ip+"|TirbalOrderRate-v1"));
+  const hash=b64url(digest),now=Math.floor(Date.now()/1000);
+  const row=await env.DB.prepare("INSERT INTO tirbal_order_attempts(ip_hash,window_start,attempts) VALUES(?,?,1) ON CONFLICT(ip_hash) DO UPDATE SET attempts=CASE WHEN tirbal_order_attempts.window_start<=? THEN 1 ELSE tirbal_order_attempts.attempts+1 END,window_start=CASE WHEN tirbal_order_attempts.window_start<=? THEN ? ELSE tirbal_order_attempts.window_start END RETURNING attempts").bind(hash,now,now-900,now-900,now).first();
+  return Boolean(row&&row.attempts<=8);
 }
 async function audit(env,id,event,actor,detail="") {
   await env.DB.prepare("INSERT INTO tirbal_audit(order_id,event,actor,created_at,detail) VALUES(?,?,?,?,?)").bind(id,event,actor,Math.floor(Date.now()/1000),detail.slice(0,400)).run();
@@ -143,6 +151,7 @@ async function handle(request,env) {
     if(name.length<2||!/^\+?[0-9()\s-]{8,25}$/.test(contact)||!validDevice(device)||!PLANS[plan]||!/^[A-Za-z0-9\-_/]{4,100}$/.test(receipt)) return json({error:"INVALID_FIELDS"},400);
     const exists=await env.DB.prepare("SELECT 1 FROM tirbal_devices WHERE device_id=?").bind(device).first();
     if(!exists) return json({error:"DEVICE_NOT_REGISTERED"},409);
+    if(!await allowOrder(request,env)) return json({error:"ORDER_RATE_LIMITED"},429);
     const duplicate=await env.DB.prepare("SELECT id FROM tirbal_orders WHERE receipt_reference=? AND status IN ('pending','approved')").bind(receipt).first();
     if(duplicate) return json({error:"RECEIPT_REFERENCE_ALREADY_USED"},409);
     const id=crypto.randomUUID(),now=Math.floor(Date.now()/1000);
