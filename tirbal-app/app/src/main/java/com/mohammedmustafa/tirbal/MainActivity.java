@@ -171,14 +171,14 @@ public class MainActivity extends Activity {
         LinearLayout form = form();
         EditText date = field("التاريخ YYYY-MM-DD",false); date.setText(today());
         EditText worker = field("اسم التربال",false);
-        Spinner category = spinner(new String[]{"تحضير الأرض","الميز","الأسمدة","المبيدات","التقاوي","الخدمة داخل الزراعة","ضريبة المياه","إيجار الأرض","أجور العمال","الوقود والترحيل","الري","المصروفات العامة","السلفيات","أخرى"});
+        Spinner category = spinner(new String[]{"تحضير الأرض","التقاوي","الأسمدة","المبيدات","الميز","الخدمة داخل الزراعة","الري وخدمة الحقل","أجور العمال","المنصرفات","السلفيات","ضريبة المياه","إيجار الأرض","الوقود والترحيل","أخرى"});
         EditText item = field("الصنف / البيان",false);
         EditText qty = field("الكمية",false); qty.setInputType(8194);
         EditText price = field("السعر بالجنيه السوداني",false); price.setInputType(2);
         Spinner responsible = spinner(new String[]{"التاجر","التربال","مشترك","حسب الاتفاق"});
         Spinner payer = spinner(new String[]{"التاجر","التربال","طرف ثالث"});
-        Spinner settlement = spinner(new String[]{"يحدد حسب الاتفاق","يتحمله المسؤول ولا يخصم","يخصم بعد الحصاد"});
-        Spinner deduction = spinner(new String[]{"لا يوجد خصم","من نصيب التاجر","من نصيب التربال","مناصفة"});
+        Spinner settlement = spinner(new String[]{"مناصفة بين الطرفين","يخصم كاملاً من نصيب التربال","على التاجر وحده","حسب اتفاق إضافي"});
+        Spinner deduction = spinner(new String[]{"مناصفة","من نصيب التربال","لا يوجد خصم","حسب الاتفاق"});
         EditText agreement = field("تفاصيل الاتفاق الخاص بهذا البند",false);
         EditText notes = field("ملاحظات",false);
         category.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -187,6 +187,8 @@ public class MainActivity extends Activity {
                 String[] defaults = db.defaultResponsibility(category.getSelectedItem().toString());
                 setSpinnerValue(responsible, defaults[0]);
                 setSpinnerValue(payer, defaults[1]);
+                setSpinnerValue(settlement, defaults[2]);
+                setSpinnerValue(deduction, defaults[3]);
             }
         });
         form.addView(date); form.addView(worker); form.addView(category); form.addView(item); form.addView(qty); form.addView(price);
@@ -201,7 +203,8 @@ public class MainActivity extends Activity {
                     if(empty(date)||empty(item)||empty(qty)||empty(price)) { toast("أكمل التاريخ والصنف والكمية والسعر"); return; }
                     double q=Double.parseDouble(val(qty)); long p=Long.parseLong(val(price));
                     if(q<=0||p<0) throw new NumberFormatException();
-                    db.addCost(val(date),val(worker),category.getSelectedItem().toString(),val(item),q,p,payer.getSelectedItem().toString(),responsible.getSelectedItem().toString(),settlement.getSelectedItemPosition()==0?"agreement_pending":(settlement.getSelectedItemPosition()==1?"owner_bears":"recoverable"),deduction.getSelectedItemPosition()==0?"none":deduction.getSelectedItem().toString(),val(agreement),val(notes));
+                    String settlementCode = new String[]{"shared_half","deduct_worker","trader_only","agreement_pending"}[settlement.getSelectedItemPosition()];
+                    db.addCost(val(date),val(worker),category.getSelectedItem().toString(),val(item),q,p,payer.getSelectedItem().toString(),responsible.getSelectedItem().toString(),settlementCode,deduction.getSelectedItem().toString(),val(agreement),val(notes));
                     showCosts();
                 } catch(Exception e){toast("تحقق من الكمية والسعر والتاريخ");}
             }).show();
