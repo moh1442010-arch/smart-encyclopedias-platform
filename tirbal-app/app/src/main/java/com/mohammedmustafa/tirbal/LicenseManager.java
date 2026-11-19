@@ -20,7 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.UUID;
 
 final class LicenseManager {
-    private static final String API = "https://hisab-al-tirbal-licensing.mohammedmustafa.workers.dev";
+    private static final String API = "https://hisab-al-tirbal-licensing.moh1442010.workers.dev";
     private static final String APP_ID = "com.mohammedmustafa.tirbal";
     private static final String PUBLIC_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtXiJgeh0o+EMZfmqPnB5+ewloD9QpftQv9S3SWI2WwG/zr748BOXMI1VXf2xbHzsLpyBHqivm4YGvsmFqurUx2oKF9Bekyy6rjLVQ7DrTTB/jVhIVDoeJPah+rQmrPvZfdqYzKokY0TqztElkWW0bwq+dzuEbmU17J3NfLQM8iXjXIvSqcLLd59syK/bEQn90JmejKarE/u/6zw4Btb5fSxgb7Up6nVczvsaMiJoq7BAuMdEHH8SWV0f75VAZzSv45L4HjhWP9aSyEVl6aQ8ClAjgqbkDFEJj9hY6G86sClLSFgDqwwzDOObLa6rJQN3JuZVJb2Tvyqf5XTfFXLcFwIDAQAB";
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
