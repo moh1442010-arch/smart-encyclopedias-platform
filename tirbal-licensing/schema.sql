@@ -35,3 +35,4 @@ CREATE TABLE IF NOT EXISTS tirbal_audit (
   created_at INTEGER NOT NULL,
   detail TEXT
 );
+\nCREATE TABLE IF NOT EXISTS tirbal_admin_attempts (\n  ip_hash TEXT PRIMARY KEY,\n  window_start INTEGER NOT NULL,\n  attempts INTEGER NOT NULL\n);\n
