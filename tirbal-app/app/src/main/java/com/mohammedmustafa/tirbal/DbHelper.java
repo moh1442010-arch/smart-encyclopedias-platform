@@ -10,7 +10,7 @@ import java.io.FileInputStream;
 
 public final class DbHelper extends SQLiteOpenHelper {
     private static final String DB_NAME = "tirbal.db";
-    private static final int DB_VERSION = 3;
+    private static final int DB_VERSION = 4;
     private static final String MIGRATION_PREFS = "tirbal_db_migration";
 
     static { System.loadLibrary("sqlcipher"); }
@@ -148,6 +148,7 @@ public final class DbHelper extends SQLiteOpenHelper {
         seedPartnershipTerms(db);
         db.execSQL("CREATE TABLE sales (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, invoice TEXT NOT NULL, sale_date TEXT NOT NULL, gross INTEGER NOT NULL, allocated_cost INTEGER NOT NULL DEFAULT 0, market_expenses INTEGER NOT NULL DEFAULT 0, net INTEGER NOT NULL, trader TEXT, notes TEXT, FOREIGN KEY(project_id) REFERENCES project(id))");
         db.execSQL("CREATE TABLE calendar_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, task_date TEXT NOT NULL, title TEXT NOT NULL, details TEXT, completed INTEGER NOT NULL DEFAULT 0, FOREIGN KEY(project_id) REFERENCES project(id))");
+        db.execSQL("CREATE TABLE workers (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, name TEXT NOT NULL, phone TEXT, notes TEXT, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(project_id,name), FOREIGN KEY(project_id) REFERENCES project(id))");
         db.execSQL("CREATE INDEX idx_costs_date ON costs(entry_date)");
         db.execSQL("CREATE INDEX idx_sales_date ON sales(sale_date)");
         db.execSQL("CREATE INDEX idx_tasks_date ON calendar_tasks(task_date)");
@@ -166,6 +167,10 @@ public final class DbHelper extends SQLiteOpenHelper {
         if (oldVersion < 3) {
             seedPartnershipTerms(db);
             migrateLegacyPartnershipRules(db);
+        }
+        if (oldVersion < 4) {
+            db.execSQL("CREATE TABLE IF NOT EXISTS workers (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, name TEXT NOT NULL, phone TEXT, notes TEXT, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(project_id,name), FOREIGN KEY(project_id) REFERENCES project(id))");
+            db.execSQL("INSERT OR IGNORE INTO workers(project_id,name) SELECT 1,TRIM(worker) FROM costs WHERE worker IS NOT NULL AND TRIM(worker)<>'' GROUP BY TRIM(worker)");
         }
     }
 
@@ -215,6 +220,35 @@ public final class DbHelper extends SQLiteOpenHelper {
             db.update("costs", cost, "category=? AND settlement_type='agreement_pending' AND payer='التاجر'", new String[]{row[0]});
         }
     }
+
+    public long addWorker(String name, String phone, String notes) {
+        ContentValues v = new ContentValues();
+        v.put("project_id", 1); v.put("name", name.trim()); v.put("phone", phone); v.put("notes", notes);
+        return getWritableDatabase().insertOrThrow("workers", null, v);
+    }
+
+    public boolean hasWorker(String name) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT 1 FROM workers WHERE project_id=1 AND name=? AND active=1", new String[]{name.trim()})) {
+            return c.moveToFirst();
+        }
+    }
+
+    public Cursor workers() {
+        return getReadableDatabase().rawQuery("SELECT id,name,phone,notes FROM workers WHERE project_id=1 AND active=1 ORDER BY name COLLATE NOCASE", null);
+    }
+
+    public Cursor workerCosts(String worker) {
+        return getReadableDatabase().rawQuery("SELECT * FROM costs WHERE project_id=1 AND worker=? ORDER BY entry_date DESC,id DESC LIMIT 150", new String[]{worker});
+    }
+
+    public long workerTotal(String worker, String settlement) {
+        return scalar("SELECT COALESCE(SUM(total),0) FROM costs WHERE project_id=1 AND worker=? AND settlement_type=?", new String[]{worker, settlement});
+    }
+
+    private long scalar(String sql, String[] args) {
+        try (Cursor c = getReadableDatabase().rawQuery(sql, args)) { return c.moveToFirst() ? c.getLong(0) : 0L; }
+    }
+
     public boolean hasProject() {
         try (Cursor c = getReadableDatabase().rawQuery("SELECT 1 FROM project WHERE id=1", null)) { return c.moveToFirst(); }
     }
