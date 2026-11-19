@@ -4,6 +4,10 @@ android {
     namespace 'com.mohammedmustafa.tirbal'
     compileSdk 36
 
+    buildFeatures {
+        buildConfig true
+    }
+
     defaultConfig {
         applicationId 'com.mohammedmustafa.tirbal'
         minSdk 23
