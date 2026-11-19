@@ -201,6 +201,16 @@ public class MainActivity extends Activity {
                     "\nرقم الحساب: "+p.optString("accountNumber","لم يُضبط بعد")+
                     "\nواتساب الدعم: "+(whatsappNumber.isEmpty()?"لم يُضبط بعد":whatsappNumber);
             payment.setText(details);
+            String whatsapp = p.optString("whatsapp", "").replaceAll("[^0-9]", "");
+            if (!whatsapp.isEmpty()) {
+                Button contactSupport = button("التواصل مع الدعم عبر واتساب");
+                content.addView(contactSupport);
+                contactSupport.setOnClickListener(v -> {
+                    String message = "مرحباً، أحتاج مساعدة في ترخيص تطبيق حساب التربال.\\nمعرّف الجهاز: " + currentDeviceId;
+                    android.net.Uri uri = android.net.Uri.parse("https://wa.me/" + whatsapp + "?text=" + android.net.Uri.encode(message));
+                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                });
+            }
             String digits=whatsappNumber.replaceAll("[^0-9]","");
             if(!digits.isEmpty()){
                 whatsapp.setEnabled(true);
@@ -288,23 +298,39 @@ public class MainActivity extends Activity {
 
     private void showGate() {
         base("حساب التربال");
-        TextView intro = text("نظام الحسابات الزراعية السوداني", 18, DARK, true);
-        content.addView(intro);
-        content.addView(text("بياناتك محفوظة على هذا الهاتف. أنشئ كلمة مرور للدخول.", 14, Color.DKGRAY, false));
+        content.addView(text("نظام الحسابات الزراعية السوداني", 18, DARK, true));
+        boolean firstSetup = !PasswordStore.configured(this) && !db.hasProject();
+        if (firstSetup) {
+            content.addView(text("التسجيل لأول مرة", 15, Color.DKGRAY, false));
+            EditText trader = field("اسم التاجر", false);
+            EditText crop = field("نوع المحصول", false);
+            EditText pass = field("ادخل كلمة السر", true);
+            EditText confirm = field("اعد كلمة السر", true);
+            content.addView(trader); content.addView(crop); content.addView(pass); content.addView(confirm);
+            Button create = button("إنشاء الحساب");
+            content.addView(create);
+            create.setOnClickListener(v -> {
+                String password = pass.getText().toString();
+                if (empty(trader) || empty(crop)) { toast("أدخل اسم التاجر ونوع المحصول"); return; }
+                if (password.length() < 8) { toast("كلمة السر يجب ألا تقل عن 8 أحرف"); return; }
+                if (!password.equals(confirm.getText().toString())) { toast("كلمتا السر غير متطابقتين"); return; }
+                try {
+                    PasswordStore.set(this, password);
+                    String traderName = val(trader);
+                    db.saveProject(traderName, val(crop), traderName, traderName, "غير محدد", 0, today(), "");
+                    toast("تم إنشاء الحساب وحفظ بيانات المشروع");
+                    showHome();
+                } catch (Exception ex) { toast("تعذر إنشاء الحساب. أعد المحاولة"); }
+            });
+            return;
+        }
+        content.addView(text("بياناتك محفوظة على هذا الهاتف. أدخل كلمة المرور للدخول.", 14, Color.DKGRAY, false));
         EditText pass = field("كلمة المرور", true);
-        EditText confirm = field("تأكيد كلمة المرور", true);
-        content.addView(pass); content.addView(confirm);
-        Button enter = button(PasswordStore.configured(this) ? "دخول" : "إنشاء كلمة المرور");
+        content.addView(pass);
+        Button enter = button("دخول");
         content.addView(enter);
         enter.setOnClickListener(v -> {
-            String p = pass.getText().toString();
-            if (p.length() < 8) { toast("كلمة المرور يجب ألا تقل عن 8 أحرف أو أرقام"); return; }
-            if (!PasswordStore.configured(this)) {
-                if (!p.equals(confirm.getText().toString())) { toast("كلمتا المرور غير متطابقتين"); return; }
-                PasswordStore.set(this, p);
-                toast("تم إنشاء كلمة المرور");
-                afterLogin();
-            } else if (PasswordStore.verify(this, p)) afterLogin();
+            if (PasswordStore.verify(this, pass.getText().toString())) afterLogin();
             else toast("كلمة المرور غير صحيحة");
         });
     }
@@ -357,27 +383,17 @@ public class MainActivity extends Activity {
 
     private void showProjectForm(boolean edit) {
         base("بيانات المشروع الزراعي");
-        EditText name = field("اسم المشروع *", false);
-        EditText crop = field("نوع المحصول *", false);
-        EditText trader = field("اسم التاجر *", false);
-        EditText owner = field("اسم صاحب المشروع *", false);
-        EditText accountant = field("اسم المحاسب *", false);
-        EditText area = field("المساحة بالفدان *", false);
-        EditText date = field("تاريخ بداية الموسم YYYY-MM-DD *", false);
-        date.setText(today());
-        EditText region = field("المنطقة الزراعية", false);
-        for (EditText e : new EditText[]{name,crop,trader,owner,accountant,area,date,region}) content.addView(e);
-        Button save = button("حفظ بيانات المشروع");
+        EditText trader = field("اسم التاجر", false);
+        EditText crop = field("نوع المحصول", false);
+        content.addView(trader); content.addView(crop);
+        Button save = button("حفظ البيانات");
         content.addView(save);
         save.setOnClickListener(v -> {
-            if (empty(name)||empty(crop)||empty(trader)||empty(owner)||empty(accountant)||empty(area)||empty(date)) {
-                toast("أكمل جميع الحقول الإجبارية"); return;
-            }
-            try {
-                db.saveProject(val(name),val(crop),val(trader),val(owner),val(accountant),Double.parseDouble(val(area)),val(date),val(region));
-                toast("تم حفظ بيانات المشروع");
-                showHome();
-            } catch (Exception ex) { toast("تحقق من قيمة المساحة والتاريخ"); }
+            if (empty(trader) || empty(crop)) { toast("أدخل اسم التاجر ونوع المحصول"); return; }
+            String traderName = val(trader);
+            db.saveProject(traderName, val(crop), traderName, traderName, "غير محدد", 0, today(), "");
+            toast("تم حفظ بيانات المشروع");
+            showHome();
         });
         addBack();
     }
