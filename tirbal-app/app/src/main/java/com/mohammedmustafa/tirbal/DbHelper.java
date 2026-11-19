@@ -131,6 +131,11 @@ public final class DbHelper extends SQLiteOpenHelper {
         }
     }
 
+    @Override public void onConfigure(SQLiteDatabase db) {
+        super.onConfigure(db);
+        db.execSQL("PRAGMA cipher_memory_security = ON");
+    }
+
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE project (id INTEGER PRIMARY KEY CHECK(id=1), name TEXT NOT NULL, crop TEXT NOT NULL, trader TEXT NOT NULL, owner TEXT NOT NULL, accountant TEXT NOT NULL, area REAL NOT NULL DEFAULT 0, start_date TEXT NOT NULL, region TEXT)");
         db.execSQL("CREATE TABLE costs (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, entry_date TEXT NOT NULL, worker TEXT NOT NULL, category TEXT NOT NULL, item TEXT NOT NULL, quantity REAL NOT NULL, unit_price INTEGER NOT NULL, total INTEGER NOT NULL, payer TEXT NOT NULL DEFAULT 'غير محدد', responsible_party TEXT NOT NULL DEFAULT 'غير محدد', settlement_type TEXT NOT NULL DEFAULT 'owner_bears', deduction_from TEXT NOT NULL DEFAULT 'none', agreement_note TEXT, notes TEXT, FOREIGN KEY(project_id) REFERENCES project(id))");
