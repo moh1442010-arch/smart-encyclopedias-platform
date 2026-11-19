@@ -8,13 +8,15 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public final class DbHelper extends SQLiteOpenHelper {
     private static final String DB_NAME = "tirbal.db";
-    private static final int DB_VERSION = 1;
+    private static final int DB_VERSION = 2;
 
     public DbHelper(Context context) { super(context, DB_NAME, null, DB_VERSION); }
 
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE project (id INTEGER PRIMARY KEY CHECK(id=1), name TEXT NOT NULL, crop TEXT NOT NULL, trader TEXT NOT NULL, owner TEXT NOT NULL, accountant TEXT NOT NULL, area REAL NOT NULL DEFAULT 0, start_date TEXT NOT NULL, region TEXT)");
-        db.execSQL("CREATE TABLE costs (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, entry_date TEXT NOT NULL, worker TEXT NOT NULL, category TEXT NOT NULL, item TEXT NOT NULL, quantity REAL NOT NULL, unit_price INTEGER NOT NULL, total INTEGER NOT NULL, notes TEXT, FOREIGN KEY(project_id) REFERENCES project(id))");
+        db.execSQL("CREATE TABLE costs (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, entry_date TEXT NOT NULL, worker TEXT NOT NULL, category TEXT NOT NULL, item TEXT NOT NULL, quantity REAL NOT NULL, unit_price INTEGER NOT NULL, total INTEGER NOT NULL, payer TEXT NOT NULL DEFAULT 'غير محدد', responsible_party TEXT NOT NULL DEFAULT 'غير محدد', settlement_type TEXT NOT NULL DEFAULT 'owner_bears', deduction_from TEXT NOT NULL DEFAULT 'none', agreement_note TEXT, notes TEXT, FOREIGN KEY(project_id) REFERENCES project(id))");
+        db.execSQL("CREATE TABLE partnership_terms (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, category TEXT NOT NULL UNIQUE, responsible_party TEXT NOT NULL, default_payer TEXT NOT NULL, settlement_type TEXT NOT NULL, deduction_from TEXT NOT NULL, note TEXT)");
+        seedPartnershipTerms(db);
         db.execSQL("CREATE TABLE sales (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, invoice TEXT NOT NULL, sale_date TEXT NOT NULL, gross INTEGER NOT NULL, allocated_cost INTEGER NOT NULL DEFAULT 0, market_expenses INTEGER NOT NULL DEFAULT 0, net INTEGER NOT NULL, trader TEXT, notes TEXT, FOREIGN KEY(project_id) REFERENCES project(id))");
         db.execSQL("CREATE TABLE calendar_tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, task_date TEXT NOT NULL, title TEXT NOT NULL, details TEXT, completed INTEGER NOT NULL DEFAULT 0, FOREIGN KEY(project_id) REFERENCES project(id))");
         db.execSQL("CREATE INDEX idx_costs_date ON costs(entry_date)");
@@ -23,7 +25,30 @@ public final class DbHelper extends SQLiteOpenHelper {
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Versioned migrations are added here. Never drop user accounting data.
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE costs ADD COLUMN payer TEXT NOT NULL DEFAULT 'غير محدد'");
+            db.execSQL("ALTER TABLE costs ADD COLUMN responsible_party TEXT NOT NULL DEFAULT 'غير محدد'");
+            db.execSQL("ALTER TABLE costs ADD COLUMN settlement_type TEXT NOT NULL DEFAULT 'owner_bears'");
+            db.execSQL("ALTER TABLE costs ADD COLUMN deduction_from TEXT NOT NULL DEFAULT 'none'");
+            db.execSQL("ALTER TABLE costs ADD COLUMN agreement_note TEXT");
+            db.execSQL("CREATE TABLE partnership_terms (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, category TEXT NOT NULL UNIQUE, responsible_party TEXT NOT NULL, default_payer TEXT NOT NULL, settlement_type TEXT NOT NULL, deduction_from TEXT NOT NULL, note TEXT)");
+            seedPartnershipTerms(db);
+        }
+    }
+
+    private void seedPartnershipTerms(SQLiteDatabase db) {
+        String[][] rows = {
+            {"تحضير الأرض","التاجر","التاجر"},{"الميز","التربال","التربال"},
+            {"الأسمدة","التربال","التربال"},{"المبيدات","التربال","التربال"},
+            {"التقاوي","التربال","التربال"},{"الخدمة داخل الزراعة","التربال","التربال"},
+            {"ضريبة المياه","التاجر","التاجر"},{"إيجار الأرض","التاجر","التاجر"}
+        };
+        for (String[] row : rows) {
+            ContentValues v = new ContentValues();
+            v.put("category",row[0]); v.put("responsible_party",row[1]); v.put("default_payer",row[2]);
+            v.put("settlement_type","owner_bears"); v.put("deduction_from","none");
+            db.insertWithOnConflict("partnership_terms",null,v,SQLiteDatabase.CONFLICT_IGNORE);
+        }
     }
 
     public boolean hasProject() {
@@ -38,12 +63,35 @@ public final class DbHelper extends SQLiteOpenHelper {
         getWritableDatabase().insertWithOnConflict("project", null, v, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
-    public void addCost(String date, String worker, String category, String item, double quantity, long price, String notes) {
+    public void addCost(String date, String worker, String category, String item, double quantity, long price,
+                        String payer, String responsible, String settlementType, String deductionFrom,
+                        String agreementNote, String notes) {
         ContentValues v = new ContentValues();
         v.put("project_id", 1); v.put("entry_date", date); v.put("worker", worker);
         v.put("category", category); v.put("item", item); v.put("quantity", quantity);
-        v.put("unit_price", price); v.put("total", Math.round(quantity * price)); v.put("notes", notes);
+        v.put("unit_price", price); v.put("total", Math.round(quantity * price));
+        v.put("payer", payer); v.put("responsible_party", responsible);
+        v.put("settlement_type", settlementType); v.put("deduction_from", deductionFrom);
+        v.put("agreement_note", agreementNote); v.put("notes", notes);
         getWritableDatabase().insertOrThrow("costs", null, v);
+    }
+
+    public String[] defaultResponsibility(String category) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT responsible_party,default_payer FROM partnership_terms WHERE category=?", new String[]{category})) {
+            if (c.moveToFirst()) return new String[]{c.getString(0), c.getString(1)};
+        }
+        return new String[]{"حسب الاتفاق", "حسب الاتفاق"};
+    }
+
+    public void savePartnershipTerm(String category, String responsible, String payer, String settlement, String deduction, String note) {
+        ContentValues v = new ContentValues();
+        v.put("category", category); v.put("responsible_party", responsible); v.put("default_payer", payer);
+        v.put("settlement_type", settlement); v.put("deduction_from", deduction); v.put("note", note);
+        getWritableDatabase().insertWithOnConflict("partnership_terms", null, v, SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    public Cursor partnershipTerms() {
+        return getReadableDatabase().rawQuery("SELECT * FROM partnership_terms ORDER BY id", null);
     }
 
     public void addSale(String invoice, String date, long gross, long allocatedCost, long marketExpenses, String trader, String notes) {
