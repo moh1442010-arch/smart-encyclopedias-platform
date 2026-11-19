@@ -268,6 +268,11 @@ public final class DbHelper extends SQLiteOpenHelper {
     public void addCost(String date, String worker, String category, String item, double quantity, long price,
                         String payer, String responsible, String settlementType, String deductionFrom,
                         String agreementNote, String notes) {
+        if (worker != null && !worker.trim().isEmpty()) {
+            ContentValues workerRecord = new ContentValues();
+            workerRecord.put("project_id", 1); workerRecord.put("name", worker.trim());
+            getWritableDatabase().insertWithOnConflict("workers", null, workerRecord, SQLiteDatabase.CONFLICT_IGNORE);
+        }
         ContentValues v = new ContentValues();
         v.put("project_id", 1); v.put("entry_date", date); v.put("worker", worker);
         v.put("category", category); v.put("item", item); v.put("quantity", quantity);
