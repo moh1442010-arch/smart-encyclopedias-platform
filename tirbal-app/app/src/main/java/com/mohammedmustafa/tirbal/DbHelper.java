@@ -38,19 +38,26 @@ public final class DbHelper extends SQLiteOpenHelper {
 
     private void seedPartnershipTerms(SQLiteDatabase db) {
         String[][] rows = {
-            {"تحضير الأرض","التاجر","التاجر"},{"الميز","التربال","التاجر"},
-            {"الأسمدة","التربال","التاجر"},{"المبيدات","التربال","التاجر"},
-            {"التقاوي","التربال","التاجر"},{"الخدمة داخل الزراعة","التربال","التاجر"},
-            {"ضريبة المياه","التاجر","التاجر"},{"إيجار الأرض","التاجر","التاجر"}
+            {"تحضير الأرض","مشترك","التاجر","shared_half","مناصفة","تكلفة التحضير مناصفة"},
+            {"التقاوي","مشترك","التاجر","shared_half","مناصفة","تكلفة التقاوي مناصفة"},
+            {"الأسمدة","مشترك","التاجر","shared_half","مناصفة","تكلفة الأسمدة مناصفة"},
+            {"المبيدات","مشترك","التاجر","shared_half","مناصفة","تكلفة المبيدات مناصفة"},
+            {"الميز","التربال","التاجر","deduct_worker","من نصيب التربال","يدفعها التاجر وتخصم كاملة من نصيب التربال"},
+            {"الخدمة داخل الزراعة","التربال","التاجر","deduct_worker","من نصيب التربال","أعمال الزراعة والنظافة والخدمة على التربال"},
+            {"الري وخدمة الحقل","التربال","التاجر","deduct_worker","من نصيب التربال","أعمال الري داخل الحقل على التربال"},
+            {"أجور العمال","التربال","التاجر","deduct_worker","من نصيب التربال","تخصم من نصيب التربال إذا دفعها التاجر"},
+            {"المنصرفات","التربال","التاجر","deduct_worker","من نصيب التربال","المنصرفات المسجلة تخصم من نصيب التربال"},
+            {"السلفيات","التربال","التاجر","deduct_worker","من نصيب التربال","السلفيات تخصم من نصيب التربال"},
+            {"ضريبة المياه","التاجر","التاجر","trader_only","لا يوجد خصم","على التاجر وحده خارج المناصفة"},
+            {"إيجار الأرض","التاجر","التاجر","trader_only","لا يوجد خصم","على التاجر وحده خارج المناصفة"}
         };
         for (String[] row : rows) {
             ContentValues v = new ContentValues();
             v.put("category",row[0]); v.put("responsible_party",row[1]); v.put("default_payer",row[2]);
-            v.put("settlement_type","agreement_pending"); v.put("deduction_from","none");
-            db.insertWithOnConflict("partnership_terms",null,v,SQLiteDatabase.CONFLICT_IGNORE);
+            v.put("settlement_type",row[3]); v.put("deduction_from",row[4]); v.put("note",row[5]);
+            db.insertWithOnConflict("partnership_terms",null,v,SQLiteDatabase.CONFLICT_REPLACE);
         }
     }
-
     public boolean hasProject() {
         try (Cursor c = getReadableDatabase().rawQuery("SELECT 1 FROM project WHERE id=1", null)) { return c.moveToFirst(); }
     }
