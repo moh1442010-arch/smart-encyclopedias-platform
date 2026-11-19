@@ -38,15 +38,15 @@ public final class DbHelper extends SQLiteOpenHelper {
 
     private void seedPartnershipTerms(SQLiteDatabase db) {
         String[][] rows = {
-            {"تحضير الأرض","التاجر","التاجر"},{"الميز","التربال","التربال"},
-            {"الأسمدة","التربال","التربال"},{"المبيدات","التربال","التربال"},
-            {"التقاوي","التربال","التربال"},{"الخدمة داخل الزراعة","التربال","التربال"},
+            {"تحضير الأرض","التاجر","التاجر"},{"الميز","التربال","التاجر"},
+            {"الأسمدة","التربال","التاجر"},{"المبيدات","التربال","التاجر"},
+            {"التقاوي","التربال","التاجر"},{"الخدمة داخل الزراعة","التربال","التاجر"},
             {"ضريبة المياه","التاجر","التاجر"},{"إيجار الأرض","التاجر","التاجر"}
         };
         for (String[] row : rows) {
             ContentValues v = new ContentValues();
             v.put("category",row[0]); v.put("responsible_party",row[1]); v.put("default_payer",row[2]);
-            v.put("settlement_type","owner_bears"); v.put("deduction_from","none");
+            v.put("settlement_type","agreement_pending"); v.put("deduction_from","none");
             db.insertWithOnConflict("partnership_terms",null,v,SQLiteDatabase.CONFLICT_IGNORE);
         }
     }
