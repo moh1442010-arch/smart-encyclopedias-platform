@@ -219,7 +219,19 @@ public class MainActivity extends Activity {
         Button add=button("＋ تسجيل فاتورة بيع"); content.addView(add); add.setOnClickListener(v->saleDialog());
         tableHeader(new String[]{"الفاتورة","التاريخ","قيمة البيع","التكلفة","منصرفات السوق","الصافي"});
         try(Cursor c=db.recent("sales","sale_date")) {
-            while(c.moveToNext()) tableRow(new String[]{c.getString(c.getColumnIndexOrThrow("invoice")),c.getString(c.getColumnIndexOrThrow("sale_date")),money.format(c.getLong(c.getColumnIndexOrThrow("gross"))),money.format(c.getLong(c.getColumnIndexOrThrow("allocated_cost"))),money.format(c.getLong(c.getColumnIndexOrThrow("market_expenses"))),money.format(c.getLong(c.getColumnIndexOrThrow("net")))});
+            while(c.moveToNext()) {
+                String invoice=c.getString(c.getColumnIndexOrThrow("invoice"));
+                String date=c.getString(c.getColumnIndexOrThrow("sale_date"));
+                long gross=c.getLong(c.getColumnIndexOrThrow("gross"));
+                long allocated=c.getLong(c.getColumnIndexOrThrow("allocated_cost"));
+                long expenses=c.getLong(c.getColumnIndexOrThrow("market_expenses"));
+                long net=c.getLong(c.getColumnIndexOrThrow("net"));
+                String trader=c.getString(c.getColumnIndexOrThrow("trader"));
+                tableRow(new String[]{invoice,date,money.format(gross),money.format(allocated),money.format(expenses),money.format(net)});
+                Button print=button("طباعة الفاتورة رقم "+invoice);
+                content.addView(print);
+                print.setOnClickListener(v->InvoicePrinter.print(this,invoice,date,gross,allocated,expenses,net,trader,db.projectName(),money));
+            }
         }
         content.addView(text("إجمالي المبيعات: "+money.format(db.total("sales","gross"))+" جنيه سوداني",18,GREEN,true));
         addBack();
