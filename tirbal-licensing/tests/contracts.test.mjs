@@ -62,3 +62,27 @@ test("manual review and payment configuration are server-controlled", () => {
   assert.match(worker, /allowOrder\(request,env\)/);
   assert.doesNotMatch(worker, /-----BEGIN (?:RSA )?PRIVATE KEY-----/);
 });
+
+test("multi-worker registry and worker-specific expense screens are present", () => {
+  assert.match(gradle, /versionCode 7/);
+  assert.match(database, /DB_VERSION = 5/);
+  assert.match(database, /CREATE TABLE workers/);
+  assert.match(database, /INSERT OR IGNORE INTO workers.*SELECT 1,TRIM\(worker\)/);
+  assert.match(database, /public Cursor workers\(\)/);
+  assert.match(database, /public Cursor workerCosts\(String worker\)/);
+  assert.match(activity, /private void showWorkers\(\)/);
+  assert.match(activity, /private void addWorkerDialog\(\)/);
+  assert.match(activity, /private void showWorkerDetails\(String workerName\)/);
+  for (const category of ["الراكوبة","الميز","التقاوي","الأسمدة","المبيدات","المنصرفات","السلفيات"]) {
+    assert.ok(activity.includes(category), "Missing worker expense category: " + category);
+  }
+});
+
+test("harvest settlement deducts shared costs by half and worker/trader obligations separately", () => {
+  assert.match(activity, /long distributable = grossHarvest - directAllocated/);
+  assert.match(activity, /long traderNet = distributable \/ 2 - sharedTotal \/ 2 - traderOnly/);
+  assert.match(activity, /long workerNet = distributable - distributable \/ 2 - \(sharedTotal - sharedTotal \/ 2\) - workerDeductions/);
+  assert.match(database, /"الراكوبة","التربال","التاجر","deduct_worker"/);
+  assert.match(database, /"ضريبة المياه","التاجر","التاجر","trader_only"/);
+  assert.match(database, /"إيجار الأرض","التاجر","التاجر","trader_only"/);
+});
