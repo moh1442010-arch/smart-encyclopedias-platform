@@ -142,6 +142,14 @@ final class LicenseManager {
         return id==null||id.trim().isEmpty()?"unknown-device-0000":id;
     }
     private static SharedPreferences prefs(Context c){return c.getSharedPreferences(PREF,Context.MODE_PRIVATE);}
+    static boolean cachedValid(Context context) {
+        String token=prefs(context).getString("token","");
+        long lastWall=prefs(context).getLong("last_wall",0);
+        long now=System.currentTimeMillis()/1000;
+        if(token.isEmpty()||now<lastWall)return false;
+        try{return verifyToken(token,deviceId(context),now);}catch(Exception e){return false;}
+    }
+
     private static void save(Context c,String token,long serverTime) {
         long wall=System.currentTimeMillis()/1000;
         prefs(c).edit().putString("token",token).putLong("server_time",serverTime)
