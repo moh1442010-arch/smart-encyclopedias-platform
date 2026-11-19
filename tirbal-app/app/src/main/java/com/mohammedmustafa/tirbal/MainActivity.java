@@ -102,7 +102,7 @@ public class MainActivity extends Activity {
         addTile("التكلفة", "التقاوي والأسمدة والمبيدات والميز والعمال والمصروفات والسلفيات", v -> showCosts());
         addTile("السوق والمبيعات", "الفواتير والتاريخ والتكلفة ومنصرفات السوق والصافي", v -> showSales());
         addTile("الرزنامة الزراعية", "مواعيد الزراعة والري والتسميد والرش والحصاد", v -> showCalendar());
-        addTile("المخزن والمدخلات", "متابعة كميات وأسعار المدخلات الزراعية", v -> showCosts());
+        addTile("مدخلات الزراعة", "تسجيل كميات وأسعار التقاوي والأسمدة والمبيدات في دفتر التكلفة", v -> showCosts());
         addTile("العمال والتربال", "تسجيل اسم التربال وربط اسمه ببنود التكلفة", v -> showCosts());
         addTile("الأرباح والخسائر", "ملخص الموسم ونتائج المبيعات والتكاليف", v -> showReports());
         addTile("الديون والسلفيات", "السلفيات تسجل كبند تكلفة قابل للتصنيف", v -> showCosts());
@@ -154,10 +154,10 @@ public class MainActivity extends Activity {
         Button add = button("＋ إضافة بند تكلفة");
         content.addView(add);
         add.setOnClickListener(v -> costDialog());
-        tableHeader(new String[]{"التاريخ","اسم التربال","الصنف","الكمية","السعر","الإجمالي"});
+        tableHeader(new String[]{"التاريخ","اسم التربال","التصنيف","الصنف","الكمية","السعر","الإجمالي"});
         try (Cursor c = db.recent("costs","entry_date")) {
             while (c.moveToNext()) {
-                tableRow(new String[]{c.getString(c.getColumnIndexOrThrow("entry_date")),c.getString(c.getColumnIndexOrThrow("worker")),c.getString(c.getColumnIndexOrThrow("item")),c.getString(c.getColumnIndexOrThrow("quantity")),money.format(c.getLong(c.getColumnIndexOrThrow("unit_price"))),money.format(c.getLong(c.getColumnIndexOrThrow("total")))});
+                tableRow(new String[]{c.getString(c.getColumnIndexOrThrow("entry_date")),c.getString(c.getColumnIndexOrThrow("worker")),c.getString(c.getColumnIndexOrThrow("category")),c.getString(c.getColumnIndexOrThrow("item")),c.getString(c.getColumnIndexOrThrow("quantity")),money.format(c.getLong(c.getColumnIndexOrThrow("unit_price"))),money.format(c.getLong(c.getColumnIndexOrThrow("total")))});
             }
         }
         content.addView(text("إجمالي التكلفة: " + money.format(db.total("costs","total")) + " جنيه سوداني",18,GREEN,true));
