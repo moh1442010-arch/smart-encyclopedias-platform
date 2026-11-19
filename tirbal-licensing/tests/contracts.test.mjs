@@ -71,7 +71,7 @@ test("multi-worker registry and worker-specific expense screens are present", ()
   assert.match(database, /public Cursor workers\(\)/);
   assert.match(database, /public Cursor workerCosts\(String worker\)/);
   assert.match(database, /INSERT OR IGNORE INTO workers\\(project_id,name\\) SELECT 1,TRIM\\(worker\\).*FROM costs/);
-  assert.match(database, /return new String\\[\\]\\{.*deduct_worker.*من نصيب التربال.*\\}/);
+  assert.ok(database.includes('return new String[]{"التربال", "التاجر", "deduct_worker", "من نصيب التربال"};'));
   assert.match(activity, /private void showWorkers\(\)/);
   assert.match(activity, /private void addWorkerDialog\(\)/);
   assert.match(activity, /private void showWorkerDetails\(String workerName\)/);
