@@ -136,7 +136,7 @@ final class LicenseManager {
             for(String f:value.split(";"))if(f.startsWith("expires="))return Long.parseLong(f.substring(8));
         }catch(Exception ignored){} return 0;
     }
-    private static String pad(String value){return value+"=".repeat((4-value.length()%4)%4);}
+    private static String pad(String value){StringBuilder b=new StringBuilder(value);int n=(4-value.length()%4)%4;for(int i=0;i<n;i++)b.append('=');return b.toString();}
     private static String deviceId(Context c) {
         String id=Settings.Secure.getString(c.getContentResolver(),Settings.Secure.ANDROID_ID);
         return id==null||id.trim().isEmpty()?"unknown-device-0000":id;
