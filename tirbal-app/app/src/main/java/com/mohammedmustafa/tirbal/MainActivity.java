@@ -183,7 +183,9 @@ public class MainActivity extends Activity {
         content.addView(text("فترة تجريبية مجانية لمدة 15 يوماً، ثم يلزم اشتراك لمواصلة العمل.",16,DARK,true));
         content.addView(text(result.message,14,Color.DKGRAY,false));
         content.addView(text("الأسعار بالجنيه السوداني",17,GREEN,true));
-        TextView pricing=text("جارٍ تحميل الأسعار الحالية...",15,DARK,true);\n        content.addView(pricing);
+        TextView pricing=text("جارٍ تحميل الأسعار الحالية...",15,DARK,true);
+        content.addView(pricing);
+        Spinner plan=spinner(new String[]{"شهري — 25,000 جنيه","سنوي — 250,000 جنيه","دائم — 500,000 جنيه"});
         TextView payment=text("جارٍ تحميل بيانات التحويل...",14,Color.DKGRAY,false);
         content.addView(payment);
         LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
@@ -195,11 +197,21 @@ public class MainActivity extends Activity {
                     "\nرقم الحساب: "+p.optString("accountNumber","لم يُضبط بعد")+
                     "\nواتساب الدعم: "+p.optString("whatsapp","لم يُضبط بعد");
             payment.setText(details);
+            JSONObject plans=config.optJSONObject("plans");
+            if(plans!=null) {
+                JSONObject monthly=plans.optJSONObject("monthly"),annual=plans.optJSONObject("annual"),lifetime=plans.optJSONObject("lifetime");
+                if(monthly!=null&&annual!=null&&lifetime!=null) {
+                    long m=monthly.optLong("amount"),a=annual.optLong("amount"),l=lifetime.optLong("amount");
+                    pricing.setText("شهري "+money.format(m)+" ج.س  •  سنوي "+money.format(a)+" ج.س  •  دائم "+money.format(l)+" ج.س");
+                    plan.setAdapter(new ArrayAdapter<>(MainActivity.this,android.R.layout.simple_spinner_dropdown_item,
+                            new String[]{"شهري — "+money.format(m)+" جنيه","سنوي — "+money.format(a)+" جنيه","دائم — "+money.format(l)+" جنيه"}));
+                }
+            }
         }));
         EditText customer=field("اسم صاحب الاشتراك",false);
         EditText contact=field("رقم هاتف العميل",false);
         EditText receipt=field("رقم مرجع التحويل",false);
-        Spinner plan=spinner(new String[]{"شهري — 25,000 جنيه","سنوي — 250,000 جنيه","دائم — 500,000 جنيه"});
+
         content.addView(customer);content.addView(contact);content.addView(plan);content.addView(receipt);
         Button submit=button("إرسال طلب الاشتراك للمراجعة");
         content.addView(submit);
