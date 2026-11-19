@@ -34,6 +34,7 @@ public final class DbHelper extends SQLiteOpenHelper {
             db.execSQL("CREATE TABLE partnership_terms (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, category TEXT NOT NULL UNIQUE, responsible_party TEXT NOT NULL, default_payer TEXT NOT NULL, settlement_type TEXT NOT NULL, deduction_from TEXT NOT NULL, note TEXT)");
             seedPartnershipTerms(db);
         }
+        if (oldVersion < 3) seedPartnershipTerms(db);
     }
 
     private void seedPartnershipTerms(SQLiteDatabase db) {
@@ -85,9 +86,9 @@ public final class DbHelper extends SQLiteOpenHelper {
 
     public String[] defaultResponsibility(String category) {
         try (Cursor c = getReadableDatabase().rawQuery("SELECT responsible_party,default_payer FROM partnership_terms WHERE category=?", new String[]{category})) {
-            if (c.moveToFirst()) return new String[]{c.getString(0), c.getString(1)};
+            if (c.moveToFirst()) return new String[]{c.getString(0), c.getString(1), c.getString(2), c.getString(3)};
         }
-        return new String[]{"حسب الاتفاق", "حسب الاتفاق"};
+        return new String[]{"حسب الاتفاق", "التاجر", "agreement_pending", "حسب الاتفاق"};
     }
 
     public void savePartnershipTerm(String category, String responsible, String payer, String settlement, String deduction, String note) {
@@ -99,6 +100,18 @@ public final class DbHelper extends SQLiteOpenHelper {
 
     public Cursor partnershipTerms() {
         return getReadableDatabase().rawQuery("SELECT * FROM partnership_terms ORDER BY id", null);
+    }
+
+    public long totalBySettlement(String settlementType) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT COALESCE(SUM(total),0) FROM costs WHERE project_id=1 AND settlement_type=?", new String[]{settlementType})) {
+            return c.moveToFirst() ? c.getLong(0) : 0L;
+        }
+    }
+
+    public long totalByDeduction(String deduction) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT COALESCE(SUM(total),0) FROM costs WHERE project_id=1 AND deduction_from=?", new String[]{deduction})) {
+            return c.moveToFirst() ? c.getLong(0) : 0L;
+        }
     }
 
     public void addSale(String invoice, String date, long gross, long allocatedCost, long marketExpenses, String trader, String notes) {
