@@ -10,7 +10,7 @@ import java.io.FileInputStream;
 
 public final class DbHelper extends SQLiteOpenHelper {
     private static final String DB_NAME = "tirbal.db";
-    private static final int DB_VERSION = 4;
+    private static final int DB_VERSION = 5;
     private static final String MIGRATION_PREFS = "tirbal_db_migration";
 
     static { System.loadLibrary("sqlcipher"); }
@@ -168,6 +168,9 @@ public final class DbHelper extends SQLiteOpenHelper {
             seedPartnershipTerms(db);
             migrateLegacyPartnershipRules(db);
         }
+        if (oldVersion < 5) {
+            seedPartnershipTerms(db);
+        }
         if (oldVersion < 4) {
             db.execSQL("CREATE TABLE IF NOT EXISTS workers (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, name TEXT NOT NULL, phone TEXT, notes TEXT, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(project_id,name), FOREIGN KEY(project_id) REFERENCES project(id))");
             db.execSQL("INSERT OR IGNORE INTO workers(project_id,name) SELECT 1,TRIM(worker) FROM costs WHERE worker IS NOT NULL AND TRIM(worker)<>'' GROUP BY TRIM(worker)");
@@ -180,6 +183,7 @@ public final class DbHelper extends SQLiteOpenHelper {
             {"التقاوي","مشترك","التاجر","shared_half","مناصفة","تكلفة التقاوي مناصفة"},
             {"الأسمدة","مشترك","التاجر","shared_half","مناصفة","تكلفة الأسمدة مناصفة"},
             {"المبيدات","مشترك","التاجر","shared_half","مناصفة","تكلفة المبيدات مناصفة"},
+            {"الراكوبة","التربال","التاجر","deduct_worker","من نصيب التربال","مصروف الراكوبة على التربال ويخصم من نصيبه إذا دفعه التاجر"},
             {"الميز","التربال","التاجر","deduct_worker","من نصيب التربال","يدفعها التاجر وتخصم كاملة من نصيب التربال"},
             {"الخدمة داخل الزراعة","التربال","التاجر","deduct_worker","من نصيب التربال","أعمال الزراعة والنظافة والخدمة على التربال"},
             {"الري وخدمة الحقل","التربال","التاجر","deduct_worker","من نصيب التربال","أعمال الري داخل الحقل على التربال"},
