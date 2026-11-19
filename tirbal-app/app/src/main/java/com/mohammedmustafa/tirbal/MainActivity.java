@@ -35,7 +35,7 @@ public class MainActivity extends Activity {
         LicenseManager.check(this, result -> runOnUiThread(() -> {
             currentDeviceId = result.deviceId;
             if (result.unlocked) {
-                db = new DbHelper(this);
+                if (!openDatabaseSafely()) return;
                 licenseReady = true;
                 showGate();
                 startLicenseMonitor();
@@ -61,6 +61,33 @@ public class MainActivity extends Activity {
     private void startLicenseMonitor() {
         licenseHandler.removeCallbacks(licenseMonitor);
         licenseHandler.postDelayed(licenseMonitor, 30000);
+    }
+
+    private boolean openDatabaseSafely() {
+        try {
+            if (db != null) db.close();
+            db = new DbHelper(this);
+            db.migrateLegacyIfNeeded(this);
+            return true;
+        } catch (Exception e) {
+            if (db != null) db.close();
+            db = null;
+            base("حماية قاعدة البيانات");
+            content.addView(text("تعذر فتح قاعدة البيانات المشفرة أو ترحيل البيانات القديمة. لم يحذف التطبيق النسخة القديمة. أعد المحاولة بعد التأكد من توفر مساحة كافية.",15,DARK,true));
+            Button retry = button("إعادة المحاولة");
+            content.addView(retry);
+            retry.setOnClickListener(v -> LicenseManager.check(this, check -> runOnUiThread(() -> {
+                currentDeviceId = check.deviceId;
+                if (check.unlocked) {
+                    if (openDatabaseSafely()) {
+                        licenseReady = true;
+                        showGate();
+                        startLicenseMonitor();
+                    }
+                } else showSubscription(check);
+            })));
+            return false;
+        }
     }
 
     private void showSubscription(LicenseManager.Result result) {
@@ -116,7 +143,7 @@ public class MainActivity extends Activity {
             LicenseManager.check(this,check->runOnUiThread(()->{
                 refresh.setEnabled(true);
                 currentDeviceId = check.deviceId;
-                if(check.unlocked){db=new DbHelper(this);licenseReady=true;showGate();startLicenseMonitor();}
+                if(check.unlocked){if(!openDatabaseSafely())return;licenseReady=true;showGate();startLicenseMonitor();}
                 else showSubscription(check);
             }));
         });
