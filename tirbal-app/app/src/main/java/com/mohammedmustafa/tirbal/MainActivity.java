@@ -33,6 +33,7 @@ public class MainActivity extends Activity {
         getWindow().setStatusBarColor(DARK);
         getWindow().setNavigationBarColor(DARK);
         LicenseManager.check(this, result -> runOnUiThread(() -> {
+            currentDeviceId = result.deviceId;
             if (result.unlocked) {
                 db = new DbHelper(this);
                 licenseReady = true;
@@ -114,6 +115,7 @@ public class MainActivity extends Activity {
             refresh.setEnabled(false);
             LicenseManager.check(this,check->runOnUiThread(()->{
                 refresh.setEnabled(true);
+                currentDeviceId = check.deviceId;
                 if(check.unlocked){db=new DbHelper(this);licenseReady=true;showGate();startLicenseMonitor();}
                 else showSubscription(check);
             }));
