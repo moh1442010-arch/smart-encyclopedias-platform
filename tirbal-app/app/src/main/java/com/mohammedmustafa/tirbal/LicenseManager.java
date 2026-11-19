@@ -147,7 +147,8 @@ final class LicenseManager {
         long lastWall=prefs(context).getLong("last_wall",0);
         long now=System.currentTimeMillis()/1000;
         if(token.isEmpty()||now<lastWall)return false;
-        try{boolean valid=verifyToken(token,deviceId(context),now);if(valid)prefs(context).edit().putLong("last_wall",now).apply();return valid;}catch(Exception e){return false;}
+        prefs(context).edit().putLong("last_wall",now).apply();
+        try{return verifyToken(token,deviceId(context),now);}catch(Exception e){return false;}
     }
 
     private static void save(Context c,String token,long serverTime) {
