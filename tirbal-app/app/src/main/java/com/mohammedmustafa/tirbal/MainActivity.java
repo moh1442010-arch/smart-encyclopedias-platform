@@ -44,7 +44,8 @@ public class MainActivity extends Activity {
         }));
     }
 
-    private boolean licenseReady = false;\n    private String currentDeviceId = "";
+    private boolean licenseReady = false;
+    private String currentDeviceId = "";
     private final Handler licenseHandler = new Handler(Looper.getMainLooper());
     private final Runnable licenseMonitor = new Runnable() {
         @Override public void run() {
