@@ -1,0 +1,117 @@
+name: Deploy Hisab Al-Tirbal licensing Worker
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "tirbal-licensing/**"
+      - ".github/workflows/deploy-tirbal-licensing.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-hisab-al-tirbal-licensing
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Worker syntax and D1 schema
+        run: |
+          set -euo pipefail
+          node --check tirbal-licensing/worker/src/index.js
+          python3 - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          db=sqlite3.connect(":memory:")
+          db.executescript(Path("tirbal-licensing/schema.sql").read_text(encoding="utf-8"))
+          names={r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+          assert {"tirbal_devices","tirbal_orders","tirbal_audit"} <= names
+          print("PASS: isolated Tirbal D1 schema")
+          PY
+
+      - name: Validate and normalize the Tirbal RSA signing key
+        env:
+          RAW_KEY: ${{ secrets.TIRBAL_LICENSE_PRIVATE_KEY_B64 }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const crypto=require("node:crypto"),fs=require("node:fs"),path=require("node:path");
+          const raw=String(process.env.RAW_KEY||"").trim().replace(/\s+/g,"");
+          if(!raw) throw new Error("Missing TIRBAL_LICENSE_PRIVATE_KEY_B64 GitHub secret");
+          const der=Buffer.from(raw,"base64");
+          const key=crypto.createPrivateKey({key:der,format:"der",type:"pkcs8"});
+          const worker=fs.readFileSync("tirbal-licensing/worker/src/index.js","utf8");
+          const match=worker.match(/PUBLIC_KEY_DER_B64 = "([^"]+)"/);
+          if(!match) throw new Error("Worker public key missing");
+          const pub=crypto.createPublicKey({key:Buffer.from(match[1],"base64"),format:"der",type:"spki"});
+          const probe=Buffer.from("Hisab Al-Tirbal signing pair check");
+          if(!crypto.verify("RSA-SHA256",probe,pub,crypto.sign("RSA-SHA256",probe,key)))
+            throw new Error("Tirbal private key does not match app public key");
+          const normalized=key.export({format:"der",type:"pkcs8"}).toString("base64");
+          const file=path.join(process.env.RUNNER_TEMP,"tirbal-private.b64");
+          fs.writeFileSync(file,normalized,{mode:0o600});
+          console.log("PASS: Tirbal RSA key matches the Android public key.");
+          NODE
+
+      - name: Normalize Cloudflare API token
+        env:
+          RAW_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          token="$(printf '%s' "$RAW_CF_TOKEN" | tr -d '\r\n' | sed -E 's/^Bearer[[:space:]]+//I')"
+          if [ -z "$token" ]; then echo "::error::Missing CLOUDFLARE_API_TOKEN"; exit 1; fi
+          echo "::add-mask::$token"
+          echo "CLOUDFLARE_API_TOKEN=$token" >> "$GITHUB_ENV"
+          unset token RAW_CF_TOKEN
+
+      - name: Apply isolated Tirbal D1 schema
+        working-directory: tirbal-licensing
+        env:
+          CLOUDFLARE_ACCOUNT_ID: b2f59f3997ad2918941d4d261370d1b4
+        run: npx --yes wrangler@4 d1 execute al-mizan-bakery-licenses --remote --file=schema.sql --config wrangler.toml
+
+      - name: Configure Worker secrets
+        working-directory: tirbal-licensing
+        env:
+          CLOUDFLARE_ACCOUNT_ID: b2f59f3997ad2918941d4d261370d1b4
+          ADMIN_PASSWORD: ${{ secrets.TIRBAL_ADMIN_PASSWORD }}
+          BANK_NAME: ${{ secrets.TIRBAL_PAYMENT_BANK_NAME }}
+          ACCOUNT_NAME: ${{ secrets.TIRBAL_PAYMENT_ACCOUNT_NAME }}
+          ACCOUNT_NUMBER: ${{ secrets.TIRBAL_PAYMENT_ACCOUNT_NUMBER }}
+          WHATSAPP: ${{ secrets.TIRBAL_PAYMENT_WHATSAPP }}
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 secret put TIRBAL_LICENSE_PRIVATE_KEY_PKCS8_B64 --config wrangler.toml < "$RUNNER_TEMP/tirbal-private.b64"
+          rm -f "$RUNNER_TEMP/tirbal-private.b64"
+          if [ -z "$ADMIN_PASSWORD" ] || [ "${#ADMIN_PASSWORD}" -lt 32 ]; then
+            echo "::error::Configure TIRBAL_ADMIN_PASSWORD as a random value of at least 32 characters."
+            exit 1
+          fi
+          printf '%s' "$ADMIN_PASSWORD" | npx --yes wrangler@4 secret put TIRBAL_ADMIN_PASSWORD --config wrangler.toml
+          for item in "PAYMENT_BANK_NAME:$BANK_NAME" "PAYMENT_ACCOUNT_NAME:$ACCOUNT_NAME" "PAYMENT_ACCOUNT_NUMBER:$ACCOUNT_NUMBER" "PAYMENT_WHATSAPP:$WHATSAPP"; do
+            key="${item%%:*}"; value="${item#*:}"
+            if [ -n "$value" ]; then printf '%s' "$value" | npx --yes wrangler@4 secret put "$key" --config wrangler.toml; fi
+          done
+
+      - name: Deploy Tirbal licensing Worker
+        working-directory: tirbal-licensing
+        env:
+          CLOUDFLARE_ACCOUNT_ID: b2f59f3997ad2918941d4d261370d1b4
+        run: npx --yes wrangler@4 deploy --config wrangler.toml
+
+      - name: Verify live service and signing pair
+        run: |
+          set -euo pipefail
+          base="https://hisab-al-tirbal-licensing.mohammedmustafa.workers.dev"
+          curl --fail --silent --show-error "$base/health" | tee "$RUNNER_TEMP/tirbal-health.json"
+          curl --fail --silent --show-error "$base/diagnostics/signing-pair" | tee "$RUNNER_TEMP/tirbal-signing.json"
+          node -e 'const h=require(process.argv[1]),s=require(process.argv[2]);if(h.ok!==true||h.service!=="hisab-al-tirbal-licensing"||s.signingReady!==true)process.exit(1)' "$RUNNER_TEMP/tirbal-health.json" "$RUNNER_TEMP/tirbal-signing.json"
