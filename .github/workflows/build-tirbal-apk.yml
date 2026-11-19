@@ -12,6 +12,7 @@ on:
   pull_request:
     branches:
       - main
+      - feature/hisab-al-tirbal-android-v1
     paths:
       - 'tirbal-app/**'
       - '.github/workflows/build-tirbal-apk.yml'
