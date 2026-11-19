@@ -1,0 +1,15 @@
+name = "hisab-al-tirbal-licensing"
+main = "worker/src/index.js"
+compatibility_date = "2026-10-25"
+
+[vars]
+APP_VERSION = "1.4.1"
+PAYMENT_BANK_NAME = "بنكك"
+PAYMENT_ACCOUNT_NAME = "محمد مصطفى بابكر"
+PAYMENT_ACCOUNT_NUMBER = "1882224"
+PAYMENT_WHATSAPP = "+249121851285"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "al-mizan-bakery-licenses"
+database_id = "690347da-5de8-41de-b9c0-b2421db66f57"
