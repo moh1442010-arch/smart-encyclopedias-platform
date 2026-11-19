@@ -14,9 +14,9 @@ const manifest = read("tirbal-app/app/src/main/AndroidManifest.xml");
 const config = read("tirbal-licensing/wrangler.toml");
 
 test("Android, Worker and Wrangler use the same product version", () => {
-  assert.match(gradle, /versionName '1.4.0'/);
-  assert.match(worker, /const APP_VERSION = "1.4.0"/);
-  assert.match(config, /APP_VERSION = "1.4.0"/);
+  assert.match(gradle, /versionName '1.4.1'/);
+  assert.match(worker, /const APP_VERSION = "1.4.1"/);
+  assert.match(config, /APP_VERSION = "1.4.1"/);
 });
 
 test("trial and prices are consistent across app and Worker", () => {
@@ -32,6 +32,17 @@ test("trial and prices are consistent across app and Worker", () => {
   assert.match(activity, /https:\/\/wa\.me\//);
   assert.match(activity, /String whatsappNumber=p\.optString\("whatsapp",""\)/);
   assert.match(activity, /String digits=whatsappNumber\.replaceAll\("\[\^0-9\]",""\)/);
+});
+
+test("startup does not wait for remote config before license bootstrap", () => {
+  assert.match(activity, /continueLicenseCheck\(\);/);
+  assert.doesNotMatch(activity, /LicenseManager\.loadConfig\(\(config,error\)->runOnUiThread/);
+});
+
+test("cached signed license survives reboot without accepting a clock rollback", () => {
+  assert.match(license, /putLong\("wall_time",System\.currentTimeMillis\(\)\)/);
+  assert.match(license, /currentWall<savedWall/);
+  assert.match(license, /savedBoot==currentBoot/);
 });
 
 test("licensing is device-bound and signed, not a local date-only trial", () => {
@@ -64,7 +75,7 @@ test("manual review and payment configuration are server-controlled", () => {
 });
 
 test("multi-worker registry and worker-specific expense screens are present", () => {
-  assert.match(gradle, /versionCode 7/);
+  assert.match(gradle, /versionCode 8/);
   assert.match(database, /DB_VERSION = 5/);
   assert.match(database, /CREATE TABLE workers/);
   assert.match(database, /INSERT OR IGNORE INTO workers.*SELECT 1,TRIM\(worker\)/);
@@ -72,6 +83,8 @@ test("multi-worker registry and worker-specific expense screens are present", ()
   assert.match(database, /public Cursor workerCosts\(String worker\)/);
   assert.ok(database.includes('INSERT OR IGNORE INTO workers(project_id,name) SELECT 1,TRIM(worker) FROM costs WHERE worker IS NOT NULL AND length(TRIM(worker))>0 GROUP BY TRIM(worker)'));
   assert.ok(database.includes('return new String[]{"التربال", "التاجر", "deduct_worker", "من نصيب التربال"};'));
+  assert.match(activity, /card\.setOrientation\(LinearLayout\.HORIZONTAL\)/);
+  assert.match(activity, /card\.setElevation\(dp\(2\)\)/);
   assert.match(activity, /private void showWorkers\(\)/);
   assert.match(activity, /private void addWorkerDialog\(\)/);
   assert.match(activity, /private void showWorkerDetails\(String workerName\)/);
