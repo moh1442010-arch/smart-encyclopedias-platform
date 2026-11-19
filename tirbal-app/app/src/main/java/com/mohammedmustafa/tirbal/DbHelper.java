@@ -8,7 +8,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public final class DbHelper extends SQLiteOpenHelper {
     private static final String DB_NAME = "tirbal.db";
-    private static final int DB_VERSION = 2;
+    private static final int DB_VERSION = 3;
 
     public DbHelper(Context context) { super(context, DB_NAME, null, DB_VERSION); }
 
