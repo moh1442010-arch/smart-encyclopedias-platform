@@ -33,7 +33,7 @@
 
 ## النشر والإدارة
 - Worker: hisab-al-tirbal-licensing
-- رابط الخدمة المتوقع: https://hisab-al-tirbal-licensing.mohammedmustafa.workers.dev
+- رابط الخدمة المتوقع: https://hisab-al-tirbal-licensing.moh1442010.workers.dev
 - لوحة الإدارة: أضف /admin إلى رابط الخدمة.
 - سير العمل: .github/workflows/deploy-tirbal-licensing.yml
 - النشر الإنتاجي مقيد بفرع main.
