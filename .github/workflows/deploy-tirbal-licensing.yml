@@ -96,6 +96,10 @@ jobs:
             echo "::error::Configure TIRBAL_ADMIN_PASSWORD as a random value of at least 32 characters."
             exit 1
           fi
+          if [ -z "$BANK_NAME" ] || [ -z "$ACCOUNT_NAME" ] || [ -z "$ACCOUNT_NUMBER" ] || [ -z "$WHATSAPP" ]; then
+            echo "::error::Configure all four TIRBAL_PAYMENT_* GitHub secrets before deployment."
+            exit 1
+          fi
           printf '%s' "$ADMIN_PASSWORD" | npx --yes wrangler@4 secret put TIRBAL_ADMIN_PASSWORD --config wrangler.toml
           for item in "PAYMENT_BANK_NAME:$BANK_NAME" "PAYMENT_ACCOUNT_NAME:$ACCOUNT_NAME" "PAYMENT_ACCOUNT_NUMBER:$ACCOUNT_NUMBER" "PAYMENT_WHATSAPP:$WHATSAPP"; do
             key="${item%%:*}"; value="${item#*:}"
