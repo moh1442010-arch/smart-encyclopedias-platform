@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - feature/hisab-al-tirbal-android-v1
+      - fix/tirbal-app-first-review-1.4.0
     paths:
       - 'tirbal-app/**'
       - '.github/workflows/build-tirbal-apk.yml'
