@@ -115,7 +115,7 @@ public class MainActivity extends Activity {
 
     private boolean isMandatoryUpdate(JSONObject config) {
         String minimum=config.optString("minSupportedVersion","1.0.0");
-        return compareVersions(BuildConfig.VERSION_NAME,minimum)<0;
+        return config.optString("downloadUrl","").startsWith("https://") && compareVersions(BuildConfig.VERSION_NAME,minimum)<0;
     }
 
     private void showMandatoryUpdate(JSONObject config) {
@@ -180,7 +180,7 @@ public class MainActivity extends Activity {
 
     private void showSubscription(LicenseManager.Result result) {
         base("اشتراك حساب التربال");
-        content.addView(text("فترة تجريبية مجانية لمدة 15 يوماً، ثم يلزم اشتراك لمواصلة العمل.",16,DARK,true));
+        content.addView(text("فترة تجريبية مجانية، ثم يلزم اشتراك لمواصلة العمل.",16,DARK,true));
         content.addView(text(result.message,14,Color.DKGRAY,false));
         content.addView(text("الأسعار بالجنيه السوداني",17,GREEN,true));
         TextView pricing=text("جارٍ تحميل الأسعار الحالية...",15,DARK,true);
