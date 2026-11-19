@@ -32,10 +32,19 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(DARK);
         getWindow().setNavigationBarColor(DARK);
+        // Review-first startup: the app remains usable while the licensing service is being finalized.
+        // The website nucleus can turn enforcement on later through /api/config without rebuilding the APK.
         LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
             if(config!=null && isMandatoryUpdate(config)) {
                 showMandatoryUpdate(config);
-            } else continueLicenseCheck();
+                return;
+            }
+            if(config!=null && BuildConfig.REMOTE_LICENSE_CONTROL
+                    && config.optBoolean("licenseEnforcement",false)) {
+                continueLicenseCheck();
+            } else {
+                openReviewSession();
+            }
         }));
     }
 
@@ -92,6 +101,14 @@ public class MainActivity extends Activity {
         }
     }
 
+
+    private void openReviewSession() {
+        currentDeviceId = "";
+        licenseReady = false;
+        licenseHandler.removeCallbacks(licenseMonitor);
+        if (!openDatabaseSafely()) return;
+        showGate();
+    }
 
     private void continueLicenseCheck() {
         LicenseManager.check(this, result -> runOnUiThread(() -> {
@@ -155,6 +172,8 @@ public class MainActivity extends Activity {
                 if(compareVersions(current,latest)<0)info.append("\\nيتوفر تحديث جديد.");
                 else info.append("\\nالتطبيق على أحدث إصدار معلن.");
                 info.append("\\nمدة التجربة: ").append(config.optInt("trialDays",15)).append(" يوماً");
+                info.append("\\nحالة الترخيص المركزي: ")
+                    .append(config.optBoolean("licenseEnforcement",false) ? "مفعّل" : "متوقف أثناء المراجعة");
                 JSONObject plans=config.optJSONObject("plans");
                 if(plans!=null) {
                     JSONObject monthly=plans.optJSONObject("monthly"),annual=plans.optJSONObject("annual"),lifetime=plans.optJSONObject("lifetime");

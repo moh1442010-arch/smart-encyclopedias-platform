@@ -14,9 +14,9 @@ const manifest = read("tirbal-app/app/src/main/AndroidManifest.xml");
 const config = read("tirbal-licensing/wrangler.toml");
 
 test("Android, Worker and Wrangler use the same product version", () => {
-  assert.match(gradle, /versionName '1\.3\.1'/);
-  assert.match(worker, /const APP_VERSION = "1\.3\.1"/);
-  assert.match(config, /APP_VERSION = "1\.3\.1"/);
+  assert.match(gradle, /versionName '1\.4\.0'/);
+  assert.match(worker, /const APP_VERSION = "1\.4\.0"/);
+  assert.match(config, /APP_VERSION = "1\.4\.0"/);
 });
 
 test("trial and prices are consistent across app and Worker", () => {
@@ -51,6 +51,16 @@ test("database opens only after license gate and uses encrypted SQLCipher storag
   assert.match(keyStore, /AES\/GCM\/NoPadding/);
   assert.match(keyStore, /AndroidKeyStore/);
   assert.match(manifest, /allowBackup="false"/);
+});
+
+test("review build can defer licensing and the website nucleus can enforce it later", () => {
+  assert.match(gradle, /REMOTE_LICENSE_CONTROL/);
+  assert.match(activity, /config\.optBoolean\("licenseEnforcement",false\)/);
+  assert.match(activity, /openReviewSession\(\)/);
+  assert.match(worker, /licenseEnforcement:false/);
+  assert.match(worker, /licenseEnforcement:settings\.licenseEnforcement/);
+  assert.match(worker, /licenseEnforcement:b\.licenseEnforcement===true/);
+  assert.match(worker, /id="licenseEnforcement"/);
 });
 
 test("manual review and payment configuration are server-controlled", () => {
