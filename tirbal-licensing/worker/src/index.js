@@ -96,7 +96,8 @@ async function handle(request,env) {
   const u=new URL(request.url);
   if(!env.DB) return json({error:"SERVICE_NOT_CONFIGURED"},503);
   await schema(env);
-  if(u.pathname==="/admin"&&request.method==="GET") return new Response(ADMIN_HTML,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store","x-frame-options":"DENY","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}});\n  if(u.pathname==="/health"&&request.method==="GET") return json({ok:true,service:"hisab-al-tirbal-licensing",mode:"manual-payment-review",appVersion:APP_VERSION});
+  if(u.pathname==="/admin"&&request.method==="GET") return new Response(ADMIN_HTML,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store","x-frame-options":"DENY","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}});
+  if(u.pathname==="/health"&&request.method==="GET") return json({ok:true,service:"hisab-al-tirbal-licensing",mode:"manual-payment-review",appVersion:APP_VERSION});
   if(u.pathname==="/api/config"&&request.method==="GET") return json(await publicConfig(env));
   if(u.pathname==="/diagnostics/signing-pair"&&request.method==="GET") {
     try {
