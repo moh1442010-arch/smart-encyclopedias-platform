@@ -21,7 +21,8 @@ async function schema(env) {
     env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_orders (id TEXT PRIMARY KEY, created_at INTEGER NOT NULL, customer_name TEXT NOT NULL, contact TEXT NOT NULL, device_id TEXT NOT NULL, plan TEXT NOT NULL, amount_sdg INTEGER NOT NULL, receipt_reference TEXT NOT NULL, status TEXT NOT NULL, reviewed_at INTEGER, reviewer_note TEXT, activation_token TEXT, token_expires INTEGER, app_version TEXT NOT NULL)"),
     env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_tirbal_receipt_active ON tirbal_orders(receipt_reference) WHERE status IN ('pending','approved')"),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_tirbal_orders_status ON tirbal_orders(status,created_at DESC)"),
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id TEXT NOT NULL, event TEXT NOT NULL, actor TEXT NOT NULL, created_at INTEGER NOT NULL, detail TEXT)"),\n    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_admin_attempts (ip_hash TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL)")
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id TEXT NOT NULL, event TEXT NOT NULL, actor TEXT NOT NULL, created_at INTEGER NOT NULL, detail TEXT)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_admin_attempts (ip_hash TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL)")
   ]);
 }
 function privateDer(value) {
