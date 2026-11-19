@@ -347,7 +347,15 @@ public class MainActivity extends Activity {
         hs.addView(row); content.addView(hs);
     }
 
-    private void addBack() { Button b=button("العودة إلى الرئيسية"); content.addView(b); b.setOnClickListener(v->showHome()); }
+    private void addBack() { Button b=button("⌂  العودة إلى الرئيسية"); content.addView(b); b.setOnClickListener(v->showHome()); }
+
+    private GradientDrawable rounded(int color, int radius, int stroke) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(color);
+        d.setCornerRadius(dp(radius));
+        d.setStroke(dp(1), stroke);
+        return d;
+    }
     private LinearLayout form() { LinearLayout l=new LinearLayout(this); l.setOrientation(LinearLayout.VERTICAL); l.setPadding(8,8,8,8); return l; }
     private Spinner spinner(String[] items) {
         Spinner s=new Spinner(this);
