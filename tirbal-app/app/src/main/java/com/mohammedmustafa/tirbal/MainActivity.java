@@ -187,7 +187,10 @@ public class MainActivity extends Activity {
                 String[] defaults = db.defaultResponsibility(category.getSelectedItem().toString());
                 setSpinnerValue(responsible, defaults[0]);
                 setSpinnerValue(payer, defaults[1]);
-                setSpinnerValue(settlement, defaults[2]);
+                String settlementLabel = "shared_half".equals(defaults[2]) ? "مناصفة بين الطرفين" :
+                    ("deduct_worker".equals(defaults[2]) ? "يخصم كاملاً من نصيب التربال" :
+                    ("trader_only".equals(defaults[2]) ? "على التاجر وحده" : "حسب اتفاق إضافي"));
+                setSpinnerValue(settlement, settlementLabel);
                 setSpinnerValue(deduction, defaults[3]);
             }
         });
