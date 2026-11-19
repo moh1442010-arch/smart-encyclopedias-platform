@@ -32,11 +32,9 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(DARK);
         getWindow().setNavigationBarColor(DARK);
-        LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
-            if(config!=null && isMandatoryUpdate(config)) {
-                showMandatoryUpdate(config);
-            } else continueLicenseCheck();
-        }));
+        // Licensing is the only startup gate. A slow or unavailable config endpoint
+        // must never strand the user on the activation screen.
+        continueLicenseCheck();
     }
 
     private boolean licenseReady = false;
@@ -362,12 +360,34 @@ public class MainActivity extends Activity {
 
     private void addTile(String title, String subtitle, View.OnClickListener click) {
         LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(16, 13, 16, 13);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(14, 12, 14, 12);
+        card.setMinimumHeight(dp(82));
         card.setBackground(rounded(Color.WHITE, 18, Color.rgb(225,232,222)));
-        TextView t = text(title, 18, GREEN, true);
-        TextView s = text(subtitle, 13, Color.DKGRAY, false);
-        card.addView(t); card.addView(s);
+        card.setElevation(dp(2));
+
+        String icon = "🌾";
+        String label = title;
+        int split = title.indexOf(' ');
+        if (split > 0) {
+            icon = title.substring(0, split);
+            label = title.substring(split + 1).trim();
+        }
+        TextView iconView = text(icon, 27, GREEN, true);
+        iconView.setGravity(Gravity.CENTER);
+        iconView.setBackground(rounded(Color.rgb(235,243,235), 16, Color.rgb(235,243,235)));
+        card.addView(iconView, new LinearLayout.LayoutParams(dp(54), dp(54)));
+
+        LinearLayout labels = new LinearLayout(this);
+        labels.setOrientation(LinearLayout.VERTICAL);
+        labels.setGravity(Gravity.CENTER_VERTICAL | Gravity.RIGHT);
+        labels.setPadding(14, 0, 0, 0);
+        TextView t = text(label, 17, DARK, true);
+        TextView sub = text(subtitle, 12, Color.DKGRAY, false);
+        labels.addView(t);
+        labels.addView(sub);
+        card.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
         content.addView(card, margin(-1, -2, 0, 0, 0, 10));
         card.setOnClickListener(click);
     }
