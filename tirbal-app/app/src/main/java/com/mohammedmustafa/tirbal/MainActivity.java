@@ -106,6 +106,7 @@ public class MainActivity extends Activity {
         addTile("العمال والتربال", "تسجيل اسم التربال وربط اسمه ببنود التكلفة", v -> showCosts());
         addTile("الأرباح والخسائر", "ملخص الموسم ونتائج المبيعات والتكاليف", v -> showReports());
         addTile("الديون والسلفيات", "السلفيات تسجل كبند تكلفة قابل للتصنيف", v -> showCosts());
+        addTile("اتفاق الشراكة والتسوية", "مسؤوليات التاجر والتربال والخصومات بعد الحصاد", v -> showPartnership());
         addTile("تغيير كلمة المرور", "تحديث كلمة مرور التطبيق", v -> changePassword());
     }
 
@@ -154,10 +155,10 @@ public class MainActivity extends Activity {
         Button add = button("＋ إضافة بند تكلفة");
         content.addView(add);
         add.setOnClickListener(v -> costDialog());
-        tableHeader(new String[]{"التاريخ","اسم التربال","التصنيف","الصنف","الكمية","السعر","الإجمالي"});
+        tableHeader(new String[]{"التاريخ","اسم التربال","التصنيف","الصنف","الكمية","السعر","الإجمالي","الدافع","المسؤول","التسوية","الخصم من"});
         try (Cursor c = db.recent("costs","entry_date")) {
             while (c.moveToNext()) {
-                tableRow(new String[]{c.getString(c.getColumnIndexOrThrow("entry_date")),c.getString(c.getColumnIndexOrThrow("worker")),c.getString(c.getColumnIndexOrThrow("category")),c.getString(c.getColumnIndexOrThrow("item")),c.getString(c.getColumnIndexOrThrow("quantity")),money.format(c.getLong(c.getColumnIndexOrThrow("unit_price"))),money.format(c.getLong(c.getColumnIndexOrThrow("total")))});
+                tableRow(new String[]{c.getString(c.getColumnIndexOrThrow("entry_date")),c.getString(c.getColumnIndexOrThrow("worker")),c.getString(c.getColumnIndexOrThrow("category")),c.getString(c.getColumnIndexOrThrow("item")),c.getString(c.getColumnIndexOrThrow("quantity")),money.format(c.getLong(c.getColumnIndexOrThrow("unit_price"))),money.format(c.getLong(c.getColumnIndexOrThrow("total"))),c.getString(c.getColumnIndexOrThrow("payer")),c.getString(c.getColumnIndexOrThrow("responsible_party")),c.getString(c.getColumnIndexOrThrow("settlement_type")),c.getString(c.getColumnIndexOrThrow("deduction_from"))});
             }
         }
         content.addView(text("إجمالي التكلفة: " + money.format(db.total("costs","total")) + " جنيه سوداني",18,GREEN,true));
@@ -168,19 +169,37 @@ public class MainActivity extends Activity {
         LinearLayout form = form();
         EditText date = field("التاريخ YYYY-MM-DD",false); date.setText(today());
         EditText worker = field("اسم التربال",false);
-        Spinner category = spinner(new String[]{"التقاوي","الأسمدة","المبيدات","الميز","أجور العمال","الوقود والترحيل","الري","المصروفات العامة","السلفيات","أخرى"});
+        Spinner category = spinner(new String[]{"تحضير الأرض","الميز","الأسمدة","المبيدات","التقاوي","الخدمة داخل الزراعة","ضريبة المياه","إيجار الأرض","أجور العمال","الوقود والترحيل","الري","المصروفات العامة","السلفيات","أخرى"});
         EditText item = field("الصنف / البيان",false);
         EditText qty = field("الكمية",false); qty.setInputType(8194);
         EditText price = field("السعر بالجنيه السوداني",false); price.setInputType(2);
+        Spinner responsible = spinner(new String[]{"التاجر","التربال","مشترك","حسب الاتفاق"});
+        Spinner payer = spinner(new String[]{"التاجر","التربال","طرف ثالث"});
+        Spinner settlement = spinner(new String[]{"يتحمله المسؤول ولا يخصم","يخصم بعد الحصاد"});
+        Spinner deduction = spinner(new String[]{"لا يوجد خصم","من نصيب التاجر","من نصيب التربال","مناصفة"});
+        EditText agreement = field("تفاصيل الاتفاق الخاص بهذا البند",false);
         EditText notes = field("ملاحظات",false);
-        form.addView(date); form.addView(worker); form.addView(category); form.addView(item); form.addView(qty); form.addView(price); form.addView(notes);
+        category.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {}
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                String[] defaults = db.defaultResponsibility(category.getSelectedItem().toString());
+                setSpinnerValue(responsible, defaults[0]);
+                setSpinnerValue(payer, defaults[1]);
+            }
+        });
+        form.addView(date); form.addView(worker); form.addView(category); form.addView(item); form.addView(qty); form.addView(price);
+        form.addView(text("المسؤول حسب الاتفاق",14,DARK,true)); form.addView(responsible);
+        form.addView(text("من دفع فعلياً؟",14,DARK,true)); form.addView(payer);
+        form.addView(text("طريقة التسوية",14,DARK,true)); form.addView(settlement);
+        form.addView(text("الخصم من أي نصيب؟",14,DARK,true)); form.addView(deduction);
+        form.addView(agreement); form.addView(notes);
         new AlertDialog.Builder(this).setTitle("إضافة بند تكلفة").setView(form)
             .setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{
                 try {
                     if(empty(date)||empty(item)||empty(qty)||empty(price)) { toast("أكمل التاريخ والصنف والكمية والسعر"); return; }
                     double q=Double.parseDouble(val(qty)); long p=Long.parseLong(val(price));
                     if(q<=0||p<0) throw new NumberFormatException();
-                    db.addCost(val(date),val(worker),category.getSelectedItem().toString(),val(item),q,p,val(notes));
+                    db.addCost(val(date),val(worker),category.getSelectedItem().toString(),val(item),q,p,payer.getSelectedItem().toString(),responsible.getSelectedItem().toString(),settlement.getSelectedItemPosition()==0?"owner_bears":"recoverable",deduction.getSelectedItemPosition()==0?"none":deduction.getSelectedItem().toString(),val(agreement),val(notes));
                     showCosts();
                 } catch(Exception e){toast("تحقق من الكمية والسعر والتاريخ");}
             }).show();
@@ -238,6 +257,31 @@ public class MainActivity extends Activity {
             while(c.moveToNext()) tableRow(new String[]{c.getString(c.getColumnIndexOrThrow("task_date")),c.getString(c.getColumnIndexOrThrow("title")),c.getString(c.getColumnIndexOrThrow("details"))});
         }
         addBack();
+    }
+
+    private void showPartnership() {
+        base("اتفاق الشراكة والتسوية");
+        content.addView(text("نسبة الشراكة الأساسية 50% للتاجر و50% للتربال. التوزيع النهائي يتم بعد مراجعة العقد والالتزامات والخصومات.",15,DARK,true));
+        content.addView(text("التوزيع الافتراضي للمسؤوليات — قابل للتعديل لكل بند عند تسجيل التكلفة:",14,Color.DKGRAY,false));
+        tableHeader(new String[]{"البند","المسؤول","الدافع الافتراضي","التسوية"});
+        try (Cursor c = db.partnershipTerms()) {
+            while (c.moveToNext()) {
+                tableRow(new String[]{c.getString(c.getColumnIndexOrThrow("category")),c.getString(c.getColumnIndexOrThrow("responsible_party")),c.getString(c.getColumnIndexOrThrow("default_payer")),c.getString(c.getColumnIndexOrThrow("settlement_type"))});
+            }
+        }
+        content.addView(text("قواعد الاتفاق المبدئية",17,GREEN,true));
+        content.addView(text("التاجر: تحضير الأرض، ضريبة المياه، إيجار الأرض.\nالتربال: الميز، الأسمدة، المبيدات، التقاوي، الخدمة داخل الزراعة.\nيمكن أن يختلف الدافع عن المسؤول، ويمكن تسجيل مبلغ يُخصم من نصيب أحد الطرفين بعد الحصاد.",14,Color.DKGRAY,false));
+        content.addView(text("لا تُجرَ تسوية نهائية تلقائية قبل إدخال كمية المحصول المباعة، وتأكيد مصروفات الطرفين، وتحديد البنود القابلة للاسترداد حسب الاتفاق.",13,Color.DKGRAY,false));
+        addBack();
+    }
+
+    private void setSpinnerValue(Spinner spinner, String value) {
+        android.widget.SpinnerAdapter adapter = spinner.getAdapter();
+        if (adapter == null) return;
+        for (int i=0; i<adapter.getCount(); i++) {
+            if (value.equals(adapter.getItem(i).toString())) { spinner.setSelection(i); return; }
+        }
+        if (value.equals("مشترك") || value.equals("حسب الاتفاق")) spinner.setSelection(adapter.getCount()-1);
     }
 
     private void showReports() {
