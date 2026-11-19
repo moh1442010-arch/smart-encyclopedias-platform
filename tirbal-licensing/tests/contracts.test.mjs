@@ -36,7 +36,8 @@ test("trial and prices are consistent across app and Worker", () => {
 
 test("startup does not wait for remote config before license bootstrap", () => {
   assert.match(activity, /continueLicenseCheck\(\);/);
-  assert.doesNotMatch(activity, /LicenseManager\.loadConfig\(\(config,error\)->runOnUiThread/);
+  const startup = activity.slice(activity.indexOf("onCreate(Bundle state)"), activity.indexOf("private boolean licenseReady"));
+  assert.doesNotMatch(startup, /LicenseManager\.loadConfig/);
 });
 
 test("cached signed license survives reboot without accepting a clock rollback", () => {
