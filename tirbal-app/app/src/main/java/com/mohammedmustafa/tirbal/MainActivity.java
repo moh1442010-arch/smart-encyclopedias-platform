@@ -1,0 +1,321 @@
+package com.mohammedmustafa.tirbal;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.os.Bundle;
+import android.graphics.Typeface;
+import android.graphics.Color;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.*;
+import android.database.Cursor;
+import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+public class MainActivity extends Activity {
+    private static final int GREEN = Color.rgb(28, 104, 58);
+    private static final int DARK = Color.rgb(18, 65, 39);
+    private static final int GOLD = Color.rgb(190, 145, 43);
+    private static final int BG = Color.rgb(246, 248, 244);
+    private DbHelper db;
+    private LinearLayout root;
+    private final NumberFormat money = NumberFormat.getIntegerInstance(new Locale("ar", "SD"));
+
+    @Override public void onCreate(Bundle state) {
+        super.onCreate(state);
+        getWindow().setStatusBarColor(DARK);
+        getWindow().setNavigationBarColor(DARK);
+        db = new DbHelper(this);
+        showGate();
+    }
+
+    private void base(String title) {
+        root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(BG);
+        TextView header = new TextView(this);
+        header.setText(title);
+        header.setTextColor(Color.WHITE);
+        header.setTextSize(21);
+        header.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        header.setGravity(Gravity.CENTER_VERTICAL | Gravity.RIGHT);
+        header.setPadding(22, 18, 22, 18);
+        header.setBackgroundColor(GREEN);
+        root.addView(header, new LinearLayout.LayoutParams(-1, dp(66)));
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(16, 16, 16, 24);
+        scroll.addView(body);
+        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        setContentView(root);
+        content = body;
+    }
+    private LinearLayout content;
+
+    private void showGate() {
+        base("حساب التربال");
+        TextView intro = text("نظام الحسابات الزراعية السوداني", 18, DARK, true);
+        content.addView(intro);
+        content.addView(text("بياناتك محفوظة على هذا الهاتف. أنشئ كلمة مرور للدخول.", 14, Color.DKGRAY, false));
+        EditText pass = field("كلمة المرور", true);
+        EditText confirm = field("تأكيد كلمة المرور", true);
+        content.addView(pass); content.addView(confirm);
+        Button enter = button(PasswordStore.configured(this) ? "دخول" : "إنشاء كلمة المرور");
+        content.addView(enter);
+        enter.setOnClickListener(v -> {
+            String p = pass.getText().toString();
+            if (p.length() < 8) { toast("كلمة المرور يجب ألا تقل عن 8 أحرف أو أرقام"); return; }
+            if (!PasswordStore.configured(this)) {
+                if (!p.equals(confirm.getText().toString())) { toast("كلمتا المرور غير متطابقتين"); return; }
+                PasswordStore.set(this, p);
+                toast("تم إنشاء كلمة المرور");
+                afterLogin();
+            } else if (PasswordStore.verify(this, p)) afterLogin();
+            else toast("كلمة المرور غير صحيحة");
+        });
+    }
+
+    private void afterLogin() {
+        if (!db.hasProject()) showProjectForm(false);
+        else showHome();
+    }
+
+    private void showHome() {
+        base("حساب التربال");
+        content.addView(text(db.projectName(), 23, DARK, true));
+        content.addView(text("لوحة المشروع الزراعي · الجنيه السوداني", 14, Color.DKGRAY, false));
+        long costs = db.total("costs", "total");
+        long sales = db.total("sales", "gross");
+        long net = db.total("sales", "net");
+        LinearLayout stats = new LinearLayout(this);
+        stats.setOrientation(LinearLayout.VERTICAL);
+        stats.setPadding(14, 14, 14, 14);
+        stats.setBackgroundColor(Color.WHITE);
+        stats.addView(text("إجمالي التكلفة  " + money.format(costs) + " ج.س", 17, DARK, true));
+        stats.addView(text("إجمالي المبيعات  " + money.format(sales) + " ج.س", 17, GREEN, true));
+        stats.addView(text("صافي نتائج المبيعات  " + money.format(net) + " ج.س", 17, net >= 0 ? GREEN : Color.RED, true));
+        content.addView(stats, margin(-1, -2, 0, 12, 0, 14));
+        addTile("بيانات المشروع", "اسم المشروع والمحصول والتاجر والمساحة", v -> showProjectForm(true));
+        addTile("التكلفة", "التقاوي والأسمدة والمبيدات والميز والعمال والمصروفات والسلفيات", v -> showCosts());
+        addTile("السوق والمبيعات", "الفواتير والتاريخ والتكلفة ومنصرفات السوق والصافي", v -> showSales());
+        addTile("الرزنامة الزراعية", "مواعيد الزراعة والري والتسميد والرش والحصاد", v -> showCalendar());
+        addTile("المخزن والمدخلات", "متابعة كميات وأسعار المدخلات الزراعية", v -> showCosts());
+        addTile("العمال والتربال", "تسجيل اسم التربال وربط اسمه ببنود التكلفة", v -> showCosts());
+        addTile("الأرباح والخسائر", "ملخص الموسم ونتائج المبيعات والتكاليف", v -> showReports());
+        addTile("الديون والسلفيات", "السلفيات تسجل كبند تكلفة قابل للتصنيف", v -> showCosts());
+        addTile("تغيير كلمة المرور", "تحديث كلمة مرور التطبيق", v -> changePassword());
+    }
+
+    private void addTile(String title, String subtitle, View.OnClickListener click) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(16, 13, 16, 13);
+        card.setBackgroundColor(Color.WHITE);
+        TextView t = text(title, 18, GREEN, true);
+        TextView s = text(subtitle, 13, Color.DKGRAY, false);
+        card.addView(t); card.addView(s);
+        content.addView(card, margin(-1, -2, 0, 0, 0, 10));
+        card.setOnClickListener(click);
+    }
+
+    private void showProjectForm(boolean edit) {
+        base("بيانات المشروع الزراعي");
+        EditText name = field("اسم المشروع *", false);
+        EditText crop = field("نوع المحصول *", false);
+        EditText trader = field("اسم التاجر *", false);
+        EditText owner = field("اسم صاحب المشروع *", false);
+        EditText accountant = field("اسم المحاسب *", false);
+        EditText area = field("المساحة بالفدان *", false);
+        EditText date = field("تاريخ بداية الموسم YYYY-MM-DD *", false);
+        date.setText(today());
+        EditText region = field("المنطقة الزراعية", false);
+        for (EditText e : new EditText[]{name,crop,trader,owner,accountant,area,date,region}) content.addView(e);
+        Button save = button("حفظ بيانات المشروع");
+        content.addView(save);
+        save.setOnClickListener(v -> {
+            if (empty(name)||empty(crop)||empty(trader)||empty(owner)||empty(accountant)||empty(area)||empty(date)) {
+                toast("أكمل جميع الحقول الإجبارية"); return;
+            }
+            try {
+                db.saveProject(val(name),val(crop),val(trader),val(owner),val(accountant),Double.parseDouble(val(area)),val(date),val(region));
+                toast("تم حفظ بيانات المشروع");
+                showHome();
+            } catch (Exception ex) { toast("تحقق من قيمة المساحة والتاريخ"); }
+        });
+        addBack();
+    }
+
+    private void showCosts() {
+        base("دفتر التكلفة");
+        content.addView(text("أضف كل عملية في سطر مستقل. الإجمالي يحسب تلقائياً بالكمية × السعر.",14,DARK,false));
+        Button add = button("＋ إضافة بند تكلفة");
+        content.addView(add);
+        add.setOnClickListener(v -> costDialog());
+        tableHeader(new String[]{"التاريخ","اسم التربال","الصنف","الكمية","السعر","الإجمالي"});
+        try (Cursor c = db.recent("costs","entry_date")) {
+            while (c.moveToNext()) {
+                tableRow(new String[]{c.getString(c.getColumnIndexOrThrow("entry_date")),c.getString(c.getColumnIndexOrThrow("worker")),c.getString(c.getColumnIndexOrThrow("item")),c.getString(c.getColumnIndexOrThrow("quantity")),money.format(c.getLong(c.getColumnIndexOrThrow("unit_price"))),money.format(c.getLong(c.getColumnIndexOrThrow("total")))});
+            }
+        }
+        content.addView(text("إجمالي التكلفة: " + money.format(db.total("costs","total")) + " جنيه سوداني",18,GREEN,true));
+        addBack();
+    }
+
+    private void costDialog() {
+        LinearLayout form = form();
+        EditText date = field("التاريخ YYYY-MM-DD",false); date.setText(today());
+        EditText worker = field("اسم التربال",false);
+        Spinner category = spinner(new String[]{"التقاوي","الأسمدة","المبيدات","الميز","أجور العمال","الوقود والترحيل","الري","المصروفات العامة","السلفيات","أخرى"});
+        EditText item = field("الصنف / البيان",false);
+        EditText qty = field("الكمية",false); qty.setInputType(8194);
+        EditText price = field("السعر بالجنيه السوداني",false); price.setInputType(2);
+        EditText notes = field("ملاحظات",false);
+        form.addView(date); form.addView(worker); form.addView(category); form.addView(item); form.addView(qty); form.addView(price); form.addView(notes);
+        new AlertDialog.Builder(this).setTitle("إضافة بند تكلفة").setView(form)
+            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{
+                try {
+                    if(empty(date)||empty(item)||empty(qty)||empty(price)) { toast("أكمل التاريخ والصنف والكمية والسعر"); return; }
+                    double q=Double.parseDouble(val(qty)); long p=Long.parseLong(val(price));
+                    if(q<=0||p<0) throw new NumberFormatException();
+                    db.addCost(val(date),val(worker),category.getSelectedItem().toString(),val(item),q,p,val(notes));
+                    showCosts();
+                } catch(Exception e){toast("تحقق من الكمية والسعر والتاريخ");}
+            }).show();
+    }
+
+    private void showSales() {
+        base("السوق والمبيعات");
+        content.addView(text("الصافي = قيمة البيع − التكلفة المخصصة − منصرفات السوق",14,DARK,false));
+        Button add=button("＋ تسجيل فاتورة بيع"); content.addView(add); add.setOnClickListener(v->saleDialog());
+        tableHeader(new String[]{"الفاتورة","التاريخ","قيمة البيع","التكلفة","منصرفات السوق","الصافي"});
+        try(Cursor c=db.recent("sales","sale_date")) {
+            while(c.moveToNext()) tableRow(new String[]{c.getString(c.getColumnIndexOrThrow("invoice")),c.getString(c.getColumnIndexOrThrow("sale_date")),money.format(c.getLong(c.getColumnIndexOrThrow("gross"))),money.format(c.getLong(c.getColumnIndexOrThrow("allocated_cost"))),money.format(c.getLong(c.getColumnIndexOrThrow("market_expenses"))),money.format(c.getLong(c.getColumnIndexOrThrow("net")))});
+        }
+        content.addView(text("إجمالي المبيعات: "+money.format(db.total("sales","gross"))+" جنيه سوداني",18,GREEN,true));
+        addBack();
+    }
+
+    private void saleDialog() {
+        LinearLayout form=form();
+        EditText invoice=field("رقم الفاتورة",false);
+        EditText date=field("التاريخ YYYY-MM-DD",false); date.setText(today());
+        EditText gross=field("قيمة البيع بالجنيه",false); gross.setInputType(2);
+        EditText cost=field("التكلفة المخصصة للمباع",false); cost.setInputType(2);
+        EditText expenses=field("منصرفات السوق",false); expenses.setInputType(2);
+        EditText trader=field("اسم التاجر",false);
+        EditText notes=field("ملاحظات",false);
+        for(EditText e:new EditText[]{invoice,date,gross,cost,expenses,trader,notes}) form.addView(e);
+        new AlertDialog.Builder(this).setTitle("فاتورة بيع").setView(form).setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{
+            try {
+                if(empty(invoice)||empty(date)||empty(gross)) {toast("أدخل رقم الفاتورة والتاريخ وقيمة البيع");return;}
+                long g=Long.parseLong(val(gross)), c=empty(cost)?0:Long.parseLong(val(cost)), x=empty(expenses)?0:Long.parseLong(val(expenses));
+                if(g<0||c<0||x<0) throw new NumberFormatException();
+                db.addSale(val(invoice),val(date),g,c,x,val(trader),val(notes)); showSales();
+            } catch(Exception e){toast("تحقق من المبالغ المدخلة");}
+        }).show();
+    }
+
+    private void showCalendar() {
+        base("الرزنامة الزراعية");
+        content.addView(text("سجل مواعيد الموسم حسب منطقتك ونوع المحصول. المواعيد لا تُفرض تلقائياً لاختلاف المواسم.",14,DARK,false));
+        Button add=button("＋ إضافة موعد زراعي"); content.addView(add); add.setOnClickListener(v->{
+            LinearLayout f=form();
+            EditText date=field("تاريخ الموعد YYYY-MM-DD",false); date.setText(today());
+            EditText title=field("العملية الزراعية",false);
+            Spinner kind=spinner(new String[]{"تجهيز الأرض","الزراعة","الري","التسميد","الرش","إزالة الحشائش","المتابعة","الحصاد","البيع","موعد آخر"});
+            EditText details=field("تفاصيل وملاحظات",false);
+            f.addView(date); f.addView(kind); f.addView(title); f.addView(details);
+            new AlertDialog.Builder(this).setTitle("موعد في الرزنامة").setView(f).setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(a,b)->{
+                if(empty(date)) {toast("أدخل التاريخ");return;}
+                db.addTask(val(date),empty(title)?kind.getSelectedItem().toString():val(title),val(details)); showCalendar();
+            }).show();
+        });
+        tableHeader(new String[]{"التاريخ","العملية","التفاصيل"});
+        try(Cursor c=db.recent("calendar_tasks","task_date")) {
+            while(c.moveToNext()) tableRow(new String[]{c.getString(c.getColumnIndexOrThrow("task_date")),c.getString(c.getColumnIndexOrThrow("title")),c.getString(c.getColumnIndexOrThrow("details"))});
+        }
+        addBack();
+    }
+
+    private void showReports() {
+        base("الأرباح والخسائر");
+        long costs=db.total("costs","total");
+        long gross=db.total("sales","gross");
+        long allocated=db.total("sales","allocated_cost");
+        long expenses=db.total("sales","market_expenses");
+        long salesNet=db.total("sales","net");
+        long result=gross-costs-expenses;
+        reportLine("إجمالي تكلفة المدخلات والمصروفات",costs);
+        reportLine("إجمالي قيمة المبيعات",gross);
+        reportLine("التكلفة المخصصة للمحصول المباع",allocated);
+        reportLine("منصرفات السوق",expenses);
+        reportLine("صافي المبيعات بعد تكلفة المباع",salesNet);
+        content.addView(text("النتيجة التقديرية للمشروع = المبيعات − إجمالي التكلفة المسجلة − منصرفات السوق",14,Color.DKGRAY,false));
+        content.addView(text((result>=0?"فائض مبدئي: ":"عجز مبدئي: ")+money.format(Math.abs(result))+" جنيه سوداني",21,result>=0?GREEN:Color.RED,true));
+        content.addView(text("ملاحظة محاسبية: هذا ملخص نقدي أولي. يجب عدم جمع التكلفة المخصصة للمباع مرة ثانية مع إجمالي التكاليف عند إعداد قائمة ربح وخسارة نهائية. ستُستكمل معالجة تكلفة المخزون والمحصول غير المباع في المرحلة التالية.",13,Color.DKGRAY,false));
+        addBack();
+    }
+    private void reportLine(String label,long amount) { content.addView(text(label+" : "+money.format(amount)+" ج.س",17,DARK,true)); }
+
+    private void changePassword() {
+        LinearLayout f=form();
+        EditText old=field("كلمة المرور الحالية",true), next=field("كلمة المرور الجديدة (8 أحرف على الأقل)",true), confirm=field("تأكيد كلمة المرور الجديدة",true);
+        f.addView(old); f.addView(next); f.addView(confirm);
+        new AlertDialog.Builder(this).setTitle("تغيير كلمة المرور").setView(f).setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{
+            String n=val(next);
+            if(!PasswordStore.verify(this,val(old))) {toast("كلمة المرور الحالية غير صحيحة");return;}
+            if(n.length()<8||!n.equals(val(confirm))) {toast("تحقق من كلمة المرور الجديدة والتأكيد");return;}
+            PasswordStore.set(this,n); toast("تم تغيير كلمة المرور");
+        }).show();
+    }
+
+    private void tableHeader(String[] cells) { tableRow(cells,true); }
+    private void tableRow(String[] cells) { tableRow(cells,false); }
+    private void tableRow(String[] cells,boolean header) {
+        HorizontalScrollView hs=new HorizontalScrollView(this);
+        LinearLayout row=new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL);
+        for(String cell:cells) {
+            TextView t=text(cell,header?13:12,header?Color.WHITE:Color.BLACK,header);
+            t.setGravity(Gravity.CENTER); t.setPadding(12,12,12,12);
+            t.setMinWidth(dp(112)); t.setBackgroundColor(header?GREEN:Color.WHITE);
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dp(112),-2);
+            lp.setMargins(1,1,1,1); row.addView(t,lp);
+        }
+        hs.addView(row); content.addView(hs);
+    }
+
+    private void addBack() { Button b=button("العودة إلى الرئيسية"); content.addView(b); b.setOnClickListener(v->showHome()); }
+    private LinearLayout form() { LinearLayout l=new LinearLayout(this); l.setOrientation(LinearLayout.VERTICAL); l.setPadding(8,8,8,8); return l; }
+    private Spinner spinner(String[] items) {
+        Spinner s=new Spinner(this);
+        ArrayAdapter<String> a=new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,items);
+        s.setAdapter(a); return s;
+    }
+    private EditText field(String hint,boolean password) {
+        EditText e=new EditText(this); e.setSingleLine(true); e.setTextSize(15); e.setHint(hint); e.setPadding(12,8,12,8);
+        if(password) e.setInputType(129);
+        e.setBackgroundColor(Color.WHITE);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(52)); p.setMargins(0,0,0,8); e.setLayoutParams(p);
+        return e;
+    }
+    private TextView text(String value,int size,int color,boolean bold) {
+        TextView t=new TextView(this); t.setText(value); t.setTextSize(size); t.setTextColor(color); t.setGravity(Gravity.RIGHT); t.setPadding(4,7,4,7);
+        if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        return t;
+    }
+    private Button button(String label) {
+        Button b=new Button(this); b.setText(label); b.setTextColor(Color.WHITE); b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(GREEN));
+        b.setAllCaps(false); b.setTextSize(15); return b;
+    }
+    private void toast(String s) { Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
+    private boolean empty(EditText e) { return val(e).trim().isEmpty(); }
+    private String val(EditText e) { return e.getText().toString().trim(); }
+    private String today() { return new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date()); }
+    private LinearLayout.LayoutParams margin(int w,int h,int l,int t,int r,int b) {
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(w,h); p.setMargins(l,t,r,b); return p;
+    }
+    private int dp(int v) { return (int)(v*getResources().getDisplayMetrics().density+0.5f); }
+}
