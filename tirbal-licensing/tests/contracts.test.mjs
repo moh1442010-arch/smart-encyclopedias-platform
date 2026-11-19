@@ -70,7 +70,7 @@ test("multi-worker registry and worker-specific expense screens are present", ()
   assert.match(database, /INSERT OR IGNORE INTO workers.*SELECT 1,TRIM\(worker\)/);
   assert.match(database, /public Cursor workers\(\)/);
   assert.match(database, /public Cursor workerCosts\(String worker\)/);
-  assert.match(database, /INSERT OR IGNORE INTO workers\\(project_id,name\\) SELECT 1,TRIM\\(worker\\).*FROM costs/);
+  assert.ok(database.includes('INSERT OR IGNORE INTO workers(project_id,name) SELECT 1,TRIM(worker) FROM costs WHERE worker IS NOT NULL AND length(TRIM(worker))>0 GROUP BY TRIM(worker)'));
   assert.ok(database.includes('return new String[]{"التربال", "التاجر", "deduct_worker", "من نصيب التربال"};'));
   assert.match(activity, /private void showWorkers\(\)/);
   assert.match(activity, /private void addWorkerDialog\(\)/);
