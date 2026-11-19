@@ -163,7 +163,6 @@ final class LicenseManager {
     }
 
     private static void save(Context c,String token,long serverTime) {
-        long wall=System.currentTimeMillis()/1000;
         prefs(c).edit().putString("token",token).putLong("server_time",serverTime)
                 .putLong("elapsed",SystemClock.elapsedRealtime()).putLong("boot_count",bootCount(c)).apply();
     }
