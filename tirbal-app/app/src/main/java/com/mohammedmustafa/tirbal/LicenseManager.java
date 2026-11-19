@@ -84,7 +84,7 @@ final class LicenseManager {
 
     private static JSONObject request(String method,String path,JSONObject body) throws Exception {
         HttpURLConnection connection=(HttpURLConnection)new URL(API+path).openConnection();
-        connection.setRequestMethod(method); connection.setConnectTimeout(12000); connection.setReadTimeout(12000);
+        connection.setRequestMethod(method); connection.setConnectTimeout(7000); connection.setReadTimeout(7000);
         connection.setRequestProperty("Accept","application/json");
         if(body!=null) {
             connection.setDoOutput(true); connection.setRequestProperty("Content-Type","application/json; charset=utf-8");
@@ -149,9 +149,19 @@ final class LicenseManager {
             long currentElapsed=SystemClock.elapsedRealtime();
             long savedBoot=prefs(context).getLong("boot_count",-1);
             long currentBoot=bootCount(context);
-            if(serverTime<=0||savedElapsed<0||currentElapsed<savedElapsed)return false;
-            if(savedBoot>=0&&currentBoot>=0&&savedBoot!=currentBoot)return false;
-            long trustedNow=serverTime+(currentElapsed-savedElapsed)/1000;
+            if(serverTime<=0||savedElapsed<0)return false;
+            long trustedNow;
+            if(savedBoot>=0&&currentBoot>=0&&savedBoot==currentBoot) {
+                if(currentElapsed<savedElapsed)return false;
+                trustedNow=serverTime+(currentElapsed-savedElapsed)/1000;
+            } else {
+                // elapsedRealtime resets after reboot. Continue the signed license's
+                // validity window using wall time, and reject a clock moved backwards.
+                long savedWall=prefs(context).getLong("wall_time",0);
+                long currentWall=System.currentTimeMillis();
+                if(savedWall<=0||currentWall<savedWall)return false;
+                trustedNow=serverTime+(currentWall-savedWall)/1000;
+            }
             return verifyToken(token,deviceId(context),trustedNow);
         } catch(Exception e) { return false; }
     }
@@ -164,6 +174,7 @@ final class LicenseManager {
 
     private static void save(Context c,String token,long serverTime) {
         prefs(c).edit().putString("token",token).putLong("server_time",serverTime)
-                .putLong("elapsed",SystemClock.elapsedRealtime()).putLong("boot_count",bootCount(c)).apply();
+                .putLong("elapsed",SystemClock.elapsedRealtime()).putLong("boot_count",bootCount(c))
+                .putLong("wall_time",System.currentTimeMillis()).apply();
     }
 }
