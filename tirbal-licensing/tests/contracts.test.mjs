@@ -53,6 +53,16 @@ test("database opens only after license gate and uses encrypted SQLCipher storag
   assert.match(manifest, /allowBackup="false"/);
 });
 
+test("review build can defer licensing and the website nucleus can enforce it later", () => {
+  assert.match(gradle, /REMOTE_LICENSE_CONTROL/);
+  assert.match(activity, /config\.optBoolean\("licenseEnforcement",false\)/);
+  assert.match(activity, /openReviewSession\(\)/);
+  assert.match(worker, /licenseEnforcement:false/);
+  assert.match(worker, /licenseEnforcement:settings\.licenseEnforcement/);
+  assert.match(worker, /licenseEnforcement:b\.licenseEnforcement===true/);
+  assert.match(worker, /id="licenseEnforcement"/);
+});
+
 test("manual review and payment configuration are server-controlled", () => {
   for (const field of ["PAYMENT_BANK_NAME","PAYMENT_ACCOUNT_NAME","PAYMENT_ACCOUNT_NUMBER","PAYMENT_WHATSAPP"]) {
     assert.match(worker, new RegExp(field));
