@@ -60,6 +60,7 @@ public final class DbHelper extends SQLiteOpenHelper {
                     copyTable(plain, encrypted, "partnership_terms");
                     copyTable(plain, encrypted, "sales");
                     copyTable(plain, encrypted, "calendar_tasks");
+                    encrypted.execSQL("INSERT OR IGNORE INTO workers(project_id,name) SELECT 1,TRIM(worker) FROM costs WHERE worker IS NOT NULL AND length(TRIM(worker))>0 GROUP BY TRIM(worker)");
                     encrypted.setTransactionSuccessful();
                 } finally {
                     encrypted.endTransaction();
@@ -184,6 +185,8 @@ public final class DbHelper extends SQLiteOpenHelper {
             {"الأسمدة","مشترك","التاجر","shared_half","مناصفة","تكلفة الأسمدة مناصفة"},
             {"المبيدات","مشترك","التاجر","shared_half","مناصفة","تكلفة المبيدات مناصفة"},
             {"الراكوبة","التربال","التاجر","deduct_worker","من نصيب التربال","مصروف الراكوبة على التربال ويخصم من نصيبه إذا دفعه التاجر"},
+            {"الوقود والترحيل","التربال","التاجر","deduct_worker","من نصيب التربال","مصروفات الوقود والترحيل التي يدفعها التاجر تخصم من نصيب التربال"},
+            {"أخرى","التربال","التاجر","deduct_worker","من نصيب التربال","أي مصروف آخر يدفعه التاجر يخصم من نصيب التربال ما لم يكن مشتركاً أو على التاجر وحده"},
             {"الميز","التربال","التاجر","deduct_worker","من نصيب التربال","يدفعها التاجر وتخصم كاملة من نصيب التربال"},
             {"الخدمة داخل الزراعة","التربال","التاجر","deduct_worker","من نصيب التربال","أعمال الزراعة والنظافة والخدمة على التربال"},
             {"الري وخدمة الحقل","التربال","التاجر","deduct_worker","من نصيب التربال","أعمال الري داخل الحقل على التربال"},
@@ -287,7 +290,7 @@ public final class DbHelper extends SQLiteOpenHelper {
         try (Cursor c = getReadableDatabase().rawQuery("SELECT responsible_party,default_payer,settlement_type,deduction_from FROM partnership_terms WHERE category=?", new String[]{category})) {
             if (c.moveToFirst()) return new String[]{c.getString(0), c.getString(1), c.getString(2), c.getString(3)};
         }
-        return new String[]{"حسب الاتفاق", "التاجر", "agreement_pending", "حسب الاتفاق"};
+        return new String[]{"التربال", "التاجر", "deduct_worker", "من نصيب التربال"};
     }
 
     public void savePartnershipTerm(String category, String responsible, String payer, String settlement, String deduction, String note) {
