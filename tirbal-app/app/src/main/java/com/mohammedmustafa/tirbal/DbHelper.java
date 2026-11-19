@@ -33,6 +33,9 @@ public final class DbHelper extends SQLiteOpenHelper {
             if (!current.renameTo(legacy)) {
                 throw new IllegalStateException("تعذر تجهيز قاعدة البيانات القديمة للترحيل الآمن");
             }
+            moveSidecar(current, legacy, "-wal");
+            moveSidecar(current, legacy, "-shm");
+            moveSidecar(current, legacy, "-journal");
         }
 
         if (legacy.exists() && !done) {
@@ -61,6 +64,9 @@ public final class DbHelper extends SQLiteOpenHelper {
                 if (plain != null) plain.close();
             }
             legacy.delete();
+            new File(legacy.getAbsolutePath() + "-wal").delete();
+            new File(legacy.getAbsolutePath() + "-shm").delete();
+            new File(legacy.getAbsolutePath() + "-journal").delete();
         } else {
             getWritableDatabase();
             if (!done) prefs.edit().putBoolean("encrypted_migration_done", true).commit();
@@ -74,6 +80,13 @@ public final class DbHelper extends SQLiteOpenHelper {
             if (in.read(header) != 16) return false;
             return header[15] == 0 && "SQLite format 3".equals(new String(header, 0, 15, java.nio.charset.StandardCharsets.US_ASCII));
         } catch (Exception e) { return false; }
+    }
+
+    private void moveSidecar(File from, File to, String suffix) {
+        File source = new File(from.getAbsolutePath() + suffix);
+        if (source.exists() && !source.renameTo(new File(to.getAbsolutePath() + suffix))) {
+            throw new IllegalStateException("تعذر نقل ملفات قاعدة البيانات المساعدة بأمان");
+        }
     }
 
     private void deleteDatabaseFiles(File file) {
@@ -99,7 +112,11 @@ public final class DbHelper extends SQLiteOpenHelper {
                 }
                 target.insertWithOnConflict(table, null, values, SQLiteDatabase.CONFLICT_REPLACE);
             }
-        } catch (android.database.sqlite.SQLiteException missingTable) {
+        } catch (android.database.sqlite.SQLiteException error) {
+            String message = error.getMessage();
+            if (message == null || !message.toLowerCase(java.util.Locale.ROOT).contains("no such table")) {
+                throw error;
+            }
             // Older installations may not yet have every optional table.
         }
     }
