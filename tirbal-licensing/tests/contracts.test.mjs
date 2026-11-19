@@ -14,9 +14,9 @@ const manifest = read("tirbal-app/app/src/main/AndroidManifest.xml");
 const config = read("tirbal-licensing/wrangler.toml");
 
 test("Android, Worker and Wrangler use the same product version", () => {
-  assert.match(gradle, /versionName '1\.3\.1'/);
-  assert.match(worker, /const APP_VERSION = "1\.3\.1"/);
-  assert.match(config, /APP_VERSION = "1\.3\.1"/);
+  assert.match(gradle, /versionName '1\.4\.0'/);
+  assert.match(worker, /const APP_VERSION = "1\.4\.0"/);
+  assert.match(config, /APP_VERSION = "1\.4\.0"/);
 });
 
 test("trial and prices are consistent across app and Worker", () => {
