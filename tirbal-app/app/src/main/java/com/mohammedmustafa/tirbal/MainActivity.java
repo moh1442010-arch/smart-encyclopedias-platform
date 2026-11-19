@@ -266,20 +266,31 @@ public class MainActivity extends Activity {
 
     private void showPartnership() {
         base("اتفاق الشراكة والتسوية");
-        content.addView(text("نسبة الشراكة الأساسية 50% للتاجر و50% للتربال. التوزيع النهائي يتم بعد مراجعة العقد والالتزامات والخصومات.",15,DARK,true));
-        content.addView(text("التاجر هو الممول الافتراضي للمصروفات، بينما المسؤولية النهائية والخصم يتبعان اتفاق الطرفين. يمكن تغيير الدافع الفعلي لكل عملية:",14,Color.DKGRAY,false));
-        tableHeader(new String[]{"البند","المسؤول","الدافع الافتراضي","التسوية"});
+        content.addView(text("🤝 اتفاق الموسم: التاجر يمول المشروع حتى الحصاد، والتوزيع الأساسي مناصفة 50% لكل طرف.",16,DARK,true));
+        content.addView(text("🌱 تكاليف مشتركة مناصفة",17,GREEN,true));
+        content.addView(text("تحضير الأرض • التقاوي • الأسمدة • المبيدات",15,Color.DKGRAY,false));
+        content.addView(text("👨‍🌾 التزامات التربال",17,GREEN,true));
+        content.addView(text("تنفيذ الزراعة والنظافة والري وكل أعمال الخدمة داخل الحقل. الميز والمنصرفات والسلفيات وأجور الخدمة التي يدفعها التاجر تخصم كاملة من نصيب التربال.",14,Color.DKGRAY,false));
+        content.addView(text("🏦 التزامات التاجر وحده",17,GREEN,true));
+        content.addView(text("إيجار الأرض وضريبة المياه. لا تدخل هذه البنود في المناصفة ولا تخصم من نصيب التربال.",14,Color.DKGRAY,false));
+        content.addView(text("📌 ملخص البنود المسجلة",17,GREEN,true));
+        reportLine("إجمالي البنود المشتركة المسجلة",db.totalBySettlement("shared_half"));
+        reportLine("إجمالي ما يخصم من نصيب التربال",db.totalByDeduction("من نصيب التربال"));
+        reportLine("إجمالي ما يتحمله التاجر وحده",db.totalBySettlement("trader_only"));
+        tableHeader(new String[]{"البند","المسؤول","الدافع الافتراضي","قاعدة التسوية"});
         try (Cursor c = db.partnershipTerms()) {
             while (c.moveToNext()) {
-                tableRow(new String[]{c.getString(c.getColumnIndexOrThrow("category")),c.getString(c.getColumnIndexOrThrow("responsible_party")),c.getString(c.getColumnIndexOrThrow("default_payer")),c.getString(c.getColumnIndexOrThrow("settlement_type"))});
+                String type=c.getString(c.getColumnIndexOrThrow("settlement_type"));
+                String label="حسب الاتفاق";
+                if("shared_half".equals(type)) label="مناصفة 50/50";
+                else if("deduct_worker".equals(type)) label="خصم من نصيب التربال";
+                else if("trader_only".equals(type)) label="على التاجر وحده";
+                tableRow(new String[]{c.getString(c.getColumnIndexOrThrow("category")),c.getString(c.getColumnIndexOrThrow("responsible_party")),c.getString(c.getColumnIndexOrThrow("default_payer")),label});
             }
         }
-        content.addView(text("قواعد الاتفاق المبدئية",17,GREEN,true));
-        content.addView(text("التاجر: تحضير الأرض، ضريبة المياه، إيجار الأرض.\nالتربال: الميز، الأسمدة، المبيدات، التقاوي، الخدمة داخل الزراعة.\nالتاجر يظهر كدافع افتراضي للمدخلات لأنه يمول المشروع، لكن المسؤولية تقع على الطرف المحدد في الاتفاق. ويمكن أن يتحمل التاجر بنداً نهائياً أو يسترد ما دفعه من نصيب التربال أو العكس، حسب العقد.",14,Color.DKGRAY,false));
-        content.addView(text("لا تُجرَ تسوية نهائية تلقائية قبل إدخال كمية المحصول المباعة، وتأكيد مصروفات الطرفين، وتحديد البنود القابلة للاسترداد حسب الاتفاق.",13,Color.DKGRAY,false));
+        content.addView(text("لا يتم خصم أي مبلغ من نصيب التربال إلا إذا سُجل ضمن بند واضح في الاتفاق. هذه أرقام البنود المسجلة وليست تسوية حصاد نهائية.",13,Color.DKGRAY,false));
         addBack();
     }
-
     private void setSpinnerValue(Spinner spinner, String value) {
         android.widget.SpinnerAdapter adapter = spinner.getAdapter();
         if (adapter == null) return;
