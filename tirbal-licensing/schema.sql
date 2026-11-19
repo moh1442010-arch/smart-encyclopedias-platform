@@ -47,3 +47,9 @@ CREATE TABLE IF NOT EXISTS tirbal_order_attempts (
   window_start INTEGER NOT NULL,
   attempts INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS tirbal_settings (
+  setting_key TEXT PRIMARY KEY,
+  setting_value TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
