@@ -17,6 +17,7 @@ import java.security.Signature;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.UUID;
 
 final class LicenseManager {
     private static final String API = "https://hisab-al-tirbal-licensing.mohammedmustafa.workers.dev";
@@ -139,7 +140,10 @@ final class LicenseManager {
     private static String pad(String value){StringBuilder b=new StringBuilder(value);int n=(4-value.length()%4)%4;for(int i=0;i<n;i++)b.append('=');return b.toString();}
     private static String deviceId(Context c) {
         String id=Settings.Secure.getString(c.getContentResolver(),Settings.Secure.ANDROID_ID);
-        return id==null||id.trim().isEmpty()?"unknown-device-0000":id;
+        if(id!=null&&!id.trim().isEmpty())return id;
+        String fallback=prefs(c).getString("fallback_device_id","");
+        if(fallback.isEmpty()){fallback=UUID.randomUUID().toString().replace("-","");prefs(c).edit().putString("fallback_device_id",fallback).apply();}
+        return fallback;
     }
     private static SharedPreferences prefs(Context c){return c.getSharedPreferences(PREF,Context.MODE_PRIVATE);}
     static boolean cachedValid(Context context) {
