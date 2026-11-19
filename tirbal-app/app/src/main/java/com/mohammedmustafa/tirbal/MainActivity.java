@@ -277,7 +277,10 @@ public class MainActivity extends Activity {
         content.addView(text("🏦 التزامات التاجر وحده",17,GREEN,true));
         content.addView(text("إيجار الأرض وضريبة المياه. لا تدخل هذه البنود في المناصفة ولا تخصم من نصيب التربال.",14,Color.DKGRAY,false));
         content.addView(text("📌 ملخص البنود المسجلة",17,GREEN,true));
-        reportLine("إجمالي البنود المشتركة المسجلة",db.totalBySettlement("shared_half"));
+        long sharedTotal = db.totalBySettlement("shared_half");
+        reportLine("إجمالي البنود المشتركة المسجلة",sharedTotal);
+        reportLine("حصة التاجر من البنود المشتركة (50%)",sharedTotal / 2);
+        reportLine("حصة التربال من البنود المشتركة (50%)",sharedTotal - (sharedTotal / 2));
         reportLine("إجمالي ما يخصم من نصيب التربال",db.totalByDeduction("من نصيب التربال"));
         reportLine("إجمالي ما يتحمله التاجر وحده",db.totalBySettlement("trader_only"));
         tableHeader(new String[]{"البند","المسؤول","الدافع الافتراضي","قاعدة التسوية"});
