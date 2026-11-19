@@ -72,7 +72,7 @@ public final class DbHelper extends SQLiteOpenHelper {
         byte[] header = new byte[16];
         try (FileInputStream in = new FileInputStream(file)) {
             if (in.read(header) != 16) return false;
-            return "SQLite format 3\\u0000".equals(new String(header, java.nio.charset.StandardCharsets.US_ASCII));
+            return header[15] == 0 && "SQLite format 3".equals(new String(header, 0, 15, java.nio.charset.StandardCharsets.US_ASCII));
         } catch (Exception e) { return false; }
     }
 
