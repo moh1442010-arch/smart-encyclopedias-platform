@@ -1,0 +1,168 @@
+const APP_ID = "com.mohammedmustafa.tirbal";
+const APP_VERSION = "1.2.0";
+const PUBLIC_KEY_DER_B64 = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtXiJgeh0o+EMZfmqPnB5+ewloD9QpftQv9S3SWI2WwG/zr748BOXMI1VXf2xbHzsLpyBHqivm4YGvsmFqurUx2oKF9Bekyy6rjLVQ7DrTTB/jVhIVDoeJPah+rQmrPvZfdqYzKokY0TqztElkWW0bwq+dzuEbmU17J3NfLQM8iXjXIvSqcLLd59syK/bEQn90JmejKarE/u/6zw4Btb5fSxgb7Up6nVczvsaMiJoq7BAuMdEHH8SWV0f75VAZzSv45L4HjhWP9aSyEVl6aQ8ClAjgqbkDFEJj9hY6G86sClLSFgDqwwzDOObLa6rJQN3JuZVJb2Tvyqf5XTfFXLcFwIDAQAB";
+const PLANS = {
+  monthly: { amount: 25000, seconds: 30 * 86400 },
+  annual: { amount: 250000, seconds: 365 * 86400 },
+  lifetime: { amount: 500000, seconds: 0 }
+};
+const enc = new TextEncoder();
+const b64url = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");
+const fromB64 = value => Uint8Array.from(atob(value), c => c.charCodeAt(0));
+const json = (data,status=200,headers={}) => new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store",...headers}});
+const clean = (v,n=120) => typeof v==="string" ? v.trim().slice(0,n) : "";
+const validDevice = v => /^[A-Za-z0-9_-]{8,100}$/.test(v);
+const planExpiry = (plan,now) => plan==="lifetime" ? 0 : now+PLANS[plan].seconds;
+
+async function schema(env) {
+  await env.DB.batch([
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_devices (device_id TEXT PRIMARY KEY, first_seen INTEGER NOT NULL, trial_expires INTEGER NOT NULL, plan TEXT, license_expires INTEGER, activation_token TEXT, updated_at INTEGER NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_orders (id TEXT PRIMARY KEY, created_at INTEGER NOT NULL, customer_name TEXT NOT NULL, contact TEXT NOT NULL, device_id TEXT NOT NULL, plan TEXT NOT NULL, amount_sdg INTEGER NOT NULL, receipt_reference TEXT NOT NULL, status TEXT NOT NULL, reviewed_at INTEGER, reviewer_note TEXT, activation_token TEXT, token_expires INTEGER, app_version TEXT NOT NULL)"),
+    env.DB.prepare("CREATE UNIQUE INDEX IF NOT EXISTS idx_tirbal_receipt_active ON tirbal_orders(receipt_reference) WHERE status IN ('pending','approved')"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_tirbal_orders_status ON tirbal_orders(status,created_at DESC)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id TEXT NOT NULL, event TEXT NOT NULL, actor TEXT NOT NULL, created_at INTEGER NOT NULL, detail TEXT)")
+  ]);
+}
+function privateDer(value) {
+  const raw=String(value||"").trim().replace(/\s+/g,"");
+  if(!/^[A-Za-z0-9+/]+={0,2}$/.test(raw)) throw new Error("SIGNING_KEY_INVALID");
+  const der=fromB64(raw);
+  if(der.length<500 || der[0]!==0x30) throw new Error("SIGNING_KEY_INVALID");
+  return der;
+}
+async function signingKey(env) {
+  if(!env.TIRBAL_LICENSE_PRIVATE_KEY_PKCS8_B64) throw new Error("SIGNING_NOT_CONFIGURED");
+  return crypto.subtle.importKey("pkcs8",privateDer(env.TIRBAL_LICENSE_PRIVATE_KEY_PKCS8_B64),{name:"RSASSA-PKCS1-v1_5",hash:"SHA-256"},false,["sign"]);
+}
+async function issue(env,device,plan,expires) {
+  const payload=enc.encode("app="+APP_ID+";device="+device+";plan="+plan+";expires="+expires);
+  const signature=await crypto.subtle.sign("RSASSA-PKCS1-v1_5",await signingKey(env),payload);
+  return b64url(payload)+"."+b64url(signature);
+}
+async function audit(env,id,event,actor,detail="") {
+  await env.DB.prepare("INSERT INTO tirbal_audit(order_id,event,actor,created_at,detail) VALUES(?,?,?,?,?)").bind(id,event,actor,Math.floor(Date.now()/1000),detail.slice(0,400)).run();
+}
+function cookie(request,name) {
+  const part=(request.headers.get("Cookie")||"").split(";").map(x=>x.trim()).find(x=>x.startsWith(name+"="));
+  return part ? part.slice(name.length+1) : "";
+}
+function adminPassword(env) { return typeof env.TIRBAL_ADMIN_PASSWORD==="string" ? env.TIRBAL_ADMIN_PASSWORD : ""; }
+async function hmacKey(env) {
+  const raw=await crypto.subtle.digest("SHA-256",enc.encode("TirbalAdminSession-v1:"+adminPassword(env)));
+  return crypto.subtle.importKey("raw",raw,{name:"HMAC",hash:"SHA-256"},false,["sign","verify"]);
+}
+async function session(env) {
+  const p=b64url(enc.encode(JSON.stringify({exp:Math.floor(Date.now()/1000)+28800,nonce:b64url(crypto.getRandomValues(new Uint8Array(16)))})));
+  const s=b64url(await crypto.subtle.sign("HMAC",await hmacKey(env),enc.encode(p)));
+  return p+"."+s;
+}
+async function admin(request,env) {
+  if(adminPassword(env).length<32) return false;
+  const parts=cookie(request,"tirbal_admin").split(".");
+  if(parts.length!==2) return false;
+  try {
+    const sig=parts[1].replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-parts[1].length%4)%4);
+    if(!await crypto.subtle.verify("HMAC",await hmacKey(env),fromB64(sig),enc.encode(parts[0]))) return false;
+    const p=parts[0].replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-parts[0].length%4)%4);
+    return JSON.parse(new TextDecoder().decode(fromB64(p))).exp>Math.floor(Date.now()/1000);
+  } catch { return false; }
+}
+async function publicConfig(env) {
+  return {
+    appId:APP_ID,appVersion:APP_VERSION,trialDays:15,currency:"SDG",
+    plans:{monthly:{amount:PLANS.monthly.amount,days:30},annual:{amount:PLANS.annual.amount,days:365},lifetime:{amount:PLANS.lifetime.amount,days:0}},
+    payment:{bankName:clean(env.PAYMENT_BANK_NAME,100),accountName:clean(env.PAYMENT_ACCOUNT_NAME,120),accountNumber:clean(env.PAYMENT_ACCOUNT_NUMBER,80),whatsapp:clean(env.PAYMENT_WHATSAPP,30)}
+  };
+}
+async function handle(request,env) {
+  const u=new URL(request.url);
+  if(!env.DB) return json({error:"SERVICE_NOT_CONFIGURED"},503);
+  await schema(env);
+  if(u.pathname==="/health"&&request.method==="GET") return json({ok:true,service:"hisab-al-tirbal-licensing",mode:"manual-payment-review",appVersion:APP_VERSION});
+  if(u.pathname==="/api/config"&&request.method==="GET") return json(await publicConfig(env));
+  if(u.pathname==="/diagnostics/signing-pair"&&request.method==="GET") {
+    try {
+      const priv=await signingKey(env);
+      const pub=await crypto.subtle.importKey("spki",fromB64(PUBLIC_KEY_DER_B64),{name:"RSASSA-PKCS1-v1_5",hash:"SHA-256"},false,["verify"]);
+      const probe=enc.encode("Hisab Al-Tirbal signing pair check");
+      const sig=await crypto.subtle.sign("RSASSA-PKCS1-v1_5",priv,probe);
+      return json({signingReady:await crypto.subtle.verify("RSASSA-PKCS1-v1_5",pub,sig,probe)});
+    } catch { return json({signingReady:false,error:"SIGNING_NOT_READY"},503); }
+  }
+  if(u.pathname==="/api/bootstrap"&&request.method==="POST") {
+    let body;try{body=await request.json();}catch{return json({error:"INVALID_JSON"},400);}
+    const device=clean(body.deviceId,100);
+    if(!validDevice(device)) return json({error:"INVALID_DEVICE"},400);
+    const now=Math.floor(Date.now()/1000);
+    let row=await env.DB.prepare("SELECT * FROM tirbal_devices WHERE device_id=?").bind(device).first();
+    if(!row) {
+      const expires=now+15*86400;
+      await env.DB.prepare("INSERT INTO tirbal_devices(device_id,first_seen,trial_expires,updated_at) VALUES(?,?,?,?)").bind(device,now,expires,now).run();
+      row={device_id:device,first_seen:now,trial_expires:expires,plan:null,license_expires:null,activation_token:null};
+    }
+    if(row.activation_token && (row.license_expires===0 || row.license_expires>now)) return json({status:"licensed",token:row.activation_token,serverTime:now});
+    if(row.trial_expires>now) {
+      const token=await issue(env,device,"trial",row.trial_expires);
+      return json({status:"trial",token,expires:row.trial_expires,serverTime:now});
+    }
+    return json({status:"expired",trialExpiredAt:row.trial_expires,serverTime:now});
+  }
+  if(u.pathname==="/api/license"&&request.method==="GET") {
+    const device=clean(u.searchParams.get("deviceId"),100);
+    if(!validDevice(device)) return json({error:"INVALID_DEVICE"},400);
+    const now=Math.floor(Date.now()/1000);
+    const row=await env.DB.prepare("SELECT trial_expires,license_expires,activation_token FROM tirbal_devices WHERE device_id=?").bind(device).first();
+    if(!row) return json({error:"DEVICE_NOT_REGISTERED"},404);
+    if(row.activation_token && (row.license_expires===0 || row.license_expires>now)) return json({status:"licensed",token:row.activation_token,serverTime:now});
+    if(row.trial_expires>now) return json({status:"trial",token:await issue(env,device,"trial",row.trial_expires),expires:row.trial_expires,serverTime:now});
+    return json({status:"expired",serverTime:now});
+  }
+  if(u.pathname==="/api/orders"&&request.method==="POST") {
+    let b;try{b=await request.json();}catch{return json({error:"INVALID_JSON"},400);}
+    const name=clean(b.customerName,100),contact=clean(b.contact,25),device=clean(b.deviceId,100);
+    const plan=clean(b.plan,20),receipt=clean(b.receiptReference,100);
+    if(name.length<2||!/^\+?[0-9()\s-]{8,25}$/.test(contact)||!validDevice(device)||!PLANS[plan]||!/^[A-Za-z0-9\-_/]{4,100}$/.test(receipt)) return json({error:"INVALID_FIELDS"},400);
+    const exists=await env.DB.prepare("SELECT 1 FROM tirbal_devices WHERE device_id=?").bind(device).first();
+    if(!exists) return json({error:"DEVICE_NOT_REGISTERED"},409);
+    const duplicate=await env.DB.prepare("SELECT id FROM tirbal_orders WHERE receipt_reference=? AND status IN ('pending','approved')").bind(receipt).first();
+    if(duplicate) return json({error:"RECEIPT_REFERENCE_ALREADY_USED"},409);
+    const id=crypto.randomUUID(),now=Math.floor(Date.now()/1000);
+    await env.DB.prepare("INSERT INTO tirbal_orders(id,created_at,customer_name,contact,device_id,plan,amount_sdg,receipt_reference,status,app_version) VALUES(?,?,?,?,?,?,?,?,?,?)").bind(id,now,name,contact,device,plan,PLANS[plan].amount,receipt,"pending",APP_VERSION).run();
+    await audit(env,id,"order_created","customer","Payment requires manual verification.");
+    return json({orderId:id,status:"pending",amountSdg:PLANS[plan].amount,message:"تم تسجيل طلبك. التفعيل بعد تأكيد الدفع ومراجعة الإدارة."},201);
+  }
+  if(u.pathname==="/admin/login"&&request.method==="POST") {
+    let b;try{b=await request.json();}catch{return json({error:"INVALID_JSON"},400);}
+    if(adminPassword(env).length<32||clean(b.password,256)!==adminPassword(env)) return json({error:"INVALID_CREDENTIALS"},401);
+    return json({ok:true},200,{"set-cookie":"tirbal_admin="+await session(env)+"; Path=/admin; HttpOnly; Secure; SameSite=Strict; Max-Age=28800"});
+  }
+  if(u.pathname==="/admin/orders"&&request.method==="GET") {
+    if(!await admin(request,env)) return json({error:"UNAUTHORIZED"},401);
+    const status=u.searchParams.get("status")||"pending";
+    if(!["pending","approved","rejected"].includes(status)) return json({error:"INVALID_STATUS"},400);
+    const rows=await env.DB.prepare("SELECT id,created_at,customer_name,contact,device_id,plan,amount_sdg,receipt_reference,status FROM tirbal_orders WHERE status=? ORDER BY created_at DESC LIMIT 100").bind(status).all();
+    return json({orders:rows.results||[]});
+  }
+  const review=u.pathname.match(/^\/admin\/orders\/([0-9a-f-]{36})\/(approve|reject)$/i);
+  if(review&&request.method==="POST") {
+    if(!await admin(request,env)) return json({error:"UNAUTHORIZED"},401);
+    let b={};try{b=await request.json();}catch{}
+    const order=await env.DB.prepare("SELECT * FROM tirbal_orders WHERE id=?").bind(review[1]).first();
+    if(!order) return json({error:"ORDER_NOT_FOUND"},404);
+    if(order.status!=="pending") return json({error:"ORDER_ALREADY_REVIEWED"},409);
+    const now=Math.floor(Date.now()/1000),note=clean(b.note,400);
+    if(review[2]==="reject") {
+      await env.DB.prepare("UPDATE tirbal_orders SET status='rejected',reviewed_at=?,reviewer_note=? WHERE id=? AND status='pending'").bind(now,note||"لم يتم تأكيد الدفع",order.id).run();
+      await audit(env,order.id,"order_rejected","admin",note);
+      return json({status:"rejected"});
+    }
+    const expires=planExpiry(order.plan,now),token=await issue(env,order.device_id,order.plan,expires);
+    const updated=await env.DB.prepare("UPDATE tirbal_orders SET status='approved',reviewed_at=?,reviewer_note=?,activation_token=?,token_expires=? WHERE id=? AND status='pending'").bind(now,note||"تم التحقق من الدفع",token,expires,order.id).run();
+    if(!updated.meta||updated.meta.changes!==1) return json({error:"ORDER_ALREADY_REVIEWED"},409);
+    await env.DB.prepare("UPDATE tirbal_devices SET plan=?,license_expires=?,activation_token=?,updated_at=? WHERE device_id=?").bind(order.plan,expires,token,now,order.device_id).run();
+    await audit(env,order.id,"license_issued","admin","plan="+order.plan);
+    return json({status:"approved",activationToken:token,expiresAt:expires});
+  }
+  return json({error:"NOT_FOUND"},404);
+}
+export default {async fetch(request,env){try{return await handle(request,env);}catch{return json({error:"INTERNAL_ERROR"},500);}}};
