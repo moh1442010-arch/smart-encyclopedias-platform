@@ -1,0 +1,45 @@
+name: Test Hisab Al-Tirbal licensing contracts
+
+on:
+  push:
+    branches:
+      - main
+      - feature/hisab-al-tirbal-android-v1
+    paths:
+      - "tirbal-app/**"
+      - "tirbal-licensing/**"
+      - ".github/workflows/test-tirbal-licensing.yml"
+  pull_request:
+    paths:
+      - "tirbal-app/**"
+      - "tirbal-licensing/**"
+      - ".github/workflows/test-tirbal-licensing.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check Worker syntax
+        run: node --check tirbal-licensing/worker/src/index.js
+      - name: Run product, security and pricing contracts
+        run: node --test tirbal-licensing/tests/*.test.mjs
+      - name: Validate isolated D1 schema
+        run: |
+          python3 - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          db=sqlite3.connect(":memory:")
+          db.executescript(Path("tirbal-licensing/schema.sql").read_text(encoding="utf-8"))
+          tables={r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+          required={"tirbal_devices","tirbal_orders","tirbal_audit","tirbal_admin_attempts","tirbal_order_attempts"}
+          missing=required-tables
+          assert not missing, f"Missing Tirbal D1 tables: {sorted(missing)}"
+          print("PASS: Tirbal licensing schema")
+          PY
