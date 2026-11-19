@@ -347,11 +347,12 @@ public class MainActivity extends Activity {
         stats.addView(text("صافي نتائج المبيعات  " + money.format(net) + " ج.س", 17, net >= 0 ? GREEN : Color.RED, true));
         content.addView(stats, margin(-1, -2, 0, 12, 0, 14));
         addTile("📁 بيانات المشروع", "اسم المشروع والمحصول والتاجر والمساحة", v -> showProjectForm(true));
-        addTile("🧾 دفتر التكلفة", "التقاوي والأسمدة والمبيدات والميز والعمال والمصروفات والسلفيات", v -> showCosts());
+        addTile("👨‍🌾 التربالون", "إضافة تربال وإدارة حساب كل تربال على حدة", v -> showWorkers());
+        addTile("🧾 دفتر التكلفة", "التقاوي والأسمدة والمبيدات والميز والراكوبة والمنصرفات والسلفيات", v -> showCosts());
         addTile("🛒 السوق والمبيعات", "الفواتير والتاريخ والتكلفة ومنصرفات السوق والصافي", v -> showSales());
         addTile("📅 الرزنامة الزراعية", "مواعيد الزراعة والري والتسميد والرش والحصاد", v -> showCalendar());
         addTile("🌱 مدخلات الزراعة", "تسجيل كميات وأسعار التقاوي والأسمدة والمبيدات في دفتر التكلفة", v -> showCosts());
-        addTile("👨‍🌾 العمال والتربال", "تسجيل اسم التربال وربط اسمه ببنود التكلفة", v -> showCosts());
+
         addTile("📊 الأرباح والخسائر", "ملخص الموسم ونتائج المبيعات والتكاليف", v -> showReports());
         addTile("💳 الديون والسلفيات", "السلفيات تسجل كبند تكلفة قابل للتصنيف", v -> showCosts());
         addTile("🤝 اتفاق الشراكة والتسوية", "مسؤوليات التاجر والتربال والخصومات بعد الحصاد", v -> showPartnership());
@@ -388,6 +389,88 @@ public class MainActivity extends Activity {
         addBack();
     }
 
+
+    private void showWorkers() {
+        base("إدارة التربالين");
+        content.addView(text("أضف كل تربال باسمه. لكل تربال سجل مستقل للراكوبة والميز والتقاوي والأسمدة والمبيدات والمنصرفات والسلفيات.",14,DARK,false));
+        Button add=button("＋ إضافة تربال");
+        content.addView(add);
+        add.setOnClickListener(v->addWorkerDialog());
+        tableHeader(new String[]{"اسم التربال","إجمالي ما يخصم من نصيبه","تكاليف مشتركة"});
+        boolean any=false;
+        try(Cursor workers=db.workers()) {
+            while(workers.moveToNext()) {
+                any=true;
+                String name=workers.getString(1);
+                long deductions=db.workerTotal(name,"deduct_worker");
+                long shared=db.workerTotal(name,"shared_half");
+                LinearLayout card=new LinearLayout(this);
+                card.setOrientation(LinearLayout.VERTICAL);
+                card.setPadding(16,12,16,12);
+                card.setBackground(rounded(Color.WHITE,16,Color.rgb(225,232,222)));
+                card.addView(text("👨‍🌾 "+name,19,GREEN,true));
+                card.addView(text("الراكوبة • الميز • التقاوي • السماد • المبيدات • المنصرفات • السلفيات",13,Color.DKGRAY,false));
+                card.addView(text("خصومات نصيبه: "+money.format(deductions)+" ج.س",15,DARK,true));
+                card.addView(text("بنود مشتركة: "+money.format(shared)+" ج.س",14,Color.DKGRAY,false));
+                Button details=button("فتح حساب "+name);
+                card.addView(details);
+                details.setOnClickListener(v->showWorkerDetails(name));
+                content.addView(card,margin(-1,-2,0,0,0,10));
+            }
+        }
+        if(!any) content.addView(text("لم تتم إضافة تربال بعد. اضغط «إضافة تربال» للبدء.",15,Color.DKGRAY,false));
+        addBack();
+    }
+
+    private void addWorkerDialog() {
+        LinearLayout f=form();
+        EditText name=field("اسم التربال",false);
+        EditText phone=field("رقم الهاتف (اختياري)",false);
+        EditText notes=field("ملاحظات (اختياري)",false);
+        f.addView(name); f.addView(phone); f.addView(notes);
+        new AlertDialog.Builder(this).setTitle("إضافة تربال").setView(f).setNegativeButton("إلغاء",null).setPositiveButton("حفظ", (d,w)->{
+            if(empty(name)){toast("أدخل اسم التربال");return;}
+            try {
+                if(db.hasWorker(val(name))){toast("هذا التربال مسجل بالفعل");return;}
+                db.addWorker(val(name),val(phone),val(notes));
+                showWorkers();
+            } catch(Exception e){toast("تعذر حفظ التربال. تحقق من الاسم.");}
+        }).show();
+    }
+
+    private void showWorkerDetails(String workerName) {
+        base("حساب التربال: "+workerName);
+        content.addView(text("الحساب منفصل حسب اسم التربال. تسجل المصروفات على هذا التربال ولا تختلط بحساب بقية التربالين.",14,DARK,false));
+        String[] categories={"الراكوبة","الميز","التقاوي","الأسمدة","المبيدات","المنصرفات","السلفيات"};
+        String[] icons={"🏠","🍲","🌾","🧪","🛡️","🧾","💳"};
+        for(int i=0;i<categories.length;i++){
+            final String category=categories[i];
+            addTile(icons[i]+" "+category,"إضافة ومراجعة بند "+category,v->costDialog(workerName,category));
+        }
+        Button other=button("＋ إضافة مصروف آخر لهذا التربال");
+        content.addView(other);
+        other.setOnClickListener(v->costDialog(workerName,null));
+        reportLine("إجمالي ما يخصم من نصيب التربال",db.workerTotal(workerName,"deduct_worker"));
+        reportLine("إجمالي البنود المشتركة",db.workerTotal(workerName,"shared_half"));
+        reportLine("إجمالي ما على التاجر وحده",db.workerTotal(workerName,"trader_only"));
+        tableHeader(new String[]{"التاريخ","البند","الصنف","الكمية","السعر","الإجمالي","الدافع","التسوية"});
+        try(Cursor rows=db.workerCosts(workerName)){
+            while(rows.moveToNext()){
+                tableRow(new String[]{rows.getString(rows.getColumnIndexOrThrow("entry_date")),
+                    rows.getString(rows.getColumnIndexOrThrow("category")),
+                    rows.getString(rows.getColumnIndexOrThrow("item")),
+                    rows.getString(rows.getColumnIndexOrThrow("quantity")),
+                    money.format(rows.getLong(rows.getColumnIndexOrThrow("unit_price"))),
+                    money.format(rows.getLong(rows.getColumnIndexOrThrow("total"))),
+                    rows.getString(rows.getColumnIndexOrThrow("payer")),
+                    rows.getString(rows.getColumnIndexOrThrow("settlement_type"))});
+            }
+        }
+        Button back=button("العودة إلى قائمة التربالين");
+        content.addView(back);
+        back.setOnClickListener(v->showWorkers());
+    }
+
     private void showCosts() {
         base("دفتر التكلفة");
         content.addView(text("أضف كل عملية في سطر مستقل. الإجمالي يحسب تلقائياً بالكمية × السعر.",14,DARK,false));
@@ -404,11 +487,15 @@ public class MainActivity extends Activity {
         addBack();
     }
 
-    private void costDialog() {
+    private void costDialog() { costDialog("", null); }
+
+    private void costDialog(String workerName, String presetCategory) {
         LinearLayout form = form();
         EditText date = field("التاريخ YYYY-MM-DD",false); date.setText(today());
         EditText worker = field("اسم التربال",false);
-        Spinner category = spinner(new String[]{"تحضير الأرض","التقاوي","الأسمدة","المبيدات","الميز","الخدمة داخل الزراعة","الري وخدمة الحقل","أجور العمال","المنصرفات","السلفيات","ضريبة المياه","إيجار الأرض","الوقود والترحيل","أخرى"});
+        if(!workerName.isEmpty()){worker.setText(workerName);worker.setEnabled(false);}
+        Spinner category = spinner(new String[]{"تحضير الأرض","التقاوي","الأسمدة","المبيدات","الراكوبة","الميز","الخدمة داخل الزراعة","الري وخدمة الحقل","أجور العمال","المنصرفات","السلفيات","ضريبة المياه","إيجار الأرض","الوقود والترحيل","أخرى"});
+        if(presetCategory!=null) setSpinnerValue(category,presetCategory);
         EditText item = field("الصنف / البيان",false);
         EditText qty = field("الكمية",false); qty.setInputType(8194);
         EditText price = field("السعر بالجنيه السوداني",false); price.setInputType(2);
@@ -440,7 +527,7 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this).setTitle("إضافة بند تكلفة").setView(form)
             .setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{
                 try {
-                    if(empty(date)||empty(item)||empty(qty)||empty(price)) { toast("أكمل التاريخ والصنف والكمية والسعر"); return; }
+                    if(empty(date)||empty(item)||empty(qty)||empty(price)||empty(worker)) { toast("أكمل التاريخ واسم التربال والصنف والكمية والسعر"); return; }
                     double q=Double.parseDouble(val(qty)); long p=Long.parseLong(val(price));
                     if(q<=0||p<0) throw new NumberFormatException();
                     String settlementCode = new String[]{"shared_half","deduct_worker","trader_only","agreement_pending"}[settlement.getSelectedItemPosition()];
@@ -530,8 +617,18 @@ public class MainActivity extends Activity {
         reportLine("إجمالي البنود المشتركة المسجلة",sharedTotal);
         reportLine("حصة التاجر من البنود المشتركة (50%)",sharedTotal / 2);
         reportLine("حصة التربال من البنود المشتركة (50%)",sharedTotal - (sharedTotal / 2));
-        reportLine("إجمالي ما يخصم من نصيب التربال",db.totalByDeduction("من نصيب التربال"));
-        reportLine("إجمالي ما يتحمله التاجر وحده",db.totalBySettlement("trader_only"));
+        long workerDeductions = db.totalByDeduction("من نصيب التربال") + db.total("sales","market_expenses");
+        long traderOnly = db.totalBySettlement("trader_only");
+        long grossHarvest = db.total("sales","gross");
+        long traderNet = grossHarvest / 2 - sharedTotal / 2 - traderOnly;
+        long workerNet = grossHarvest - grossHarvest / 2 - (sharedTotal - sharedTotal / 2) - workerDeductions;
+        reportLine("إجمالي ما يخصم من نصيب التربال",workerDeductions);
+        reportLine("إجمالي ما يتحمله التاجر وحده",traderOnly);
+        content.addView(text("التسوية التقديرية بعد الإنتاج",18,GREEN,true));
+        reportLine("إجمالي إيراد الإنتاج/المبيعات",grossHarvest);
+        reportLine("صافي نصيب التاجر بعد حصته من المشترك والتزاماته",traderNet);
+        reportLine("صافي نصيب التربال بعد حصته من المشترك والميز والمنصرفات والسلفيات",workerNet);
+        content.addView(text("الحساب يفترض أن كل المصروفات مسجلة مرة واحدة، وأن ما يخص التربال دفعه التاجر. ضريبة المياه وإيجار الأرض على التاجر ولا تخصم من التربال.",13,Color.DKGRAY,false));
         tableHeader(new String[]{"البند","المسؤول","الدافع الافتراضي","قاعدة التسوية"});
         try (Cursor c = db.partnershipTerms()) {
             while (c.moveToNext()) {
