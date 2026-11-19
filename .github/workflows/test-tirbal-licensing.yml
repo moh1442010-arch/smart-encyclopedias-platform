@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/hisab-al-tirbal-android-v1
+      - feature/tirbal-multi-worker-settlement-v1
     paths:
       - "tirbal-app/**"
       - "tirbal-licensing/**"
