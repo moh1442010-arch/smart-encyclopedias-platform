@@ -2,6 +2,10 @@ package com.mohammedmustafa.tirbal;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
+import android.os.Handler;
+import android.os.Looper;
+import org.json.JSONObject;
 import android.os.Bundle;
 import android.graphics.Typeface;
 import android.graphics.Color;
@@ -28,8 +32,91 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(DARK);
         getWindow().setNavigationBarColor(DARK);
-        db = new DbHelper(this);
-        showGate();
+        LicenseManager.check(this, result -> runOnUiThread(() -> {
+            if (result.unlocked) {
+                db = new DbHelper(this);
+                licenseReady = true;
+                showGate();
+                startLicenseMonitor();
+            } else {
+                showSubscription(result);
+            }
+        }));
+    }
+
+    private boolean licenseReady = false;
+    private final Handler licenseHandler = new Handler(Looper.getMainLooper());
+    private final Runnable licenseMonitor = new Runnable() {
+        @Override public void run() {
+            if (licenseReady && !LicenseManager.cachedValid(MainActivity.this)) {
+                licenseReady = false;
+                if (db != null) db.close();
+                showSubscription(new LicenseManager.Result(false, true, "", "انتهت صلاحية الترخيص.", 0));
+            }
+            licenseHandler.postDelayed(this, 30000);
+        }
+    };
+    private void startLicenseMonitor() {
+        licenseHandler.removeCallbacks(licenseMonitor);
+        licenseHandler.postDelayed(licenseMonitor, 30000);
+    }
+
+    private void showSubscription(LicenseManager.Result result) {
+        base("اشتراك حساب التربال");
+        content.addView(text("فترة تجريبية مجانية لمدة 15 يوماً، ثم يلزم اشتراك لمواصلة العمل.",16,DARK,true));
+        content.addView(text(result.message,14,Color.DKGRAY,false));
+        content.addView(text("الأسعار بالجنيه السوداني",17,GREEN,true));
+        content.addView(text("شهري 25,000 ج.س  •  سنوي 250,000 ج.س  •  دائم 500,000 ج.س",15,DARK,true));
+        TextView payment=text("جارٍ تحميل بيانات التحويل...",14,Color.DKGRAY,false);
+        content.addView(payment);
+        LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
+            if(config==null){payment.setText(error);return;}
+            JSONObject p=config.optJSONObject("payment");
+            if(p==null){payment.setText("بيانات التحويل غير متاحة حالياً.");return;}
+            String details="بنك التحويل: "+p.optString("bankName","غير محدد")+
+                    "\\nاسم الحساب: "+p.optString("accountName","غير محدد")+
+                    "\\nرقم الحساب: "+p.optString("accountNumber","لم يُضبط بعد")+
+                    "\\nواتساب الدعم: "+p.optString("whatsapp","لم يُضبط بعد");
+            payment.setText(details);
+        }));
+        EditText customer=field("اسم صاحب الاشتراك",false);
+        EditText contact=field("رقم هاتف العميل",false);
+        EditText receipt=field("رقم مرجع التحويل",false);
+        Spinner plan=spinner(new String[]{"شهري — 25,000 جنيه","سنوي — 250,000 جنيه","دائم — 500,000 جنيه"});
+        content.addView(customer);content.addView(contact);content.addView(plan);content.addView(receipt);
+        Button submit=button("إرسال طلب الاشتراك للمراجعة");
+        content.addView(submit);
+        submit.setOnClickListener(v->{
+            if(empty(customer)||empty(contact)||empty(receipt)){toast("أكمل الاسم ورقم الهاتف ومرجع التحويل");return;}
+            String code=new String[]{"monthly","annual","lifetime"}[plan.getSelectedItemPosition()];
+            submit.setEnabled(false);
+            LicenseManager.submitOrder(val(customer),val(contact),code,val(receipt),result.deviceId,(order,error)->runOnUiThread(()->{
+                submit.setEnabled(true);
+                if(order==null){toast(error);return;}
+                String id=order.optString("orderId");
+                String message="طلب اشتراك حساب التربال\\nرقم الطلب: "+id+
+                        "\\nالاسم: "+val(customer)+"\\nالخطة: "+plan.getSelectedItem().toString()+
+                        "\\nمرجع التحويل: "+val(receipt)+"\\nالمبلغ: "+order.optLong("amountSdg")+" جنيه سوداني"+
+                        "\\nيرجى مراجعة التحويل وتفعيل الترخيص بعد التأكد من وصول المبلغ.";
+                new AlertDialog.Builder(this).setTitle("تم تسجيل الطلب")
+                        .setMessage("رقم الطلب: "+id+"\\nحالة الطلب: قيد مراجعة الدفع. لن يفتح التطبيق حتى اعتماد الترخيص.")
+                        .setPositiveButton("مشاركة تفاصيل الطلب", (d,w)->{
+                            Intent share=new Intent(Intent.ACTION_SEND);share.setType("text/plain");
+                            share.putExtra(Intent.EXTRA_TEXT,message);
+                            startActivity(Intent.createChooser(share,"إرسال تفاصيل طلب الاشتراك"));
+                        }).setNegativeButton("حسناً",null).show();
+            }));
+        });
+        Button refresh=button("تحقق من التفعيل / استعادة الاشتراك");
+        content.addView(refresh);
+        refresh.setOnClickListener(v->{
+            refresh.setEnabled(false);
+            LicenseManager.check(this,check->runOnUiThread(()->{
+                refresh.setEnabled(true);
+                if(check.unlocked){db=new DbHelper(this);licenseReady=true;showGate();startLicenseMonitor();}
+                else showSubscription(check);
+            }));
+        });
     }
 
     private void base(String title) {
