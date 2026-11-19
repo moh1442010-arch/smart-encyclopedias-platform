@@ -3,14 +3,106 @@ package com.mohammedmustafa.tirbal;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
+import net.zetetic.database.sqlcipher.SQLiteDatabase;
+import net.zetetic.database.sqlcipher.SQLiteOpenHelper;
+import java.io.File;
+import java.io.FileInputStream;
 
 public final class DbHelper extends SQLiteOpenHelper {
     private static final String DB_NAME = "tirbal.db";
     private static final int DB_VERSION = 3;
+    private static final String MIGRATION_PREFS = "tirbal_db_migration";
 
-    public DbHelper(Context context) { super(context, DB_NAME, null, DB_VERSION); }
+    static { System.loadLibrary("sqlcipher"); }
+
+    public DbHelper(Context context) {
+        super(context, DB_NAME, DbKeyStore.getOrCreate(context), null, DB_VERSION, 0, null, null, true);
+    }
+
+    /**
+     * Converts the existing plaintext SQLite file into an encrypted SQLCipher database.
+     * The legacy file is retained until every table has been copied successfully.
+     */
+    public synchronized void migrateLegacyIfNeeded(Context context) {
+        android.content.SharedPreferences prefs = context.getSharedPreferences(MIGRATION_PREFS, Context.MODE_PRIVATE);
+        boolean done = prefs.getBoolean("encrypted_migration_done", false);
+        File current = context.getDatabasePath(DB_NAME);
+        File legacy = new File(current.getParentFile(), DB_NAME + ".plaintext-backup");
+
+        if (!done && current.exists() && !legacy.exists() && isPlainSqlite(current)) {
+            if (!current.renameTo(legacy)) {
+                throw new IllegalStateException("تعذر تجهيز قاعدة البيانات القديمة للترحيل الآمن");
+            }
+        }
+
+        if (legacy.exists() && !done) {
+            if (current.exists()) deleteDatabaseFiles(current);
+            SQLiteDatabase encrypted = getWritableDatabase();
+            android.database.sqlite.SQLiteDatabase plain = null;
+            try {
+                plain = android.database.sqlite.SQLiteDatabase.openDatabase(
+                        legacy.getAbsolutePath(), null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY);
+                encrypted.beginTransaction();
+                try {
+                    copyTable(plain, encrypted, "project");
+                    copyTable(plain, encrypted, "costs");
+                    copyTable(plain, encrypted, "partnership_terms");
+                    copyTable(plain, encrypted, "sales");
+                    copyTable(plain, encrypted, "calendar_tasks");
+                    encrypted.setTransactionSuccessful();
+                } finally {
+                    encrypted.endTransaction();
+                }
+                prefs.edit().putBoolean("encrypted_migration_done", true).commit();
+            } catch (Exception e) {
+                close();
+                throw new IllegalStateException("فشل ترحيل البيانات إلى قاعدة مشفرة. احتفظنا بالنسخة القديمة ولم نحذفها.", e);
+            } finally {
+                if (plain != null) plain.close();
+            }
+            legacy.delete();
+        } else {
+            getWritableDatabase();
+            if (!done) prefs.edit().putBoolean("encrypted_migration_done", true).commit();
+            if (legacy.exists() && done) legacy.delete();
+        }
+    }
+
+    private boolean isPlainSqlite(File file) {
+        byte[] header = new byte[16];
+        try (FileInputStream in = new FileInputStream(file)) {
+            if (in.read(header) != 16) return false;
+            return "SQLite format 3\\u0000".equals(new String(header, java.nio.charset.StandardCharsets.US_ASCII));
+        } catch (Exception e) { return false; }
+    }
+
+    private void deleteDatabaseFiles(File file) {
+        new File(file.getAbsolutePath() + "-wal").delete();
+        new File(file.getAbsolutePath() + "-shm").delete();
+        new File(file.getAbsolutePath() + "-journal").delete();
+        file.delete();
+    }
+
+    private void copyTable(android.database.sqlite.SQLiteDatabase source, SQLiteDatabase target, String table) {
+        try (Cursor cursor = source.rawQuery("SELECT * FROM " + table, null)) {
+            String[] columns = cursor.getColumnNames();
+            while (cursor.moveToNext()) {
+                ContentValues values = new ContentValues();
+                for (int i = 0; i < columns.length; i++) {
+                    switch (cursor.getType(i)) {
+                        case Cursor.FIELD_TYPE_NULL: values.putNull(columns[i]); break;
+                        case Cursor.FIELD_TYPE_INTEGER: values.put(columns[i], cursor.getLong(i)); break;
+                        case Cursor.FIELD_TYPE_FLOAT: values.put(columns[i], cursor.getDouble(i)); break;
+                        case Cursor.FIELD_TYPE_BLOB: values.put(columns[i], cursor.getBlob(i)); break;
+                        default: values.put(columns[i], cursor.getString(i)); break;
+                    }
+                }
+                target.insertWithOnConflict(table, null, values, SQLiteDatabase.CONFLICT_REPLACE);
+            }
+        } catch (android.database.sqlite.SQLiteException missingTable) {
+            // Older installations may not yet have every optional table.
+        }
+    }
 
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE project (id INTEGER PRIMARY KEY CHECK(id=1), name TEXT NOT NULL, crop TEXT NOT NULL, trader TEXT NOT NULL, owner TEXT NOT NULL, accountant TEXT NOT NULL, area REAL NOT NULL DEFAULT 0, start_date TEXT NOT NULL, region TEXT)");
