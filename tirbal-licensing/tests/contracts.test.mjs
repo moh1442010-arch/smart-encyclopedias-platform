@@ -24,6 +24,7 @@ test("trial and prices are consistent across app and Worker", () => {
   assert.ok(worker.includes("monthly: { amount: 70000, seconds: 30 * 86400 }"));
   assert.ok(worker.includes("annual: { amount: 650000, seconds: 365 * 86400 }"));
   assert.ok(worker.includes("lifetime: { amount: 1300000, seconds: 0 }"));
+  assert.match(worker, /values\.monthlyPrice===25000[\s\S]*values\.annualPrice=650000[\s\S]*values\.lifetimePrice=1300000/);
   assert.match(activity, /monthly\.optLong\("amount"\)/);
   assert.match(activity, /annual\.optLong\("amount"\)/);
   assert.match(activity, /lifetime\.optLong\("amount"\)/);
