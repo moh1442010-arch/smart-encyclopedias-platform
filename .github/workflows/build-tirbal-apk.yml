@@ -8,6 +8,12 @@ on:
     paths:
       - 'tirbal-app/**'
       - '.github/workflows/build-tirbal-apk.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'tirbal-app/**'
+      - '.github/workflows/build-tirbal-apk.yml'
 
 permissions:
   contents: read
