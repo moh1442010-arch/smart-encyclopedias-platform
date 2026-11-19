@@ -175,7 +175,7 @@ public class MainActivity extends Activity {
         EditText price = field("السعر بالجنيه السوداني",false); price.setInputType(2);
         Spinner responsible = spinner(new String[]{"التاجر","التربال","مشترك","حسب الاتفاق"});
         Spinner payer = spinner(new String[]{"التاجر","التربال","طرف ثالث"});
-        Spinner settlement = spinner(new String[]{"يتحمله المسؤول ولا يخصم","يخصم بعد الحصاد"});
+        Spinner settlement = spinner(new String[]{"يحدد حسب الاتفاق","يتحمله المسؤول ولا يخصم","يخصم بعد الحصاد"});
         Spinner deduction = spinner(new String[]{"لا يوجد خصم","من نصيب التاجر","من نصيب التربال","مناصفة"});
         EditText agreement = field("تفاصيل الاتفاق الخاص بهذا البند",false);
         EditText notes = field("ملاحظات",false);
@@ -199,7 +199,7 @@ public class MainActivity extends Activity {
                     if(empty(date)||empty(item)||empty(qty)||empty(price)) { toast("أكمل التاريخ والصنف والكمية والسعر"); return; }
                     double q=Double.parseDouble(val(qty)); long p=Long.parseLong(val(price));
                     if(q<=0||p<0) throw new NumberFormatException();
-                    db.addCost(val(date),val(worker),category.getSelectedItem().toString(),val(item),q,p,payer.getSelectedItem().toString(),responsible.getSelectedItem().toString(),settlement.getSelectedItemPosition()==0?"owner_bears":"recoverable",deduction.getSelectedItemPosition()==0?"none":deduction.getSelectedItem().toString(),val(agreement),val(notes));
+                    db.addCost(val(date),val(worker),category.getSelectedItem().toString(),val(item),q,p,payer.getSelectedItem().toString(),responsible.getSelectedItem().toString(),settlement.getSelectedItemPosition()==0?"agreement_pending":(settlement.getSelectedItemPosition()==1?"owner_bears":"recoverable"),deduction.getSelectedItemPosition()==0?"none":deduction.getSelectedItem().toString(),val(agreement),val(notes));
                     showCosts();
                 } catch(Exception e){toast("تحقق من الكمية والسعر والتاريخ");}
             }).show();
@@ -262,7 +262,7 @@ public class MainActivity extends Activity {
     private void showPartnership() {
         base("اتفاق الشراكة والتسوية");
         content.addView(text("نسبة الشراكة الأساسية 50% للتاجر و50% للتربال. التوزيع النهائي يتم بعد مراجعة العقد والالتزامات والخصومات.",15,DARK,true));
-        content.addView(text("التوزيع الافتراضي للمسؤوليات — قابل للتعديل لكل بند عند تسجيل التكلفة:",14,Color.DKGRAY,false));
+        content.addView(text("التاجر هو الممول الافتراضي للمصروفات، بينما المسؤولية النهائية والخصم يتبعان اتفاق الطرفين. يمكن تغيير الدافع الفعلي لكل عملية:",14,Color.DKGRAY,false));
         tableHeader(new String[]{"البند","المسؤول","الدافع الافتراضي","التسوية"});
         try (Cursor c = db.partnershipTerms()) {
             while (c.moveToNext()) {
@@ -270,7 +270,7 @@ public class MainActivity extends Activity {
             }
         }
         content.addView(text("قواعد الاتفاق المبدئية",17,GREEN,true));
-        content.addView(text("التاجر: تحضير الأرض، ضريبة المياه، إيجار الأرض.\nالتربال: الميز، الأسمدة، المبيدات، التقاوي، الخدمة داخل الزراعة.\nيمكن أن يختلف الدافع عن المسؤول، ويمكن تسجيل مبلغ يُخصم من نصيب أحد الطرفين بعد الحصاد.",14,Color.DKGRAY,false));
+        content.addView(text("التاجر: تحضير الأرض، ضريبة المياه، إيجار الأرض.\nالتربال: الميز، الأسمدة، المبيدات، التقاوي، الخدمة داخل الزراعة.\nالتاجر يظهر كدافع افتراضي للمدخلات لأنه يمول المشروع، لكن المسؤولية تقع على الطرف المحدد في الاتفاق. ويمكن أن يتحمل التاجر بنداً نهائياً أو يسترد ما دفعه من نصيب التربال أو العكس، حسب العقد.",14,Color.DKGRAY,false));
         content.addView(text("لا تُجرَ تسوية نهائية تلقائية قبل إدخال كمية المحصول المباعة، وتأكيد مصروفات الطرفين، وتحديد البنود القابلة للاسترداد حسب الاتفاق.",13,Color.DKGRAY,false));
         addBack();
     }
