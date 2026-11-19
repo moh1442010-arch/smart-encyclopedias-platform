@@ -14,6 +14,33 @@ const json = (data,status=200,headers={}) => new Response(JSON.stringify(data),{
 const clean = (v,n=120) => typeof v==="string" ? v.trim().slice(0,n) : "";
 const validDevice = v => /^[A-Za-z0-9_-]{8,100}$/.test(v);
 const planExpiry = (plan,now) => plan==="lifetime" ? 0 : now+PLANS[plan].seconds;
+const DEFAULT_SETTINGS = {
+  monthlyPrice:25000, annualPrice:250000, lifetimePrice:500000, trialDays:15,
+  latestVersion:APP_VERSION, minSupportedVersion:"1.0.0", downloadUrl:"",
+  releaseNotes:"", announcement:"", maintenanceMode:false
+};
+async function loadSettings(env) {
+  const rows=await env.DB.prepare("SELECT setting_key,setting_value FROM tirbal_settings").all();
+  const values={...DEFAULT_SETTINGS};
+  for(const row of rows.results||[]) {
+    if(Object.prototype.hasOwnProperty.call(values,row.setting_key)) {
+      const raw=row.setting_value;
+      if(["maintenanceMode"].includes(row.setting_key)) values[row.setting_key]=raw==="true";
+      else if(["monthlyPrice","annualPrice","lifetimePrice","trialDays"].includes(row.setting_key)) values[row.setting_key]=Number(raw);
+      else values[row.setting_key]=raw;
+    }
+  }
+  return values;
+}
+const priceFor = (settings,plan) => plan==="monthly"?settings.monthlyPrice:plan==="annual"?settings.annualPrice:settings.lifetimePrice;
+async function saveSettings(env,settings) {
+  const now=Math.floor(Date.now()/1000);
+  const statements=Object.entries(settings).map(([key,value])=>env.DB.prepare("INSERT INTO tirbal_settings(setting_key,setting_value,updated_at) VALUES(?,?,?) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=excluded.updated_at").bind(key,String(value),now));
+  await env.DB.batch(statements);
+}
+function validVersion(v){return typeof v==="string"&&/^\\d+\\.\\d+\\.\\d+$/.test(v);}
+function validUpdateUrl(v){if(!v)return true;try{const u=new URL(v);return u.protocol==="https:";}catch{return false;}}
+
 
 async function schema(env) {
   await env.DB.batch([
@@ -23,7 +50,8 @@ async function schema(env) {
     env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_tirbal_orders_status ON tirbal_orders(status,created_at DESC)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, order_id TEXT NOT NULL, event TEXT NOT NULL, actor TEXT NOT NULL, created_at INTEGER NOT NULL, detail TEXT)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_admin_attempts (ip_hash TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL)"),
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_order_attempts (ip_hash TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL)")
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_order_attempts (ip_hash TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS tirbal_settings (setting_key TEXT PRIMARY KEY, setting_value TEXT NOT NULL, updated_at INTEGER NOT NULL)")
   ]);
 }
 function privateDer(value) {
@@ -93,10 +121,12 @@ async function admin(request,env) {
     return JSON.parse(new TextDecoder().decode(fromB64(p))).exp>Math.floor(Date.now()/1000);
   } catch { return false; }
 }
-async function publicConfig(env) {
+async function publicConfig(env,settings) {
   return {
-    appId:APP_ID,appVersion:APP_VERSION,trialDays:15,currency:"SDG",
-    plans:{monthly:{amount:PLANS.monthly.amount,days:30},annual:{amount:PLANS.annual.amount,days:365},lifetime:{amount:PLANS.lifetime.amount,days:0}},
+    appId:APP_ID,appVersion:APP_VERSION,latestVersion:settings.latestVersion,minSupportedVersion:settings.minSupportedVersion,
+    trialDays:settings.trialDays,currency:"SDG",maintenanceMode:settings.maintenanceMode,
+    announcement:settings.announcement,releaseNotes:settings.releaseNotes,downloadUrl:settings.downloadUrl,
+    plans:{monthly:{amount:settings.monthlyPrice,days:30},annual:{amount:settings.annualPrice,days:365},lifetime:{amount:settings.lifetimePrice,days:0}},
     payment:{bankName:clean(env.PAYMENT_BANK_NAME,100),accountName:clean(env.PAYMENT_ACCOUNT_NAME,120),accountNumber:clean(env.PAYMENT_ACCOUNT_NUMBER,80),whatsapp:clean(env.PAYMENT_WHATSAPP,30)}
   };
 }
@@ -104,9 +134,10 @@ async function handle(request,env) {
   const u=new URL(request.url);
   if(!env.DB) return json({error:"SERVICE_NOT_CONFIGURED"},503);
   await schema(env);
+  const settings=await loadSettings(env);
   if(u.pathname==="/admin"&&request.method==="GET") return new Response(ADMIN_HTML,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store","x-frame-options":"DENY","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}});
   if(u.pathname==="/health"&&request.method==="GET") return json({ok:true,service:"hisab-al-tirbal-licensing",mode:"manual-payment-review",appVersion:APP_VERSION});
-  if(u.pathname==="/api/config"&&request.method==="GET") return json(await publicConfig(env));
+  if(u.pathname==="/api/config"&&request.method==="GET") return json(await publicConfig(env,settings));
   if(u.pathname==="/diagnostics/signing-pair"&&request.method==="GET") {
     try {
       const priv=await signingKey(env);
@@ -123,7 +154,7 @@ async function handle(request,env) {
     const now=Math.floor(Date.now()/1000);
     let row=await env.DB.prepare("SELECT * FROM tirbal_devices WHERE device_id=?").bind(device).first();
     if(!row) {
-      const expires=now+15*86400;
+      const expires=now+settings.trialDays*86400;
       await env.DB.prepare("INSERT OR IGNORE INTO tirbal_devices(device_id,first_seen,trial_expires,updated_at) VALUES(?,?,?,?)").bind(device,now,expires,now).run();
       row=await env.DB.prepare("SELECT * FROM tirbal_devices WHERE device_id=?").bind(device).first();
     }
@@ -155,7 +186,7 @@ async function handle(request,env) {
     const duplicate=await env.DB.prepare("SELECT id FROM tirbal_orders WHERE receipt_reference=? AND status IN ('pending','approved')").bind(receipt).first();
     if(duplicate) return json({error:"RECEIPT_REFERENCE_ALREADY_USED"},409);
     const id=crypto.randomUUID(),now=Math.floor(Date.now()/1000);
-    await env.DB.prepare("INSERT INTO tirbal_orders(id,created_at,customer_name,contact,device_id,plan,amount_sdg,receipt_reference,status,app_version) VALUES(?,?,?,?,?,?,?,?,?,?)").bind(id,now,name,contact,device,plan,PLANS[plan].amount,receipt,"pending",APP_VERSION).run();
+    await env.DB.prepare("INSERT INTO tirbal_orders(id,created_at,customer_name,contact,device_id,plan,amount_sdg,receipt_reference,status,app_version) VALUES(?,?,?,?,?,?,?,?,?,?)").bind(id,now,name,contact,device,plan,priceFor(settings,plan),receipt,"pending",APP_VERSION).run();
     await audit(env,id,"order_created","customer","Payment requires manual verification.");
     return json({orderId:id,status:"pending",amountSdg:PLANS[plan].amount,message:"تم تسجيل طلبك. التفعيل بعد تأكيد الدفع ومراجعة الإدارة."},201);
   }
@@ -170,6 +201,27 @@ async function handle(request,env) {
     }
     await env.DB.prepare("DELETE FROM tirbal_admin_attempts WHERE ip_hash=?").bind(state.hash).run();
     return json({ok:true},200,{"set-cookie":"tirbal_admin="+await session(env)+"; Path=/admin; HttpOnly; Secure; SameSite=Strict; Max-Age=28800"});
+  }
+  if(u.pathname==="/admin/settings"&&request.method==="GET") {
+    if(!await admin(request,env)) return json({error:"UNAUTHORIZED"},401);
+    return json({settings});
+  }
+  if(u.pathname==="/admin/settings"&&request.method==="POST") {
+    if(!sameOriginPost(request,u))return json({error:"INVALID_ORIGIN"},403);
+    if(!await admin(request,env)) return json({error:"UNAUTHORIZED"},401);
+    let b;try{b=await request.json();}catch{return json({error:"INVALID_JSON"},400);}
+    const next={
+      monthlyPrice:Number(b.monthlyPrice),annualPrice:Number(b.annualPrice),lifetimePrice:Number(b.lifetimePrice),
+      trialDays:Number(b.trialDays),latestVersion:clean(b.latestVersion,20),minSupportedVersion:clean(b.minSupportedVersion,20),
+      downloadUrl:clean(b.downloadUrl,500),releaseNotes:clean(b.releaseNotes,2000),announcement:clean(b.announcement,500),
+      maintenanceMode:b.maintenanceMode===true
+    };
+    if(![next.monthlyPrice,next.annualPrice,next.lifetimePrice].every(n=>Number.isSafeInteger(n)&&n>=1&&n<=1000000000)||
+       !Number.isInteger(next.trialDays)||next.trialDays<0||next.trialDays>90||
+       !validVersion(next.latestVersion)||!validVersion(next.minSupportedVersion)||!validUpdateUrl(next.downloadUrl))
+      return json({error:"INVALID_SETTINGS"},400);
+    await saveSettings(env,next);
+    return json({ok:true,settings:next});
   }
   if(u.pathname==="/admin/orders"&&request.method==="GET") {
     if(!await admin(request,env)) return json({error:"UNAUTHORIZED"},401);
