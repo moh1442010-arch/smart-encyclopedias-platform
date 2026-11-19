@@ -109,7 +109,7 @@ public final class DbHelper extends SQLiteOpenHelper {
     }
 
     public long totalByDeduction(String deduction) {
-        try (Cursor c = getReadableDatabase().rawQuery("SELECT COALESCE(SUM(total),0) FROM costs WHERE project_id=1 AND deduction_from=?", new String[]{deduction})) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT COALESCE(SUM(total),0) FROM costs WHERE project_id=1 AND deduction_from=? AND payer='التاجر'", new String[]{deduction})) {
             return c.moveToFirst() ? c.getLong(0) : 0L;
         }
     }
