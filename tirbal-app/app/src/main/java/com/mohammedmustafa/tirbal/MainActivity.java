@@ -156,9 +156,12 @@ public class MainActivity extends Activity {
                 else info.append("\\nالتطبيق على أحدث إصدار معلن.");
                 info.append("\\nمدة التجربة: ").append(config.optInt("trialDays",15)).append(" يوماً");
                 JSONObject plans=config.optJSONObject("plans");
-                if(plans!=null)info.append("\\nالشهري: ").append(plans.optJSONObject("monthly").optLong("amount")).append(" ج.س")
-                        .append("\\nالسنوي: ").append(plans.optJSONObject("annual").optLong("amount")).append(" ج.س")
-                        .append("\\nالدائم: ").append(plans.optJSONObject("lifetime").optLong("amount")).append(" ج.س");
+                if(plans!=null) {
+                    JSONObject monthly=plans.optJSONObject("monthly"),annual=plans.optJSONObject("annual"),lifetime=plans.optJSONObject("lifetime");
+                    if(monthly!=null&&annual!=null&&lifetime!=null)info.append("\\nالشهري: ").append(monthly.optLong("amount")).append(" ج.س")
+                            .append("\\nالسنوي: ").append(annual.optLong("amount")).append(" ج.س")
+                            .append("\\nالدائم: ").append(lifetime.optLong("amount")).append(" ج.س");
+                }
                 if(!announcement.isEmpty())info.append("\\n\\nإعلان الإدارة\\n").append(announcement);
                 if(!notes.isEmpty())info.append("\\n\\nملاحظات الإصدار\\n").append(notes);
                 status.setText(info.toString());
@@ -180,7 +183,7 @@ public class MainActivity extends Activity {
         content.addView(text("فترة تجريبية مجانية لمدة 15 يوماً، ثم يلزم اشتراك لمواصلة العمل.",16,DARK,true));
         content.addView(text(result.message,14,Color.DKGRAY,false));
         content.addView(text("الأسعار بالجنيه السوداني",17,GREEN,true));
-        content.addView(text("شهري 25,000 ج.س  •  سنوي 250,000 ج.س  •  دائم 500,000 ج.س",15,DARK,true));
+        TextView pricing=text("جارٍ تحميل الأسعار الحالية...",15,DARK,true);\n        content.addView(pricing);
         TextView payment=text("جارٍ تحميل بيانات التحويل...",14,Color.DKGRAY,false);
         content.addView(payment);
         LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
