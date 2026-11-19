@@ -73,6 +73,14 @@ jobs:
           echo "CLOUDFLARE_API_TOKEN=$token" >> "$GITHUB_ENV"
           unset token RAW_CF_TOKEN
 
+      - name: Verify Cloudflare API token before D1 changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --show-error --connect-timeout 10 --max-time 20 --output "$RUNNER_TEMP/tirbal-cf-verify.json" --write-out '%{http_code}' https://api.cloudflare.com/client/v4/user/tokens/verify -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H "Content-Type: application/json")"
+          node -e 'const fs=require("node:fs");let x={};try{x=JSON.parse(fs.readFileSync(process.argv[1],"utf8"))}catch{};if(process.argv[2]!=="200"||x.success!==true||x.result?.status!=="active")process.exit(1)' "$RUNNER_TEMP/tirbal-cf-verify.json" "$code"
+          rm -f "$RUNNER_TEMP/tirbal-cf-verify.json"
+
       - name: Apply isolated Tirbal D1 schema
         working-directory: tirbal-licensing
         env:
