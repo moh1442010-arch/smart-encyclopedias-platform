@@ -85,7 +85,7 @@ public final class DbHelper extends SQLiteOpenHelper {
     }
 
     public String[] defaultResponsibility(String category) {
-        try (Cursor c = getReadableDatabase().rawQuery("SELECT responsible_party,default_payer FROM partnership_terms WHERE category=?", new String[]{category})) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT responsible_party,default_payer,settlement_type,deduction_from FROM partnership_terms WHERE category=?", new String[]{category})) {
             if (c.moveToFirst()) return new String[]{c.getString(0), c.getString(1), c.getString(2), c.getString(3)};
         }
         return new String[]{"حسب الاتفاق", "التاجر", "agreement_pending", "حسب الاتفاق"};
