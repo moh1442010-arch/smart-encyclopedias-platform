@@ -74,9 +74,9 @@ public class MainActivity extends Activity {
             JSONObject p=config.optJSONObject("payment");
             if(p==null){payment.setText("بيانات التحويل غير متاحة حالياً.");return;}
             String details="بنك التحويل: "+p.optString("bankName","غير محدد")+
-                    "\\nاسم الحساب: "+p.optString("accountName","غير محدد")+
-                    "\\nرقم الحساب: "+p.optString("accountNumber","لم يُضبط بعد")+
-                    "\\nواتساب الدعم: "+p.optString("whatsapp","لم يُضبط بعد");
+                    "\nاسم الحساب: "+p.optString("accountName","غير محدد")+
+                    "\nرقم الحساب: "+p.optString("accountNumber","لم يُضبط بعد")+
+                    "\nواتساب الدعم: "+p.optString("whatsapp","لم يُضبط بعد");
             payment.setText(details);
         }));
         EditText customer=field("اسم صاحب الاشتراك",false);
@@ -94,12 +94,12 @@ public class MainActivity extends Activity {
                 submit.setEnabled(true);
                 if(order==null){toast(error);return;}
                 String id=order.optString("orderId");
-                String message="طلب اشتراك حساب التربال\\nرقم الطلب: "+id+
-                        "\\nالاسم: "+val(customer)+"\\nالخطة: "+plan.getSelectedItem().toString()+
-                        "\\nمرجع التحويل: "+val(receipt)+"\\nالمبلغ: "+order.optLong("amountSdg")+" جنيه سوداني"+
-                        "\\nيرجى مراجعة التحويل وتفعيل الترخيص بعد التأكد من وصول المبلغ.";
+                String message="طلب اشتراك حساب التربال\nرقم الطلب: "+id+
+                        "\nالاسم: "+val(customer)+"\nالخطة: "+plan.getSelectedItem().toString()+
+                        "\nمرجع التحويل: "+val(receipt)+"\nالمبلغ: "+order.optLong("amountSdg")+" جنيه سوداني"+
+                        "\nيرجى مراجعة التحويل وتفعيل الترخيص بعد التأكد من وصول المبلغ.";
                 new AlertDialog.Builder(this).setTitle("تم تسجيل الطلب")
-                        .setMessage("رقم الطلب: "+id+"\\nحالة الطلب: قيد مراجعة الدفع. لن يفتح التطبيق حتى اعتماد الترخيص.")
+                        .setMessage("رقم الطلب: "+id+"\nحالة الطلب: قيد مراجعة الدفع. لن يفتح التطبيق حتى اعتماد الترخيص.")
                         .setPositiveButton("مشاركة تفاصيل الطلب", (d,w)->{
                             Intent share=new Intent(Intent.ACTION_SEND);share.setType("text/plain");
                             share.putExtra(Intent.EXTRA_TEXT,message);
