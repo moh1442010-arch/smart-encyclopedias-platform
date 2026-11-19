@@ -58,6 +58,12 @@ public class MainActivity extends Activity {
             licenseHandler.postDelayed(this, 30000);
         }
     };
+    @Override protected void onDestroy() {
+        licenseHandler.removeCallbacks(licenseMonitor);
+        if (db != null) db.close();
+        super.onDestroy();
+    }
+
     private void startLicenseMonitor() {
         licenseHandler.removeCallbacks(licenseMonitor);
         licenseHandler.postDelayed(licenseMonitor, 30000);
