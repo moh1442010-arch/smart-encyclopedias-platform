@@ -50,10 +50,12 @@ public class MainActivity extends Activity {
     private final Handler licenseHandler = new Handler(Looper.getMainLooper());
     private final Runnable licenseMonitor = new Runnable() {
         @Override public void run() {
-            if (licenseReady && !LicenseManager.cachedValid(MainActivity.this)) {
+            if (!licenseReady) return;
+            if (!LicenseManager.cachedValid(MainActivity.this)) {
                 licenseReady = false;
                 if (db != null) db.close();
                 showSubscription(new LicenseManager.Result(false, true, currentDeviceId, "انتهت صلاحية الترخيص.", 0));
+                return;
             }
             licenseHandler.postDelayed(this, 30000);
         }
