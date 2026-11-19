@@ -22,11 +22,12 @@ test("Android, Worker and Wrangler use the same product version", () => {
 test("trial and prices are consistent across app and Worker", () => {
   assert.match(worker, /trialDays:15/);
   assert.match(worker, /monthly: \{ amount: 70000, seconds: 30 \* 86400 \}/);
-  assert.match(worker, /annual: \{ amount: 700000, seconds: 365 \* 86400 \}/);
+  assert.match(worker, /annual: { amount: 650000, seconds: 365 * 86400 }/);
   assert.match(worker, /lifetime: \{ amount: 1300000, seconds: 0 \}/);
-  assert.match(activity, /شهري 70,000 ج\.س/);
-  assert.match(activity, /سنوي 650,000 ج\.س/);
-  assert.match(activity, /دائم 1,300,000 ج\.س/);
+  assert.match(activity, /monthly\.optLong\("amount"\)/);
+  assert.match(activity, /annual\.optLong\("amount"\)/);
+  assert.match(activity, /lifetime\.optLong\("amount"\)/);
+  assert.match(activity, /جارٍ تحميل الخطة الشهرية/);
 });
 
 test("licensing is device-bound and signed, not a local date-only trial", () => {
