@@ -185,7 +185,7 @@ public class MainActivity extends Activity {
         content.addView(text("الأسعار بالجنيه السوداني",17,GREEN,true));
         TextView pricing=text("جارٍ تحميل الأسعار الحالية...",15,DARK,true);
         content.addView(pricing);
-        Spinner plan=spinner(new String[]{"شهري — 25,000 جنيه","سنوي — 250,000 جنيه","دائم — 500,000 جنيه"});
+        Spinner plan=spinner(new String[]{"جارٍ تحميل الخطة الشهرية...","جارٍ تحميل الخطة السنوية...","جارٍ تحميل الخطة الدائمة..."});
         TextView payment=text("جارٍ تحميل بيانات التحويل...",14,Color.DKGRAY,false);
         content.addView(payment);
         LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
