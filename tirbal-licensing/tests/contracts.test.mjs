@@ -29,6 +29,8 @@ test("trial and prices are consistent across app and Worker", () => {
   assert.match(activity, /annual\.optLong\("amount"\)/);
   assert.match(activity, /lifetime\.optLong\("amount"\)/);
   assert.match(activity, /جارٍ تحميل الخطة الشهرية/);
+  assert.match(activity, /https:\/\/wa\.me\//);
+  assert.match(activity, /whatsappNumber\.replaceAll\("\[\^0-9\]",""\)/);
 });
 
 test("licensing is device-bound and signed, not a local date-only trial", () => {
