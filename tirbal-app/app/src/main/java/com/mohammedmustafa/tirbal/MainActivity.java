@@ -609,7 +609,7 @@ public class MainActivity extends Activity {
         content.addView(text("🌱 تكاليف مشتركة مناصفة",17,GREEN,true));
         content.addView(text("تحضير الأرض • التقاوي • الأسمدة • المبيدات",15,Color.DKGRAY,false));
         content.addView(text("👨‍🌾 التزامات التربال",17,GREEN,true));
-        content.addView(text("تنفيذ الزراعة والنظافة والري وكل أعمال الخدمة داخل الحقل. الميز والمنصرفات والسلفيات وأجور الخدمة التي يدفعها التاجر تخصم كاملة من نصيب التربال.",14,Color.DKGRAY,false));
+        content.addView(text("تنفيذ الزراعة والنظافة والري وكل أعمال الخدمة داخل الحقل. الراكوبة والميز والمنصرفات والسلفيات وأجور الخدمة التي يدفعها التاجر تخصم كاملة من نصيب التربال.",14,Color.DKGRAY,false));
         content.addView(text("🏦 التزامات التاجر وحده",17,GREEN,true));
         content.addView(text("إيجار الأرض وضريبة المياه. لا تدخل هذه البنود في المناصفة ولا تخصم من نصيب التربال.",14,Color.DKGRAY,false));
         content.addView(text("📌 ملخص البنود المسجلة",17,GREEN,true));
