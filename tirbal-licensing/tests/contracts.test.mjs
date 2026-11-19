@@ -81,9 +81,9 @@ test("multi-worker registry and worker-specific expense screens are present", ()
 });
 
 test("harvest settlement deducts shared costs by half and worker/trader obligations separately", () => {
-  assert.match(activity, /long distributable = grossHarvest - directAllocated/);
-  assert.match(activity, /long traderNet = distributable \/ 2 - sharedTotal \/ 2 - traderOnly/);
-  assert.match(activity, /long workerNet = distributable - distributable \/ 2 - \(sharedTotal - sharedTotal \/ 2\) - workerDeductions/);
+  assert.match(activity, /long workerDeductions = db\.totalByDeduction\("من نصيب التربال"\) \+ directAllocated \+ marketExpenses/);
+  assert.match(activity, /long traderNet = grossHarvest \/ 2 - sharedTotal \/ 2 - traderOnly/);
+  assert.match(activity, /long workerNet = grossHarvest - grossHarvest \/ 2 - \(sharedTotal - sharedTotal \/ 2\) - workerDeductions/);
   assert.match(database, /"الراكوبة","التربال","التاجر","deduct_worker"/);
   assert.match(database, /"ضريبة المياه","التاجر","التاجر","trader_only"/);
   assert.match(database, /"إيجار الأرض","التاجر","التاجر","trader_only"/);
