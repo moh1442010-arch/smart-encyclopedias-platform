@@ -44,14 +44,14 @@ public class MainActivity extends Activity {
         }));
     }
 
-    private boolean licenseReady = false;
+    private boolean licenseReady = false;\n    private String currentDeviceId = "";
     private final Handler licenseHandler = new Handler(Looper.getMainLooper());
     private final Runnable licenseMonitor = new Runnable() {
         @Override public void run() {
             if (licenseReady && !LicenseManager.cachedValid(MainActivity.this)) {
                 licenseReady = false;
                 if (db != null) db.close();
-                showSubscription(new LicenseManager.Result(false, true, "", "انتهت صلاحية الترخيص.", 0));
+                showSubscription(new LicenseManager.Result(false, true, currentDeviceId, "انتهت صلاحية الترخيص.", 0));
             }
             licenseHandler.postDelayed(this, 30000);
         }
@@ -90,7 +90,7 @@ public class MainActivity extends Activity {
             if(empty(customer)||empty(contact)||empty(receipt)){toast("أكمل الاسم ورقم الهاتف ومرجع التحويل");return;}
             String code=new String[]{"monthly","annual","lifetime"}[plan.getSelectedItemPosition()];
             submit.setEnabled(false);
-            LicenseManager.submitOrder(val(customer),val(contact),code,val(receipt),result.deviceId,(order,error)->runOnUiThread(()->{
+            LicenseManager.submitOrder(val(customer),val(contact),code,val(receipt),currentDeviceId,(order,error)->runOnUiThread(()->{
                 submit.setEnabled(true);
                 if(order==null){toast(error);return;}
                 String id=order.optString("orderId");
