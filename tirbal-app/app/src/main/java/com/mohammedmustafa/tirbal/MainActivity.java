@@ -326,7 +326,8 @@ public class MainActivity extends Activity {
         addTile("📊 الأرباح والخسائر", "ملخص الموسم ونتائج المبيعات والتكاليف", v -> showReports());
         addTile("💳 الديون والسلفيات", "السلفيات تسجل كبند تكلفة قابل للتصنيف", v -> showCosts());
         addTile("🤝 اتفاق الشراكة والتسوية", "مسؤوليات التاجر والتربال والخصومات بعد الحصاد", v -> showPartnership());
-        addTile("🔐 تغيير كلمة المرور", "تحديث كلمة مرور التطبيق", v -> changePassword());\n        addTile("🌐 مركز التحديثات والإعدادات", "فحص التحديثات والإعلانات والأسعار الحالية", v -> showUpdateCenter());
+        addTile("🔐 تغيير كلمة المرور", "تحديث كلمة مرور التطبيق", v -> changePassword());
+        addTile("🌐 مركز التحديثات والإعدادات", "فحص التحديثات والإعلانات والأسعار الحالية", v -> showUpdateCenter());
     }
 
     private void addTile(String title, String subtitle, View.OnClickListener click) {
