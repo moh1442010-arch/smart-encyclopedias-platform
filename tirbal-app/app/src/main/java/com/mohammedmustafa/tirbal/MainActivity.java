@@ -416,8 +416,8 @@ public class MainActivity extends Activity {
     }
 
     private static final String[] QUICK_CATEGORIES = {"الميز","الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون"};
-    private static final String[] SHARED_CATEGORIES = {"الأسمدة","المبيدات","التقاوي","تحضير الأرض"};
-    private static final String[] WORKER_DEDUCTIONS = {"الميز","الديون","السلفيات","الخدمة داخل الزراعة","الري وخدمة الحقل","أجور العمال","المنصرفات"};
+    private static final String[] SHARED_CATEGORIES = {"الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون"};
+    private static final String[] WORKER_DEDUCTIONS = {"الميز","السلفيات","الخدمة داخل الزراعة","الري وخدمة الحقل","أجور العمال","المنصرفات"};
 
     private class CostRow {
         EditText worker;
@@ -441,7 +441,7 @@ public class MainActivity extends Activity {
     private void showCosts() {
         base("دفتر تكلفة التربال");
         content.addView(text("أدخل كل تربال في صف واحد. اكتب قيمة كل بند مباشرة، وسيحسب التطبيق جملة الصف تلقائياً.",14,DARK,false));
-        content.addView(text("الميز والديون والسلفيات تخصم كاملة من نصيب التربال. التحضير والتقاوي والسماد والمبيد تدخل في التكلفة المشتركة.",13,Color.DKGRAY,false));
+        content.addView(text("الميز والسلفيات والخدمات المسجلة على التربال تخصم من نصيبه. التحضير والتقاوي والسماد والمبيد والديون المشتركة تدخل في التكلفة المشتركة.",13,Color.DKGRAY,false));
         LinearLayout table=new LinearLayout(this);table.setOrientation(LinearLayout.VERTICAL);
         content.addView(table);
         List<CostRow> rows=new ArrayList<>();
@@ -659,7 +659,7 @@ public class MainActivity extends Activity {
 
     private void showSettlement() {
         base("تسوية نصيب التربال");
-        content.addView(text("طريقة الحساب: صافي الفواتير − كامل التكلفة المشتركة المسجلة، ثم تقسيم المتبقي مناصفة. تخصم الميز والديون والسلفيات والخدمات من نصيب التربال فقط.",14,DARK,false));
+        content.addView(text("طريقة الحساب: صافي الفواتير − كامل التكلفة المشتركة المسجلة، ثم تقسيم المتبقي مناصفة. تخصم الميز والسلفيات والخدمات المحددة على التربال من نصيبه فقط.",14,DARK,false));
         long totalNet=0,totalShared=0,totalWorkerDeductions=0,totalWorkerShare=0;
         tableHeader(new String[]{"التربال","صافي الفواتير","التكلفة المشتركة","نصيب التربال قبل الخصم","خصومات التربال","الصافي المستحق"});
         try(Cursor names=db.workerNames()){
@@ -678,8 +678,8 @@ public class MainActivity extends Activity {
         content.addView(text("ملخص المشروع",18,GREEN,true));
         reportLine("صافي جميع الفواتير بعد تكلفة الرحلات",totalNet);
         reportLine("إجمالي التحضير والتقاوي والسماد والمبيد",totalShared);
-        reportLine("نصيب التربال قبل الميز والديون والسلفيات",(totalNet-totalShared)/2);
-        reportLine("إجمالي خصومات التربال",totalWorkerDeductions);
+        reportLine("نصيب التربال قبل الميز والسلفيات",(totalNet-totalShared)/2);
+        reportLine("إجمالي خصومات الميز والسلفيات والخدمات",totalWorkerDeductions);
         content.addView(text("إجمالي صافي مستحقات الترابلة: "+money.format(totalWorkerShare)+" ج.س",21,GREEN,true));
         content.addView(text("مثال المعادلة: 50,000,000 − 5,000,000 = 45,000,000. نصيب كل طرف 22,500,000. إذا كانت خصومات التربال 2,000,000 يصبح صافي نصيبه 20,500,000.",13,Color.DKGRAY,false));
         addBack();
@@ -824,7 +824,7 @@ public class MainActivity extends Activity {
         reportLine("التكاليف المشتركة قبل المناصفة",shared);
         reportLine("المتبقي القابل للتوزيع",remainder);
         reportLine("نصيب كل طرف قبل خصومات التربال",remainder/2);
-        reportLine("خصومات الميز والديون والسلفيات والخدمات",workerOnly);
+        reportLine("خصومات الميز والسلفيات والخدمات",workerOnly);
         reportLine("صافي مستحق التربال",remainder/2-workerOnly);
         reportLine("إجمالي مصروفات دفتر التكلفة",db.total("costs","total"));
         Button settlement=button("فتح كشف التسوية التفصيلي");content.addView(settlement);settlement.setOnClickListener(v->showSettlement());
