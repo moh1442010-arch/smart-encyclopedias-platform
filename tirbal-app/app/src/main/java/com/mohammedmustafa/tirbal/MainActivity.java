@@ -952,7 +952,7 @@ public class MainActivity extends Activity {
         hs.addView(row); content.addView(hs);
     }
 
-    private void addBack() { Button b=button("⌂  العودة إلى الرئيسية"); content.addView(b); b.setOnClickListener(v->showHome()); }
+    private void addBack() { Button b=button("⌂  الرئيسية"); content.addView(b,0); b.setOnClickListener(v->showHome()); }
 
     private GradientDrawable rounded(int color, int radius, int stroke) {
         GradientDrawable d = new GradientDrawable();
