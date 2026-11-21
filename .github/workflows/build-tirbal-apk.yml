@@ -23,6 +23,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      TIRBAL_KEYSTORE_BASE64: ${{ secrets.TIRBAL_KEYSTORE_BASE64 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,15 +46,13 @@ jobs:
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;35.0.0"
 
       - name: Prepare original release keystore
-        if: ${{ secrets.TIRBAL_KEYSTORE_BASE64 != '' }}
-        env:
-          TIRBAL_KEYSTORE_BASE64: ${{ secrets.TIRBAL_KEYSTORE_BASE64 }}
+        if: ${{ env.TIRBAL_KEYSTORE_BASE64 != '' }}
         run: |
           printf '%s' "$TIRBAL_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/tirbal-release.jks"
           echo "TIRBAL_KEYSTORE_PATH=$RUNNER_TEMP/tirbal-release.jks" >> "$GITHUB_ENV"
 
       - name: Build signed update APK
-        if: ${{ secrets.TIRBAL_KEYSTORE_BASE64 != '' }}
+        if: ${{ env.TIRBAL_KEYSTORE_BASE64 != '' }}
         env:
           TIRBAL_KEYSTORE_PASSWORD: ${{ secrets.TIRBAL_KEYSTORE_PASSWORD }}
           TIRBAL_KEY_ALIAS: ${{ secrets.TIRBAL_KEY_ALIAS }}
@@ -60,7 +60,7 @@ jobs:
         run: gradle --no-daemon -p tirbal-app :app:assembleRelease
 
       - name: Build debug review APK when no release key is configured
-        if: ${{ secrets.TIRBAL_KEYSTORE_BASE64 == '' }}
+        if: ${{ env.TIRBAL_KEYSTORE_BASE64 == '' }}
         run: gradle --no-daemon -p tirbal-app :app:assembleDebug
 
       - name: Stage APK
