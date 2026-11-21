@@ -31,7 +31,7 @@ final class AccountingBook {
         String[][] rows = {
             {"1000","النقدية","ASSET","DEBIT"},
             {"1100","العملاء والمدينون","ASSET","DEBIT"},
-            {"1200","مخزون المحصول","ASSET","DEBIT"},
+            {"1200","تكاليف الموسم ومخزون المحصول","ASSET","DEBIT"},
             {"2000","الموردون والدائنون","LIABILITY","CREDIT"},
             {"2100","جاري التاجر","LIABILITY","CREDIT"},
             {"2200","جاري التربال","LIABILITY","CREDIT"},
@@ -63,10 +63,12 @@ final class AccountingBook {
         try {
             long entry=entry(db,date,"COST-"+sourceId,"إثبات تكلفة: "+category+" - "+item,"COST",sourceId);
             if(entry>0) {
-                line(db,entry,"5200",amount,0,"تكلفة زراعية");
+                String debit="إيجار الأرض".equals(category)||"ضريبة المياه".equals(category)?"5200":"1200";
+                line(db,entry,debit,amount,0,"تكلفة الموسم: "+category);
                 String credit="التربال".equals(payer)?"2200":("طرف ثالث".equals(payer)?"2000":"2100");
                 line(db,entry,credit,0,amount,"مصدر التمويل: "+payer);
             }
+            assertBalanced(db,entry);
             db.setTransactionSuccessful();
         } finally { db.endTransaction(); }
     }
@@ -81,6 +83,7 @@ final class AccountingBook {
                 if(cost>0){line(db,entry,"5000",cost,0,"تكلفة المحصول المباع");line(db,entry,"1200",0,cost,"تخفيض مخزون المحصول");}
                 if(marketExpenses>0){line(db,entry,"5100",marketExpenses,0,"مصروفات السوق");line(db,entry,"2000",0,marketExpenses,"مستحقات مصروفات السوق");}
             }
+            assertBalanced(db,entry);
             db.setTransactionSuccessful();
         } finally { db.endTransaction(); }
     }
@@ -93,6 +96,7 @@ final class AccountingBook {
             if(id<=0)throw new IllegalStateException("تعذر إنشاء القيد");
             line(db,id,debitCode,amount,0,description);
             line(db,id,creditCode,0,amount,description);
+            assertBalanced(db,id);
             db.setTransactionSuccessful();
         } finally { db.endTransaction(); }
     }
@@ -115,12 +119,18 @@ final class AccountingBook {
         db.insertOrThrow("journal_lines",null,v);
     }
 
+    private static void assertBalanced(SQLiteDatabase db,long entryId) {
+        try(Cursor c=db.rawQuery("SELECT COALESCE(SUM(debit),0),COALESCE(SUM(credit),0) FROM journal_lines WHERE entry_id=?",new String[]{String.valueOf(entryId)})) {
+            if(!c.moveToFirst()||c.getLong(0)<=0||c.getLong(0)!=c.getLong(1)) throw new IllegalStateException("القيد غير متوازن");
+        }
+    }
+
     static long accountId(SQLiteDatabase db,String code) {
         try(Cursor c=db.rawQuery("SELECT id FROM accounts WHERE code=?",new String[]{code})) {return c.moveToFirst()?c.getLong(0):0;}
     }
 
     static Cursor trialBalance(SQLiteDatabase db) {
-        return db.rawQuery("SELECT a.code,a.name,a.account_type,COALESCE(SUM(l.debit),0) AS debit,COALESCE(SUM(l.credit),0) AS credit,COALESCE(SUM(l.debit-l.credit),0) AS balance FROM accounts a LEFT JOIN journal_lines l ON l.account_id=a.id LEFT JOIN journal_entries e ON e.id=l.entry_id AND e.status='POSTED' GROUP BY a.id,a.code,a.name,a.account_type ORDER BY a.code",null);
+        return db.rawQuery("SELECT a.code,a.name,a.account_type,COALESCE(SUM(l.debit),0) AS debit,COALESCE(SUM(l.credit),0) AS credit,CASE WHEN a.normal_side='DEBIT' THEN COALESCE(SUM(l.debit-l.credit),0) ELSE COALESCE(SUM(l.credit-l.debit),0) END AS balance FROM accounts a LEFT JOIN journal_lines l ON l.account_id=a.id LEFT JOIN journal_entries e ON e.id=l.entry_id AND e.status='POSTED' GROUP BY a.id,a.code,a.name,a.account_type ORDER BY a.code",null);
     }
 
     static Cursor recentEntries(SQLiteDatabase db) {
