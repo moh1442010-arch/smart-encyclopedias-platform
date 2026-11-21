@@ -10,7 +10,7 @@ import java.io.FileInputStream;
 
 public final class DbHelper extends SQLiteOpenHelper {
     private static final String DB_NAME = "tirbal.db";
-    private static final int DB_VERSION = 4;
+    private static final int DB_VERSION = 5;
     private static final String MIGRATION_PREFS = "tirbal_db_migration";
 
     static { System.loadLibrary("sqlcipher"); }
@@ -169,6 +169,7 @@ public final class DbHelper extends SQLiteOpenHelper {
             migrateLegacyPartnershipRules(db);
         }
         if (oldVersion < 4) AccountingBook.install(db);
+        if (oldVersion < 5) seedPartnershipTerms(db);
     }
 
     private void seedPartnershipTerms(SQLiteDatabase db) {
