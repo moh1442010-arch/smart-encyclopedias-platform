@@ -10,7 +10,7 @@ import java.io.FileInputStream;
 
 public final class DbHelper extends SQLiteOpenHelper {
     private static final String DB_NAME = "tirbal.db";
-    private static final int DB_VERSION = 5;
+    private static final int DB_VERSION = 6;
     private static final String MIGRATION_PREFS = "tirbal_db_migration";
 
     static { System.loadLibrary("sqlcipher"); }
@@ -170,6 +170,10 @@ public final class DbHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 4) AccountingBook.install(db);
         if (oldVersion < 5) seedPartnershipTerms(db);
+        if (oldVersion < 6) {
+            seedPartnershipTerms(db);
+            db.execSQL("UPDATE partnership_terms SET responsible_party='مشترك', settlement_type='shared_half', deduction_from='مناصفة', note='الديون الزراعية المشتركة توزع مناصفة بين التاجر والتربال' WHERE category='الديون' AND settlement_type='deduct_worker' AND deduction_from='من نصيب التربال'");
+        }
     }
 
     private void seedPartnershipTerms(SQLiteDatabase db) {
@@ -184,7 +188,7 @@ public final class DbHelper extends SQLiteOpenHelper {
             {"أجور العمال","التربال","التاجر","deduct_worker","من نصيب التربال","تخصم من نصيب التربال إذا دفعها التاجر"},
             {"المنصرفات","التربال","التاجر","deduct_worker","من نصيب التربال","المنصرفات المسجلة تخصم من نصيب التربال"},
             {"السلفيات","التربال","التاجر","deduct_worker","من نصيب التربال","السلفيات تخصم من نصيب التربال"},
-            {"الديون","التربال","التاجر","deduct_worker","من نصيب التربال","الديون المسجلة تخصم من نصيب التربال"},
+            {"الديون","مشترك","التاجر","shared_half","مناصفة","الديون الزراعية المشتركة توزع مناصفة بين الطرفين"},
             {"ضريبة المياه","التاجر","التاجر","trader_only","لا يوجد خصم","على التاجر وحده خارج المناصفة"},
             {"إيجار الأرض","التاجر","التاجر","trader_only","لا يوجد خصم","على التاجر وحده خارج المناصفة"}
         };
