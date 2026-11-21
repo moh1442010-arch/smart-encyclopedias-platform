@@ -15,9 +15,9 @@ const manifest = read("tirbal-app/app/src/main/AndroidManifest.xml");
 const config = read("tirbal-licensing/wrangler.toml");
 
 test("Android, Worker and Wrangler use the same product version", () => {
-  assert.ok(gradle.includes("versionName '1.6.0'"));
-  assert.ok(worker.includes('APP_VERSION = "1.6.0"'));
-  assert.ok(config.includes('APP_VERSION = "1.6.0"'));
+  assert.ok(gradle.includes("versionName '1.7.0'"));
+  assert.ok(worker.includes('APP_VERSION = "1.7.0"'));
+  assert.ok(config.includes('APP_VERSION = "1.7.0"'));
 });
 
 test("trial and prices are consistent across app and Worker", () => {
@@ -76,7 +76,7 @@ test("manual review and payment configuration are server-controlled", () => {
 
 
 test("agricultural costs and sales are posted to a balanced double-entry ledger", () => {
-  assert.match(database, /DB_VERSION = 5/);
+  assert.match(database, /DB_VERSION = 6/);
   assert.match(database, /AccountingBook\.install\(db\)/);
   assert.match(database, /AccountingBook\.postCost\(/);
   assert.match(database, /AccountingBook\.postSale\(/);
@@ -100,5 +100,5 @@ test("quick worker cost sheet, crop input rows, invoices and settlement follow t
   assert.match(activity, /sumCostsForWorker\(worker,WORKER_DEDUCTIONS\)/);
   assert.match(database, /DB_VERSION = 5/);
   assert.match(database, /\{"الديون","التربال","التاجر","deduct_worker"/);
-  assert.equal(((50000000 - 5000000) / 2) - 2000000, 20500000);
+  assert.match(activity, /التكاليف المشتركة قبل المناصفة/);\n  assert.match(activity, /الميز والسلفيات المخصومة من نصيب التربال/);\n  assert.match(activity, /updateQuickCostSummary/);\n  assert.match(activity, /workerInput/);\n  assert.equal(((50000000 - 5000000) / 2) - 2000000, 20500000);
 });
