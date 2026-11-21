@@ -68,13 +68,13 @@ final class AccountingBook {
                 String credit="التربال".equals(payer)?"2200":("طرف ثالث".equals(payer)?"2000":"2100");
                 line(db,entry,credit,0,amount,"مصدر التمويل: "+payer);
             }
-            assertBalanced(db,entry);
+            if(entry>0) assertBalanced(db,entry);
             db.setTransactionSuccessful();
         } finally { db.endTransaction(); }
     }
 
     static void postSale(SQLiteDatabase db,long sourceId,String date,String invoice,long gross,long cost,long marketExpenses) {
-        if(gross<0||cost<0||marketExpenses<0)return;
+        if(gross<0||cost<0||marketExpenses<0||(gross==0&&cost==0&&marketExpenses==0))return;
         db.beginTransaction();
         try {
             long entry=entry(db,date,"SALE-"+sourceId,"إثبات فاتورة بيع رقم "+invoice,"SALE",sourceId);
@@ -83,7 +83,7 @@ final class AccountingBook {
                 if(cost>0){line(db,entry,"5000",cost,0,"تكلفة المحصول المباع");line(db,entry,"1200",0,cost,"تخفيض مخزون المحصول");}
                 if(marketExpenses>0){line(db,entry,"5100",marketExpenses,0,"مصروفات السوق");line(db,entry,"2000",0,marketExpenses,"مستحقات مصروفات السوق");}
             }
-            assertBalanced(db,entry);
+            if(entry>0) assertBalanced(db,entry);
             db.setTransactionSuccessful();
         } finally { db.endTransaction(); }
     }
