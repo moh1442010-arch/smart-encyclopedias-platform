@@ -15,7 +15,7 @@ android {
     }
 
     namespace 'com.mohammedmustafa.tirbal'
-    compileSdk 36 // Review build: simplified workflow and worker settlement 1.6.0
+    compileSdk 36 // Review build: simplified worker ledger and settlement 1.7.0
 
     buildFeatures {
         buildConfig true
