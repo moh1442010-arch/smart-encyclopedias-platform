@@ -9,7 +9,7 @@ import net.zetetic.database.sqlcipher.SQLiteDatabase;
  * Every posted entry is balanced and linked to its source record.
  */
 final class AccountingBook {
-    static final String[] ACCOUNT_CODES = {"1000","1100","1200","2000","2100","2200","3000","4000","5000","5100","5200"};
+    static final String[] ACCOUNT_CODES = {"1000","1100","1200","1300","2000","2100","2200","3000","4000","5000","5100","5200"};
     static final String[] ACCOUNT_NAMES = {
         "النقدية","العملاء والمدينون","مخزون المحصول","الموردون والدائنون",
         "جاري التاجر","جاري التربال","رأس المال","إيرادات المبيعات",
@@ -31,7 +31,7 @@ final class AccountingBook {
         String[][] rows = {
             {"1000","النقدية","ASSET","DEBIT"},
             {"1100","العملاء والمدينون","ASSET","DEBIT"},
-            {"1200","تكاليف الموسم ومخزون المحصول","ASSET","DEBIT"},
+            {"1200","تكاليف الموسم ومخزون المحصول","ASSET","DEBIT"},\n            {"1300","سلفيات على الترابلة","ASSET","DEBIT"},
             {"2000","الموردون والدائنون","LIABILITY","CREDIT"},
             {"2100","جاري التاجر","LIABILITY","CREDIT"},
             {"2200","جاري التربال","LIABILITY","CREDIT"},
@@ -63,7 +63,7 @@ final class AccountingBook {
         try {
             long entry=entry(db,date,"COST-"+sourceId,"إثبات تكلفة: "+category+" - "+item,"COST",sourceId);
             if(entry>0) {
-                String debit=("إيجار الأرض".equals(category)||"ضريبة المياه".equals(category)||"الميز".equals(category)||"السلفيات".equals(category)||"الديون".equals(category)||"السلفيات".equals(category)||"الخدمة داخل الزراعة".equals(category)||"الري وخدمة الحقل".equals(category)||"أجور العمال".equals(category)||"المنصرفات".equals(category))?"5200":"1200";
+                String debit="السلفيات".equals(category)?"1300":(("إيجار الأرض".equals(category)||"ضريبة المياه".equals(category)||"الميز".equals(category)||"الديون".equals(category)||"الخدمة داخل الزراعة".equals(category)||"الري وخدمة الحقل".equals(category)||"أجور العمال".equals(category)||"المنصرفات".equals(category))?"5200":"1200");
                 line(db,entry,debit,amount,0,"تكلفة الموسم: "+category);
                 String credit="التربال".equals(payer)?"2200":("طرف ثالث".equals(payer)?"2000":"2100");
                 line(db,entry,credit,0,amount,"مصدر التمويل: "+payer);
