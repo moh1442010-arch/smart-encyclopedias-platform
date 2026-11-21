@@ -151,6 +151,7 @@ public final class DbHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE INDEX idx_costs_date ON costs(entry_date)");
         db.execSQL("CREATE INDEX idx_sales_date ON sales(sale_date)");
         db.execSQL("CREATE INDEX idx_tasks_date ON calendar_tasks(task_date)");
+        AccountingBook.install(db);
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
