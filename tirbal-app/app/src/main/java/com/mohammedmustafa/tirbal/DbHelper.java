@@ -10,7 +10,7 @@ import java.io.FileInputStream;
 
 public final class DbHelper extends SQLiteOpenHelper {
     private static final String DB_NAME = "tirbal.db";
-    private static final int DB_VERSION = 3;
+    private static final int DB_VERSION = 4;
     private static final String MIGRATION_PREFS = "tirbal_db_migration";
 
     static { System.loadLibrary("sqlcipher"); }
@@ -167,6 +167,7 @@ public final class DbHelper extends SQLiteOpenHelper {
             seedPartnershipTerms(db);
             migrateLegacyPartnershipRules(db);
         }
+        if (oldVersion < 4) AccountingBook.install(db);
     }
 
     private void seedPartnershipTerms(SQLiteDatabase db) {
@@ -237,7 +238,8 @@ public final class DbHelper extends SQLiteOpenHelper {
         v.put("payer", payer); v.put("responsible_party", responsible);
         v.put("settlement_type", settlementType); v.put("deduction_from", deductionFrom);
         v.put("agreement_note", agreementNote); v.put("notes", notes);
-        getWritableDatabase().insertOrThrow("costs", null, v);
+        long id = getWritableDatabase().insertOrThrow("costs", null, v);
+        AccountingBook.postCost(getWritableDatabase(), id, date, category, item, Math.round(quantity * price), payer);
     }
 
     public String[] defaultResponsibility(String category) {
@@ -275,7 +277,8 @@ public final class DbHelper extends SQLiteOpenHelper {
         v.put("project_id", 1); v.put("invoice", invoice); v.put("sale_date", date);
         v.put("gross", gross); v.put("allocated_cost", allocatedCost); v.put("market_expenses", marketExpenses);
         v.put("net", gross - allocatedCost - marketExpenses); v.put("trader", trader); v.put("notes", notes);
-        getWritableDatabase().insertOrThrow("sales", null, v);
+        long id = getWritableDatabase().insertOrThrow("sales", null, v);
+        AccountingBook.postSale(getWritableDatabase(), id, date, invoice, gross, allocatedCost, marketExpenses);
     }
 
     public void addTask(String date, String title, String details) {
