@@ -18,6 +18,10 @@ import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
+import android.text.TextWatcher;
+import android.text.Editable;
 
 public class MainActivity extends Activity {
     private static final int GREEN = Color.rgb(28, 104, 58);
@@ -32,10 +36,19 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(DARK);
         getWindow().setNavigationBarColor(DARK);
+        // Review-first startup: the app remains usable while the licensing service is being finalized.
+        // The website nucleus can turn enforcement on later through /api/config without rebuilding the APK.
         LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
             if(config!=null && isMandatoryUpdate(config)) {
                 showMandatoryUpdate(config);
-            } else continueLicenseCheck();
+                return;
+            }
+            if(config!=null && BuildConfig.REMOTE_LICENSE_CONTROL
+                    && config.optBoolean("licenseEnforcement",false)) {
+                continueLicenseCheck();
+            } else {
+                openReviewSession();
+            }
         }));
     }
 
@@ -70,6 +83,7 @@ public class MainActivity extends Activity {
             if (db != null) db.close();
             db = new DbHelper(this);
             db.migrateLegacyIfNeeded(this);
+            AccountingBook.backfillLegacy(db.getWritableDatabase());
             return true;
         } catch (Exception e) {
             if (db != null) db.close();
@@ -92,6 +106,14 @@ public class MainActivity extends Activity {
         }
     }
 
+
+    private void openReviewSession() {
+        currentDeviceId = "";
+        licenseReady = false;
+        licenseHandler.removeCallbacks(licenseMonitor);
+        if (!openDatabaseSafely()) return;
+        showGate();
+    }
 
     private void continueLicenseCheck() {
         LicenseManager.check(this, result -> runOnUiThread(() -> {
@@ -155,6 +177,8 @@ public class MainActivity extends Activity {
                 if(compareVersions(current,latest)<0)info.append("\\nيتوفر تحديث جديد.");
                 else info.append("\\nالتطبيق على أحدث إصدار معلن.");
                 info.append("\\nمدة التجربة: ").append(config.optInt("trialDays",15)).append(" يوماً");
+                info.append("\\nحالة الترخيص المركزي: ")
+                    .append(config.optBoolean("licenseEnforcement",false) ? "مفعّل" : "متوقف أثناء المراجعة");
                 JSONObject plans=config.optJSONObject("plans");
                 if(plans!=null) {
                     JSONObject monthly=plans.optJSONObject("monthly"),annual=plans.optJSONObject("annual"),lifetime=plans.optJSONObject("lifetime");
@@ -350,9 +374,12 @@ public class MainActivity extends Activity {
         addTile("🧾 دفتر التكلفة", "التقاوي والأسمدة والمبيدات والميز والعمال والمصروفات والسلفيات", v -> showCosts());
         addTile("🛒 السوق والمبيعات", "الفواتير والتاريخ والتكلفة ومنصرفات السوق والصافي", v -> showSales());
         addTile("📅 الرزنامة الزراعية", "مواعيد الزراعة والري والتسميد والرش والحصاد", v -> showCalendar());
-        addTile("🌱 مدخلات الزراعة", "تسجيل كميات وأسعار التقاوي والأسمدة والمبيدات في دفتر التكلفة", v -> showCosts());
+        addTile("🌱 مدخلات الزراعة", "إدخال سريع متعدد البنود والكميات والأسعار", v -> showAgricultureInputs());
         addTile("👨‍🌾 العمال والتربال", "تسجيل اسم التربال وربط اسمه ببنود التكلفة", v -> showCosts());
+        addTile("🤝 تسوية نصيب التربال", "حساب صافي الفواتير والمناصفة والخصومات لكل تربال", v -> showSettlement());
         addTile("📊 الأرباح والخسائر", "ملخص الموسم ونتائج المبيعات والتكاليف", v -> showReports());
+        addTile("📚 دفتر اليومية والأستاذ", "قيود محاسبية مزدوجة وسجل العمليات المرحلة", v -> showJournal());
+        addTile("⚖️ ميزان المراجعة", "أرصدة الحسابات ومطابقة إجمالي المدين والدائن", v -> showTrialBalance());
         addTile("💳 الديون والسلفيات", "السلفيات تسجل كبند تكلفة قابل للتصنيف", v -> showCosts());
         addTile("🤝 اتفاق الشراكة والتسوية", "مسؤوليات التاجر والتربال والخصومات بعد الحصاد", v -> showPartnership());
         addTile("🔐 تغيير كلمة المرور", "تحديث كلمة مرور التطبيق", v -> changePassword());
@@ -388,20 +415,246 @@ public class MainActivity extends Activity {
         addBack();
     }
 
+    private static final String[] QUICK_CATEGORIES = {"الميز","الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون","السلفيات"};
+    private static final String[] SHARED_CATEGORIES = {"الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون"};
+    private static final String[] WORKER_DEDUCTIONS = {"الميز","السلفيات","الخدمة داخل الزراعة","الري وخدمة الحقل","أجور العمال","المنصرفات"};
+
+    private class CostRow {
+        EditText worker;
+        EditText[] amounts = new EditText[QUICK_CATEGORIES.length];
+        TextView total;
+    }
+
+    private EditText cellInput(String hint, boolean numeric, int width) {
+        EditText e=new EditText(this); e.setSingleLine(true); e.setTextSize(13); e.setHint(hint);
+        e.setGravity(Gravity.CENTER); e.setPadding(6,4,6,4); e.setBackground(rounded(Color.WHITE,6,Color.rgb(210,220,210)));
+        if(numeric)e.setInputType(2);
+        e.setLayoutParams(new LinearLayout.LayoutParams(dp(width),dp(48)));
+        return e;
+    }
+
+    private TextView cellLabel(String value,int width) {
+        TextView t=text(value,12,DARK,true);t.setGravity(Gravity.CENTER);t.setBackground(rounded(Color.rgb(239,244,238),6,Color.rgb(210,220,210)));
+        t.setLayoutParams(new LinearLayout.LayoutParams(dp(width),dp(48)));return t;
+    }
+
     private void showCosts() {
-        base("دفتر التكلفة");
-        content.addView(text("أضف كل عملية في سطر مستقل. الإجمالي يحسب تلقائياً بالكمية × السعر.",14,DARK,false));
-        Button add = button("＋ إضافة بند تكلفة");
-        content.addView(add);
-        add.setOnClickListener(v -> costDialog());
-        tableHeader(new String[]{"التاريخ","اسم التربال","التصنيف","الصنف","الكمية","السعر","الإجمالي","الدافع","المسؤول","التسوية","الخصم من"});
-        try (Cursor c = db.recent("costs","entry_date")) {
-            while (c.moveToNext()) {
-                tableRow(new String[]{c.getString(c.getColumnIndexOrThrow("entry_date")),c.getString(c.getColumnIndexOrThrow("worker")),c.getString(c.getColumnIndexOrThrow("category")),c.getString(c.getColumnIndexOrThrow("item")),c.getString(c.getColumnIndexOrThrow("quantity")),money.format(c.getLong(c.getColumnIndexOrThrow("unit_price"))),money.format(c.getLong(c.getColumnIndexOrThrow("total"))),c.getString(c.getColumnIndexOrThrow("payer")),c.getString(c.getColumnIndexOrThrow("responsible_party")),c.getString(c.getColumnIndexOrThrow("settlement_type")),c.getString(c.getColumnIndexOrThrow("deduction_from"))});
-            }
+        base("دفتر تكلفة التربال");
+        content.addView(text("أدخل اسم كل تربال مرة واحدة، ثم أدخل المبالغ تحت البنود. يمكنك إضافة عدد كبير من الصفوف وحذف أي صف قبل الحفظ.",14,DARK,false));
+        content.addView(text("الأسمدة والمبيدات والتقاوي والتحضير والديون تدخل في التكلفة المشتركة. الميز والسلفيات تخصم من نصيب التربال بعد المناصفة.",13,Color.DKGRAY,false));
+        LinearLayout table=new LinearLayout(this);table.setOrientation(LinearLayout.VERTICAL);
+        content.addView(table);
+        List<CostRow> rows=new ArrayList<>();
+        addQuickCostHeader(table);
+        TextView summary=text("",15,DARK,true);
+        summary.setPadding(10,12,10,12);
+        summary.setBackground(rounded(Color.WHITE,12,Color.rgb(218,228,216)));
+        content.addView(summary,margin(-1,-2,0,10,0,10));
+        Runnable addRow=()->addQuickCostRow(table,rows,summary);
+        Button add=button("＋ إضافة تربال جديد");
+        content.addView(add);add.setOnClickListener(v->addRow.run());
+        addRow.run();
+        EditText date=field("تاريخ دفتر التكلفة YYYY-MM-DD",false);date.setText(today());content.addView(date);
+        Button save=button("حفظ جميع صفوف التكلفة");
+        content.addView(save);
+        save.setOnClickListener(v->{
+            if(empty(date)){toast("أدخل تاريخ التكلفة");return;}
+            int pending=0;
+            try {
+                for(CostRow row:rows) {
+                    String worker=val(row.worker);
+                    boolean hasAmount=false;
+                    for(EditText amountField:row.amounts) {
+                        String raw=val(amountField);
+                        if(!raw.isEmpty()) {
+                            long amount=Long.parseLong(raw);
+                            if(amount<0)throw new NumberFormatException();
+                            if(amount>0)hasAmount=true;
+                        }
+                    }
+                    if(worker.isEmpty()&&hasAmount)throw new IllegalArgumentException("اسم التربال مطلوب لكل صف يحتوي مبالغ");
+                    if(!worker.isEmpty()) {
+                        for(EditText amountField:row.amounts)if(!val(amountField).isEmpty()&&Long.parseLong(val(amountField))>0)pending++;
+                    }
+                }
+                if(pending==0){toast("أدخل اسم تربال ومبلغاً واحداً على الأقل");return;}
+                net.zetetic.database.sqlcipher.SQLiteDatabase writable=db.getWritableDatabase();
+                writable.beginTransaction();
+                try {
+                    for(CostRow row:rows) {
+                        String worker=val(row.worker);
+                        if(worker.isEmpty())continue;
+                        for(int i=0;i<QUICK_CATEGORIES.length;i++) {
+                            String raw=val(row.amounts[i]);
+                            if(raw.isEmpty())continue;
+                            long amount=Long.parseLong(raw);
+                            if(amount==0)continue;
+                            String category=QUICK_CATEGORIES[i];
+                            String[] defaults=db.defaultResponsibility(category);
+                            db.addCost(val(date),worker,category,category,1,amount,"التاجر",defaults[0],defaults[2],defaults[3],"","إدخال سريع من دفتر التكلفة");
+                        }
+                    }
+                    writable.setTransactionSuccessful();
+                } finally { writable.endTransaction(); }
+                toast("تم حفظ "+pending+" بند تكلفة دون تجزئة العملية");
+                showCosts();
+            }catch(Exception ex){toast("لم تحفظ البيانات. راجع أسماء الترابلة والمبالغ ثم حاول مجدداً.");}
+        });
+        content.addView(text("آخر السجلات المحفوظة",17,GREEN,true));
+        tableHeader(new String[]{"التاريخ","التربال","البند","المبلغ"});
+        try(Cursor c=db.recent("costs","entry_date")) {
+            while(c.moveToNext())tableRow(new String[]{c.getString(c.getColumnIndexOrThrow("entry_date")),c.getString(c.getColumnIndexOrThrow("worker")),c.getString(c.getColumnIndexOrThrow("category")),money.format(c.getLong(c.getColumnIndexOrThrow("total")))});
         }
-        content.addView(text("إجمالي التكلفة: " + money.format(db.total("costs","total")) + " جنيه سوداني",18,GREEN,true));
+        reportLine("إجمالي التكلفة المسجلة",db.total("costs","total"));
+        Button detailed=button("إدخال تفصيلي للمدخلات الزراعية");content.addView(detailed);detailed.setOnClickListener(v->showAgricultureInputs());
+        Button settlement=button("حساب التسوية لكل تربال");content.addView(settlement);settlement.setOnClickListener(v->showSettlement());
         addBack();
+    }
+
+    private void addQuickCostHeader(LinearLayout table) {
+        HorizontalScrollView hs=new HorizontalScrollView(this);
+        LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);
+        String[] labels={"اسم التربال","الميز","السماد","المبيد","التقاوي","التحضير","الديون","السلفيات","الجملة","حذف"};
+        int[] widths={132,82,82,82,82,82,82,82,105,64};
+        for(int i=0;i<labels.length;i++){
+            TextView t=text(labels[i],12,Color.WHITE,true);t.setGravity(Gravity.CENTER);t.setBackgroundColor(GREEN);
+            row.addView(t,new LinearLayout.LayoutParams(dp(widths[i]),dp(46)));
+        }
+        hs.addView(row);table.addView(hs);
+    }
+
+    private void addQuickCostRow(LinearLayout table,List<CostRow> rows,TextView summary) {
+        CostRow item=new CostRow();item.worker=workerInput("اسم التربال",132);
+        HorizontalScrollView hs=new HorizontalScrollView(this);
+        LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);
+        row.addView(item.worker);
+        for(int i=0;i<item.amounts.length;i++){
+            item.amounts[i]=cellInput("0",true,82);
+            item.amounts[i].setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_NEXT);
+            row.addView(item.amounts[i]);
+        }
+        item.total=cellLabel("0",105);row.addView(item.total);
+        Button remove=button("حذف");remove.setTextSize(11);remove.setPadding(0,0,0,0);
+        row.addView(remove,new LinearLayout.LayoutParams(dp(64),dp(48)));
+        hs.addView(row);table.addView(hs);
+        TextWatcher watcher=new TextWatcher(){
+            public void beforeTextChanged(CharSequence x,int st,int count,int after){}
+            public void onTextChanged(CharSequence x,int st,int before,int count){
+                long total=0;
+                for(EditText e:item.amounts){try{String value=val(e);if(!value.isEmpty())total=Math.addExact(total,Long.parseLong(value));}catch(Exception ignored){}}
+                item.total.setText(money.format(total));
+                updateQuickCostSummary(rows,summary);
+            }
+            public void afterTextChanged(Editable e){}
+        };
+        for(EditText e:item.amounts)e.addTextChangedListener(watcher);
+        item.worker.addTextChangedListener(watcher);
+        remove.setOnClickListener(v->{rows.remove(item);table.removeView(hs);updateQuickCostSummary(rows,summary);});
+        rows.add(item);
+        updateQuickCostSummary(rows,summary);
+    }
+
+    private void updateQuickCostSummary(List<CostRow> rows,TextView summary) {
+        long shared=0,deductions=0,total=0;
+        for(CostRow row:rows)for(int i=0;i<row.amounts.length;i++){
+            try{
+                String raw=val(row.amounts[i]);if(raw.isEmpty())continue;
+                long amount=Long.parseLong(raw);
+                total=Math.addExact(total,amount);
+                if(i==0||i==6)deductions=Math.addExact(deductions,amount);
+                else shared=Math.addExact(shared,amount);
+            }catch(Exception ignored){}
+        }
+        summary.setText("إجمالي دفتر التكلفة: "+money.format(total)+" ج.س\n"
+            +"التكاليف المشتركة قبل المناصفة: "+money.format(shared)+" ج.س\n"
+            +"الميز والسلفيات المخصومة من نصيب التربال: "+money.format(deductions)+" ج.س");
+    }
+
+    private AutoCompleteTextView workerInput(String hint,int width) {
+        AutoCompleteTextView input=new AutoCompleteTextView(this);
+        input.setSingleLine(true);input.setTextSize(14);input.setHint(hint);
+        input.setGravity(Gravity.CENTER);input.setPadding(6,4,6,4);
+        input.setBackground(rounded(Color.WHITE,6,Color.rgb(210,220,210)));
+        input.setThreshold(1);
+        ArrayList<String> names=new ArrayList<>();
+        try(Cursor c=db.workerNames()){while(c.moveToNext())names.add(c.getString(0));}
+        input.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_dropdown_item_1line,names));
+        input.setLayoutParams(new LinearLayout.LayoutParams(width<0?-1:dp(width),dp(48)));
+        return input;
+    }
+
+    private class AgricultureRow {
+        Spinner category;
+        EditText worker,item,quantity,price;
+        TextView total;
+    }
+
+    private void showAgricultureInputs() {
+        base("مدخلات الزراعة");
+        content.addView(text("أضف كل صنف كسطر مستقل. يمكنك إضافة أسمدة وتقاوي ومبيدات وتحضير وأي بند آخر، مع حساب الكمية × سعر الوحدة تلقائياً.",14,DARK,false));
+        EditText date=field("تاريخ الإدخال YYYY-MM-DD",false);date.setText(today());content.addView(date);
+        LinearLayout rowsBox=new LinearLayout(this);rowsBox.setOrientation(LinearLayout.VERTICAL);content.addView(rowsBox);
+        List<AgricultureRow> rows=new ArrayList<>();
+        TextView summary=text("إجمالي المدخلات الزراعية: 0 ج.س",16,GREEN,true);
+        content.addView(summary);
+        Button add=button("＋ إضافة صنف زراعي");content.addView(add);add.setOnClickListener(v->addAgricultureRow(rowsBox,rows,summary));
+        add.performClick();
+        Button save=button("حفظ جميع المدخلات");content.addView(save);
+        save.setOnClickListener(v->{
+            if(empty(date)){toast("أدخل التاريخ");return;}
+            int count=0;
+            try{
+                for(AgricultureRow r:rows){
+                    if(empty(r.worker)&&empty(r.item)&&empty(r.quantity)&&empty(r.price))continue;
+                    if(empty(r.worker)||empty(r.item)||empty(r.quantity)||empty(r.price))throw new IllegalArgumentException();
+                    double q=Double.parseDouble(val(r.quantity));long p=Long.parseLong(val(r.price));
+                    if(q<=0||p<0||!Double.isFinite(q))throw new IllegalArgumentException();
+                    count++;
+                }
+                if(count==0){toast("أدخل صنفاً واحداً على الأقل");return;}
+                net.zetetic.database.sqlcipher.SQLiteDatabase writable=db.getWritableDatabase();
+                writable.beginTransaction();
+                try {
+                    for(AgricultureRow r:rows){
+                        if(empty(r.worker)&&empty(r.item)&&empty(r.quantity)&&empty(r.price))continue;
+                        double q=Double.parseDouble(val(r.quantity));long p=Long.parseLong(val(r.price));
+                        String category=r.category.getSelectedItem().toString();
+                        String[] defaults=db.defaultResponsibility(category);
+                        db.addCost(val(date),val(r.worker),category,val(r.item),q,p,"التاجر",defaults[0],defaults[2],defaults[3],"","مدخل زراعي تفصيلي");
+                    }
+                    writable.setTransactionSuccessful();
+                } finally { writable.endTransaction(); }
+                toast("تم حفظ "+count+" مدخل زراعي في عملية واحدة");
+                showAgricultureInputs();
+            }catch(Exception ex){toast("لم تحفظ المدخلات. أكمل الحقول وتحقق من الكميات والأسعار ثم أعد المحاولة.");}
+        });
+        addBack();
+    }
+
+    private void updateAgricultureSummary(List<AgricultureRow> rows,TextView summary) {
+        long total=0;
+        for(AgricultureRow row:rows)try{
+            double quantity=empty(row.quantity)?0:Double.parseDouble(val(row.quantity));
+            long price=empty(row.price)?0:Long.parseLong(val(row.price));
+            if(quantity>0&&price>=0)total=Math.addExact(total,Math.round(quantity*price));
+        }catch(Exception ignored){}
+        summary.setText("إجمالي المدخلات الزراعية: "+money.format(total)+" ج.س");
+    }
+
+    private void addAgricultureRow(LinearLayout parent,List<AgricultureRow> rows,TextView summary) {
+        AgricultureRow r=new AgricultureRow();LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(10,8,10,8);card.setBackground(rounded(Color.WHITE,12,Color.rgb(218,228,216)));
+        r.category=spinner(new String[]{"التقاوي","الأسمدة","المبيدات","تحضير الأرض","الري وخدمة الحقل","الوقود والترحيل","أجور العمال","أخرى"});
+        r.worker=workerInput("اسم التربال",-1);r.item=field("اسم الصنف / البيان",false);r.quantity=field("الكمية",false);r.quantity.setInputType(8194);
+        r.price=field("سعر الوحدة بالجنيه",false);r.price.setInputType(2);r.total=text("الإجمالي: 0 ج.س",15,GREEN,true);
+        TextWatcher watcher=new TextWatcher(){public void beforeTextChanged(CharSequence x,int st,int count,int after){}public void onTextChanged(CharSequence x,int st,int before,int count){
+            try{double q=empty(r.quantity)?0:Double.parseDouble(val(r.quantity));long p=empty(r.price)?0:Long.parseLong(val(r.price));r.total.setText("الإجمالي: "+money.format(Math.round(q*p))+" ج.س");}catch(Exception ex){r.total.setText("تحقق من الكمية والسعر");} updateAgricultureSummary(rows,summary);
+        }public void afterTextChanged(Editable e){}};
+        r.quantity.addTextChangedListener(watcher);r.price.addTextChangedListener(watcher);
+        Button remove=button("حذف هذا الصنف");remove.setTextSize(12);
+        remove.setOnClickListener(v->{rows.remove(r);parent.removeView(card);updateAgricultureSummary(rows,summary);});
+        card.addView(text("بند زراعي جديد",14,DARK,true));card.addView(r.category);card.addView(r.worker);card.addView(r.item);card.addView(r.quantity);card.addView(r.price);card.addView(r.total);card.addView(remove);
+        parent.addView(card,margin(-1,-2,0,0,0,10));rows.add(r);updateAgricultureSummary(rows,summary);
     }
 
     private void costDialog() {
@@ -451,47 +704,76 @@ public class MainActivity extends Activity {
     }
 
     private void showSales() {
-        base("السوق والمبيعات");
-        content.addView(text("الصافي = قيمة البيع − التكلفة المخصصة − منصرفات السوق",14,DARK,false));
-        Button add=button("＋ تسجيل فاتورة بيع"); content.addView(add); add.setOnClickListener(v->saleDialog());
-        tableHeader(new String[]{"الفاتورة","التاريخ","قيمة البيع","التكلفة","منصرفات السوق","الصافي"});
-        try(Cursor c=db.recent("sales","sale_date")) {
-            while(c.moveToNext()) {
-                String invoice=c.getString(c.getColumnIndexOrThrow("invoice"));
-                String date=c.getString(c.getColumnIndexOrThrow("sale_date"));
-                long gross=c.getLong(c.getColumnIndexOrThrow("gross"));
-                long allocated=c.getLong(c.getColumnIndexOrThrow("allocated_cost"));
-                long expenses=c.getLong(c.getColumnIndexOrThrow("market_expenses"));
-                long net=c.getLong(c.getColumnIndexOrThrow("net"));
-                String trader=c.getString(c.getColumnIndexOrThrow("trader"));
-                tableRow(new String[]{invoice,date,money.format(gross),money.format(allocated),money.format(expenses),money.format(net)});
-                Button print=button("طباعة الفاتورة رقم "+invoice);
-                content.addView(print);
-                print.setOnClickListener(v->InvoicePrinter.print(this,invoice,date,gross,allocated,expenses,net,trader,db.projectName(),money));
+        base("السوق وفواتير التربال");
+        content.addView(text("سجل كل فاتورة مستقلة. أدخل اسم التربال وتاريخ الفاتورة ورقمها وتكلفة الرحلة وقيمة البيع. الصافي يحسب تلقائياً.",14,DARK,false));
+        Button add=button("＋ إضافة فاتورة جديدة");content.addView(add);add.setOnClickListener(v->saleDialog());
+        tableHeader(new String[]{"اسم التربال","التاريخ","رقم الفاتورة","قيمة البيع","تكلفة الرحلة","الصافي"});
+        try(Cursor c=db.recent("sales","sale_date")){
+            while(c.moveToNext()){
+                String invoice=c.getString(c.getColumnIndexOrThrow("invoice")),date=c.getString(c.getColumnIndexOrThrow("sale_date"));
+                long gross=c.getLong(c.getColumnIndexOrThrow("gross")),trip=c.getLong(c.getColumnIndexOrThrow("market_expenses")),net=c.getLong(c.getColumnIndexOrThrow("net"));
+                String worker=c.getString(c.getColumnIndexOrThrow("trader"));
+                tableRow(new String[]{worker,date,invoice,money.format(gross),money.format(trip),money.format(net)});
+                Button print=button("طباعة الفاتورة "+invoice);content.addView(print);
+                print.setOnClickListener(v->InvoicePrinter.print(this,invoice,date,gross,0,trip,net,worker,db.projectName(),money));
             }
         }
-        content.addView(text("إجمالي المبيعات: "+money.format(db.total("sales","gross"))+" جنيه سوداني",18,GREEN,true));
+        reportLine("إجمالي صافي الفواتير",db.totalSalesNet());
+        content.addView(text("يمكن تسجيل عدد غير محدود من الفواتير للتربال نفسه. تجمع الفواتير حسب الاسم في شاشة التسوية.",13,Color.DKGRAY,false));
+        Button settlement=button("عرض تسوية التربال");content.addView(settlement);settlement.setOnClickListener(v->showSettlement());
         addBack();
     }
 
     private void saleDialog() {
-        LinearLayout form=form();
+        LinearLayout f=form();
+        EditText worker=workerInput("اسم التربال",-1);
+        EditText date=field("تاريخ الفاتورة YYYY-MM-DD",false);date.setText(today());
         EditText invoice=field("رقم الفاتورة",false);
-        EditText date=field("التاريخ YYYY-MM-DD",false); date.setText(today());
-        EditText gross=field("قيمة البيع بالجنيه",false); gross.setInputType(2);
-        EditText cost=field("التكلفة المخصصة للمباع",false); cost.setInputType(2);
-        EditText expenses=field("منصرفات السوق",false); expenses.setInputType(2);
-        EditText trader=field("اسم التاجر",false);
+        EditText gross=field("قيمة البيع بالجنيه السوداني",false);gross.setInputType(2);
+        EditText trip=field("تكلفة الرحلة / الترحيل",false);trip.setInputType(2);
         EditText notes=field("ملاحظات",false);
-        for(EditText e:new EditText[]{invoice,date,gross,cost,expenses,trader,notes}) form.addView(e);
-        new AlertDialog.Builder(this).setTitle("فاتورة بيع").setView(form).setNegativeButton("إلغاء",null).setPositiveButton("حفظ",(d,w)->{
-            try {
-                if(empty(invoice)||empty(date)||empty(gross)) {toast("أدخل رقم الفاتورة والتاريخ وقيمة البيع");return;}
-                long g=Long.parseLong(val(gross)), c=empty(cost)?0:Long.parseLong(val(cost)), x=empty(expenses)?0:Long.parseLong(val(expenses));
-                if(g<0||c<0||x<0) throw new NumberFormatException();
-                db.addSale(val(invoice),val(date),g,c,x,val(trader),val(notes)); showSales();
-            } catch(Exception e){toast("تحقق من المبالغ المدخلة");}
+        f.addView(worker);f.addView(date);f.addView(invoice);f.addView(gross);f.addView(trip);f.addView(notes);
+        TextView net=text("صافي الفاتورة: 0 ج.س",17,GREEN,true);f.addView(net);
+        TextWatcher calc=new TextWatcher(){public void beforeTextChanged(CharSequence x,int st,int count,int after){}public void onTextChanged(CharSequence x,int st,int before,int count){
+            try{long g=empty(gross)?0:Long.parseLong(val(gross)),t=empty(trip)?0:Long.parseLong(val(trip));net.setText("صافي الفاتورة: "+money.format(g-t)+" ج.س");}catch(Exception ex){net.setText("تحقق من المبالغ");}
+        }public void afterTextChanged(Editable e){}};
+        gross.addTextChangedListener(calc);trip.addTextChangedListener(calc);
+        new AlertDialog.Builder(this).setTitle("فاتورة سوق جديدة").setView(f).setNegativeButton("إلغاء",null).setPositiveButton("حفظ الفاتورة",(d,w)->{
+            try{
+                if(empty(worker)||empty(date)||empty(invoice)||empty(gross))throw new IllegalArgumentException();
+                long g=Long.parseLong(val(gross)),t=empty(trip)?0:Long.parseLong(val(trip));
+                if(g<0||t<0||t>g)throw new IllegalArgumentException();
+                db.addSale(val(invoice),val(date),g,0,t,val(worker),val(notes));showSales();
+            }catch(Exception ex){toast("أكمل البيانات وتأكد أن تكلفة الرحلة لا تتجاوز قيمة البيع");}
         }).show();
+    }
+
+    private void showSettlement() {
+        base("تسوية نصيب التربال");
+        content.addView(text("طريقة الحساب: صافي الفواتير − كامل التكلفة المشتركة المسجلة، ثم تقسيم المتبقي مناصفة. تخصم الميز والسلفيات والخدمات المحددة على التربال من نصيبه فقط.",14,DARK,false));
+        long totalNet=0,totalShared=0,totalWorkerDeductions=0,totalWorkerShare=0;
+        tableHeader(new String[]{"التربال","صافي الفواتير","التكلفة المشتركة","نصيب التربال قبل الخصم","خصومات التربال","الصافي المستحق"});
+        try(Cursor names=db.workerNames()){
+            while(names.moveToNext()){
+                String worker=names.getString(0);
+                long net=db.netSalesForWorker(worker);
+                long shared=db.sumCostsForWorker(worker,SHARED_CATEGORIES);
+                long deductions=db.sumCostsForWorker(worker,WORKER_DEDUCTIONS);
+                long distributable=net-shared;
+                long half=distributable/2;
+                long due=half-deductions;
+                tableRow(new String[]{worker,money.format(net),money.format(shared),money.format(half),money.format(deductions),money.format(due)});
+                totalNet+=net;totalShared+=shared;totalWorkerDeductions+=deductions;totalWorkerShare+=due;
+            }
+        }
+        content.addView(text("ملخص المشروع",18,GREEN,true));
+        reportLine("صافي جميع الفواتير بعد تكلفة الرحلات",totalNet);
+        reportLine("إجمالي التحضير والتقاوي والسماد والمبيد",totalShared);
+        reportLine("نصيب التربال قبل الميز والسلفيات",(totalNet-totalShared)/2);
+        reportLine("إجمالي خصومات الميز والسلفيات والخدمات",totalWorkerDeductions);
+        content.addView(text("إجمالي صافي مستحقات الترابلة: "+money.format(totalWorkerShare)+" ج.س",21,GREEN,true));
+        content.addView(text("مثال المعادلة: 50,000,000 − 5,000,000 = 45,000,000. نصيب كل طرف 22,500,000. إذا كانت خصومات التربال 2,000,000 يصبح صافي نصيبه 20,500,000.",13,Color.DKGRAY,false));
+        addBack();
     }
 
     private void showCalendar() {
@@ -555,22 +837,90 @@ public class MainActivity extends Activity {
         if (value.equals("مشترك") || value.equals("حسب الاتفاق")) spinner.setSelection(adapter.getCount()-1);
     }
 
+    private void showJournal() {
+        base("دفتر اليومية والأستاذ");
+        content.addView(text("تُرحّل تكاليف المشروع وفواتير البيع تلقائياً إلى قيود مزدوجة. ويمكن إضافة قيد يدوي متوازن.",14,DARK,false));
+        Button add=button("＋ إضافة قيد يومية");
+        content.addView(add);
+        add.setOnClickListener(v->manualJournalDialog());
+        tableHeader(new String[]{"التاريخ","المرجع","البيان","مدين","دائن"});
+        try(Cursor c=AccountingBook.recentEntries(db.getReadableDatabase())) {
+            while(c.moveToNext()) {
+                tableRow(new String[]{c.getString(1),c.getString(2),c.getString(3),money.format(c.getLong(4)),money.format(c.getLong(5))});
+            }
+        }
+        content.addView(text("يعرض الدفتر آخر 100 قيد مرحّل. القيود الآلية مرتبطة بسجل التكلفة أو فاتورة البيع لمنع الترحيل المكرر.",13,Color.DKGRAY,false));
+        addBack();
+    }
+
+    private void manualJournalDialog() {
+        LinearLayout f=form();
+        EditText date=field("التاريخ YYYY-MM-DD",false); date.setText(today());
+        EditText description=field("شرح القيد",false);
+        Spinner debit=spinner(AccountingBook.ACCOUNT_NAMES);
+        Spinner credit=spinner(AccountingBook.ACCOUNT_NAMES);
+        EditText amount=field("المبلغ بالجنيه السوداني",false); amount.setInputType(2);
+        f.addView(date);f.addView(description);
+        f.addView(text("الحساب المدين",14,DARK,true));f.addView(debit);
+        f.addView(text("الحساب الدائن",14,DARK,true));f.addView(credit);f.addView(amount);
+        new AlertDialog.Builder(this).setTitle("قيد يومية مزدوج").setView(f)
+            .setNegativeButton("إلغاء",null).setPositiveButton("ترحيل القيد",(dialog,which)->{
+                try {
+                    if(empty(date)||empty(description)||empty(amount)){toast("أكمل التاريخ والبيان والمبلغ");return;}
+                    long value=Long.parseLong(val(amount));
+                    if(value<=0||debit.getSelectedItemPosition()==credit.getSelectedItemPosition())throw new IllegalArgumentException();
+                    String debitCode=AccountingBook.ACCOUNT_CODES[debit.getSelectedItemPosition()];
+                    String creditCode=AccountingBook.ACCOUNT_CODES[credit.getSelectedItemPosition()];
+                    AccountingBook.createManual(db.getWritableDatabase(),val(date),val(description),debitCode,creditCode,value);
+                    toast("تم ترحيل القيد وهو متوازن");
+                    showJournal();
+                } catch(Exception ex){toast("تعذر ترحيل القيد. تحقق من المبلغ والحسابات");}
+            }).show();
+    }
+
+    private void showTrialBalance() {
+        base("ميزان المراجعة");
+        content.addView(text("الأرصدة مستخرجة من القيود المرحلة في دفتر اليومية. يجب أن يتساوى إجمالي المدين مع إجمالي الدائن.",14,DARK,false));
+        tableHeader(new String[]{"رمز الحساب","اسم الحساب","مدين","دائن","الرصيد"});
+        long totalDebit=0,totalCredit=0;
+        try(Cursor c=AccountingBook.trialBalance(db.getReadableDatabase())) {
+            while(c.moveToNext()) {
+                long debit=c.getLong(3),credit=c.getLong(4),balance=c.getLong(5);
+                totalDebit+=debit;totalCredit+=credit;
+                tableRow(new String[]{c.getString(0),c.getString(1),money.format(debit),money.format(credit),money.format(balance)});
+            }
+        }
+        content.addView(text("إجمالي المدين: "+money.format(totalDebit)+" ج.س",18,DARK,true));
+        content.addView(text("إجمالي الدائن: "+money.format(totalCredit)+" ج.س",18,DARK,true));
+        boolean balanced=totalDebit==totalCredit;
+        content.addView(text(balanced?"الميزان متوازن حسابياً":"يوجد فرق في ميزان المراجعة",17,balanced?GREEN:Color.RED,true));
+        Button journal=button("فتح دفتر اليومية");
+        content.addView(journal);journal.setOnClickListener(v->showJournal());
+        addBack();
+    }
+
     private void showReports() {
-        base("الأرباح والخسائر");
-        long costs=db.total("costs","total");
-        long gross=db.total("sales","gross");
-        long allocated=db.total("sales","allocated_cost");
-        long expenses=db.total("sales","market_expenses");
-        long salesNet=db.total("sales","net");
-        long result=gross-costs-expenses;
-        reportLine("إجمالي تكلفة المدخلات والمصروفات",costs);
-        reportLine("إجمالي قيمة المبيعات",gross);
-        reportLine("التكلفة المخصصة للمحصول المباع",allocated);
-        reportLine("منصرفات السوق",expenses);
-        reportLine("صافي المبيعات بعد تكلفة المباع",salesNet);
-        content.addView(text("النتيجة التقديرية للمشروع = المبيعات − إجمالي التكلفة المسجلة − منصرفات السوق",14,Color.DKGRAY,false));
-        content.addView(text((result>=0?"فائض مبدئي: ":"عجز مبدئي: ")+money.format(Math.abs(result))+" جنيه سوداني",21,result>=0?GREEN:Color.RED,true));
-        content.addView(text("ملاحظة محاسبية: هذا ملخص نقدي أولي. يجب عدم جمع التكلفة المخصصة للمباع مرة ثانية مع إجمالي التكاليف عند إعداد قائمة ربح وخسارة نهائية. ستُستكمل معالجة تكلفة المخزون والمحصول غير المباع في المرحلة التالية.",13,Color.DKGRAY,false));
+        base("ملخص حسابات الموسم");
+        long sales=db.totalSalesNet();
+        long shared=0,workerOnly=0;
+        try(Cursor names=db.workerNames()){
+            while(names.moveToNext()){
+                String worker=names.getString(0);
+                shared+=db.sumCostsForWorker(worker,SHARED_CATEGORIES);
+                workerOnly+=db.sumCostsForWorker(worker,WORKER_DEDUCTIONS);
+            }
+        }
+        long remainder=sales-shared;
+        reportLine("صافي الفواتير بعد تكاليف الرحلات",sales);
+        reportLine("التكاليف المشتركة قبل المناصفة",shared);
+        reportLine("المتبقي القابل للتوزيع",remainder);
+        reportLine("نصيب كل طرف قبل خصومات التربال",remainder/2);
+        reportLine("خصومات الميز والسلفيات والخدمات",workerOnly);
+        reportLine("صافي مستحق التربال",remainder/2-workerOnly);
+        reportLine("إجمالي مصروفات دفتر التكلفة",db.total("costs","total"));
+        Button settlement=button("فتح كشف التسوية التفصيلي");content.addView(settlement);settlement.setOnClickListener(v->showSettlement());
+        Button journal=button("فتح دفتر اليومية");content.addView(journal);journal.setOnClickListener(v->showJournal());
+        Button trial=button("عرض ميزان المراجعة");content.addView(trial);trial.setOnClickListener(v->showTrialBalance());
         addBack();
     }
     private void reportLine(String label,long amount) { content.addView(text(label+" : "+money.format(amount)+" ج.س",17,DARK,true)); }
@@ -602,7 +952,7 @@ public class MainActivity extends Activity {
         hs.addView(row); content.addView(hs);
     }
 
-    private void addBack() { Button b=button("⌂  العودة إلى الرئيسية"); content.addView(b); b.setOnClickListener(v->showHome()); }
+    private void addBack() { Button b=button("⌂  الرئيسية"); content.addView(b,0); b.setOnClickListener(v->showHome()); }
 
     private GradientDrawable rounded(int color, int radius, int stroke) {
         GradientDrawable d = new GradientDrawable();

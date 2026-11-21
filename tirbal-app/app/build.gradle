@@ -1,8 +1,21 @@
 plugins { id 'com.android.application' }
 
+def hasTirbalReleaseSigning = ['TIRBAL_KEYSTORE_PATH','TIRBAL_KEYSTORE_PASSWORD','TIRBAL_KEY_ALIAS','TIRBAL_KEY_PASSWORD'].every { System.getenv(it)?.trim() }
+
 android {
+    signingConfigs {
+        if (hasTirbalReleaseSigning) {
+            release {
+                storeFile file(System.getenv('TIRBAL_KEYSTORE_PATH'))
+                storePassword System.getenv('TIRBAL_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('TIRBAL_KEY_ALIAS')
+                keyPassword System.getenv('TIRBAL_KEY_PASSWORD')
+            }
+        }
+    }
+
     namespace 'com.mohammedmustafa.tirbal'
-    compileSdk 36
+    compileSdk 36 // Review build: simplified worker ledger and settlement 1.7.0
 
     buildFeatures {
         buildConfig true
@@ -12,8 +25,17 @@ android {
         applicationId 'com.mohammedmustafa.tirbal'
         minSdk 23
         targetSdk 35
-        versionCode 6
-        versionName '1.3.1'
+        versionCode 10
+        versionName '1.7.0'
+        // Licensing is remotely controlled by the website nucleus. Keep disabled during review.
+        buildConfigField 'boolean', 'REMOTE_LICENSE_CONTROL', 'true'
+    }
+
+    buildTypes {
+        release {
+            if (hasTirbalReleaseSigning) signingConfig signingConfigs.release
+            minifyEnabled false
+        }
     }
 
     compileOptions {

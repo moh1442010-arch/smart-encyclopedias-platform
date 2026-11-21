@@ -10,7 +10,7 @@ import java.io.FileInputStream;
 
 public final class DbHelper extends SQLiteOpenHelper {
     private static final String DB_NAME = "tirbal.db";
-    private static final int DB_VERSION = 3;
+    private static final int DB_VERSION = 7;
     private static final String MIGRATION_PREFS = "tirbal_db_migration";
 
     static { System.loadLibrary("sqlcipher"); }
@@ -151,6 +151,7 @@ public final class DbHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE INDEX idx_costs_date ON costs(entry_date)");
         db.execSQL("CREATE INDEX idx_sales_date ON sales(sale_date)");
         db.execSQL("CREATE INDEX idx_tasks_date ON calendar_tasks(task_date)");
+        AccountingBook.install(db);
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
@@ -167,6 +168,13 @@ public final class DbHelper extends SQLiteOpenHelper {
             seedPartnershipTerms(db);
             migrateLegacyPartnershipRules(db);
         }
+        if (oldVersion < 4) AccountingBook.install(db);
+        if (oldVersion < 5) seedPartnershipTerms(db);
+        if (oldVersion < 6) {
+            seedPartnershipTerms(db);
+            db.execSQL("UPDATE partnership_terms SET responsible_party='مشترك', settlement_type='shared_half', deduction_from='مناصفة', note='الديون الزراعية المشتركة توزع مناصفة بين التاجر والتربال' WHERE category='الديون' AND settlement_type='deduct_worker' AND deduction_from='من نصيب التربال'");
+        }
+        if (oldVersion < 7) AccountingBook.install(db);
     }
 
     private void seedPartnershipTerms(SQLiteDatabase db) {
@@ -181,6 +189,7 @@ public final class DbHelper extends SQLiteOpenHelper {
             {"أجور العمال","التربال","التاجر","deduct_worker","من نصيب التربال","تخصم من نصيب التربال إذا دفعها التاجر"},
             {"المنصرفات","التربال","التاجر","deduct_worker","من نصيب التربال","المنصرفات المسجلة تخصم من نصيب التربال"},
             {"السلفيات","التربال","التاجر","deduct_worker","من نصيب التربال","السلفيات تخصم من نصيب التربال"},
+            {"الديون","مشترك","التاجر","shared_half","مناصفة","الديون الزراعية المشتركة توزع مناصفة بين الطرفين"},
             {"ضريبة المياه","التاجر","التاجر","trader_only","لا يوجد خصم","على التاجر وحده خارج المناصفة"},
             {"إيجار الأرض","التاجر","التاجر","trader_only","لا يوجد خصم","على التاجر وحده خارج المناصفة"}
         };
@@ -237,7 +246,8 @@ public final class DbHelper extends SQLiteOpenHelper {
         v.put("payer", payer); v.put("responsible_party", responsible);
         v.put("settlement_type", settlementType); v.put("deduction_from", deductionFrom);
         v.put("agreement_note", agreementNote); v.put("notes", notes);
-        getWritableDatabase().insertOrThrow("costs", null, v);
+        long id = getWritableDatabase().insertOrThrow("costs", null, v);
+        AccountingBook.postCost(getWritableDatabase(), id, date, category, item, Math.round(quantity * price), payer);
     }
 
     public String[] defaultResponsibility(String category) {
@@ -275,13 +285,37 @@ public final class DbHelper extends SQLiteOpenHelper {
         v.put("project_id", 1); v.put("invoice", invoice); v.put("sale_date", date);
         v.put("gross", gross); v.put("allocated_cost", allocatedCost); v.put("market_expenses", marketExpenses);
         v.put("net", gross - allocatedCost - marketExpenses); v.put("trader", trader); v.put("notes", notes);
-        getWritableDatabase().insertOrThrow("sales", null, v);
+        long id = getWritableDatabase().insertOrThrow("sales", null, v);
+        AccountingBook.postSale(getWritableDatabase(), id, date, invoice, gross, allocatedCost, marketExpenses);
     }
 
     public void addTask(String date, String title, String details) {
         ContentValues v = new ContentValues();
         v.put("project_id", 1); v.put("task_date", date); v.put("title", title); v.put("details", details);
         getWritableDatabase().insertOrThrow("calendar_tasks", null, v);
+    }
+
+    public long sumCostsForWorker(String worker, String[] categories) {
+        if (categories == null || categories.length == 0) return 0L;
+        StringBuilder sql = new StringBuilder("SELECT COALESCE(SUM(total),0) FROM costs WHERE project_id=1 AND worker=? AND category IN (");
+        String[] args = new String[categories.length + 1]; args[0] = worker;
+        for (int i=0;i<categories.length;i++) { if(i>0) sql.append(","); sql.append("?"); args[i+1]=categories[i]; }
+        sql.append(")");
+        try (Cursor c=getReadableDatabase().rawQuery(sql.toString(),args)) { return c.moveToFirst()?c.getLong(0):0L; }
+    }
+
+    public long netSalesForWorker(String worker) {
+        try (Cursor c=getReadableDatabase().rawQuery("SELECT COALESCE(SUM(net),0) FROM sales WHERE project_id=1 AND trader=?",new String[]{worker})) {
+            return c.moveToFirst()?c.getLong(0):0L;
+        }
+    }
+
+    public Cursor workerNames() {
+        return getReadableDatabase().rawQuery("SELECT worker AS name FROM costs WHERE project_id=1 AND TRIM(worker)<>'' UNION SELECT trader AS name FROM sales WHERE project_id=1 AND TRIM(COALESCE(trader,''))<>'' ORDER BY name",null);
+    }
+
+    public long totalSalesNet() {
+        try (Cursor c=getReadableDatabase().rawQuery("SELECT COALESCE(SUM(net),0) FROM sales WHERE project_id=1",null)) { return c.moveToFirst()?c.getLong(0):0L; }
     }
 
     public long total(String table, String column) {

@@ -5,12 +5,14 @@ on:
   push:
     branches:
       - feature/hisab-al-tirbal-android-v1
+      - fix/tirbal-app-first-review-1.4.0
     paths:
       - 'tirbal-app/**'
       - '.github/workflows/build-tirbal-apk.yml'
   pull_request:
     branches:
       - main
+      - feature/hisab-al-tirbal-android-v1
     paths:
       - 'tirbal-app/**'
       - '.github/workflows/build-tirbal-apk.yml'
@@ -21,6 +23,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      TIRBAL_KEYSTORE_BASE64: ${{ secrets.TIRBAL_KEYSTORE_BASE64 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,13 +45,37 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;35.0.0"
 
-      - name: Build debug APK
+      - name: Prepare original release keystore
+        if: ${{ env.TIRBAL_KEYSTORE_BASE64 != '' }}
+        run: |
+          printf '%s' "$TIRBAL_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/tirbal-release.jks"
+          echo "TIRBAL_KEYSTORE_PATH=$RUNNER_TEMP/tirbal-release.jks" >> "$GITHUB_ENV"
+
+      - name: Build signed update APK
+        if: ${{ env.TIRBAL_KEYSTORE_BASE64 != '' }}
+        env:
+          TIRBAL_KEYSTORE_PASSWORD: ${{ secrets.TIRBAL_KEYSTORE_PASSWORD }}
+          TIRBAL_KEY_ALIAS: ${{ secrets.TIRBAL_KEY_ALIAS }}
+          TIRBAL_KEY_PASSWORD: ${{ secrets.TIRBAL_KEY_PASSWORD }}
+        run: gradle --no-daemon -p tirbal-app :app:assembleRelease
+
+      - name: Build debug review APK when no release key is configured
+        if: ${{ env.TIRBAL_KEYSTORE_BASE64 == '' }}
         run: gradle --no-daemon -p tirbal-app :app:assembleDebug
+
+      - name: Stage APK
+        run: |
+          mkdir -p tirbal-app/dist
+          if [ -f tirbal-app/app/build/outputs/apk/release/app-release.apk ]; then
+            cp tirbal-app/app/build/outputs/apk/release/app-release.apk tirbal-app/dist/hisab-al-tirbal.apk
+          else
+            cp tirbal-app/app/build/outputs/apk/debug/app-debug.apk tirbal-app/dist/hisab-al-tirbal.apk
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: hisab-al-tirbal-debug-apk
-          path: tirbal-app/app/build/outputs/apk/debug/app-debug.apk
+          name: hisab-al-tirbal-1.7.0-review-apk
+          path: tirbal-app/dist/hisab-al-tirbal.apk
           if-no-files-found: error
           retention-days: 14
