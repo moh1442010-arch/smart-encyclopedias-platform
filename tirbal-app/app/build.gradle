@@ -2,7 +2,7 @@ plugins { id 'com.android.application' }
 
 android {
     namespace 'com.mohammedmustafa.tirbal'
-    compileSdk 36 // Review build: double-entry ledger 1.5.0; migration backfill optimized
+    compileSdk 36 // Review build: simplified workflow and worker settlement 1.6.0
 
     buildFeatures {
         buildConfig true
@@ -12,8 +12,8 @@ android {
         applicationId 'com.mohammedmustafa.tirbal'
         minSdk 23
         targetSdk 35
-        versionCode 8
-        versionName '1.5.0'
+        versionCode 9
+        versionName '1.6.0'
         // Licensing is remotely controlled by the website nucleus. Keep disabled during review.
         buildConfigField 'boolean', 'REMOTE_LICENSE_CONTROL', 'true'
     }
