@@ -79,6 +79,7 @@ public class MainActivity extends Activity {
             if (db != null) db.close();
             db = new DbHelper(this);
             db.migrateLegacyIfNeeded(this);
+            AccountingBook.backfillLegacy(db.getWritableDatabase());
             return true;
         } catch (Exception e) {
             if (db != null) db.close();
@@ -372,6 +373,8 @@ public class MainActivity extends Activity {
         addTile("🌱 مدخلات الزراعة", "تسجيل كميات وأسعار التقاوي والأسمدة والمبيدات في دفتر التكلفة", v -> showCosts());
         addTile("👨‍🌾 العمال والتربال", "تسجيل اسم التربال وربط اسمه ببنود التكلفة", v -> showCosts());
         addTile("📊 الأرباح والخسائر", "ملخص الموسم ونتائج المبيعات والتكاليف", v -> showReports());
+        addTile("📚 دفتر اليومية والأستاذ", "قيود محاسبية مزدوجة وسجل العمليات المرحلة", v -> showJournal());
+        addTile("⚖️ ميزان المراجعة", "أرصدة الحسابات ومطابقة إجمالي المدين والدائن", v -> showTrialBalance());
         addTile("💳 الديون والسلفيات", "السلفيات تسجل كبند تكلفة قابل للتصنيف", v -> showCosts());
         addTile("🤝 اتفاق الشراكة والتسوية", "مسؤوليات التاجر والتربال والخصومات بعد الحصاد", v -> showPartnership());
         addTile("🔐 تغيير كلمة المرور", "تحديث كلمة مرور التطبيق", v -> changePassword());
@@ -572,6 +575,68 @@ public class MainActivity extends Activity {
             if (value.equals(adapter.getItem(i).toString())) { spinner.setSelection(i); return; }
         }
         if (value.equals("مشترك") || value.equals("حسب الاتفاق")) spinner.setSelection(adapter.getCount()-1);
+    }
+
+    private void showJournal() {
+        base("دفتر اليومية والأستاذ");
+        content.addView(text("تُرحّل تكاليف المشروع وفواتير البيع تلقائياً إلى قيود مزدوجة. ويمكن إضافة قيد يدوي متوازن.",14,DARK,false));
+        Button add=button("＋ إضافة قيد يومية");
+        content.addView(add);
+        add.setOnClickListener(v->manualJournalDialog());
+        tableHeader(new String[]{"التاريخ","المرجع","البيان","مدين","دائن"});
+        try(Cursor c=AccountingBook.recentEntries(db.getReadableDatabase())) {
+            while(c.moveToNext()) {
+                tableRow(new String[]{c.getString(1),c.getString(2),c.getString(3),money.format(c.getLong(4)),money.format(c.getLong(5))});
+            }
+        }
+        content.addView(text("يعرض الدفتر آخر 100 قيد مرحّل. القيود الآلية مرتبطة بسجل التكلفة أو فاتورة البيع لمنع الترحيل المكرر.",13,Color.DKGRAY,false));
+        addBack();
+    }
+
+    private void manualJournalDialog() {
+        LinearLayout f=form();
+        EditText date=field("التاريخ YYYY-MM-DD",false); date.setText(today());
+        EditText description=field("شرح القيد",false);
+        Spinner debit=spinner(AccountingBook.ACCOUNT_NAMES);
+        Spinner credit=spinner(AccountingBook.ACCOUNT_NAMES);
+        EditText amount=field("المبلغ بالجنيه السوداني",false); amount.setInputType(2);
+        f.addView(date);f.addView(description);
+        f.addView(text("الحساب المدين",14,DARK,true));f.addView(debit);
+        f.addView(text("الحساب الدائن",14,DARK,true));f.addView(credit);f.addView(amount);
+        new AlertDialog.Builder(this).setTitle("قيد يومية مزدوج").setView(f)
+            .setNegativeButton("إلغاء",null).setPositiveButton("ترحيل القيد",(dialog,which)->{
+                try {
+                    if(empty(date)||empty(description)||empty(amount)){toast("أكمل التاريخ والبيان والمبلغ");return;}
+                    long value=Long.parseLong(val(amount));
+                    if(value<=0||debit.getSelectedItemPosition()==credit.getSelectedItemPosition())throw new IllegalArgumentException();
+                    String debitCode=AccountingBook.ACCOUNT_CODES[debit.getSelectedItemPosition()];
+                    String creditCode=AccountingBook.ACCOUNT_CODES[credit.getSelectedItemPosition()];
+                    AccountingBook.createManual(db.getWritableDatabase(),val(date),val(description),debitCode,creditCode,value);
+                    toast("تم ترحيل القيد وهو متوازن");
+                    showJournal();
+                } catch(Exception ex){toast("تعذر ترحيل القيد. تحقق من المبلغ والحسابات");}
+            }).show();
+    }
+
+    private void showTrialBalance() {
+        base("ميزان المراجعة");
+        content.addView(text("الأرصدة مستخرجة من القيود المرحلة في دفتر اليومية. يجب أن يتساوى إجمالي المدين مع إجمالي الدائن.",14,DARK,false));
+        tableHeader(new String[]{"رمز الحساب","اسم الحساب","مدين","دائن","الرصيد"});
+        long totalDebit=0,totalCredit=0;
+        try(Cursor c=AccountingBook.trialBalance(db.getReadableDatabase())) {
+            while(c.moveToNext()) {
+                long debit=c.getLong(3),credit=c.getLong(4),balance=c.getLong(5);
+                totalDebit+=debit;totalCredit+=credit;
+                tableRow(new String[]{c.getString(0),c.getString(1),money.format(debit),money.format(credit),money.format(balance)});
+            }
+        }
+        content.addView(text("إجمالي المدين: "+money.format(totalDebit)+" ج.س",18,DARK,true));
+        content.addView(text("إجمالي الدائن: "+money.format(totalCredit)+" ج.س",18,DARK,true));
+        boolean balanced=totalDebit==totalCredit;
+        content.addView(text(balanced?"الميزان متوازن حسابياً":"يوجد فرق في ميزان المراجعة",17,balanced?GREEN:Color.RED,true));
+        Button journal=button("فتح دفتر اليومية");
+        content.addView(journal);journal.setOnClickListener(v->showJournal());
+        addBack();
     }
 
     private void showReports() {
