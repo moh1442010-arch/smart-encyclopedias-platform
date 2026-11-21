@@ -75,7 +75,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: hisab-al-tirbal-1.6.0-apk
+          name: hisab-al-tirbal-1.7.0-review-apk
           path: tirbal-app/dist/hisab-al-tirbal.apk
           if-no-files-found: error
           retention-days: 14
