@@ -595,7 +595,9 @@ public class MainActivity extends Activity {
         EditText date=field("تاريخ الإدخال YYYY-MM-DD",false);date.setText(today());content.addView(date);
         LinearLayout rowsBox=new LinearLayout(this);rowsBox.setOrientation(LinearLayout.VERTICAL);content.addView(rowsBox);
         List<AgricultureRow> rows=new ArrayList<>();
-        Button add=button("＋ إضافة صنف زراعي");content.addView(add);add.setOnClickListener(v->addAgricultureRow(rowsBox,rows));
+        TextView summary=text("إجمالي المدخلات الزراعية: 0 ج.س",16,GREEN,true);
+        content.addView(summary);
+        Button add=button("＋ إضافة صنف زراعي");content.addView(add);add.setOnClickListener(v->addAgricultureRow(rowsBox,rows,summary));
         add.performClick();
         Button save=button("حفظ جميع المدخلات");content.addView(save);
         save.setOnClickListener(v->{
@@ -606,32 +608,53 @@ public class MainActivity extends Activity {
                     if(empty(r.worker)&&empty(r.item)&&empty(r.quantity)&&empty(r.price))continue;
                     if(empty(r.worker)||empty(r.item)||empty(r.quantity)||empty(r.price))throw new IllegalArgumentException();
                     double q=Double.parseDouble(val(r.quantity));long p=Long.parseLong(val(r.price));
-                    if(q<=0||p<0)throw new IllegalArgumentException();
-                    String category=r.category.getSelectedItem().toString();
-                    String[] defaults=db.defaultResponsibility(category);
-                    db.addCost(val(date),val(r.worker),category,val(r.item),q,p,"التاجر",defaults[0],defaults[2],defaults[3],"","مدخل زراعي تفصيلي");
+                    if(q<=0||p<0||!Double.isFinite(q))throw new IllegalArgumentException();
                     count++;
                 }
                 if(count==0){toast("أدخل صنفاً واحداً على الأقل");return;}
-                toast("تم حفظ "+count+" مدخل زراعي");
+                net.zetetic.database.sqlcipher.SQLiteDatabase writable=db.getWritableDatabase();
+                writable.beginTransaction();
+                try {
+                    for(AgricultureRow r:rows){
+                        if(empty(r.worker)&&empty(r.item)&&empty(r.quantity)&&empty(r.price))continue;
+                        double q=Double.parseDouble(val(r.quantity));long p=Long.parseLong(val(r.price));
+                        String category=r.category.getSelectedItem().toString();
+                        String[] defaults=db.defaultResponsibility(category);
+                        db.addCost(val(date),val(r.worker),category,val(r.item),q,p,"التاجر",defaults[0],defaults[2],defaults[3],"","مدخل زراعي تفصيلي");
+                    }
+                    writable.setTransactionSuccessful();
+                } finally { writable.endTransaction(); }
+                toast("تم حفظ "+count+" مدخل زراعي في عملية واحدة");
                 showAgricultureInputs();
-            }catch(Exception ex){toast("أكمل اسم الصنف والكمية والسعر وتأكد من صحة الأرقام");}
+            }catch(Exception ex){toast("لم تحفظ المدخلات. أكمل الحقول وتحقق من الكميات والأسعار ثم أعد المحاولة.");}
         });
         addBack();
     }
 
-    private void addAgricultureRow(LinearLayout parent,List<AgricultureRow> rows) {
+    private void updateAgricultureSummary(List<AgricultureRow> rows,TextView summary) {
+        long total=0;
+        for(AgricultureRow row:rows)try{
+            double quantity=empty(row.quantity)?0:Double.parseDouble(val(row.quantity));
+            long price=empty(row.price)?0:Long.parseLong(val(row.price));
+            if(quantity>0&&price>=0)total=Math.addExact(total,Math.round(quantity*price));
+        }catch(Exception ignored){}
+        summary.setText("إجمالي المدخلات الزراعية: "+money.format(total)+" ج.س");
+    }
+
+    private void addAgricultureRow(LinearLayout parent,List<AgricultureRow> rows,TextView summary) {
         AgricultureRow r=new AgricultureRow();LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(10,8,10,8);card.setBackground(rounded(Color.WHITE,12,Color.rgb(218,228,216)));
         r.category=spinner(new String[]{"التقاوي","الأسمدة","المبيدات","تحضير الأرض","الري وخدمة الحقل","الوقود والترحيل","أجور العمال","أخرى"});
         r.worker=workerInput("اسم التربال",-1);r.item=field("اسم الصنف / البيان",false);r.quantity=field("الكمية",false);r.quantity.setInputType(8194);
         r.price=field("سعر الوحدة بالجنيه",false);r.price.setInputType(2);r.total=text("الإجمالي: 0 ج.س",15,GREEN,true);
         TextWatcher watcher=new TextWatcher(){public void beforeTextChanged(CharSequence x,int st,int count,int after){}public void onTextChanged(CharSequence x,int st,int before,int count){
-            try{double q=empty(r.quantity)?0:Double.parseDouble(val(r.quantity));long p=empty(r.price)?0:Long.parseLong(val(r.price));r.total.setText("الإجمالي: "+money.format(Math.round(q*p))+" ج.س");}catch(Exception ex){r.total.setText("تحقق من الكمية والسعر");}
+            try{double q=empty(r.quantity)?0:Double.parseDouble(val(r.quantity));long p=empty(r.price)?0:Long.parseLong(val(r.price));r.total.setText("الإجمالي: "+money.format(Math.round(q*p))+" ج.س");}catch(Exception ex){r.total.setText("تحقق من الكمية والسعر");} updateAgricultureSummary(rows,summary);
         }public void afterTextChanged(Editable e){}};
         r.quantity.addTextChangedListener(watcher);r.price.addTextChangedListener(watcher);
-        card.addView(text("بند زراعي جديد",14,DARK,true));card.addView(r.category);card.addView(r.worker);card.addView(r.item);card.addView(r.quantity);card.addView(r.price);card.addView(r.total);
-        parent.addView(card,margin(-1,-2,0,0,0,10));rows.add(r);
+        Button remove=button("حذف هذا الصنف");remove.setTextSize(12);
+        remove.setOnClickListener(v->{rows.remove(r);parent.removeView(card);updateAgricultureSummary(rows,summary);});
+        card.addView(text("بند زراعي جديد",14,DARK,true));card.addView(r.category);card.addView(r.worker);card.addView(r.item);card.addView(r.quantity);card.addView(r.price);card.addView(r.total);card.addView(remove);
+        parent.addView(card,margin(-1,-2,0,0,0,10));rows.add(r);updateAgricultureSummary(rows,summary);
     }
 
     private void costDialog() {
