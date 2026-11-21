@@ -10,7 +10,7 @@ import java.io.FileInputStream;
 
 public final class DbHelper extends SQLiteOpenHelper {
     private static final String DB_NAME = "tirbal.db";
-    private static final int DB_VERSION = 6;
+    private static final int DB_VERSION = 7;
     private static final String MIGRATION_PREFS = "tirbal_db_migration";
 
     static { System.loadLibrary("sqlcipher"); }
@@ -174,6 +174,7 @@ public final class DbHelper extends SQLiteOpenHelper {
             seedPartnershipTerms(db);
             db.execSQL("UPDATE partnership_terms SET responsible_party='مشترك', settlement_type='shared_half', deduction_from='مناصفة', note='الديون الزراعية المشتركة توزع مناصفة بين التاجر والتربال' WHERE category='الديون' AND settlement_type='deduct_worker' AND deduction_from='من نصيب التربال'");
         }
+        if (oldVersion < 7) AccountingBook.install(db);
     }
 
     private void seedPartnershipTerms(SQLiteDatabase db) {
