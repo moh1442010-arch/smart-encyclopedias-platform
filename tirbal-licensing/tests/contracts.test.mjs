@@ -89,15 +89,15 @@ test("agricultural costs and sales are posted to a balanced double-entry ledger"
 
 test("quick worker cost sheet, crop input rows, invoices and settlement follow the requested workflow", () => {
   assert.match(activity, /اسم التربال/);
-  assert.match(activity, /QUICK_CATEGORIES = \\{"الميز","الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون","السلفيات"\\}/);
-  assert.match(activity, /showAgricultureInputs\\(\\)/);
-  assert.match(activity, /showSettlement\\(\\)/);
+  assert.match(activity, /QUICK_CATEGORIES = \{"الميز","الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون","السلفيات"\}/);
+  assert.match(activity, /showAgricultureInputs\(\)/);
+  assert.match(activity, /showSettlement\(\)/);
   assert.match(activity, /تكلفة الرحلة/);
-  assert.match(activity, /netSalesForWorker\\(worker\\)/);
-  assert.match(activity, /SHARED_CATEGORIES = \\{"الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون"\\}/);
-  assert.match(activity, /sumCostsForWorker\\(worker,SHARED_CATEGORIES\\)/);
-  assert.match(activity, /WORKER_DEDUCTIONS = \\{"الميز","السلفيات"/);
-  assert.match(activity, /sumCostsForWorker\\(worker,WORKER_DEDUCTIONS\\)/);
+  assert.match(activity, /netSalesForWorker\(worker\)/);
+  assert.match(activity, /SHARED_CATEGORIES = \{"الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون"\}/);
+  assert.match(activity, /sumCostsForWorker\(worker,SHARED_CATEGORIES\)/);
+  assert.match(activity, /WORKER_DEDUCTIONS = \{"الميز","السلفيات"/);
+  assert.match(activity, /sumCostsForWorker\(worker,WORKER_DEDUCTIONS\)/);
   assert.match(database, /DB_VERSION = 6/);
   assert.match(database, /UPDATE partnership_terms SET responsible_party='مشترك', settlement_type='shared_half'/);
   assert.match(activity, /التكاليف المشتركة قبل المناصفة/);
