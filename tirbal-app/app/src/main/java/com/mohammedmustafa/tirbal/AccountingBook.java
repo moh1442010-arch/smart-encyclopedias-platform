@@ -49,10 +49,10 @@ final class AccountingBook {
     }
 
     static void backfillLegacy(SQLiteDatabase db) {
-        try (Cursor c=db.rawQuery("SELECT id,entry_date,category,item,total,payer FROM costs ORDER BY id",null)) {
+        try (Cursor c=db.rawQuery("SELECT c.id,c.entry_date,c.category,c.item,c.total,c.payer FROM costs c WHERE NOT EXISTS (SELECT 1 FROM journal_entries e WHERE e.source_type='COST' AND e.source_id=c.id) ORDER BY c.id",null)) {
             while(c.moveToNext()) postCost(db,c.getLong(0),c.getString(1),c.getString(2),c.getString(3),c.getLong(4),c.getString(5));
         }
-        try (Cursor c=db.rawQuery("SELECT id,sale_date,invoice,gross,allocated_cost,market_expenses FROM sales ORDER BY id",null)) {
+        try (Cursor c=db.rawQuery("SELECT s.id,s.sale_date,s.invoice,s.gross,s.allocated_cost,s.market_expenses FROM sales s WHERE NOT EXISTS (SELECT 1 FROM journal_entries e WHERE e.source_type='SALE' AND e.source_id=s.id) ORDER BY s.id",null)) {
             while(c.moveToNext()) postSale(db,c.getLong(0),c.getString(1),c.getString(2),c.getLong(3),c.getLong(4),c.getLong(5));
         }
     }
