@@ -84,6 +84,8 @@ test("agricultural costs and sales are posted to a balanced double-entry ledger"
   assert.match(accounting, /assertBalanced\(db,entry\)/);
   assert.match(accounting, /static Cursor trialBalance\(/);
   assert.match(accounting, /static void backfillLegacy\(/);
+  assert.match(accounting, /{"1300","سلفيات على الترابلة","ASSET","DEBIT"}/);
+  assert.match(accounting, /"السلفيات".equals\(category\)\?"1300"/);
 });
 
 
