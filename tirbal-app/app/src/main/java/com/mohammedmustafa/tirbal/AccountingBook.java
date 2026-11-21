@@ -129,6 +129,12 @@ final class AccountingBook {
         try(Cursor c=db.rawQuery("SELECT id FROM accounts WHERE code=?",new String[]{code})) {return c.moveToFirst()?c.getLong(0):0;}
     }
 
+    static long balanceForCode(SQLiteDatabase db,String code) {
+        try(Cursor c=db.rawQuery("SELECT CASE WHEN a.normal_side='DEBIT' THEN COALESCE(SUM(l.debit-l.credit),0) ELSE COALESCE(SUM(l.credit-l.debit),0) END FROM accounts a LEFT JOIN journal_lines l ON l.account_id=a.id LEFT JOIN journal_entries e ON e.id=l.entry_id WHERE a.code=? AND (e.status='POSTED' OR e.id IS NULL) GROUP BY a.id,a.normal_side",new String[]{code})) {
+            return c.moveToFirst()?c.getLong(0):0L;
+        }
+    }
+
     static Cursor trialBalance(SQLiteDatabase db) {
         return db.rawQuery("SELECT a.code,a.name,a.account_type,COALESCE(SUM(l.debit),0) AS debit,COALESCE(SUM(l.credit),0) AS credit,CASE WHEN a.normal_side='DEBIT' THEN COALESCE(SUM(l.debit-l.credit),0) ELSE COALESCE(SUM(l.credit-l.debit),0) END AS balance FROM accounts a LEFT JOIN journal_lines l ON l.account_id=a.id LEFT JOIN journal_entries e ON e.id=l.entry_id AND e.status='POSTED' GROUP BY a.id,a.code,a.name,a.account_type ORDER BY a.code",null);
     }
