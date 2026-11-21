@@ -2,7 +2,7 @@ plugins { id 'com.android.application' }
 
 android {
     namespace 'com.mohammedmustafa.tirbal'
-    compileSdk 36
+    compileSdk 36 // Review build: double-entry ledger 1.5.0
 
     buildFeatures {
         buildConfig true
