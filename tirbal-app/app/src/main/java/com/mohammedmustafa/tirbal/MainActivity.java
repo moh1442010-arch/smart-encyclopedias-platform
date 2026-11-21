@@ -641,7 +641,6 @@ public class MainActivity extends Activity {
 
     private void showReports() {
         base("الأرباح والخسائر");
-        android.database.sqlite.SQLiteDatabase unused = null;
         net.zetetic.database.sqlcipher.SQLiteDatabase ledger = db.getReadableDatabase();
         long revenue=AccountingBook.balanceForCode(ledger,"4000");
         long costOfSales=AccountingBook.balanceForCode(ledger,"5000");
