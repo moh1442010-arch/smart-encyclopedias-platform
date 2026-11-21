@@ -94,7 +94,9 @@ test("quick worker cost sheet, crop input rows, invoices and settlement follow t
   assert.match(activity, /showSettlement\(\)/);
   assert.match(activity, /تكلفة الرحلة/);
   assert.match(activity, /netSalesForWorker\(worker\)/);
+  assert.match(activity, /SHARED_CATEGORIES = \{"الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون"\}/);
   assert.match(activity, /sumCostsForWorker\(worker,SHARED_CATEGORIES\)/);
+  assert.match(activity, /WORKER_DEDUCTIONS = \{"الميز","السلفيات"/);
   assert.match(activity, /sumCostsForWorker\(worker,WORKER_DEDUCTIONS\)/);
   assert.match(database, /DB_VERSION = 5/);
   assert.match(database, /\{"الديون","التربال","التاجر","deduct_worker"/);
