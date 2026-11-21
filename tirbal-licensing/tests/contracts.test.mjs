@@ -89,16 +89,21 @@ test("agricultural costs and sales are posted to a balanced double-entry ledger"
 
 test("quick worker cost sheet, crop input rows, invoices and settlement follow the requested workflow", () => {
   assert.match(activity, /اسم التربال/);
-  assert.match(activity, /QUICK_CATEGORIES = \{"الميز","الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون"\}/);
-  assert.match(activity, /showAgricultureInputs\(\)/);
-  assert.match(activity, /showSettlement\(\)/);
+  assert.match(activity, /QUICK_CATEGORIES = \\{"الميز","الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون","السلفيات"\\}/);
+  assert.match(activity, /showAgricultureInputs\\(\\)/);
+  assert.match(activity, /showSettlement\\(\\)/);
   assert.match(activity, /تكلفة الرحلة/);
-  assert.match(activity, /netSalesForWorker\(worker\)/);
-  assert.match(activity, /SHARED_CATEGORIES = \{"الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون"\}/);
-  assert.match(activity, /sumCostsForWorker\(worker,SHARED_CATEGORIES\)/);
-  assert.match(activity, /WORKER_DEDUCTIONS = \{"الميز","السلفيات"/);
-  assert.match(activity, /sumCostsForWorker\(worker,WORKER_DEDUCTIONS\)/);
-  assert.match(database, /DB_VERSION = 5/);
-  assert.match(database, /\{"الديون","التربال","التاجر","deduct_worker"/);
-  assert.match(activity, /التكاليف المشتركة قبل المناصفة/);\n  assert.match(activity, /الميز والسلفيات المخصومة من نصيب التربال/);\n  assert.match(activity, /updateQuickCostSummary/);\n  assert.match(activity, /workerInput/);\n  assert.equal(((50000000 - 5000000) / 2) - 2000000, 20500000);
+  assert.match(activity, /netSalesForWorker\\(worker\\)/);
+  assert.match(activity, /SHARED_CATEGORIES = \\{"الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون"\\}/);
+  assert.match(activity, /sumCostsForWorker\\(worker,SHARED_CATEGORIES\\)/);
+  assert.match(activity, /WORKER_DEDUCTIONS = \\{"الميز","السلفيات"/);
+  assert.match(activity, /sumCostsForWorker\\(worker,WORKER_DEDUCTIONS\\)/);
+  assert.match(database, /DB_VERSION = 6/);
+  assert.match(database, /UPDATE partnership_terms SET responsible_party='مشترك', settlement_type='shared_half'/);
+  assert.match(activity, /التكاليف المشتركة قبل المناصفة/);
+  assert.match(activity, /الميز والسلفيات المخصومة من نصيب التربال/);
+  assert.match(activity, /updateQuickCostSummary/);
+  assert.match(activity, /workerInput/);
+  assert.match(activity, /إضافة تربال جديد/);
+  assert.equal(((50000000 - 5000000) / 2) - 2000000, 20500000);
 });
