@@ -415,7 +415,7 @@ public class MainActivity extends Activity {
         addBack();
     }
 
-    private static final String[] QUICK_CATEGORIES = {"الميز","الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون"};
+    private static final String[] QUICK_CATEGORIES = {"الميز","الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون","السلفيات"};
     private static final String[] SHARED_CATEGORIES = {"الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون"};
     private static final String[] WORKER_DEDUCTIONS = {"الميز","السلفيات","الخدمة داخل الزراعة","الري وخدمة الحقل","أجور العمال","المنصرفات"};
 
@@ -440,14 +440,18 @@ public class MainActivity extends Activity {
 
     private void showCosts() {
         base("دفتر تكلفة التربال");
-        content.addView(text("أدخل كل تربال في صف واحد. اكتب قيمة كل بند مباشرة، وسيحسب التطبيق جملة الصف تلقائياً.",14,DARK,false));
-        content.addView(text("الميز والسلفيات والخدمات المسجلة على التربال تخصم من نصيبه. التحضير والتقاوي والسماد والمبيد والديون المشتركة تدخل في التكلفة المشتركة.",13,Color.DKGRAY,false));
+        content.addView(text("أدخل اسم كل تربال مرة واحدة، ثم أدخل المبالغ تحت البنود. يمكنك إضافة عدد كبير من الصفوف وحذف أي صف قبل الحفظ.",14,DARK,false));
+        content.addView(text("الأسمدة والمبيدات والتقاوي والتحضير والديون تدخل في التكلفة المشتركة. الميز والسلفيات تخصم من نصيب التربال بعد المناصفة.",13,Color.DKGRAY,false));
         LinearLayout table=new LinearLayout(this);table.setOrientation(LinearLayout.VERTICAL);
         content.addView(table);
         List<CostRow> rows=new ArrayList<>();
-        Runnable addRow=()->addQuickCostRow(table,rows);
         addQuickCostHeader(table);
-        Button add=button("＋ إضافة تربال");
+        TextView summary=text("",15,DARK,true);
+        summary.setPadding(10,12,10,12);
+        summary.setBackground(rounded(Color.WHITE,12,Color.rgb(218,228,216)));
+        content.addView(summary,margin(-1,-2,0,10,0,10));
+        Runnable addRow=()->addQuickCostRow(table,rows,summary);
+        Button add=button("＋ إضافة تربال جديد");
         content.addView(add);add.setOnClickListener(v->addRow.run());
         addRow.run();
         EditText date=field("تاريخ دفتر التكلفة YYYY-MM-DD",false);date.setText(today());content.addView(date);
@@ -455,29 +459,48 @@ public class MainActivity extends Activity {
         content.addView(save);
         save.setOnClickListener(v->{
             if(empty(date)){toast("أدخل تاريخ التكلفة");return;}
-            int saved=0;
+            int pending=0;
             try {
                 for(CostRow row:rows) {
                     String worker=val(row.worker);
-                    if(worker.isEmpty())continue;
-                    for(int i=0;i<QUICK_CATEGORIES.length;i++) {
-                        String raw=val(row.amounts[i]);
-                        if(raw.isEmpty())continue;
-                        long amount=Long.parseLong(raw);
-                        if(amount<0)throw new NumberFormatException();
-                        if(amount==0)continue;
-                        String category=QUICK_CATEGORIES[i];
-                        String[] defaults=db.defaultResponsibility(category);
-                        db.addCost(val(date),worker,category,category,1,amount,"التاجر",defaults[0],defaults[2],defaults[3],"","إدخال سريع من دفتر التكلفة");
-                        saved++;
+                    boolean hasAmount=false;
+                    for(EditText amountField:row.amounts) {
+                        String raw=val(amountField);
+                        if(!raw.isEmpty()) {
+                            long amount=Long.parseLong(raw);
+                            if(amount<0)throw new NumberFormatException();
+                            if(amount>0)hasAmount=true;
+                        }
+                    }
+                    if(worker.isEmpty()&&hasAmount)throw new IllegalArgumentException("اسم التربال مطلوب لكل صف يحتوي مبالغ");
+                    if(!worker.isEmpty()) {
+                        for(EditText amountField:row.amounts)if(!val(amountField).isEmpty()&&Long.parseLong(val(amountField))>0)pending++;
                     }
                 }
-                if(saved==0){toast("أدخل اسم تربال ومبلغاً واحداً على الأقل");return;}
-                toast("تم حفظ "+saved+" بند تكلفة");
+                if(pending==0){toast("أدخل اسم تربال ومبلغاً واحداً على الأقل");return;}
+                net.zetetic.database.sqlcipher.SQLiteDatabase writable=db.getWritableDatabase();
+                writable.beginTransaction();
+                try {
+                    for(CostRow row:rows) {
+                        String worker=val(row.worker);
+                        if(worker.isEmpty())continue;
+                        for(int i=0;i<QUICK_CATEGORIES.length;i++) {
+                            String raw=val(row.amounts[i]);
+                            if(raw.isEmpty())continue;
+                            long amount=Long.parseLong(raw);
+                            if(amount==0)continue;
+                            String category=QUICK_CATEGORIES[i];
+                            String[] defaults=db.defaultResponsibility(category);
+                            db.addCost(val(date),worker,category,category,1,amount,"التاجر",defaults[0],defaults[2],defaults[3],"","إدخال سريع من دفتر التكلفة");
+                        }
+                    }
+                    writable.setTransactionSuccessful();
+                } finally { writable.endTransaction(); }
+                toast("تم حفظ "+pending+" بند تكلفة دون تجزئة العملية");
                 showCosts();
-            }catch(Exception ex){toast("تعذر الحفظ. راجع المبالغ وتأكد أنها أرقام صحيحة.");}
+            }catch(Exception ex){toast("لم تحفظ البيانات. راجع أسماء الترابلة والمبالغ ثم حاول مجدداً.");}
         });
-        content.addView(text("السجلات المحفوظة",17,GREEN,true));
+        content.addView(text("آخر السجلات المحفوظة",17,GREEN,true));
         tableHeader(new String[]{"التاريخ","التربال","البند","المبلغ"});
         try(Cursor c=db.recent("costs","entry_date")) {
             while(c.moveToNext())tableRow(new String[]{c.getString(c.getColumnIndexOrThrow("entry_date")),c.getString(c.getColumnIndexOrThrow("worker")),c.getString(c.getColumnIndexOrThrow("category")),money.format(c.getLong(c.getColumnIndexOrThrow("total")))});
@@ -489,9 +512,10 @@ public class MainActivity extends Activity {
     }
 
     private void addQuickCostHeader(LinearLayout table) {
-        HorizontalScrollView hs=new HorizontalScrollView(this);LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);
-        String[] labels={"اسم التربال","الميز","السماد","المبيد","التقاوي","التحضير","الديون","الجملة"};
-        int[] widths={142,92,92,92,92,92,92,105};
+        HorizontalScrollView hs=new HorizontalScrollView(this);
+        LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);
+        String[] labels={"اسم التربال","الميز","السماد","المبيد","التقاوي","التحضير","الديون","السلفيات","الجملة","حذف"};
+        int[] widths={132,82,82,82,82,82,82,82,105,64};
         for(int i=0;i<labels.length;i++){
             TextView t=text(labels[i],12,Color.WHITE,true);t.setGravity(Gravity.CENTER);t.setBackgroundColor(GREEN);
             row.addView(t,new LinearLayout.LayoutParams(dp(widths[i]),dp(46)));
@@ -499,20 +523,64 @@ public class MainActivity extends Activity {
         hs.addView(row);table.addView(hs);
     }
 
-    private void addQuickCostRow(LinearLayout table,List<CostRow> rows) {
-        CostRow item=new CostRow();item.worker=cellInput("اسم التربال",false,142);
-        HorizontalScrollView hs=new HorizontalScrollView(this);LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);
+    private void addQuickCostRow(LinearLayout table,List<CostRow> rows,TextView summary) {
+        CostRow item=new CostRow();item.worker=workerInput("اسم التربال",132);
+        HorizontalScrollView hs=new HorizontalScrollView(this);
+        LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);
         row.addView(item.worker);
         for(int i=0;i<item.amounts.length;i++){
-            item.amounts[i]=cellInput("0",true,92);row.addView(item.amounts[i]);
+            item.amounts[i]=cellInput("0",true,82);
+            item.amounts[i].setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_NEXT);
+            row.addView(item.amounts[i]);
         }
-        item.total=cellLabel("0",105);row.addView(item.total);hs.addView(row);table.addView(hs);
-        TextWatcher watcher=new TextWatcher(){public void beforeTextChanged(CharSequence x,int st,int count,int after){}public void onTextChanged(CharSequence x,int st,int before,int count){
-            long total=0;for(EditText e:item.amounts){try{String v=val(e);if(!v.isEmpty())total+=Long.parseLong(v);}catch(Exception ignored){}}
-            item.total.setText(money.format(total));
-        }public void afterTextChanged(Editable e){}};
+        item.total=cellLabel("0",105);row.addView(item.total);
+        Button remove=button("حذف");remove.setTextSize(11);remove.setPadding(0,0,0,0);
+        row.addView(remove,new LinearLayout.LayoutParams(dp(64),dp(48)));
+        hs.addView(row);table.addView(hs);
+        TextWatcher watcher=new TextWatcher(){
+            public void beforeTextChanged(CharSequence x,int st,int count,int after){}
+            public void onTextChanged(CharSequence x,int st,int before,int count){
+                long total=0;
+                for(EditText e:item.amounts){try{String value=val(e);if(!value.isEmpty())total=Math.addExact(total,Long.parseLong(value));}catch(Exception ignored){}}
+                item.total.setText(money.format(total));
+                updateQuickCostSummary(rows,summary);
+            }
+            public void afterTextChanged(Editable e){}
+        };
         for(EditText e:item.amounts)e.addTextChangedListener(watcher);
+        item.worker.addTextChangedListener(watcher);
+        remove.setOnClickListener(v->{rows.remove(item);table.removeView(hs);updateQuickCostSummary(rows,summary);});
         rows.add(item);
+        updateQuickCostSummary(rows,summary);
+    }
+
+    private void updateQuickCostSummary(List<CostRow> rows,TextView summary) {
+        long shared=0,deductions=0,total=0;
+        for(CostRow row:rows)for(int i=0;i<row.amounts.length;i++){
+            try{
+                String raw=val(row.amounts[i]);if(raw.isEmpty())continue;
+                long amount=Long.parseLong(raw);
+                total=Math.addExact(total,amount);
+                if(i==0||i==6)deductions=Math.addExact(deductions,amount);
+                else shared=Math.addExact(shared,amount);
+            }catch(Exception ignored){}
+        }
+        summary.setText("إجمالي دفتر التكلفة: "+money.format(total)+" ج.س\n"
+            +"التكاليف المشتركة قبل المناصفة: "+money.format(shared)+" ج.س\n"
+            +"الميز والسلفيات المخصومة من نصيب التربال: "+money.format(deductions)+" ج.س");
+    }
+
+    private AutoCompleteTextView workerInput(String hint,int width) {
+        AutoCompleteTextView input=new AutoCompleteTextView(this);
+        input.setSingleLine(true);input.setTextSize(14);input.setHint(hint);
+        input.setGravity(Gravity.CENTER);input.setPadding(6,4,6,4);
+        input.setBackground(rounded(Color.WHITE,6,Color.rgb(210,220,210)));
+        input.setThreshold(1);
+        ArrayList<String> names=new ArrayList<>();
+        try(Cursor c=db.workerNames()){while(c.moveToNext())names.add(c.getString(0));}
+        input.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_dropdown_item_1line,names));
+        input.setLayoutParams(new LinearLayout.LayoutParams(width<0?-1:dp(width),dp(48)));
+        return input;
     }
 
     private class AgricultureRow {
@@ -556,7 +624,7 @@ public class MainActivity extends Activity {
         AgricultureRow r=new AgricultureRow();LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(10,8,10,8);card.setBackground(rounded(Color.WHITE,12,Color.rgb(218,228,216)));
         r.category=spinner(new String[]{"التقاوي","الأسمدة","المبيدات","تحضير الأرض","الري وخدمة الحقل","الوقود والترحيل","أجور العمال","أخرى"});
-        r.worker=field("اسم التربال",false);r.item=field("اسم الصنف / البيان",false);r.quantity=field("الكمية",false);r.quantity.setInputType(8194);
+        r.worker=workerInput("اسم التربال",-1);r.item=field("اسم الصنف / البيان",false);r.quantity=field("الكمية",false);r.quantity.setInputType(8194);
         r.price=field("سعر الوحدة بالجنيه",false);r.price.setInputType(2);r.total=text("الإجمالي: 0 ج.س",15,GREEN,true);
         TextWatcher watcher=new TextWatcher(){public void beforeTextChanged(CharSequence x,int st,int count,int after){}public void onTextChanged(CharSequence x,int st,int before,int count){
             try{double q=empty(r.quantity)?0:Double.parseDouble(val(r.quantity));long p=empty(r.price)?0:Long.parseLong(val(r.price));r.total.setText("الإجمالي: "+money.format(Math.round(q*p))+" ج.س");}catch(Exception ex){r.total.setText("تحقق من الكمية والسعر");}
@@ -635,7 +703,7 @@ public class MainActivity extends Activity {
 
     private void saleDialog() {
         LinearLayout f=form();
-        EditText worker=field("اسم التربال",false);
+        EditText worker=workerInput("اسم التربال",-1);
         EditText date=field("تاريخ الفاتورة YYYY-MM-DD",false);date.setText(today());
         EditText invoice=field("رقم الفاتورة",false);
         EditText gross=field("قيمة البيع بالجنيه السوداني",false);gross.setInputType(2);
