@@ -63,7 +63,7 @@ final class AccountingBook {
         try {
             long entry=entry(db,date,"COST-"+sourceId,"إثبات تكلفة: "+category+" - "+item,"COST",sourceId);
             if(entry>0) {
-                String debit=("إيجار الأرض".equals(category)||"ضريبة المياه".equals(category)||"الميز".equals(category)||"الديون".equals(category)||"السلفيات".equals(category)||"الخدمة داخل الزراعة".equals(category)||"الري وخدمة الحقل".equals(category)||"أجور العمال".equals(category)||"المنصرفات".equals(category))?"5200":"1200";
+                String debit=("إيجار الأرض".equals(category)||"ضريبة المياه".equals(category)||"الميز".equals(category)||"السلفيات".equals(category)||"الديون".equals(category)||"السلفيات".equals(category)||"الخدمة داخل الزراعة".equals(category)||"الري وخدمة الحقل".equals(category)||"أجور العمال".equals(category)||"المنصرفات".equals(category))?"5200":"1200";
                 line(db,entry,debit,amount,0,"تكلفة الموسم: "+category);
                 String credit="التربال".equals(payer)?"2200":("طرف ثالث".equals(payer)?"2000":"2100");
                 line(db,entry,credit,0,amount,"مصدر التمويل: "+payer);
