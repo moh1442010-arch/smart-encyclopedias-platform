@@ -76,7 +76,7 @@ test("manual review and payment configuration are server-controlled", () => {
 
 
 test("agricultural costs and sales are posted to a balanced double-entry ledger", () => {
-  assert.match(database, /DB_VERSION = 4/);
+  assert.match(database, /DB_VERSION = 5/);
   assert.match(database, /AccountingBook\.install\(db\)/);
   assert.match(database, /AccountingBook\.postCost\(/);
   assert.match(database, /AccountingBook\.postSale\(/);
@@ -84,4 +84,19 @@ test("agricultural costs and sales are posted to a balanced double-entry ledger"
   assert.match(accounting, /assertBalanced\(db,entry\)/);
   assert.match(accounting, /static Cursor trialBalance\(/);
   assert.match(accounting, /static void backfillLegacy\(/);
+});
+
+
+test("quick worker cost sheet, crop input rows, invoices and settlement follow the requested workflow", () => {
+  assert.match(activity, /اسم التربال/);
+  assert.match(activity, /QUICK_CATEGORIES = \{"الميز","الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون"\}/);
+  assert.match(activity, /showAgricultureInputs\(\)/);
+  assert.match(activity, /showSettlement\(\)/);
+  assert.match(activity, /تكلفة الرحلة/);
+  assert.match(activity, /netSalesForWorker\(worker\)/);
+  assert.match(activity, /sumCostsForWorker\(worker,SHARED_CATEGORIES\)/);
+  assert.match(activity, /sumCostsForWorker\(worker,WORKER_DEDUCTIONS\)/);
+  assert.match(database, /DB_VERSION = 5/);
+  assert.match(database, /\{"الديون","التربال","التاجر","deduct_worker"/);
+  assert.equal(((50000000 - 5000000) / 2) - 2000000, 20500000);
 });
