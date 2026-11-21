@@ -641,20 +641,23 @@ public class MainActivity extends Activity {
 
     private void showReports() {
         base("الأرباح والخسائر");
-        long costs=db.total("costs","total");
-        long gross=db.total("sales","gross");
-        long allocated=db.total("sales","allocated_cost");
-        long expenses=db.total("sales","market_expenses");
-        long salesNet=db.total("sales","net");
-        long result=gross-costs-expenses;
-        reportLine("إجمالي تكلفة المدخلات والمصروفات",costs);
-        reportLine("إجمالي قيمة المبيعات",gross);
-        reportLine("التكلفة المخصصة للمحصول المباع",allocated);
-        reportLine("منصرفات السوق",expenses);
-        reportLine("صافي المبيعات بعد تكلفة المباع",salesNet);
-        content.addView(text("النتيجة التقديرية للمشروع = المبيعات − إجمالي التكلفة المسجلة − منصرفات السوق",14,Color.DKGRAY,false));
-        content.addView(text((result>=0?"فائض مبدئي: ":"عجز مبدئي: ")+money.format(Math.abs(result))+" جنيه سوداني",21,result>=0?GREEN:Color.RED,true));
-        content.addView(text("ملاحظة محاسبية: هذا ملخص نقدي أولي. يجب عدم جمع التكلفة المخصصة للمباع مرة ثانية مع إجمالي التكاليف عند إعداد قائمة ربح وخسارة نهائية. ستُستكمل معالجة تكلفة المخزون والمحصول غير المباع في المرحلة التالية.",13,Color.DKGRAY,false));
+        android.database.sqlite.SQLiteDatabase unused = null;
+        net.zetetic.database.sqlcipher.SQLiteDatabase ledger = db.getReadableDatabase();
+        long revenue=AccountingBook.balanceForCode(ledger,"4000");
+        long costOfSales=AccountingBook.balanceForCode(ledger,"5000");
+        long marketExpenses=AccountingBook.balanceForCode(ledger,"5100");
+        long fieldExpenses=AccountingBook.balanceForCode(ledger,"5200");
+        long remainingSeasonCost=AccountingBook.balanceForCode(ledger,"1200");
+        long result=revenue-costOfSales-marketExpenses-fieldExpenses;
+        reportLine("إيرادات المبيعات",revenue);
+        reportLine("تكلفة المحصول المباع",costOfSales);
+        reportLine("مصروفات السوق",marketExpenses);
+        reportLine("مصروفات الموسم المباشرة",fieldExpenses);
+        content.addView(text("صافي نتيجة النشاط وفق القيود المرحلة",14,Color.DKGRAY,false));
+        content.addView(text((result>=0?"ربح الفترة: ":"خسارة الفترة: ")+money.format(Math.abs(result))+" جنيه سوداني",21,result>=0?GREEN:Color.RED,true));
+        reportLine("تكاليف الموسم غير المحملة على المباع",remainingSeasonCost);
+        content.addView(text("تكاليف الموسم غير المباع تظهر كأصل ضمن حساب تكاليف الموسم. لا تُحمّل على نتيجة الفترة إلا عند تسجيل تكلفة المحصول المباع. المبالغ تعتمد على القيود المرحلة في دفتر اليومية.",13,Color.DKGRAY,false));
+        Button trial=button("عرض ميزان المراجعة");content.addView(trial);trial.setOnClickListener(v->showTrialBalance());
         addBack();
     }
     private void reportLine(String label,long amount) { content.addView(text(label+" : "+money.format(amount)+" ج.س",17,DARK,true)); }
