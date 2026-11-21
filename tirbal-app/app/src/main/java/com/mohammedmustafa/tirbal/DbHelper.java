@@ -183,6 +183,7 @@ public final class DbHelper extends SQLiteOpenHelper {
             {"أجور العمال","التربال","التاجر","deduct_worker","من نصيب التربال","تخصم من نصيب التربال إذا دفعها التاجر"},
             {"المنصرفات","التربال","التاجر","deduct_worker","من نصيب التربال","المنصرفات المسجلة تخصم من نصيب التربال"},
             {"السلفيات","التربال","التاجر","deduct_worker","من نصيب التربال","السلفيات تخصم من نصيب التربال"},
+            {"الديون","التربال","التاجر","deduct_worker","من نصيب التربال","الديون المسجلة تخصم من نصيب التربال"},
             {"ضريبة المياه","التاجر","التاجر","trader_only","لا يوجد خصم","على التاجر وحده خارج المناصفة"},
             {"إيجار الأرض","التاجر","التاجر","trader_only","لا يوجد خصم","على التاجر وحده خارج المناصفة"}
         };
@@ -286,6 +287,29 @@ public final class DbHelper extends SQLiteOpenHelper {
         ContentValues v = new ContentValues();
         v.put("project_id", 1); v.put("task_date", date); v.put("title", title); v.put("details", details);
         getWritableDatabase().insertOrThrow("calendar_tasks", null, v);
+    }
+
+    public long sumCostsForWorker(String worker, String[] categories) {
+        if (categories == null || categories.length == 0) return 0L;
+        StringBuilder sql = new StringBuilder("SELECT COALESCE(SUM(total),0) FROM costs WHERE project_id=1 AND worker=? AND category IN (");
+        String[] args = new String[categories.length + 1]; args[0] = worker;
+        for (int i=0;i<categories.length;i++) { if(i>0) sql.append(","); sql.append("?"); args[i+1]=categories[i]; }
+        sql.append(")");
+        try (Cursor c=getReadableDatabase().rawQuery(sql.toString(),args)) { return c.moveToFirst()?c.getLong(0):0L; }
+    }
+
+    public long netSalesForWorker(String worker) {
+        try (Cursor c=getReadableDatabase().rawQuery("SELECT COALESCE(SUM(net),0) FROM sales WHERE project_id=1 AND trader=?",new String[]{worker})) {
+            return c.moveToFirst()?c.getLong(0):0L;
+        }
+    }
+
+    public Cursor workerNames() {
+        return getReadableDatabase().rawQuery("SELECT worker AS name FROM costs WHERE project_id=1 AND TRIM(worker)<>'' UNION SELECT trader AS name FROM sales WHERE project_id=1 AND TRIM(COALESCE(trader,''))<>'' ORDER BY name",null);
+    }
+
+    public long totalSalesNet() {
+        try (Cursor c=getReadableDatabase().rawQuery("SELECT COALESCE(SUM(net),0) FROM sales WHERE project_id=1",null)) { return c.moveToFirst()?c.getLong(0):0L; }
     }
 
     public long total(String table, String column) {
