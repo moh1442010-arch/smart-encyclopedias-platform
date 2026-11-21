@@ -9,14 +9,15 @@ const gradle = read("tirbal-app/app/build.gradle");
 const activity = read("tirbal-app/app/src/main/java/com/mohammedmustafa/tirbal/MainActivity.java");
 const license = read("tirbal-app/app/src/main/java/com/mohammedmustafa/tirbal/LicenseManager.java");
 const database = read("tirbal-app/app/src/main/java/com/mohammedmustafa/tirbal/DbHelper.java");
+const accounting = read("tirbal-app/app/src/main/java/com/mohammedmustafa/tirbal/AccountingBook.java");
 const keyStore = read("tirbal-app/app/src/main/java/com/mohammedmustafa/tirbal/DbKeyStore.java");
 const manifest = read("tirbal-app/app/src/main/AndroidManifest.xml");
 const config = read("tirbal-licensing/wrangler.toml");
 
 test("Android, Worker and Wrangler use the same product version", () => {
-  assert.match(gradle, /versionName '1\.4\.0'/);
-  assert.match(worker, /const APP_VERSION = "1\.4\.0"/);
-  assert.match(config, /APP_VERSION = "1\.4\.0"/);
+  assert.match(gradle, /versionName '1\.5\.0'/);
+  assert.match(worker, /const APP_VERSION = "1\.5\.0"/);
+  assert.match(config, /APP_VERSION = "1\.5\.0"/);
 });
 
 test("trial and prices are consistent across app and Worker", () => {
@@ -71,4 +72,16 @@ test("manual review and payment configuration are server-controlled", () => {
   assert.match(worker, /sameOriginPost/);
   assert.match(worker, /allowOrder\(request,env\)/);
   assert.doesNotMatch(worker, /-----BEGIN (?:RSA )?PRIVATE KEY-----/);
+});
+
+
+test("agricultural costs and sales are posted to a balanced double-entry ledger", () => {
+  assert.match(database, /DB_VERSION = 4/);
+  assert.match(database, /AccountingBook\.install\(db\)/);
+  assert.match(database, /AccountingBook\.postCost\(/);
+  assert.match(database, /AccountingBook\.postSale\(/);
+  assert.match(accounting, /UNIQUE\(source_type,source_id\)/);
+  assert.match(accounting, /assertBalanced\(db,entry\)/);
+  assert.match(accounting, /static Cursor trialBalance\(/);
+  assert.match(accounting, /static void backfillLegacy\(/);
 });
