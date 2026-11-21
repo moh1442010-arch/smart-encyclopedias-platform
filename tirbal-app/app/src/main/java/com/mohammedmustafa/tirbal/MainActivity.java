@@ -517,7 +517,7 @@ public class MainActivity extends Activity {
 
     private class AgricultureRow {
         Spinner category;
-        EditText item,quantity,price;
+        EditText worker,item,quantity,price;
         TextView total;
     }
 
@@ -535,13 +535,13 @@ public class MainActivity extends Activity {
             int count=0;
             try{
                 for(AgricultureRow r:rows){
-                    if(empty(r.item)&&empty(r.quantity)&&empty(r.price))continue;
-                    if(empty(r.item)||empty(r.quantity)||empty(r.price))throw new IllegalArgumentException();
+                    if(empty(r.worker)&&empty(r.item)&&empty(r.quantity)&&empty(r.price))continue;
+                    if(empty(r.worker)||empty(r.item)||empty(r.quantity)||empty(r.price))throw new IllegalArgumentException();
                     double q=Double.parseDouble(val(r.quantity));long p=Long.parseLong(val(r.price));
                     if(q<=0||p<0)throw new IllegalArgumentException();
                     String category=r.category.getSelectedItem().toString();
                     String[] defaults=db.defaultResponsibility(category);
-                    db.addCost(val(date),"",category,val(r.item),q,p,"التاجر",defaults[0],defaults[2],defaults[3],"","مدخل زراعي تفصيلي");
+                    db.addCost(val(date),val(r.worker),category,val(r.item),q,p,"التاجر",defaults[0],defaults[2],defaults[3],"","مدخل زراعي تفصيلي");
                     count++;
                 }
                 if(count==0){toast("أدخل صنفاً واحداً على الأقل");return;}
@@ -556,13 +556,13 @@ public class MainActivity extends Activity {
         AgricultureRow r=new AgricultureRow();LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(10,8,10,8);card.setBackground(rounded(Color.WHITE,12,Color.rgb(218,228,216)));
         r.category=spinner(new String[]{"التقاوي","الأسمدة","المبيدات","تحضير الأرض","الري وخدمة الحقل","الوقود والترحيل","أجور العمال","أخرى"});
-        r.item=field("اسم الصنف / البيان",false);r.quantity=field("الكمية",false);r.quantity.setInputType(8194);
+        r.worker=field("اسم التربال",false);r.item=field("اسم الصنف / البيان",false);r.quantity=field("الكمية",false);r.quantity.setInputType(8194);
         r.price=field("سعر الوحدة بالجنيه",false);r.price.setInputType(2);r.total=text("الإجمالي: 0 ج.س",15,GREEN,true);
         TextWatcher watcher=new TextWatcher(){public void beforeTextChanged(CharSequence x,int st,int count,int after){}public void onTextChanged(CharSequence x,int st,int before,int count){
             try{double q=empty(r.quantity)?0:Double.parseDouble(val(r.quantity));long p=empty(r.price)?0:Long.parseLong(val(r.price));r.total.setText("الإجمالي: "+money.format(Math.round(q*p))+" ج.س");}catch(Exception ex){r.total.setText("تحقق من الكمية والسعر");}
         }public void afterTextChanged(Editable e){}};
         r.quantity.addTextChangedListener(watcher);r.price.addTextChangedListener(watcher);
-        card.addView(text("بند زراعي جديد",14,DARK,true));card.addView(r.category);card.addView(r.item);card.addView(r.quantity);card.addView(r.price);card.addView(r.total);
+        card.addView(text("بند زراعي جديد",14,DARK,true));card.addView(r.category);card.addView(r.worker);card.addView(r.item);card.addView(r.quantity);card.addView(r.price);card.addView(r.total);
         parent.addView(card,margin(-1,-2,0,0,0,10));rows.add(r);
     }
 
