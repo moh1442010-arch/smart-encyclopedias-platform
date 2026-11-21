@@ -98,7 +98,7 @@ test("quick worker cost sheet, crop input rows, invoices and settlement follow t
   assert.match(activity, /sumCostsForWorker\(worker,SHARED_CATEGORIES\)/);
   assert.match(activity, /WORKER_DEDUCTIONS = \{"الميز","السلفيات"/);
   assert.match(activity, /sumCostsForWorker\(worker,WORKER_DEDUCTIONS\)/);
-  assert.match(database, /DB_VERSION = 6/);
+  assert.match(database, /DB_VERSION = 7/);
   assert.match(database, /UPDATE partnership_terms SET responsible_party='مشترك', settlement_type='shared_half'/);
   assert.match(activity, /التكاليف المشتركة قبل المناصفة/);
   assert.match(activity, /الميز والسلفيات المخصومة من نصيب التربال/);
