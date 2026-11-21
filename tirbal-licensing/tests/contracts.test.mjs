@@ -76,7 +76,7 @@ test("manual review and payment configuration are server-controlled", () => {
 
 
 test("agricultural costs and sales are posted to a balanced double-entry ledger", () => {
-  assert.match(database, /DB_VERSION = 6/);
+  assert.match(database, /DB_VERSION = 7/);
   assert.match(database, /AccountingBook\.install\(db\)/);
   assert.match(database, /AccountingBook\.postCost\(/);
   assert.match(database, /AccountingBook\.postSale\(/);
