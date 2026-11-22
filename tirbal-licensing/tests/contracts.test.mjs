@@ -17,7 +17,7 @@ const config = read("tirbal-licensing/wrangler.toml");
 test("Android, Worker and Wrangler use the same product version", () => {
   assert.ok(gradle.includes("versionName '1.8.0'"));
   assert.ok(worker.includes('APP_VERSION = "1.8.0"'));
-  assert.ok(config.includes('APP_VERSION = "1.7.0"'));
+  assert.ok(config.includes('APP_VERSION = "1.8.0"'));
 });
 
 test("trial and prices are consistent across app and Worker", () => {
