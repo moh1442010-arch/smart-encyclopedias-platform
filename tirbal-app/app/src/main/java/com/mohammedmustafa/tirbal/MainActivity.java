@@ -394,11 +394,29 @@ public class MainActivity extends Activity {
     private void addTile(String title, String subtitle, View.OnClickListener click) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(16, 13, 16, 13);
+        card.setPadding(14, 12, 14, 12);
         card.setBackground(rounded(Color.WHITE, 18, Color.rgb(225,232,222)));
-        TextView t = text(title, 18, GREEN, true);
-        TextView s = text(subtitle, 13, Color.DKGRAY, false);
-        card.addView(t); card.addView(s);
+
+        int split = title.indexOf(' ');
+        String icon = split > 0 ? title.substring(0, split) : "◈";
+        String label = split > 0 ? title.substring(split + 1).trim() : title;
+
+        LinearLayout line = new LinearLayout(this);
+        line.setOrientation(LinearLayout.HORIZONTAL);
+        line.setGravity(Gravity.CENTER_VERTICAL);
+        TextView iconView = text(icon, 23, GREEN, true);
+        iconView.setGravity(Gravity.CENTER);
+        iconView.setBackground(rounded(Color.rgb(235,243,234), 14, Color.rgb(235,243,234)));
+        line.addView(iconView, new LinearLayout.LayoutParams(dp(52), dp(52)));
+
+        LinearLayout labels = new LinearLayout(this);
+        labels.setOrientation(LinearLayout.VERTICAL);
+        labels.setPadding(12, 0, 0, 0);
+        labels.addView(text(label, 17, GREEN, true));
+        labels.addView(text(subtitle, 13, Color.DKGRAY, false));
+        line.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
+        card.addView(line);
+
         content.addView(card, margin(-1, -2, 0, 0, 0, 10));
         card.setOnClickListener(click);
     }
