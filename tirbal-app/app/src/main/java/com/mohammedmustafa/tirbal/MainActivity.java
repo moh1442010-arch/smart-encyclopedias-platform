@@ -39,7 +39,12 @@ public class MainActivity extends Activity {
         // Review-first startup: the app remains usable while the licensing service is being finalized.
         // The website nucleus can turn enforcement on later through /api/config without rebuilding the APK.
         LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
-            if(config!=null && isMandatoryUpdate(config)) {
+            if(config==null) {
+                // Never fall back to an unrestricted review session when the licensing service is unreachable.
+                continueLicenseCheck();
+                return;
+            }
+            if(isMandatoryUpdate(config)) {
                 showMandatoryUpdate(config);
                 return;
             }
@@ -176,7 +181,7 @@ public class MainActivity extends Activity {
                 info.append("الإصدار المثبت: ").append(current).append("\\nأحدث إصدار: ").append(latest);
                 if(compareVersions(current,latest)<0)info.append("\\nيتوفر تحديث جديد.");
                 else info.append("\\nالتطبيق على أحدث إصدار معلن.");
-                info.append("\\nمدة التجربة: ").append(config.optInt("trialDays",15)).append(" يوماً");
+                info.append("\\nمدة التجربة: ").append(config.optInt("trialDays",7)).append(" يوماً");
                 info.append("\\nحالة الترخيص المركزي: ")
                     .append(config.optBoolean("licenseEnforcement",false) ? "مفعّل" : "متوقف أثناء المراجعة");
                 JSONObject plans=config.optJSONObject("plans");
@@ -383,7 +388,7 @@ public class MainActivity extends Activity {
         addTile("💳 الديون والسلفيات", "السلفيات تسجل كبند تكلفة قابل للتصنيف", v -> showCosts());
         addTile("🤝 اتفاق الشراكة والتسوية", "مسؤوليات التاجر والتربال والخصومات بعد الحصاد", v -> showPartnership());
         addTile("🔐 تغيير كلمة المرور", "تحديث كلمة مرور التطبيق", v -> changePassword());
-        addTile("🌐 مركز التحديثات والإعدادات", "فحص التحديثات والإعلانات والأسعار الحالية", v -> showUpdateCenter());
+        addTile("💳 الأسعار والاشتراك والتحديثات", "الأسعار الحالية ومدة التجربة وإصدارات التطبيق", v -> showUpdateCenter());
     }
 
     private void addTile(String title, String subtitle, View.OnClickListener click) {
