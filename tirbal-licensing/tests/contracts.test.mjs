@@ -62,6 +62,8 @@ test("review build can defer licensing and the website nucleus can enforce it la
   assert.match(activity, /openReviewSession\(\)/);
   assert.match(activity, /if\(config==null\)[\s\S]*continueLicenseCheck\(\)/);
   assert.match(activity, /optInt\("trialDays",7\)/);
+  assert.match(activity, /title\.indexOf\(' ')/);
+  assert.match(activity, /iconView\.setBackground\(rounded\(Color\.rgb\(235,243,234\)/);
   assert.match(worker, /licenseEnforcement:true/);
   assert.match(worker, /licenseEnforcement:settings\.licenseEnforcement/);
   assert.match(worker, /licenseEnforcement:b\.licenseEnforcement===true/);
