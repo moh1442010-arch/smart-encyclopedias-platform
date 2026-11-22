@@ -5,7 +5,7 @@
 ## الهوية
 - الاسم: حساب التربال
 - Package: `com.mohammedmustafa.tirbal`
-- Version: `1.7.0`
+- Version: `1.8.0`
 - لغة الواجهة: العربية مع RTL
 - Minimum Android: 6.0 (API 23)
 - Database: SQLCipher مشفرة محلياً، ومفتاحها محمي بواسطة Android Keystore
