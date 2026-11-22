@@ -36,8 +36,8 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(DARK);
         getWindow().setNavigationBarColor(DARK);
-        // Review-first startup: the app remains usable while the licensing service is being finalized.
-        // The website nucleus can turn enforcement on later through /api/config without rebuilding the APK.
+        // Commercial startup is controlled by the licensing service. If config cannot be fetched,
+        // the signed bootstrap check may still validate a cached or online license.
         LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
             if(config==null) {
                 // Never fall back to an unrestricted review session when the licensing service is unreachable.
