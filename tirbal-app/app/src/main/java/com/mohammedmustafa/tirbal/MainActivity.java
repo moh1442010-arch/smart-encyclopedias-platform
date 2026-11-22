@@ -217,10 +217,6 @@ public class MainActivity extends Activity {
                 "قبل الانتقال إلى هاتف آخر أو تثبيت نسخة بتوقيع مختلف، اطلب نسخة احتياطية قابلة للاستعادة واختبرها أولاً.",
                 "طابق الأرصدة مع الفواتير والإيصالات والسجلات الأصلية بصورة دورية."
         });
-        Button home = button("⌂  العودة إلى الرئيسية");
-        content.addView(home);
-        home.setOnClickListener(v -> showHome());
-        addBack();
     }
 
     private void addGuideSection(String heading, String[] points) {
@@ -1060,7 +1056,7 @@ public class MainActivity extends Activity {
         hs.addView(row); content.addView(hs);
     }
 
-    private void addBack() { Button b=button("⌂  الرئيسية"); content.addView(b,0); b.setOnClickListener(v->showHome()); }
+    private void addBack() { /* Navigation button is injected once by base() on every working screen. */ }
 
     private GradientDrawable rounded(int color, int radius, int stroke) {
         GradientDrawable d = new GradientDrawable();
