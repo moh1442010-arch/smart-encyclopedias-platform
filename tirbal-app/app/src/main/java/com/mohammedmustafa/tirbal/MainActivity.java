@@ -162,6 +162,81 @@ public class MainActivity extends Activity {
         })));
     }
 
+    private void showUserGuide() {
+        base("الدليل الإرشادي");
+        content.addView(text("دليل استخدام حساب التربال", 21, DARK, true));
+        content.addView(text("ابدأ بإعداد المشروع، ثم سجّل التكاليف والمبيعات، وبعد الحصاد راجع التسوية والتقارير. احفظ البيانات بعد كل عملية.", 15, Color.DKGRAY, false));
+
+        addGuideSection("١. إعداد المشروع", new String[]{
+                "افتح بيانات المشروع من الصفحة الرئيسية.",
+                "أدخل اسم المشروع واسم التاجر ونوع المحصول والمساحة إن وجدت.",
+                "راجع البيانات قبل الحفظ. تظهر بيانات المشروع في لوحة المتابعة."
+        });
+        addGuideSection("٢. دفتر التكلفة", new String[]{
+                "أضف صفاً مستقلاً لكل تربال.",
+                "أدخل مبالغ الميز والأسمدة والمبيدات والتقاوي والتحضير والديون والسلفيات في أعمدتها.",
+                "راجع إجمالي كل صف والإجمالي العام قبل الحفظ.",
+                "تُعامل البنود المشتركة وفق اتفاق الشراكة، بينما تُخصم البنود المحمّلة على نصيب التربال وفق إعداد التسوية."
+        });
+        addGuideSection("٣. المدخلات الزراعية", new String[]{
+                "أضف صنف المدخل الزراعي والكمية وسعر الوحدة.",
+                "أضف صفوفاً أخرى عند الحاجة.",
+                "راجع الإجمالي ثم احفظ الدفعة. لا تعتمد رقماً تقديرياً بدلاً من الفاتورة الفعلية."
+        });
+        addGuideSection("٤. السوق والمبيعات", new String[]{
+                "سجّل كل فاتورة باسم التربال وتاريخها ورقمها.",
+                "أدخل قيمة البيع وتكلفة الرحلة ومصروفات السوق.",
+                "راجع صافي الفاتورة. يمكنك تسجيل أكثر من فاتورة للتربال الواحد."
+        });
+        addGuideSection("٥. التسوية", new String[]{
+                "افتح تسوية نصيب التربال بعد تسجيل الفواتير والتكاليف.",
+                "يُحسب صافي المبيعات بعد مصروفات الرحلة والسوق.",
+                "تُخصم التكاليف المشتركة قبل قسمة المتبقي حسب نسبة الشراكة المسجلة.",
+                "تُخصم الميز والسلفيات والخدمات من نصيب التربال عندما تنص طريقة التسوية على ذلك.",
+                "راجع تفاصيل كل تربال ولا تعتمد التسوية قبل مطابقة المستندات."
+        });
+        addGuideSection("٦. التقارير والدفاتر", new String[]{
+                "راجع الأرباح والخسائر لمقارنة المبيعات بالتكاليف.",
+                "راجع دفتر اليومية والأستاذ لمتابعة القيود.",
+                "استخدم ميزان المراجعة للتحقق من تساوي إجمالي المدين والدائن."
+        });
+        addGuideSection("٧. اتفاق الشراكة", new String[]{
+                "افتح اتفاق الشراكة وحدد مسؤولية كل طرف عن البنود.",
+                "حدد من يدفع ومن يتحمل التكلفة وكيف تخصم عند التسوية.",
+                "لا تغيّر قواعد الموسم بعد بدء التسجيل إلا بعد توثيق الاتفاق ومراجعة أثره على الحسابات."
+        });
+        addGuideSection("٨. الأسعار والترخيص والتحديث", new String[]{
+                "افتح الأسعار والاشتراك والتحديثات لقراءة الأسعار ومدة التجربة المنشورة من نواة الموقع.",
+                "فترة التجربة الافتراضية سبعة أيام، وبعد انتهائها يلزم اعتماد اشتراك صالح.",
+                "قدّم طلب الاشتراك وأرفق مرجع التحويل، وانتظر اعتماد الإدارة.",
+                "نزّل التحديث من رابط موثوق. يجب توقيع كل إصدار جديد بمفتاح الإصدار نفسه حتى يقبل الهاتف التحديث فوق النسخة المثبتة."
+        });
+        addGuideSection("٩. حماية البيانات", new String[]{
+                "احتفظ بالهاتف آمناً ولا تشارك كلمة المرور.",
+                "لا تحذف التطبيق ولا تمسح بياناته عند تعذر التحديث.",
+                "قبل الانتقال إلى هاتف آخر أو تثبيت نسخة بتوقيع مختلف، اطلب نسخة احتياطية قابلة للاستعادة واختبرها أولاً.",
+                "طابق الأرصدة مع الفواتير والإيصالات والسجلات الأصلية بصورة دورية."
+        });
+        Button home = button("⌂  العودة إلى الرئيسية");
+        content.addView(home);
+        home.setOnClickListener(v -> showHome());
+        addBack();
+    }
+
+    private void addGuideSection(String heading, String[] points) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(12, 10, 12, 10);
+        card.setBackground(rounded(Color.WHITE, 14, Color.rgb(225,232,222)));
+        card.addView(text(heading, 17, GREEN, true));
+        for (String point : points) {
+            TextView line = text("• " + point, 14, DARK, false);
+            line.setPadding(4, 5, 4, 5);
+            card.addView(line);
+        }
+        content.addView(card, margin(-1, -2, 0, 0, 0, 10));
+    }
+
     private void showUpdateCenter() {
         base("مركز التحديثات والإعدادات");
         content.addView(text("يتصل هذا المركز بنواة حساب التربال على الموقع لتحميل الأسعار والإعلانات ومعلومات الإصدارات.",15,DARK,false));
@@ -304,6 +379,15 @@ public class MainActivity extends Activity {
         header.setPadding(22, 18, 22, 18);
         header.setBackgroundColor(GREEN);
         root.addView(header, new LinearLayout.LayoutParams(-1, dp(66)));
+        if (!"حساب التربال".equals(title) && !"اشتراك حساب التربال".equals(title)) {
+            Button home = button("⌂  العودة إلى الرئيسية");
+            home.setTextSize(14);
+            root.addView(home, new LinearLayout.LayoutParams(-1, dp(48)));
+            home.setOnClickListener(v -> {
+                if (db != null && db.hasProject()) showHome();
+                else showGate();
+            });
+        }
         ScrollView scroll = new ScrollView(this);
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
@@ -389,6 +473,7 @@ public class MainActivity extends Activity {
         addTile("🤝 اتفاق الشراكة والتسوية", "مسؤوليات التاجر والتربال والخصومات بعد الحصاد", v -> showPartnership());
         addTile("🔐 تغيير كلمة المرور", "تحديث كلمة مرور التطبيق", v -> changePassword());
         addTile("💳 الأسعار والاشتراك والتحديثات", "الأسعار الحالية ومدة التجربة وإصدارات التطبيق", v -> showUpdateCenter());
+        addTile("📘 الدليل الإرشادي", "شرح الاستخدام خطوة بخطوة وطريقة إدخال الحسابات", v -> showUserGuide());
     }
 
     private void addTile(String title, String subtitle, View.OnClickListener click) {
