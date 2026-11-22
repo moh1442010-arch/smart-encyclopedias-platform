@@ -15,13 +15,15 @@ const manifest = read("tirbal-app/app/src/main/AndroidManifest.xml");
 const config = read("tirbal-licensing/wrangler.toml");
 
 test("Android, Worker and Wrangler use the same product version", () => {
-  assert.ok(gradle.includes("versionName '1.7.0'"));
-  assert.ok(worker.includes('APP_VERSION = "1.7.0"'));
+  assert.ok(gradle.includes("versionName '1.8.0'"));
+  assert.ok(worker.includes('APP_VERSION = "1.8.0"'));
   assert.ok(config.includes('APP_VERSION = "1.7.0"'));
 });
 
 test("trial and prices are consistent across app and Worker", () => {
-  assert.ok(worker.includes("trialDays:15"));
+  assert.ok(worker.includes("trialDays:7"));
+  assert.ok(worker.includes("licenseEnforcement:true"));
+  assert.match(worker,/trialDays===15[\s\S]*values\.trialDays=7[\s\S]*licenseEnforcement=true/);
   assert.ok(worker.includes("monthly: { amount: 70000, seconds: 30 * 86400 }"));
   assert.ok(worker.includes("annual: { amount: 650000, seconds: 365 * 86400 }"));
   assert.ok(worker.includes("lifetime: { amount: 1300000, seconds: 0 }"));
@@ -58,7 +60,9 @@ test("review build can defer licensing and the website nucleus can enforce it la
   assert.match(gradle, /REMOTE_LICENSE_CONTROL/);
   assert.match(activity, /config\.optBoolean\("licenseEnforcement",false\)/);
   assert.match(activity, /openReviewSession\(\)/);
-  assert.match(worker, /licenseEnforcement:false/);
+  assert.match(activity, /if\(config==null\)[\s\S]*continueLicenseCheck\(\)/);
+  assert.match(activity, /optInt\("trialDays",7\)/);
+  assert.match(worker, /licenseEnforcement:true/);
   assert.match(worker, /licenseEnforcement:settings\.licenseEnforcement/);
   assert.match(worker, /licenseEnforcement:b\.licenseEnforcement===true/);
   assert.match(worker, /id="licenseEnforcement"/);
