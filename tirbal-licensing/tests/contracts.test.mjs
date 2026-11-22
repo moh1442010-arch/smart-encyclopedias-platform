@@ -64,6 +64,13 @@ test("review build can defer licensing and the website nucleus can enforce it la
   assert.match(activity, /optInt\("trialDays",7\)/);
   assert.match(activity, /title\.indexOf\(' ')/);
   assert.match(activity, /iconView\.setBackground\(rounded\(Color\.rgb\(235,243,234\)/);
+  assert.match(activity, /private void showUserGuide\(\)/);
+  assert.match(activity, /"١. إعداد المشروع"/);
+  assert.match(activity, /"٨. الأسعار والترخيص والتحديث"/);
+  assert.match(activity, /"٩. حماية البيانات"/);
+  assert.match(activity, /عودة إلى الرئيسية/);
+  assert.match(activity, /private void base\(String title\)[\s\S]*عودة إلى الرئيسية[\s\S]*showHome\(\)/);
+  assert.match(activity, /private void addBack\(\) \{ \/\* Navigation button is injected once by base\(\)/);
   assert.match(worker, /licenseEnforcement:true/);
   assert.match(worker, /licenseEnforcement:settings\.licenseEnforcement/);
   assert.match(worker, /licenseEnforcement:b\.licenseEnforcement===true/);
