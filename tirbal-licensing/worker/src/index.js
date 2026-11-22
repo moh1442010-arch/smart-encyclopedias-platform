@@ -15,9 +15,9 @@ const clean = (v,n=120) => typeof v==="string" ? v.trim().slice(0,n) : "";
 const validDevice = v => /^[A-Za-z0-9_-]{8,100}$/.test(v);
 const planExpiry = (plan,now) => plan==="lifetime" ? 0 : now+PLANS[plan].seconds;
 const DEFAULT_SETTINGS = {
-  monthlyPrice:70000, annualPrice:650000, lifetimePrice:1300000, trialDays:15,
+  monthlyPrice:70000, annualPrice:650000, lifetimePrice:1300000, trialDays:7,
   latestVersion:APP_VERSION, minSupportedVersion:"1.0.0", downloadUrl:"",
-  releaseNotes:"", announcement:"", maintenanceMode:false, licenseEnforcement:false
+  releaseNotes:"", announcement:"", maintenanceMode:false, licenseEnforcement:true
 };
 async function loadSettings(env) {
   const rows=await env.DB.prepare("SELECT setting_key,setting_value FROM tirbal_settings").all();
@@ -29,6 +29,19 @@ async function loadSettings(env) {
       else if(["monthlyPrice","annualPrice","lifetimePrice","trialDays"].includes(row.setting_key)) values[row.setting_key]=Number(raw);
       else values[row.setting_key]=raw;
     }
+  }
+  // Commercial launch migration: move the former 15-day default to 7 days.
+  // Preserve any administrator-customized trial duration and prices.
+  if(values.trialDays===15) {
+    values.trialDays=7;
+    const migration={trialDays:7};
+    if(!values.licenseEnforcement) {
+      values.licenseEnforcement=true;
+      migration.licenseEnforcement=true;
+    }
+    await saveSettings(env,migration);
+    // Shorten only unlicensed trial records created under the former default.
+    await env.DB.prepare("UPDATE tirbal_devices SET trial_expires=first_seen+? WHERE plan IS NULL AND trial_expires>first_seen+?").bind(7*86400,7*86400).run();
   }
   // One-time migration of the previous bundled price defaults. Preserve any
   // administrator-customized price set that does not exactly match the old trio.
