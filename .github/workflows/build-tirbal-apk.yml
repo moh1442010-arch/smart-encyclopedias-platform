@@ -6,6 +6,7 @@ on:
     branches:
       - feature/hisab-al-tirbal-android-v1
       - fix/tirbal-app-first-review-1.4.0
+      - feature/tirbal-commercial-1.8.0
     paths:
       - 'tirbal-app/**'
       - '.github/workflows/build-tirbal-apk.yml'
@@ -13,6 +14,7 @@ on:
     branches:
       - main
       - feature/hisab-al-tirbal-android-v1
+      - fix/tirbal-app-first-review-1.4.0
     paths:
       - 'tirbal-app/**'
       - '.github/workflows/build-tirbal-apk.yml'
@@ -75,7 +77,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: hisab-al-tirbal-1.7.0-review-apk
+          name: hisab-al-tirbal-1.8.0-review-apk
           path: tirbal-app/dist/hisab-al-tirbal.apk
           if-no-files-found: error
           retention-days: 14

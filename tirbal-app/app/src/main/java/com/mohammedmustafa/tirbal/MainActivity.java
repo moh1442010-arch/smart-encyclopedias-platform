@@ -36,10 +36,15 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(DARK);
         getWindow().setNavigationBarColor(DARK);
-        // Review-first startup: the app remains usable while the licensing service is being finalized.
-        // The website nucleus can turn enforcement on later through /api/config without rebuilding the APK.
+        // Commercial startup is controlled by the licensing service. If config cannot be fetched,
+        // the signed bootstrap check may still validate a cached or online license.
         LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
-            if(config!=null && isMandatoryUpdate(config)) {
+            if(config==null) {
+                // Never fall back to an unrestricted review session when the licensing service is unreachable.
+                continueLicenseCheck();
+                return;
+            }
+            if(isMandatoryUpdate(config)) {
                 showMandatoryUpdate(config);
                 return;
             }
@@ -157,6 +162,84 @@ public class MainActivity extends Activity {
         })));
     }
 
+    private void showUserGuide() {
+        base("الدليل الإرشادي");
+        content.addView(text("دليل استخدام حساب التربال", 21, DARK, true));
+        content.addView(text("ابدأ بإعداد المشروع، ثم سجّل التكاليف والمبيعات، وبعد الحصاد راجع التسوية والتقارير. احفظ البيانات بعد كل عملية.", 15, Color.DKGRAY, false));
+
+        addGuideSection("١. إعداد المشروع", new String[]{
+                "افتح بيانات المشروع من الصفحة الرئيسية.",
+                "أدخل اسم المشروع واسم التاجر ونوع المحصول والمساحة إن وجدت.",
+                "راجع البيانات قبل الحفظ. تظهر بيانات المشروع في لوحة المتابعة."
+        });
+        addGuideSection("٢. دفتر التكلفة", new String[]{
+                "أضف صفاً مستقلاً لكل تربال.",
+                "أدخل مبالغ الميز والأسمدة والمبيدات والتقاوي والتحضير والديون والسلفيات في أعمدتها.",
+                "راجع إجمالي كل صف والإجمالي العام قبل الحفظ.",
+                "تُعامل البنود المشتركة وفق اتفاق الشراكة، بينما تُخصم البنود المحمّلة على نصيب التربال وفق إعداد التسوية."
+        });
+        addGuideSection("٣. المدخلات الزراعية", new String[]{
+                "أضف صنف المدخل الزراعي والكمية وسعر الوحدة.",
+                "أضف صفوفاً أخرى عند الحاجة.",
+                "راجع الإجمالي ثم احفظ الدفعة. لا تعتمد رقماً تقديرياً بدلاً من الفاتورة الفعلية."
+        });
+        addGuideSection("٤. السوق والمبيعات", new String[]{
+                "سجّل كل فاتورة باسم التربال وتاريخها ورقمها.",
+                "أدخل قيمة البيع وتكلفة الرحلة ومصروفات السوق.",
+                "راجع صافي الفاتورة. يمكنك تسجيل أكثر من فاتورة للتربال الواحد."
+        });
+        addGuideSection("٥. التسوية", new String[]{
+                "افتح تسوية نصيب التربال بعد تسجيل الفواتير والتكاليف.",
+                "يُحسب صافي المبيعات بعد مصروفات الرحلة والسوق.",
+                "تُخصم التكاليف المشتركة قبل قسمة المتبقي حسب نسبة الشراكة المسجلة.",
+                "تُخصم الميز والسلفيات والخدمات من نصيب التربال عندما تنص طريقة التسوية على ذلك.",
+                "راجع تفاصيل كل تربال ولا تعتمد التسوية قبل مطابقة المستندات."
+        });
+        addGuideSection("٦. التقارير والدفاتر", new String[]{
+                "راجع الأرباح والخسائر لمقارنة المبيعات بالتكاليف.",
+                "راجع دفتر اليومية والأستاذ لمتابعة القيود.",
+                "استخدم ميزان المراجعة للتحقق من تساوي إجمالي المدين والدائن."
+        });
+        addGuideSection("٧. اتفاق الشراكة", new String[]{
+                "افتح اتفاق الشراكة وحدد مسؤولية كل طرف عن البنود.",
+                "حدد من يدفع ومن يتحمل التكلفة وكيف تخصم عند التسوية.",
+                "لا تغيّر قواعد الموسم بعد بدء التسجيل إلا بعد توثيق الاتفاق ومراجعة أثره على الحسابات."
+        });
+        addGuideSection("٨. الأسعار والترخيص والتحديث", new String[]{
+                "افتح الأسعار والاشتراك والتحديثات لقراءة الأسعار ومدة التجربة المنشورة من نواة الموقع.",
+                "فترة التجربة الافتراضية سبعة أيام، وبعد انتهائها يلزم اعتماد اشتراك صالح.",
+                "قدّم طلب الاشتراك وأرفق مرجع التحويل، وانتظر اعتماد الإدارة.",
+                "نزّل التحديث من رابط موثوق. يجب توقيع كل إصدار جديد بمفتاح الإصدار نفسه حتى يقبل الهاتف التحديث فوق النسخة المثبتة."
+        });
+        addGuideSection("١٠. الوكلاء والرواكيب", new String[]{
+                "أضف الوكيل الذي يتبع للتاجر، ثم أضف الرواكيب التي يشرف عليها.",
+                "سجّل اسم الراكوبة واسم كبير المزارعين المسؤول عنها.",
+                "افتح الراكوبة من قائمة الوكيل لإدارة سكانها، وسكان الراكوبة هم التربالة المسجلون فيها.",
+                "استخدم زر القيد اليومي بجوار اسم التربال لتسجيل عمله أو ميزه أو مدخلاته الزراعية بتاريخها ومبلغها.",
+                "تُحفظ القيود على قاعدة البيانات المحلية وتدخل في دفاتر التكلفة والتسوية وفق تصنيف البند."
+        });
+        addGuideSection("١١. حماية البيانات", new String[]{
+                "احتفظ بالهاتف آمناً ولا تشارك كلمة المرور.",
+                "لا تحذف التطبيق ولا تمسح بياناته عند تعذر التحديث.",
+                "قبل الانتقال إلى هاتف آخر أو تثبيت نسخة بتوقيع مختلف، اطلب نسخة احتياطية قابلة للاستعادة واختبرها أولاً.",
+                "طابق الأرصدة مع الفواتير والإيصالات والسجلات الأصلية بصورة دورية."
+        });
+    }
+
+    private void addGuideSection(String heading, String[] points) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(12, 10, 12, 10);
+        card.setBackground(rounded(Color.WHITE, 14, Color.rgb(225,232,222)));
+        card.addView(text(heading, 17, GREEN, true));
+        for (String point : points) {
+            TextView line = text("• " + point, 14, DARK, false);
+            line.setPadding(4, 5, 4, 5);
+            card.addView(line);
+        }
+        content.addView(card, margin(-1, -2, 0, 0, 0, 10));
+    }
+
     private void showUpdateCenter() {
         base("مركز التحديثات والإعدادات");
         content.addView(text("يتصل هذا المركز بنواة حساب التربال على الموقع لتحميل الأسعار والإعلانات ومعلومات الإصدارات.",15,DARK,false));
@@ -176,7 +259,7 @@ public class MainActivity extends Activity {
                 info.append("الإصدار المثبت: ").append(current).append("\\nأحدث إصدار: ").append(latest);
                 if(compareVersions(current,latest)<0)info.append("\\nيتوفر تحديث جديد.");
                 else info.append("\\nالتطبيق على أحدث إصدار معلن.");
-                info.append("\\nمدة التجربة: ").append(config.optInt("trialDays",15)).append(" يوماً");
+                info.append("\\nمدة التجربة: ").append(config.optInt("trialDays",7)).append(" يوماً");
                 info.append("\\nحالة الترخيص المركزي: ")
                     .append(config.optBoolean("licenseEnforcement",false) ? "مفعّل" : "متوقف أثناء المراجعة");
                 JSONObject plans=config.optJSONObject("plans");
@@ -299,6 +382,15 @@ public class MainActivity extends Activity {
         header.setPadding(22, 18, 22, 18);
         header.setBackgroundColor(GREEN);
         root.addView(header, new LinearLayout.LayoutParams(-1, dp(66)));
+        if (!"حساب التربال".equals(title) && !"اشتراك حساب التربال".equals(title)) {
+            Button home = button("⌂  العودة إلى الرئيسية");
+            home.setTextSize(14);
+            root.addView(home, new LinearLayout.LayoutParams(-1, dp(48)));
+            home.setOnClickListener(v -> {
+                if (db != null && db.hasProject()) showHome();
+                else showGate();
+            });
+        }
         ScrollView scroll = new ScrollView(this);
         LinearLayout body = new LinearLayout(this);
         body.setOrientation(LinearLayout.VERTICAL);
@@ -376,6 +468,7 @@ public class MainActivity extends Activity {
         addTile("📅 الرزنامة الزراعية", "مواعيد الزراعة والري والتسميد والرش والحصاد", v -> showCalendar());
         addTile("🌱 مدخلات الزراعة", "إدخال سريع متعدد البنود والكميات والأسعار", v -> showAgricultureInputs());
         addTile("👨‍🌾 العمال والتربال", "تسجيل اسم التربال وربط اسمه ببنود التكلفة", v -> showCosts());
+        addTile("🧑‍🌾 الوكلاء والرواكيب", "إدارة الوكلاء والرواكيب وكبار المزارعين وسكان كل راكوبة والقيد اليومي", v -> showAgents());
         addTile("🤝 تسوية نصيب التربال", "حساب صافي الفواتير والمناصفة والخصومات لكل تربال", v -> showSettlement());
         addTile("📊 الأرباح والخسائر", "ملخص الموسم ونتائج المبيعات والتكاليف", v -> showReports());
         addTile("📚 دفتر اليومية والأستاذ", "قيود محاسبية مزدوجة وسجل العمليات المرحلة", v -> showJournal());
@@ -383,19 +476,177 @@ public class MainActivity extends Activity {
         addTile("💳 الديون والسلفيات", "السلفيات تسجل كبند تكلفة قابل للتصنيف", v -> showCosts());
         addTile("🤝 اتفاق الشراكة والتسوية", "مسؤوليات التاجر والتربال والخصومات بعد الحصاد", v -> showPartnership());
         addTile("🔐 تغيير كلمة المرور", "تحديث كلمة مرور التطبيق", v -> changePassword());
-        addTile("🌐 مركز التحديثات والإعدادات", "فحص التحديثات والإعلانات والأسعار الحالية", v -> showUpdateCenter());
+        addTile("🌐 نواة الموقع والخلية", "الأسعار والترخيص والإعلانات والتحديثات المركزية؛ ويستمر التسجيل المحاسبي محلياً دون إنترنت", v -> showUpdateCenter());
+        addTile("📘 الدليل الإرشادي", "شرح الاستخدام خطوة بخطوة وطريقة إدخال الحسابات", v -> showUserGuide());
     }
 
     private void addTile(String title, String subtitle, View.OnClickListener click) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(16, 13, 16, 13);
+        card.setPadding(14, 12, 14, 12);
         card.setBackground(rounded(Color.WHITE, 18, Color.rgb(225,232,222)));
-        TextView t = text(title, 18, GREEN, true);
-        TextView s = text(subtitle, 13, Color.DKGRAY, false);
-        card.addView(t); card.addView(s);
+
+        int split = title.indexOf(' ');
+        String icon = split > 0 ? title.substring(0, split) : "◈";
+        String label = split > 0 ? title.substring(split + 1).trim() : title;
+
+        LinearLayout line = new LinearLayout(this);
+        line.setOrientation(LinearLayout.HORIZONTAL);
+        line.setGravity(Gravity.CENTER_VERTICAL);
+        TextView iconView = text(icon, 23, GREEN, true);
+        iconView.setGravity(Gravity.CENTER);
+        iconView.setBackground(rounded(Color.rgb(235,243,234), 14, Color.rgb(235,243,234)));
+        line.addView(iconView, new LinearLayout.LayoutParams(dp(52), dp(52)));
+
+        LinearLayout labels = new LinearLayout(this);
+        labels.setOrientation(LinearLayout.VERTICAL);
+        labels.setPadding(12, 0, 0, 0);
+        labels.addView(text(label, 17, GREEN, true));
+        labels.addView(text(subtitle, 13, Color.DKGRAY, false));
+        line.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
+        card.addView(line);
+
         content.addView(card, margin(-1, -2, 0, 0, 0, 10));
         card.setOnClickListener(click);
+    }
+
+
+    private void showAgents() {
+        base("الوكلاء والرواكيب");
+        content.addView(text("سجّل كل وكيل يتبع للتاجر، ثم أضف الرواكيب التي يشرف عليها. افتح اسم الراكوبة لعرض سكانها وإدخال القيد اليومي لهم.",14,DARK,false));
+        Button add=button("＋ إضافة وكيل");
+        content.addView(add);
+        add.setOnClickListener(v->agentDialog());
+        try(Cursor agents=db.agents()) {
+            if(!agents.moveToFirst()) content.addView(text("لا توجد وكلاء مسجلون بعد. ابدأ بإضافة وكيل.",15,Color.DKGRAY,false));
+            else do {
+                long id=agents.getLong(0);
+                String name=agents.getString(1),phone=agents.getString(2);
+                LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
+                card.setPadding(14,12,14,12);card.setBackground(rounded(Color.WHITE,16,Color.rgb(220,230,218)));
+                card.addView(text("🧑‍🌾 "+name,18,GREEN,true));
+                card.addView(text("الهاتف: "+(phone==null||phone.isEmpty()?"غير مسجل":phone),13,Color.DKGRAY,false));
+                Button open=button("فتح الوكيل وإدارة الرواكيب");
+                card.addView(open);open.setOnClickListener(v->showAgentDetail(id,name));
+                content.addView(card,margin(-1,-2,0,0,0,10));
+            } while(agents.moveToNext());
+        }
+        addBack();
+    }
+
+    private void agentDialog() {
+        LinearLayout f=form();
+        EditText name=field("اسم الوكيل",false),phone=field("رقم الهاتف (اختياري)",false),notes=field("ملاحظات الوكيل (اختياري)",false);
+        f.addView(name);f.addView(phone);f.addView(notes);
+        new AlertDialog.Builder(this).setTitle("إضافة وكيل جديد").setView(f)
+            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ الوكيل",(d,w)->{
+                if(empty(name)){toast("أدخل اسم الوكيل");return;}
+                try{db.saveAgent(val(name),val(phone),val(notes));showAgents();toast("تم حفظ الوكيل");}
+                catch(Exception e){toast("تعذر حفظ الوكيل. تحقق من البيانات");}
+            }).show();
+    }
+
+    private void showAgentDetail(long agentId,String agentName) {
+        base("الوكيل: "+agentName);
+        content.addView(text("الرواكيب التابعة للوكيل",17,DARK,true));
+        Button add=button("＋ إضافة راكوبة");
+        content.addView(add);add.setOnClickListener(v->raqubaDialog(agentId,agentName));
+        try(Cursor rows=db.raqubasForAgent(agentId)) {
+            if(!rows.moveToFirst())content.addView(text("لم تُضف رواكيب لهذا الوكيل بعد.",14,Color.DKGRAY,false));
+            else do {
+                long id=rows.getLong(0);String name=rows.getString(1),senior=rows.getString(2);
+                Button raquba=button("🏡 "+name+"  |  كبير المزارعين: "+senior);
+                raquba.setTextSize(14);content.addView(raquba,margin(-1,-2,0,6,0,6));
+                raquba.setOnClickListener(v->showRaqubaPanel(agentId,agentName,id,name,senior));
+            }while(rows.moveToNext());
+        }
+        Button back=button("العودة إلى قائمة الوكلاء");content.addView(back);back.setOnClickListener(v->showAgents());
+        addBack();
+    }
+
+    private void raqubaDialog(long agentId,String agentName) {
+        LinearLayout f=form();
+        EditText name=field("اسم الراكوبة",false),senior=field("اسم كبير المزارعين",false),notes=field("ملاحظات (اختياري)",false);
+        f.addView(name);f.addView(senior);f.addView(notes);
+        new AlertDialog.Builder(this).setTitle("إضافة راكوبة للوكيل "+agentName).setView(f)
+            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ الراكوبة",(d,w)->{
+                if(empty(name)||empty(senior)){toast("أدخل اسم الراكوبة واسم كبير المزارعين");return;}
+                try{db.saveRaquba(agentId,val(name),val(senior),val(notes));showAgentDetail(agentId,agentName);toast("تم حفظ الراكوبة");}
+                catch(Exception e){toast("تعذر حفظ الراكوبة");}
+            }).show();
+    }
+
+    private void showRaqubaPanel(long agentId,String agentName,long raqubaId,String raqubaName,String senior) {
+        android.app.Dialog panel=new android.app.Dialog(this);
+        LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(16,18,16,18);box.setBackgroundColor(BG);
+        TextView heading=text("🏡 "+raqubaName,21,DARK,true);box.addView(heading);
+        box.addView(text("الوكيل: "+agentName,14,Color.DKGRAY,false));
+        box.addView(text("كبير المزارعين: "+senior,15,GREEN,true));
+        box.addView(text("سكان الراكوبة — التربالة",16,DARK,true));
+        LinearLayout members=new LinearLayout(this);members.setOrientation(LinearLayout.VERTICAL);
+        ScrollView scroll=new ScrollView(this);scroll.addView(members);
+        box.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        Runnable reload=()->{
+            members.removeAllViews();
+            try(Cursor c=db.workersForRaquba(raqubaId)){
+                if(!c.moveToFirst())members.addView(text("لم تتم إضافة تربالة لهذه الراكوبة.",14,Color.DKGRAY,false));
+                else do {
+                    String worker=c.getString(0);
+                    LinearLayout line=new LinearLayout(this);line.setOrientation(LinearLayout.HORIZONTAL);line.setGravity(Gravity.CENTER_VERTICAL);
+                    line.addView(text("👨‍🌾 "+worker,15,DARK,true),new LinearLayout.LayoutParams(0,-2,1));
+                    Button daily=button("قيد يومي");daily.setTextSize(12);line.addView(daily);
+                    daily.setOnClickListener(v->dailyAgentEntry(raqubaId,worker));
+                    members.addView(line,margin(-1,-2,0,0,0,6));
+                }while(c.moveToNext());
+            }
+        };
+        reload.run();
+        Button addWorker=button("＋ إضافة تربال إلى الراكوبة");
+        box.addView(addWorker);addWorker.setOnClickListener(v->{
+            EditText worker=field("اسم التربال / المزارع",false);
+            new AlertDialog.Builder(this).setTitle("إضافة ساكن للراكوبة").setView(worker)
+                .setNegativeButton("إلغاء",null).setPositiveButton("إضافة",(d,w)->{
+                    if(empty(worker)){toast("أدخل اسم التربال");return;}
+                    try{db.addRaqubaWorker(raqubaId,val(worker));reload.run();toast("تمت إضافة التربال");}
+                    catch(Exception e){toast("الاسم مسجل في هذه الراكوبة بالفعل أو تعذر الحفظ");}
+                }).show();
+        });
+        Button close=button("إغلاق الراكوبة");box.addView(close);close.setOnClickListener(v->panel.dismiss());
+        panel.setContentView(box);
+        android.view.Window window=panel.getWindow();
+        if(window!=null){window.setBackgroundDrawableResource(android.R.color.transparent);window.setLayout((int)(getResources().getDisplayMetrics().widthPixels*0.90),-1);window.setGravity(Gravity.END);}
+        panel.show();
+        if(panel.getWindow()!=null)panel.getWindow().setLayout((int)(getResources().getDisplayMetrics().widthPixels*0.90),-1);
+    }
+
+    private long findAgentIdForRaquba(long raqubaId) {
+        try(Cursor c=db.getReadableDatabase().rawQuery("SELECT agent_id FROM raqubas WHERE id=? AND project_id=1",new String[]{String.valueOf(raqubaId)})){
+            if(c.moveToFirst())return c.getLong(0);
+        }
+        throw new IllegalStateException("الراكوبة غير موجودة");
+    }
+
+    private void dailyAgentEntry(long raqubaId,String worker) {
+        LinearLayout f=form();
+        EditText date=field("تاريخ القيد YYYY-MM-DD",false);date.setText(today());
+        Spinner category=spinner(QUICK_CATEGORIES);
+        EditText item=field("البيان / العمل الزراعي",false);
+        EditText quantity=field("الكمية (اكتب 1 للمبلغ المباشر)",false);quantity.setText("1");quantity.setInputType(8194);
+        EditText price=field("سعر الوحدة أو المبلغ بالجنيه",false);price.setInputType(2);
+        EditText notes=field("ملاحظات الوكيل",false);
+        f.addView(text("التربال: "+worker,15,GREEN,true));f.addView(date);f.addView(category);f.addView(item);f.addView(quantity);f.addView(price);f.addView(notes);
+        new AlertDialog.Builder(this).setTitle("القيد اليومي — "+worker).setView(f)
+            .setNegativeButton("إلغاء",null).setPositiveButton("حفظ القيد",(d,w)->{
+                try{
+                    if(empty(date)||empty(item)||empty(quantity)||empty(price))throw new IllegalArgumentException();
+                    double q=Double.parseDouble(val(quantity));long p=Long.parseLong(val(price));
+                    if(q<=0||p<0||!Double.isFinite(q))throw new IllegalArgumentException();
+                    String cat=category.getSelectedItem().toString();String[] defaults=db.defaultResponsibility(cat);
+                    db.addAgentCost(findAgentIdForRaquba(raqubaId),raqubaId,val(date),worker,cat,val(item),q,p,"التاجر",defaults[0],defaults[2],defaults[3],"","قيد يومي بواسطة الوكيل؛ "+val(notes));
+                    toast("تم حفظ القيد اليومي للتربال "+worker);
+                }catch(Exception e){toast("لم يُحفظ القيد. تحقق من التاريخ والكمية والمبلغ");}
+            }).show();
     }
 
     private void showProjectForm(boolean edit) {
@@ -952,7 +1203,7 @@ public class MainActivity extends Activity {
         hs.addView(row); content.addView(hs);
     }
 
-    private void addBack() { Button b=button("⌂  الرئيسية"); content.addView(b,0); b.setOnClickListener(v->showHome()); }
+    private void addBack() { /* Navigation button is injected once by base() on every working screen. */ }
 
     private GradientDrawable rounded(int color, int radius, int stroke) {
         GradientDrawable d = new GradientDrawable();
