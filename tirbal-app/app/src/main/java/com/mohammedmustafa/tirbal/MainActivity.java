@@ -1108,7 +1108,7 @@ public class MainActivity extends Activity {
     private void showSettlement() {
         base("تسوية نصيب التربال");
         content.addView(text("طريقة الحساب: صافي الفواتير − كامل التكلفة المشتركة المسجلة، ثم تقسيم المتبقي مناصفة. تخصم الميز والسلفيات والخدمات المحددة على التربال من نصيبه فقط.",14,DARK,false));
-        long totalNet=0,totalShared=0,totalWorkerDeductions=0,totalWorkerShare=0;
+        long totalNet=0,totalShared=0,totalWorkerDeductions=0,totalWorkerHalfShare=0,totalWorkerShare=0;
         tableHeader(new String[]{"التربال","صافي الفواتير","التكلفة المشتركة","نصيب التربال قبل الخصم","خصومات التربال","الصافي المستحق"});
         try(Cursor names=db.workerNames()){
             while(names.moveToNext()){
@@ -1116,17 +1116,17 @@ public class MainActivity extends Activity {
                 long net=db.netSalesForWorker(worker);
                 long shared=db.sumCostsForWorker(worker,SHARED_CATEGORIES);
                 long deductions=db.sumCostsForWorker(worker,WORKER_DEDUCTIONS);
-                long distributable=net-shared;
-                long half=distributable/2;
-                long due=half-deductions;
+                SettlementMath.Share share=SettlementMath.calculateWorkerShare(net,shared,deductions);
+                long half=share.halfShare;
+                long due=share.netDue;
                 tableRow(new String[]{worker,money.format(net),money.format(shared),money.format(half),money.format(deductions),money.format(due)});
-                totalNet+=net;totalShared+=shared;totalWorkerDeductions+=deductions;totalWorkerShare+=due;
+                totalNet=Math.addExact(totalNet,net);totalShared=Math.addExact(totalShared,shared);totalWorkerDeductions=Math.addExact(totalWorkerDeductions,deductions);totalWorkerHalfShare=Math.addExact(totalWorkerHalfShare,half);totalWorkerShare=Math.addExact(totalWorkerShare,due);
             }
         }
         content.addView(text("ملخص المشروع",18,GREEN,true));
         reportLine("صافي جميع الفواتير بعد تكلفة الرحلات",totalNet);
         reportLine("إجمالي التحضير والتقاوي والسماد والمبيد",totalShared);
-        reportLine("نصيب التربال قبل الميز والسلفيات",(totalNet-totalShared)/2);
+        reportLine("مجموع أنصبة الترابلة قبل الخصومات",totalWorkerHalfShare);
         reportLine("إجمالي خصومات الميز والسلفيات والخدمات",totalWorkerDeductions);
         content.addView(text("إجمالي صافي مستحقات الترابلة: "+money.format(totalWorkerShare)+" ج.س",21,GREEN,true));
         content.addView(text("مثال المعادلة: 50,000,000 − 5,000,000 = 45,000,000. نصيب كل طرف 22,500,000. إذا كانت خصومات التربال 2,000,000 يصبح صافي نصيبه 20,500,000.",13,Color.DKGRAY,false));
