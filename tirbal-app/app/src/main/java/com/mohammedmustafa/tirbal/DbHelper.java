@@ -334,7 +334,7 @@ public final class DbHelper extends SQLiteOpenHelper {
         ContentValues v = new ContentValues();
         v.put("project_id", 1); v.put("invoice", invoice); v.put("sale_date", date);
         v.put("gross", gross); v.put("allocated_cost", allocatedCost); v.put("market_expenses", marketExpenses);
-        v.put("net", gross - allocatedCost - marketExpenses); v.put("trader", trader); v.put("notes", notes);
+        v.put("net", SettlementMath.netSale(gross, allocatedCost, marketExpenses)); v.put("trader", trader); v.put("notes", notes);
         long id = getWritableDatabase().insertOrThrow("sales", null, v);
         AccountingBook.postSale(getWritableDatabase(), id, date, invoice, gross, allocatedCost, marketExpenses);
     }
