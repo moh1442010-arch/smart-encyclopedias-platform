@@ -15,9 +15,9 @@ public class SettlementMathTest {
         long first = SettlementMath.netSale(30_000_000L, 2_000_000L, 500_000L);
         long second = SettlementMath.netSale(25_000_000L, 1_500_000L, 500_000L);
         SettlementMath.Share share = SettlementMath.calculateWorkerShare(first + second, 5_000_000L, 2_000_000L);
-        assertEquals(51_000_000L, first + second);
-        assertEquals(23_000_000L, share.halfShare);
-        assertEquals(21_000_000L, share.netDue);
+        assertEquals(50_500_000L, first + second);
+        assertEquals(22_750_000L, share.halfShare);
+        assertEquals(20_750_000L, share.netDue);
     }
 
     @Test public void handlesOddHalvesWithoutCreatingMoney() {
@@ -46,6 +46,6 @@ public class SettlementMathTest {
 
     @Test(expected = ArithmeticException.class)
     public void detectsLongOverflow() {
-        SettlementMath.calculateWorkerShare(Long.MAX_VALUE, 0L, 0L);
+        SettlementMath.calculateWorkerShare(Long.MIN_VALUE, 1L, 0L);
     }
 }
