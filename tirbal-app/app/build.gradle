@@ -8,12 +8,21 @@ android {
         buildConfig true
     }
 
+    buildTypes {
+        debug {
+            buildConfigField 'boolean', 'REVIEW_MODE', 'true'
+        }
+        release {
+            buildConfigField 'boolean', 'REVIEW_MODE', 'false'
+        }
+    }
+
     defaultConfig {
         applicationId 'com.mohammedmustafa.tirbal'
         minSdk 23
         targetSdk 35
-        versionCode 6
-        versionName '1.3.1'
+        versionCode 8
+        versionName '1.4.1'
     }
 
     compileOptions {
