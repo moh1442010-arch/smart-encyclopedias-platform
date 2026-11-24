@@ -24,7 +24,7 @@ android {
     defaultConfig {
         applicationId 'com.mohammedmustafa.tirbal'
         minSdk 23
-        targetSdk 35
+        targetSdk 36
         versionCode 12
         versionName '1.8.1'
         // Commercial licensing is controlled by the website nucleus.
