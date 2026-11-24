@@ -67,7 +67,7 @@ test("review build can defer licensing and the website nucleus can enforce it la
   assert.ok(activity.includes("private void showUserGuide()"));
   assert.ok(activity.includes('"١. إعداد المشروع"'));
   assert.ok(activity.includes('"٨. الأسعار والترخيص والتحديث"'));
-  assert.ok(activity.includes('"٩. حماية البيانات"'));
+  assert.ok(activity.includes('"١١. حماية البيانات"'));
   assert.ok(activity.includes("عودة إلى الرئيسية"));
   assert.ok(activity.includes("private void base(String title)"));
   assert.ok(activity.includes("private void addBack() { /* Navigation button is injected once by base()"));
@@ -89,7 +89,7 @@ test("manual review and payment configuration are server-controlled", () => {
 
 
 test("agricultural costs and sales are posted to a balanced double-entry ledger", () => {
-  assert.match(database, /DB_VERSION = 7/);
+  assert.match(database, /DB_VERSION = 8/);
   assert.match(database, /AccountingBook\.install\(db\)/);
   assert.match(database, /AccountingBook\.postCost\(/);
   assert.match(database, /AccountingBook\.postSale\(/);
@@ -136,7 +136,7 @@ test("quick worker cost sheet, crop input rows, invoices and settlement follow t
   assert.match(activity, /sumCostsForWorker\(worker,SHARED_CATEGORIES\)/);
   assert.match(activity, /WORKER_DEDUCTIONS = \{"الميز","السلفيات"/);
   assert.match(activity, /sumCostsForWorker\(worker,WORKER_DEDUCTIONS\)/);
-  assert.match(database, /DB_VERSION = 7/);
+  assert.match(database, /DB_VERSION = 8/);
   assert.match(database, /UPDATE partnership_terms SET responsible_party='مشترك', settlement_type='shared_half'/);
   assert.match(activity, /التكاليف المشتركة قبل المناصفة/);
   assert.match(activity, /الميز والسلفيات المخصومة من نصيب التربال/);
