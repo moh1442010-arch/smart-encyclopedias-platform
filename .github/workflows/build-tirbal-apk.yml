@@ -54,7 +54,7 @@ jobs:
           printf '%s' "$TIRBAL_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/tirbal-release.jks"
           echo "TIRBAL_KEYSTORE_PATH=$RUNNER_TEMP/tirbal-release.jks" >> "$GITHUB_ENV"
 
-      - name: Build signed update APK
+      - name: Run accounting calculation unit tests\n        run: gradle --no-daemon -p tirbal-app :app:testDebugUnitTest\n\n      - name: Build signed update APK
         if: ${{ env.TIRBAL_KEYSTORE_BASE64 != '' }}
         env:
           TIRBAL_KEYSTORE_PASSWORD: ${{ secrets.TIRBAL_KEYSTORE_PASSWORD }}
