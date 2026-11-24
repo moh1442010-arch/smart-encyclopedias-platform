@@ -17,7 +17,7 @@ const config = read("tirbal-licensing/wrangler.toml");
 test("Android, Worker and Wrangler use the same product version", () => {
   assert.ok(gradle.includes("versionName '1.8.1'"));
   assert.ok(worker.includes('APP_VERSION = "1.8.1"'));
-  assert.ok(config.includes('APP_VERSION = "1.8.0"'));
+  assert.ok(config.includes('APP_VERSION = "1.8.1"'));
 });
 
 test("trial and prices are consistent across app and Worker", () => {
@@ -31,7 +31,7 @@ test("trial and prices are consistent across app and Worker", () => {
   assert.match(activity, /monthly\.optLong\("amount"\)/);
   assert.match(activity, /annual\.optLong\("amount"\)/);
   assert.match(activity, /lifetime\.optLong\("amount"\)/);
-  assert.match(activity, /الأسعار المرجعية غير مؤكدة من الخادم/);
+  assert.match(activity, /أسعار مرجعية غير مؤكدة من الخادم/);
   assert.match(activity, /private void loadSubscriptionConfig\(/);
   assert.match(activity, /إعادة تحميل الأسعار وبيانات الدفع/);
   assert.match(activity, /submit\.setEnabled\(false\)/);
