@@ -448,68 +448,174 @@ public class MainActivity extends Activity {
 
     private void showHome() {
         base("حساب التربال");
-        content.addView(text(db.projectName(), 23, DARK, true));
-        content.addView(text("لوحة المشروع الزراعي  •  الجنيه السوداني", 14, Color.DKGRAY, false));
-        content.addView(text("🤝 شراكة مناصفة 50% للتاجر و50% للتربال", 16, GOLD, true));
+        LinearLayout hero = new LinearLayout(this);
+        hero.setOrientation(LinearLayout.VERTICAL);
+        hero.setGravity(Gravity.CENTER);
+        hero.setPadding(18, 22, 18, 22);
+        GradientDrawable heroBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.rgb(7,75,39), Color.rgb(24,135,62), Color.rgb(5,83,54)});
+        heroBg.setCornerRadius(dp(22));
+        hero.setBackground(heroBg);
+        TextView brand = text("🌱  حساب التربال", 28, Color.WHITE, true);
+        brand.setGravity(Gravity.CENTER);
+        hero.addView(brand);
+        TextView slogan = text("برنامج المحاسبة الزراعية الذكي", 15, Color.rgb(255,225,145), true);
+        slogan.setGravity(Gravity.CENTER);
+        hero.addView(slogan);
+        TextView project = text(db.projectName() + "  •  " + "الجنيه السوداني", 14, Color.WHITE, false);
+        project.setGravity(Gravity.CENTER);
+        hero.addView(project);
+        content.addView(hero, margin(-1,-2,0,0,0,12));
+
+        LinearLayout stats = new LinearLayout(this);
+        stats.setOrientation(LinearLayout.VERTICAL);
+        stats.setPadding(14, 12, 14, 12);
+        stats.setBackground(rounded(Color.WHITE, 16, Color.rgb(220,230,218)));
         long costs = db.total("costs", "total");
         long sales = db.total("sales", "gross");
         long net = db.total("sales", "net");
-        LinearLayout stats = new LinearLayout(this);
-        stats.setOrientation(LinearLayout.VERTICAL);
-        stats.setPadding(14, 14, 14, 14);
-        stats.setBackgroundColor(Color.WHITE);
-        stats.addView(text("إجمالي التكلفة  " + money.format(costs) + " ج.س", 17, DARK, true));
-        stats.addView(text("إجمالي المبيعات  " + money.format(sales) + " ج.س", 17, GREEN, true));
-        stats.addView(text("صافي نتائج المبيعات  " + money.format(net) + " ج.س", 17, net >= 0 ? GREEN : Color.RED, true));
-        content.addView(stats, margin(-1, -2, 0, 12, 0, 14));
+        stats.addView(text("إجمالي التكلفة  " + money.format(costs) + " ج.س", 16, DARK, true));
+        stats.addView(text("إجمالي المبيعات  " + money.format(sales) + " ج.س", 16, GREEN, true));
+        stats.addView(text("صافي نتائج المبيعات  " + money.format(net) + " ج.س", 16, net >= 0 ? GREEN : Color.RED, true));
+        content.addView(stats, margin(-1,-2,0,0,0,14));
+        content.addView(text("إدارة المزرعة والحسابات", 18, DARK, true));
+
+        addTile("📘 الدليل الإرشادي", "تعلم استخدام التطبيق خطوة بخطوة", v -> showUserGuide());
+        addTile("🧑‍🌾 الوكلاء والرواكيب", "الوكلاء وكبار المزارعين وسكان الرواكيب", v -> showAgents());
+        addTile("🧮 المحاسب والدفاتر", "دفتر اليومية والأستاذ وميزان المراجعة", v -> showJournal());
+        addTile("🧾 الفواتير والمبيعات", "فواتير السوق والترحيل وصافي البيع", v -> showSales());
+        addTile("🍅 محاصيلنا الزراعية", "الطماطم والبطيخ والبامية والذرة والسمسم وغيرها", v -> showCropHub());
+        addTile("🌾 تكلفة الزراعة", "الميز والأسمدة والمبيدات والتقاوي والخدمات", v -> showCosts());
+        addTile("⚖️ التسوية والميزان", "تسوية الحقوق والالتزامات وحساب الأنصبة", v -> showSettlement());
+        addTile("📊 التقارير", "تقارير الموسم والأرباح والخسائر", v -> showReports());
+        addTile("🔐 الترخيص والاشتراك", "الأسعار وطلب الاشتراك وحالة الترخيص", v -> showSubscriptionInfo());
+        addTile("🌐 نواة الموقع والخلية", "الأسعار والتحديثات والإعلانات المركزية", v -> showUpdateCenter());
+        addTile("⚙️ إعدادات التطبيق", "بيانات المشروع وكلمة المرور واتفاق الشراكة", v -> showSettingsHub());
+        addTile("🎧 الدعم الفني", "دليل المساعدة وبيانات التواصل", v -> showSupportHub());
+
+        content.addView(text("أدوات العمل اليومية", 18, DARK, true));
         addTile("📁 بيانات المشروع", "اسم المشروع والمحصول والتاجر والمساحة", v -> showProjectForm(true));
-        addTile("🧾 دفتر التكلفة", "التقاوي والأسمدة والمبيدات والميز والعمال والمصروفات والسلفيات", v -> showCosts());
         addTile("🛒 السوق والمبيعات", "الفواتير والتاريخ والتكلفة ومنصرفات السوق والصافي", v -> showSales());
         addTile("📅 الرزنامة الزراعية", "مواعيد الزراعة والري والتسميد والرش والحصاد", v -> showCalendar());
         addTile("🌱 مدخلات الزراعة", "إدخال سريع متعدد البنود والكميات والأسعار", v -> showAgricultureInputs());
-        addTile("👨‍🌾 العمال والتربال", "تسجيل اسم التربال وربط اسمه ببنود التكلفة", v -> showCosts());
-        addTile("🧑‍🌾 الوكلاء والرواكيب", "إدارة الوكلاء والرواكيب وكبار المزارعين وسكان كل راكوبة والقيد اليومي", v -> showAgents());
-        addTile("🤝 تسوية نصيب التربال", "حساب صافي الفواتير والمناصفة والخصومات لكل تربال", v -> showSettlement());
-        addTile("📊 الأرباح والخسائر", "ملخص الموسم ونتائج المبيعات والتكاليف", v -> showReports());
-        addTile("📚 دفتر اليومية والأستاذ", "قيود محاسبية مزدوجة وسجل العمليات المرحلة", v -> showJournal());
-        addTile("⚖️ ميزان المراجعة", "أرصدة الحسابات ومطابقة إجمالي المدين والدائن", v -> showTrialBalance());
-        addTile("💳 الديون والسلفيات", "السلفيات تسجل كبند تكلفة قابل للتصنيف", v -> showCosts());
-        addTile("🤝 اتفاق الشراكة والتسوية", "مسؤوليات التاجر والتربال والخصومات بعد الحصاد", v -> showPartnership());
-        addTile("🔐 تغيير كلمة المرور", "تحديث كلمة مرور التطبيق", v -> changePassword());
-        addTile("🌐 نواة الموقع والخلية", "الأسعار والترخيص والإعلانات والتحديثات المركزية؛ ويستمر التسجيل المحاسبي محلياً دون إنترنت", v -> showUpdateCenter());
-        addTile("📘 الدليل الإرشادي", "شرح الاستخدام خطوة بخطوة وطريقة إدخال الحسابات", v -> showUserGuide());
+        addTile("👨‍🌾 العمال والتربال", "تسجيل أسماء التربالة وربطها ببنود التكلفة", v -> showCosts());
+        addTile("💳 الديون والسلفيات", "متابعة السلفيات والديون وتصنيفها المحاسبي", v -> showCosts());
+        addTile("🤝 اتفاق الشراكة والتسوية", "مسؤوليات التاجر والتربال وقواعد الخصم", v -> showPartnership());
     }
 
     private void addTile(String title, String subtitle, View.OnClickListener click) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(14, 12, 14, 12);
-        card.setBackground(rounded(Color.WHITE, 18, Color.rgb(225,232,222)));
+        card.setElevation(dp(3));
+        int[][] palette = {
+                {Color.rgb(30,75,180), Color.rgb(16,115,205)},
+                {Color.rgb(15,115,63), Color.rgb(35,155,78)},
+                {Color.rgb(108,42,160), Color.rgb(151,62,190)},
+                {Color.rgb(190,105,12), Color.rgb(230,150,20)},
+                {Color.rgb(0,120,125), Color.rgb(0,160,145)}
+        };
+        int colorIndex = Math.abs(title.hashCode()) % palette.length;
+        GradientDrawable background = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                palette[colorIndex]);
+        background.setCornerRadius(dp(18));
+        background.setStroke(dp(1), Color.argb(100,255,255,255));
+        card.setBackground(background);
 
         int split = title.indexOf(' ');
         String icon = split > 0 ? title.substring(0, split) : "◈";
         String label = split > 0 ? title.substring(split + 1).trim() : title;
-
         LinearLayout line = new LinearLayout(this);
         line.setOrientation(LinearLayout.HORIZONTAL);
         line.setGravity(Gravity.CENTER_VERTICAL);
-        TextView iconView = text(icon, 23, GREEN, true);
+        TextView iconView = text(icon, 30, Color.WHITE, true);
         iconView.setGravity(Gravity.CENTER);
-        iconView.setBackground(rounded(Color.rgb(235,243,234), 14, Color.rgb(235,243,234)));
-        line.addView(iconView, new LinearLayout.LayoutParams(dp(52), dp(52)));
-
+        iconView.setBackground(rounded(Color.argb(45,255,255,255), 14, Color.argb(90,255,255,255)));
+        line.addView(iconView, new LinearLayout.LayoutParams(dp(58), dp(58)));
         LinearLayout labels = new LinearLayout(this);
         labels.setOrientation(LinearLayout.VERTICAL);
         labels.setPadding(12, 0, 0, 0);
-        labels.addView(text(label, 17, GREEN, true));
-        labels.addView(text(subtitle, 13, Color.DKGRAY, false));
+        labels.addView(text(label, 17, Color.WHITE, true));
+        labels.addView(text(subtitle, 13, Color.WHITE, false));
         line.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView arrow = text("‹", 30, Color.WHITE, true);
+        arrow.setGravity(Gravity.CENTER);
+        line.addView(arrow, new LinearLayout.LayoutParams(dp(28), dp(48)));
         card.addView(line);
-
-        content.addView(card, margin(-1, -2, 0, 0, 0, 10));
+        content.addView(card, margin(-1,-2,0,0,0,10));
         card.setOnClickListener(click);
     }
 
+    private void showCropHub() {
+        base("محاصيلنا الزراعية");
+        content.addView(text("اختر المحصول لعرض أدواته الزراعية. التسجيل المحاسبي يبقى في دفاتر التكلفة والمدخلات والفواتير الحالية.",14,DARK,false));
+        String[][] crops = {
+                {"🍅","الطماطم","شتلات، تسميد، ري، مكافحة، حصاد وفرز"},
+                {"🍉","البطيخ","بذور، تجهيز الجور، ري، تسميد وحصاد"},
+                {"🌿","البامية","بذور، خدمة، مكافحة، جمع وتسويق"},
+                {"🌽","الذرة","تقاوي، تحضير، تسميد، ري وحصاد"},
+                {"🌾","القمح","تقاوي، تسميد، مكافحة وحصاد"},
+                {"🥜","الفول السوداني","بذور، خدمة، قلع وتجفيف"},
+                {"🫘","السمسم","تقاوي، مكافحة، حصاد وتجفيف"},
+                {"🧅","البصل","شتل، ري، تسميد، تقليع وتخزين"}
+        };
+        for(String[] crop:crops) {
+            LinearLayout card=new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(14,10,14,10);
+            card.setBackground(rounded(Color.WHITE,16,Color.rgb(220,230,218)));
+            card.addView(text(crop[0]+"  "+crop[1],19,GREEN,true));
+            card.addView(text(crop[2],13,Color.DKGRAY,false));
+            Button open=button("فتح أدوات المحصول");
+            card.addView(open);
+            open.setOnClickListener(v->{
+                new AlertDialog.Builder(this).setTitle(crop[0]+" "+crop[1])
+                    .setMessage("اختر الإجراء المطلوب لهذا المحصول. أدخل بيانات الموسم في شاشة المشروع، ثم سجّل التكاليف والمدخلات والمواعيد والفواتير في الأقسام المخصصة.")
+                    .setPositiveButton("مدخلات الزراعة",(d,w)->showAgricultureInputs())
+                    .setNeutralButton("الرزنامة الزراعية",(d,w)->showCalendar())
+                    .setNegativeButton("دفتر التكلفة",(d,w)->showCosts()).show();
+            });
+            content.addView(card,margin(-1,-2,0,0,0,10));
+        }
+        addBack();
+    }
+
+    private void showSubscriptionInfo() {
+        base("الترخيص والاشتراك");
+        content.addView(text("تُحمّل تفاصيل الأسعار ومدة التجربة وبيانات التحويل من نواة الموقع عند توفر الاتصال.",15,DARK,false));
+        Button refresh=button("عرض حالة الاشتراك والأسعار");
+        content.addView(refresh);
+        refresh.setOnClickListener(v->LicenseManager.loadConfig((cfg,error)->runOnUiThread(()->{
+            if(cfg==null){toast(error==null?"تعذر الاتصال بنواة الموقع":error);return;}
+            JSONObject plans=cfg.optJSONObject("plans");
+            String message="مدة التجربة: "+cfg.optInt("trialDays",7)+" أيام";
+            if(plans!=null) {
+                JSONObject m=plans.optJSONObject("monthly"),a=plans.optJSONObject("annual"),l=plans.optJSONObject("lifetime");
+                if(m!=null)message+="\\nالشهري: "+m.optLong("amount")+" ج.س";
+                if(a!=null)message+="\\nالسنوي: "+a.optLong("amount")+" ج.س";
+                if(l!=null)message+="\\nالدائم: "+l.optLong("amount")+" ج.س";
+            }
+            new AlertDialog.Builder(this).setTitle("تفاصيل الاشتراك").setMessage(message).setPositiveButton("حسناً",null).show();
+        })));
+        addBack();
+    }
+
+    private void showSettingsHub() {
+        base("إعدادات التطبيق");
+        addTile("📁 بيانات المشروع","تعديل بيانات المزرعة والمحصول",v->showProjectForm(true));
+        addTile("🤝 اتفاق الشراكة","تحديد المسؤوليات وطريقة الخصم",v->showPartnership());
+        addTile("🔐 كلمة المرور","تغيير كلمة مرور التطبيق",v->changePassword());
+        addBack();
+    }
+
+    private void showSupportHub() {
+        base("الدعم الفني");
+        content.addView(text("يمكنك الرجوع إلى الدليل الإرشادي لمعرفة خطوات إدخال البيانات ومراجعة الحسابات.",15,DARK,false));
+        Button guide=button("فتح الدليل الإرشادي");
+        content.addView(guide);
+        guide.setOnClickListener(v->showUserGuide());
+        addBack();
+    }
 
     private void showAgents() {
         base("الوكلاء والرواكيب");
