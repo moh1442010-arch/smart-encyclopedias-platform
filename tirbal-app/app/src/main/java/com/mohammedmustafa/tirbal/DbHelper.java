@@ -148,7 +148,7 @@ public final class DbHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE raquba_workers (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, raquba_id INTEGER NOT NULL, worker_name TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(raquba_id,worker_name), FOREIGN KEY(raquba_id) REFERENCES raqubas(id) ON DELETE CASCADE)");
         db.execSQL("CREATE INDEX idx_raqubas_agent ON raqubas(agent_id)");
         db.execSQL("CREATE INDEX idx_raquba_workers_raquba ON raquba_workers(raquba_id)");
-        db.execSQL("CREATE TABLE costs (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, entry_date TEXT NOT NULL, worker TEXT NOT NULL, category TEXT NOT NULL, item TEXT NOT NULL, quantity REAL NOT NULL, unit_price INTEGER NOT NULL, total INTEGER NOT NULL, payer TEXT NOT NULL DEFAULT 'غير محدد', responsible_party TEXT NOT NULL DEFAULT 'غير محدد', settlement_type TEXT NOT NULL DEFAULT 'owner_bears', deduction_from TEXT NOT NULL DEFAULT 'none', agreement_note TEXT, notes TEXT, FOREIGN KEY(project_id) REFERENCES project(id))");
+        db.execSQL("CREATE TABLE costs (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, entry_date TEXT NOT NULL, worker TEXT NOT NULL, category TEXT NOT NULL, item TEXT NOT NULL, quantity REAL NOT NULL, unit_price INTEGER NOT NULL, total INTEGER NOT NULL, payer TEXT NOT NULL DEFAULT 'غير محدد', responsible_party TEXT NOT NULL DEFAULT 'غير محدد', settlement_type TEXT NOT NULL DEFAULT 'owner_bears', deduction_from TEXT NOT NULL DEFAULT 'none', agreement_note TEXT, notes TEXT, agent_id INTEGER, raquba_id INTEGER, FOREIGN KEY(project_id) REFERENCES project(id))");
         db.execSQL("CREATE TABLE partnership_terms (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, category TEXT NOT NULL UNIQUE, responsible_party TEXT NOT NULL, default_payer TEXT NOT NULL, settlement_type TEXT NOT NULL, deduction_from TEXT NOT NULL, note TEXT)");
         seedPartnershipTerms(db);
         db.execSQL("CREATE TABLE sales (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, invoice TEXT NOT NULL, sale_date TEXT NOT NULL, gross INTEGER NOT NULL, allocated_cost INTEGER NOT NULL DEFAULT 0, market_expenses INTEGER NOT NULL DEFAULT 0, net INTEGER NOT NULL, trader TEXT, notes TEXT, FOREIGN KEY(project_id) REFERENCES project(id))");
@@ -181,6 +181,8 @@ public final class DbHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 7) AccountingBook.install(db);
         if (oldVersion < 8) {
+            db.execSQL("ALTER TABLE costs ADD COLUMN agent_id INTEGER");
+            db.execSQL("ALTER TABLE costs ADD COLUMN raquba_id INTEGER");
             db.execSQL("CREATE TABLE agents (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, name TEXT NOT NULL, phone TEXT, notes TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
             db.execSQL("CREATE TABLE raqubas (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, agent_id INTEGER NOT NULL, name TEXT NOT NULL, senior_farmer TEXT NOT NULL, notes TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE)");
             db.execSQL("CREATE TABLE raquba_workers (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, raquba_id INTEGER NOT NULL, worker_name TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(raquba_id,worker_name), FOREIGN KEY(raquba_id) REFERENCES raqubas(id) ON DELETE CASCADE)");
@@ -283,6 +285,19 @@ public final class DbHelper extends SQLiteOpenHelper {
         v.put("agreement_note", agreementNote); v.put("notes", notes);
         long id = getWritableDatabase().insertOrThrow("costs", null, v);
         AccountingBook.postCost(getWritableDatabase(), id, date, category, item, Math.round(quantity * price), payer);
+    }
+
+
+    public void addAgentCost(long agentId,long raqubaId,String date,String worker,String category,String item,double quantity,long price,
+                             String payer,String responsible,String settlementType,String deductionFrom,String agreementNote,String notes) {
+        long total=Math.round(quantity*price);
+        ContentValues v=new ContentValues();v.put("project_id",1);v.put("entry_date",date);v.put("worker",worker);
+        v.put("category",category);v.put("item",item);v.put("quantity",quantity);v.put("unit_price",price);v.put("total",total);
+        v.put("payer",payer);v.put("responsible_party",responsible);v.put("settlement_type",settlementType);
+        v.put("deduction_from",deductionFrom);v.put("agreement_note",agreementNote);v.put("notes",notes);
+        v.put("agent_id",agentId);v.put("raquba_id",raqubaId);
+        long id=getWritableDatabase().insertOrThrow("costs",null,v);
+        AccountingBook.postCost(getWritableDatabase(),id,date,category,item,total,payer);
     }
 
     public String[] defaultResponsibility(String category) {
