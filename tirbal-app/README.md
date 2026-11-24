@@ -5,7 +5,7 @@
 ## الهوية
 - الاسم: حساب التربال
 - Package: `com.mohammedmustafa.tirbal`
-- Version: `1.3.1`
+- Version: `1.4.1` (Build 8 review candidate)
 - لغة الواجهة: العربية مع RTL
 - Minimum Android: 6.0 (API 23)
 - Database: SQLCipher مشفرة محلياً، ومفتاحها محمي بواسطة Android Keystore
@@ -36,6 +36,10 @@ gradle -p tirbal-app :app:assembleDebug
 ```
 الناتج:
 `tirbal-app/app/build/outputs/apk/debug/app-debug.apk`
+
+## وضع المراجعة 1.4.1
+- بناء Debug يفتح قاعدة البيانات المحلية مباشرة دون انتظار خادم الترخيص، حتى يمكن اختبار التسجيل والدخول وجميع الشاشات والعمليات دون اتصال.
+- بناء Release يبقي بوابة الترخيص السحابية مفعلة. هذا الاستثناء مخصص لمراجعة الوظائف فقط ولا يمثل اعتماداً تجارياً.
 
 ## الترخيص والاشتراكات
 - تجربة مجانية 15 يوماً تبدأ عند أول تسجيل للجهاز على خادم الترخيص.
