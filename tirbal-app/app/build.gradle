@@ -25,14 +25,18 @@ android {
         applicationId 'com.mohammedmustafa.tirbal'
         minSdk 23
         targetSdk 36
-        versionCode 12
-        versionName '1.8.1'
+        versionCode 13
+        versionName '1.8.2'
         // Commercial licensing is controlled by the website nucleus.
         buildConfigField 'boolean', 'REMOTE_LICENSE_CONTROL', 'true'
     }
 
     buildTypes {
+        debug {
+            buildConfigField 'boolean', 'REVIEW_MODE', 'true'
+        }
         release {
+            buildConfigField 'boolean', 'REVIEW_MODE', 'false'
             if (hasTirbalReleaseSigning) signingConfig signingConfigs.release
             minifyEnabled false
         }
