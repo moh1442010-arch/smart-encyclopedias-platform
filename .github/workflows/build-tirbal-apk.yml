@@ -6,6 +6,8 @@ on:
     branches:
       - feature/hisab-al-tirbal-android-v1
       - fix/tirbal-app-first-review-1.4.0
+      - feature/tirbal-commercial-1.8.0
+      - feature/tirbal-visual-identity-1.9.0
     paths:
       - 'tirbal-app/**'
       - '.github/workflows/build-tirbal-apk.yml'
@@ -13,6 +15,7 @@ on:
     branches:
       - main
       - feature/hisab-al-tirbal-android-v1
+      - fix/tirbal-app-first-review-1.4.0
     paths:
       - 'tirbal-app/**'
       - '.github/workflows/build-tirbal-apk.yml'
@@ -51,6 +54,9 @@ jobs:
           printf '%s' "$TIRBAL_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/tirbal-release.jks"
           echo "TIRBAL_KEYSTORE_PATH=$RUNNER_TEMP/tirbal-release.jks" >> "$GITHUB_ENV"
 
+      - name: Run accounting calculation unit tests
+        run: gradle --no-daemon -p tirbal-app :app:testDebugUnitTest
+
       - name: Build signed update APK
         if: ${{ env.TIRBAL_KEYSTORE_BASE64 != '' }}
         env:
@@ -75,7 +81,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: hisab-al-tirbal-1.7.0-review-apk
+          name: hisab-al-tirbal-1.8.0-review-apk
           path: tirbal-app/dist/hisab-al-tirbal.apk
           if-no-files-found: error
           retention-days: 14
