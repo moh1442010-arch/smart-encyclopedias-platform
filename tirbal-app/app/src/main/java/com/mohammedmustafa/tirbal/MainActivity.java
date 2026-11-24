@@ -620,6 +620,13 @@ public class MainActivity extends Activity {
         if(panel.getWindow()!=null)panel.getWindow().setLayout((int)(getResources().getDisplayMetrics().widthPixels*0.90),-1);
     }
 
+    private long findAgentIdForRaquba(long raqubaId) {
+        try(Cursor c=db.getReadableDatabase().rawQuery("SELECT agent_id FROM raqubas WHERE id=? AND project_id=1",new String[]{String.valueOf(raqubaId)})){
+            if(c.moveToFirst())return c.getLong(0);
+        }
+        throw new IllegalStateException("الراكوبة غير موجودة");
+    }
+
     private void dailyAgentEntry(long raqubaId,String worker) {
         LinearLayout f=form();
         EditText date=field("تاريخ القيد YYYY-MM-DD",false);date.setText(today());
@@ -636,7 +643,7 @@ public class MainActivity extends Activity {
                     double q=Double.parseDouble(val(quantity));long p=Long.parseLong(val(price));
                     if(q<=0||p<0||!Double.isFinite(q))throw new IllegalArgumentException();
                     String cat=category.getSelectedItem().toString();String[] defaults=db.defaultResponsibility(cat);
-                    db.addCost(val(date),worker,cat,val(item),q,p,"التاجر",defaults[0],defaults[2],defaults[3],"","قيد يومي بواسطة الوكيل؛ "+val(notes));
+                    db.addAgentCost(findAgentIdForRaquba(raqubaId),raqubaId,val(date),worker,cat,val(item),q,p,"التاجر",defaults[0],defaults[2],defaults[3],"","قيد يومي بواسطة الوكيل؛ "+val(notes));
                     toast("تم حفظ القيد اليومي للتربال "+worker);
                 }catch(Exception e){toast("لم يُحفظ القيد. تحقق من التاريخ والكمية والمبلغ");}
             }).show();
