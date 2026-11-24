@@ -63,7 +63,14 @@ test("review build can defer licensing and the website nucleus can enforce it la
   assert.match(activity, /if\(config==null\)[\s\S]*continueLicenseCheck\(\)/);
   assert.match(activity, /optInt\("trialDays",7\)/);
   assert.ok(activity.includes("title.indexOf(' ')"));
-  assert.ok(activity.includes("iconView.setBackground(rounded(Color.rgb(235,243,234)"));
+  assert.ok(activity.includes("card.setElevation(dp(3))"));
+  assert.ok(activity.includes("private void showCropHub()"));
+  assert.ok(activity.includes("الطماطم"));
+  assert.ok(activity.includes("البطيخ"));
+  assert.ok(activity.includes("البامية"));
+  assert.ok(activity.includes("private void showSubscriptionInfo()"));
+  assert.ok(activity.includes("private void showSettingsHub()"));
+  assert.ok(activity.includes("private void showSupportHub()"));
   assert.ok(activity.includes("private void showUserGuide()"));
   assert.ok(activity.includes('"١. إعداد المشروع"'));
   assert.ok(activity.includes('"٨. الأسعار والترخيص والتحديث"'));
