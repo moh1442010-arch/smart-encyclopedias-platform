@@ -415,7 +415,7 @@ public class MainActivity extends Activity {
             }
             try {
                 double areaValue = empty(area) ? 0d : Double.parseDouble(val(area));
-                if (!Double.isFinite(areaValue) || areaValue < 0d) throw new NumberFormatException();
+                if (Double.isNaN(areaValue) || Double.isInfinite(areaValue) || areaValue < 0d) throw new NumberFormatException();
                 if (!val(startDate).matches("\\d{4}-\\d{2}-\\d{2}")) {
                     toast("أدخل تاريخ الموسم بصيغة YYYY-MM-DD"); return;
                 }
