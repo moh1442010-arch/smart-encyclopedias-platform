@@ -8,6 +8,7 @@ on:
       - fix/tirbal-app-first-review-1.4.0
       - feature/tirbal-commercial-1.8.0
       - feature/tirbal-visual-identity-1.9.0
+      - fix/tirbal-startup-playprotect-1.8.1
     paths:
       - 'tirbal-app/**'
       - '.github/workflows/build-tirbal-apk.yml'
@@ -16,6 +17,7 @@ on:
       - main
       - feature/hisab-al-tirbal-android-v1
       - fix/tirbal-app-first-review-1.4.0
+      - fix/tirbal-startup-playprotect-1.8.1
     paths:
       - 'tirbal-app/**'
       - '.github/workflows/build-tirbal-apk.yml'
