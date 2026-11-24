@@ -32,6 +32,12 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(DARK);
         getWindow().setNavigationBarColor(DARK);
+        // Review builds open the local accounting workspace directly. Licensing remains
+        // implemented but is deliberately deferred until functional review is complete.
+        if (BuildConfig.REVIEW_MODE) {
+            if (openDatabaseSafely()) showGate();
+            return;
+        }
         LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
             if(config!=null && isMandatoryUpdate(config)) {
                 showMandatoryUpdate(config);
