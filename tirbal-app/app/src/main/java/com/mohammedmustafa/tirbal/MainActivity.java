@@ -378,7 +378,7 @@ public class MainActivity extends Activity {
             JSONObject plans=config.optJSONObject("plans");
             boolean ready=false;
             if(plans!=null) {
-                JSONObject monthly=plans.optJSONObject("monthly),annual=plans.optJSONObject("annual"),lifetime=plans.optJSONObject("lifetime");
+                JSONObject monthly=plans.optJSONObject("monthly"),annual=plans.optJSONObject("annual"),lifetime=plans.optJSONObject("lifetime");
                 if(monthly!=null&&annual!=null&&lifetime!=null) {
                     long m=monthly.optLong("amount"),a=annual.optLong("amount"),l=lifetime.optLong("amount");
                     pricing.setText("شهري "+money.format(m)+" ج.س  •  سنوي "+money.format(a)+" ج.س  •  دائم "+money.format(l)+" ج.س");
