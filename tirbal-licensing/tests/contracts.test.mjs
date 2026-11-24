@@ -102,6 +102,29 @@ test("agricultural costs and sales are posted to a balanced double-entry ledger"
 });
 
 
+
+test("agent hierarchy, raquba roster and offline daily entries are linked without losing existing data", () => {
+  assert.match(database, /DB_VERSION = 8/);
+  assert.match(database, /CREATE TABLE agents/);
+  assert.match(database, /CREATE TABLE raqubas/);
+  assert.match(database, /CREATE TABLE raquba_workers/);
+  assert.match(database, /ALTER TABLE costs ADD COLUMN agent_id INTEGER/);
+  assert.match(database, /ALTER TABLE costs ADD COLUMN raquba_id INTEGER/);
+  assert.match(database, /void addAgentCost\(/);
+  assert.match(database, /v\.put\("agent_id",agentId\)/);
+  assert.match(database, /v\.put\("raquba_id",raqubaId\)/);
+  assert.match(database, /AccountingBook\.postCost\(/);
+  assert.match(activity, /private void showAgents\(\)/);
+  assert.match(activity, /private void showAgentDetail\(/);
+  assert.match(activity, /private void showRaqubaPanel\(/);
+  assert.match(activity, /كبير المزارعين/);
+  assert.match(activity, /سكان الراكوبة/);
+  assert.match(activity, /private void dailyAgentEntry\(/);
+  assert.match(activity, /db\.addAgentCost\(/);
+  assert.match(activity, /🧑‍🌾 الوكلاء والرواكيب/);
+  assert.match(activity, /١٠\. الوكلاء والرواكيب/);
+});
+
 test("quick worker cost sheet, crop input rows, invoices and settlement follow the requested workflow", () => {
   assert.match(activity, /اسم التربال/);
   assert.match(activity, /QUICK_CATEGORIES = \{"الميز","الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون","السلفيات"\}/);
