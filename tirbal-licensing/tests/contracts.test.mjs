@@ -35,7 +35,7 @@ test("trial and prices are consistent across app and Worker", () => {
   assert.match(activity, /private void loadSubscriptionConfig\(/);
   assert.match(activity, /إعادة تحميل الأسعار وبيانات الدفع/);
   assert.match(activity, /submit\.setEnabled\(false\)/);
-  assert.match(activity, /SUPPORT_WHATSAPP = "\\+249121851285"/);
+  assert.ok(activity.includes('SUPPORT_WHATSAPP = "+249121851285"'));
   assert.match(license, /setConnectTimeout\(8000\)/);
   assert.match(license, /setReadTimeout\(8000\)/);
   assert.match(activity, /https:\/\/wa\.me\//);
