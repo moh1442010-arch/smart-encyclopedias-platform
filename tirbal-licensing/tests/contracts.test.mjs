@@ -15,8 +15,8 @@ const manifest = read("tirbal-app/app/src/main/AndroidManifest.xml");
 const config = read("tirbal-licensing/wrangler.toml");
 
 test("Android, Worker and Wrangler use the same product version", () => {
-  assert.ok(gradle.includes("versionName '1.8.0'"));
-  assert.ok(worker.includes('APP_VERSION = "1.8.0"'));
+  assert.ok(gradle.includes("versionName '1.8.1'"));
+  assert.ok(worker.includes('APP_VERSION = "1.8.1"'));
   assert.ok(config.includes('APP_VERSION = "1.8.0"'));
 });
 
@@ -31,7 +31,13 @@ test("trial and prices are consistent across app and Worker", () => {
   assert.match(activity, /monthly\.optLong\("amount"\)/);
   assert.match(activity, /annual\.optLong\("amount"\)/);
   assert.match(activity, /lifetime\.optLong\("amount"\)/);
-  assert.match(activity, /جارٍ تحميل الخطة الشهرية/);
+  assert.match(activity, /الأسعار المرجعية غير مؤكدة من الخادم/);
+  assert.match(activity, /private void loadSubscriptionConfig\(/);
+  assert.match(activity, /إعادة تحميل الأسعار وبيانات الدفع/);
+  assert.match(activity, /submit\.setEnabled\(false\)/);
+  assert.match(activity, /SUPPORT_WHATSAPP = "\\+249121851285"/);
+  assert.match(license, /setConnectTimeout\(8000\)/);
+  assert.match(license, /setReadTimeout\(8000\)/);
   assert.match(activity, /https:\/\/wa\.me\//);
   assert.match(activity, /String whatsappNumber=p\.optString\("whatsapp",""\)/);
   assert.match(activity, /String digits=whatsappNumber\.replaceAll\("\[\^0-9\]",""\)/);
@@ -71,6 +77,7 @@ test("review build can defer licensing and the website nucleus can enforce it la
   assert.ok(activity.includes("private void showSubscriptionInfo()"));
   assert.ok(activity.includes("private void showSettingsHub()"));
   assert.ok(activity.includes("private void showSupportHub()"));
+  assert.ok(activity.includes("private void openSupportWhatsApp()"));
   assert.ok(activity.includes("private void showUserGuide()"));
   assert.ok(activity.includes('"١. إعداد المشروع"'));
   assert.ok(activity.includes('"٨. الأسعار والترخيص والتحديث"'));
