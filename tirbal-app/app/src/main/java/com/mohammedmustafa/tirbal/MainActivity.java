@@ -36,6 +36,12 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(DARK);
         getWindow().setNavigationBarColor(DARK);
+        // Review APKs must expose the complete local accounting app without a network/license gate.
+        // Release APKs keep the remote licensing flow below.
+        if (BuildConfig.REVIEW_MODE) {
+            openReviewSession();
+            return;
+        }
         // Commercial startup is controlled by the licensing service. If config cannot be fetched,
         // the signed bootstrap check may still validate a cached or online license.
         LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
@@ -97,16 +103,22 @@ public class MainActivity extends Activity {
             content.addView(text("تعذر فتح قاعدة البيانات المشفرة أو ترحيل البيانات القديمة. لم يحذف التطبيق النسخة القديمة. أعد المحاولة بعد التأكد من توفر مساحة كافية.",15,DARK,true));
             Button retry = button("إعادة المحاولة");
             content.addView(retry);
-            retry.setOnClickListener(v -> LicenseManager.check(this, check -> runOnUiThread(() -> {
-                currentDeviceId = check.deviceId;
-                if (check.unlocked) {
-                    if (openDatabaseSafely()) {
-                        licenseReady = true;
-                        showGate();
-                        startLicenseMonitor();
-                    }
-                } else showSubscription(check);
-            })));
+            retry.setOnClickListener(v -> {
+                if (BuildConfig.REVIEW_MODE) {
+                    if (openDatabaseSafely()) showGate();
+                    return;
+                }
+                LicenseManager.check(this, check -> runOnUiThread(() -> {
+                    currentDeviceId = check.deviceId;
+                    if (check.unlocked) {
+                        if (openDatabaseSafely()) {
+                            licenseReady = true;
+                            showGate();
+                            startLicenseMonitor();
+                        }
+                    } else showSubscription(check);
+                }));
+            });
             return false;
         }
     }
