@@ -379,17 +379,55 @@ public class MainActivity extends Activity {
 
     private void showProjectForm(boolean edit) {
         base("بيانات المشروع الزراعي");
+        EditText project = field("اسم المشروع / المزرعة", false);
         EditText trader = field("اسم التاجر", false);
         EditText crop = field("نوع المحصول", false);
-        content.addView(trader); content.addView(crop);
+        EditText owner = field("اسم المالك", false);
+        EditText accountant = field("اسم المحاسب / المسؤول", false);
+        EditText area = field("المساحة بالفدان أو الوحدة المتفق عليها", false);
+        area.setInputType(8194);
+        EditText startDate = field("تاريخ بداية الموسم YYYY-MM-DD", false);
+        EditText region = field("المنطقة / الموقع", false);
+        startDate.setText(today());
+        if (edit) {
+            try (Cursor c = db.getReadableDatabase().rawQuery(
+                    "SELECT name,trader,crop,owner,accountant,area,start_date,region FROM project WHERE id=1", null)) {
+                if (c.moveToFirst()) {
+                    project.setText(c.getString(0));
+                    trader.setText(c.getString(1));
+                    crop.setText(c.getString(2));
+                    owner.setText(c.getString(3));
+                    accountant.setText(c.getString(4));
+                    area.setText(c.getString(5));
+                    startDate.setText(c.getString(6));
+                    region.setText(c.getString(7));
+                }
+            }
+        }
+        content.addView(project); content.addView(trader); content.addView(crop);
+        content.addView(owner); content.addView(accountant); content.addView(area);
+        content.addView(startDate); content.addView(region);
         Button save = button("حفظ البيانات");
         content.addView(save);
         save.setOnClickListener(v -> {
-            if (empty(trader) || empty(crop)) { toast("أدخل اسم التاجر ونوع المحصول"); return; }
-            String traderName = val(trader);
-            db.saveProject(traderName, val(crop), traderName, traderName, "غير محدد", 0, today(), "");
-            toast("تم حفظ بيانات المشروع");
-            showHome();
+            if (empty(project) || empty(trader) || empty(crop)) {
+                toast("أدخل اسم المشروع واسم التاجر ونوع المحصول"); return;
+            }
+            try {
+                double areaValue = empty(area) ? 0d : Double.parseDouble(val(area));
+                if (!Double.isFinite(areaValue) || areaValue < 0d) throw new NumberFormatException();
+                if (!val(startDate).matches("\\d{4}-\\d{2}-\\d{2}")) {
+                    toast("أدخل تاريخ الموسم بصيغة YYYY-MM-DD"); return;
+                }
+                db.saveProject(val(project), val(crop), val(trader),
+                        empty(owner) ? val(trader) : val(owner),
+                        empty(accountant) ? "غير محدد" : val(accountant),
+                        areaValue, val(startDate), val(region));
+                toast("تم حفظ بيانات المشروع");
+                showHome();
+            } catch (Exception ex) {
+                toast("تحقق من المساحة والتاريخ والبيانات المدخلة");
+            }
         });
         addBack();
     }
