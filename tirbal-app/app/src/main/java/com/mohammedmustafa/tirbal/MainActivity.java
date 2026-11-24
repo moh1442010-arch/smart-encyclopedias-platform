@@ -285,55 +285,32 @@ public class MainActivity extends Activity {
         addBack();
     }
 
+    private static final String SUPPORT_WHATSAPP = "+249121851285";
+
     private void showSubscription(LicenseManager.Result result) {
         base("اشتراك حساب التربال");
         content.addView(text("فترة تجريبية مجانية، ثم يلزم اشتراك لمواصلة العمل.",16,DARK,true));
         content.addView(text(result.message,14,Color.DKGRAY,false));
         content.addView(text("الأسعار بالجنيه السوداني",17,GREEN,true));
-        TextView pricing=text("جارٍ تحميل الأسعار الحالية...",15,DARK,true);
+
+        TextView pricing=text("الأسعار المرجعية: شهري 70,000 • سنوي 650,000 • دائم 1,300,000 ج.س",14,DARK,true);
         content.addView(pricing);
-        Spinner plan=spinner(new String[]{"جارٍ تحميل الخطة الشهرية...","جارٍ تحميل الخطة السنوية...","جارٍ تحميل الخطة الدائمة..."});
-        TextView payment=text("جارٍ تحميل بيانات التحويل...",14,Color.DKGRAY,false);
+        Spinner plan=spinner(new String[]{"شهري — 70,000 جنيه","سنوي — 650,000 جنيه","دائم — 1,300,000 جنيه"});
+        content.addView(plan);
+
+        TextView payment=text("يجري الاتصال بنواة الترخيص لتحميل بيانات التحويل المعتمدة.",14,Color.DKGRAY,false);
         content.addView(payment);
         Button whatsapp=button("التواصل مع الدعم عبر واتساب");
-        whatsapp.setEnabled(false);
         content.addView(whatsapp);
-        LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
-            if(config==null){payment.setText(error);return;}
-            JSONObject p=config.optJSONObject("payment");
-            if(p==null){payment.setText("بيانات التحويل غير متاحة حالياً.");return;}
-            String whatsappNumber=p.optString("whatsapp","");
-            String details="بنك التحويل: "+p.optString("bankName","غير محدد")+
-                    "\nاسم الحساب: "+p.optString("accountName","غير محدد")+
-                    "\nرقم الحساب: "+p.optString("accountNumber","لم يُضبط بعد")+
-                    "\nواتساب الدعم: "+(whatsappNumber.isEmpty()?"لم يُضبط بعد":whatsappNumber);
-            payment.setText(details);
-            String digits=whatsappNumber.replaceAll("[^0-9]","");
-            if(!digits.isEmpty()){
-                whatsapp.setEnabled(true);
-                whatsapp.setOnClickListener(v->{
-                    String message="مرحباً، أحتاج مساعدة بخصوص ترخيص تطبيق حساب التربال.";
-                    Intent intent=new Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://wa.me/"+digits+"?text="+android.net.Uri.encode(message)));
-                    try{startActivity(intent);}catch(Exception ex){toast("تعذر فتح واتساب أو المتصفح.");}
-                });
-            }
-            JSONObject plans=config.optJSONObject("plans");
-            if(plans!=null) {
-                JSONObject monthly=plans.optJSONObject("monthly"),annual=plans.optJSONObject("annual"),lifetime=plans.optJSONObject("lifetime");
-                if(monthly!=null&&annual!=null&&lifetime!=null) {
-                    long m=monthly.optLong("amount"),a=annual.optLong("amount"),l=lifetime.optLong("amount");
-                    pricing.setText("شهري "+money.format(m)+" ج.س  •  سنوي "+money.format(a)+" ج.س  •  دائم "+money.format(l)+" ج.س");
-                    plan.setAdapter(new ArrayAdapter<>(MainActivity.this,android.R.layout.simple_spinner_dropdown_item,
-                            new String[]{"شهري — "+money.format(m)+" جنيه","سنوي — "+money.format(a)+" جنيه","دائم — "+money.format(l)+" جنيه"}));
-                }
-            }
-        }));
+        whatsapp.setOnClickListener(v->openSupportWhatsApp());
+
         EditText customer=field("اسم صاحب الاشتراك",false);
         EditText contact=field("رقم هاتف العميل",false);
         EditText receipt=field("رقم مرجع التحويل",false);
+        content.addView(customer);content.addView(contact);content.addView(receipt);
 
-        content.addView(customer);content.addView(contact);content.addView(plan);content.addView(receipt);
         Button submit=button("إرسال طلب الاشتراك للمراجعة");
+        submit.setEnabled(false);
         content.addView(submit);
         submit.setOnClickListener(v->{
             if(empty(customer)||empty(contact)||empty(receipt)){toast("أكمل الاسم ورقم الهاتف ومرجع التحويل");return;}
@@ -349,24 +326,83 @@ public class MainActivity extends Activity {
                         "\nيرجى مراجعة التحويل وتفعيل الترخيص بعد التأكد من وصول المبلغ.";
                 new AlertDialog.Builder(this).setTitle("تم تسجيل الطلب")
                         .setMessage("رقم الطلب: "+id+"\nحالة الطلب: قيد مراجعة الدفع. لن يفتح التطبيق حتى اعتماد الترخيص.")
-                        .setPositiveButton("مشاركة تفاصيل الطلب", (d,w)->{
+                        .setPositiveButton("مشاركة تفاصيل الطلب",(d,w)->{
                             Intent share=new Intent(Intent.ACTION_SEND);share.setType("text/plain");
                             share.putExtra(Intent.EXTRA_TEXT,message);
                             startActivity(Intent.createChooser(share,"إرسال تفاصيل طلب الاشتراك"));
                         }).setNegativeButton("حسناً",null).show();
             }));
         });
+
+        Button reload=button("إعادة تحميل الأسعار وبيانات الدفع");
+        content.addView(reload);
+        reload.setOnClickListener(v->loadSubscriptionConfig(pricing,plan,payment,whatsapp,submit));
         Button refresh=button("تحقق من التفعيل / استعادة الاشتراك");
         content.addView(refresh);
         refresh.setOnClickListener(v->{
             refresh.setEnabled(false);
             LicenseManager.check(this,check->runOnUiThread(()->{
                 refresh.setEnabled(true);
-                currentDeviceId = check.deviceId;
+                currentDeviceId=check.deviceId;
                 if(check.unlocked){if(!openDatabaseSafely())return;licenseReady=true;showGate();startLicenseMonitor();}
                 else showSubscription(check);
             }));
         });
+        loadSubscriptionConfig(pricing,plan,payment,whatsapp,submit);
+    }
+
+    private void loadSubscriptionConfig(TextView pricing,Spinner plan,TextView payment,Button whatsapp,Button submit) {
+        pricing.setText("جارٍ تحديث الأسعار من نواة الموقع...");
+        payment.setText("جارٍ تحميل بيانات التحويل...");
+        submit.setEnabled(false);
+        LicenseManager.loadConfig((config,error)->runOnUiThread(()->{
+            if(config==null) {
+                pricing.setText("تعذر تحديث الأسعار. المعروض أسعار مرجعية غير مؤكدة من الخادم: شهري 70,000 • سنوي 650,000 • دائم 1,300,000 ج.س");
+                payment.setText((error==null?"تعذر الاتصال بنواة الترخيص.":error)+" يمكنك التواصل مع الدعم عبر واتساب أو إعادة المحاولة.");
+                whatsapp.setEnabled(true);
+                submit.setEnabled(false);
+                return;
+            }
+            JSONObject p=config.optJSONObject("payment");
+            if(p==null) payment.setText("بيانات التحويل غير متاحة حالياً. تواصل مع الدعم قبل التحويل.");
+            else {
+                String details="بنك التحويل: "+p.optString("bankName","غير محدد")+
+                        "\nاسم الحساب: "+p.optString("accountName","غير محدد")+
+                        "\nرقم الحساب: "+p.optString("accountNumber","لم يُضبط بعد")+
+                        "\nواتساب الدعم: "+p.optString("whatsapp",SUPPORT_WHATSAPP);
+                payment.setText(details);
+                String number=p.optString("whatsapp",SUPPORT_WHATSAPP).replaceAll("[^0-9]","");
+                whatsapp.setEnabled(!number.isEmpty());
+                whatsapp.setOnClickListener(v->openWhatsApp(number));
+            }
+            JSONObject plans=config.optJSONObject("plans");
+            boolean ready=false;
+            if(plans!=null) {
+                JSONObject monthly=plans.optJSONObject("monthly),annual=plans.optJSONObject("annual"),lifetime=plans.optJSONObject("lifetime");
+                if(monthly!=null&&annual!=null&&lifetime!=null) {
+                    long m=monthly.optLong("amount"),a=annual.optLong("amount"),l=lifetime.optLong("amount");
+                    pricing.setText("شهري "+money.format(m)+" ج.س  •  سنوي "+money.format(a)+" ج.س  •  دائم "+money.format(l)+" ج.س");
+                    plan.setAdapter(new ArrayAdapter<>(MainActivity.this,android.R.layout.simple_spinner_dropdown_item,
+                            new String[]{"شهري — "+money.format(m)+" جنيه","سنوي — "+money.format(a)+" جنيه","دائم — "+money.format(l)+" جنيه"}));
+                    ready=m>0&&a>0&&l>0;
+                }
+            }
+            if(!ready) {
+                pricing.setText("تعذر تحميل خطط الاشتراك المعتمدة. أعد المحاولة قبل إرسال الطلب.");
+                submit.setEnabled(false);
+            } else submit.setEnabled(true);
+        }));
+    }
+
+    private void openSupportWhatsApp() {
+        openWhatsApp(SUPPORT_WHATSAPP.replaceAll("[^0-9]",""));
+    }
+
+    private void openWhatsApp(String digits) {
+        if(digits==null||digits.isEmpty()){toast("رقم الدعم غير متاح حالياً.");return;}
+        String message="مرحباً، أحتاج مساعدة بخصوص ترخيص تطبيق حساب التربال.";
+        Intent intent=new Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://wa.me/"+digits+"?text="+android.net.Uri.encode(message)));
+        try{startActivity(intent);}catch(Exception ex){toast("تعذر فتح واتساب أو المتصفح.");}
     }
 
     private void base(String title) {
