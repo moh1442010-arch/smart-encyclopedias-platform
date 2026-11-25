@@ -9,6 +9,7 @@ on:
       - feature/tirbal-commercial-1.8.0
       - feature/tirbal-visual-identity-1.9.0
       - fix/tirbal-startup-playprotect-1.8.1
+      - feature/tirbal-commercial-2.0.0
     paths:
       - 'tirbal-app/**'
       - '.github/workflows/build-tirbal-apk.yml'
@@ -50,17 +51,31 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;35.0.0"
 
-      - name: Prepare original release keystore
-        if: ${{ env.TIRBAL_KEYSTORE_BASE64 != '' }}
+      - name: Check original release signing configuration
+        id: signing
+        env:
+          STORE_B64: ${{ secrets.TIRBAL_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.TIRBAL_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.TIRBAL_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.TIRBAL_KEY_PASSWORD }}
         run: |
-          printf '%s' "$TIRBAL_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/tirbal-release.jks"
-          echo "TIRBAL_KEYSTORE_PATH=$RUNNER_TEMP/tirbal-release.jks" >> "$GITHUB_ENV"
+          set -euo pipefail
+          if [ -n "$STORE_B64" ] && [ -n "$STORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            printf '%s' "$STORE_B64" | base64 --decode > "$RUNNER_TEMP/tirbal-release.jks"
+            keytool -list -keystore "$RUNNER_TEMP/tirbal-release.jks" -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+            echo "TIRBAL_KEYSTORE_PATH=$RUNNER_TEMP/tirbal-release.jks" >> "$GITHUB_ENV"
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "Original release signing key is present and readable."
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Original release signing key is incomplete; producing a separate review-only APK."
+          fi
 
       - name: Run accounting calculation unit tests
         run: gradle --no-daemon -p tirbal-app :app:testDebugUnitTest
 
       - name: Build signed update APK
-        if: ${{ env.TIRBAL_KEYSTORE_BASE64 != '' }}
+        if: ${{ steps.signing.outputs.ready == 'true' }}
         env:
           TIRBAL_KEYSTORE_PASSWORD: ${{ secrets.TIRBAL_KEYSTORE_PASSWORD }}
           TIRBAL_KEY_ALIAS: ${{ secrets.TIRBAL_KEY_ALIAS }}
@@ -68,22 +83,52 @@ jobs:
         run: gradle --no-daemon -p tirbal-app :app:assembleRelease
 
       - name: Build debug review APK when no release key is configured
-        if: ${{ env.TIRBAL_KEYSTORE_BASE64 == '' }}
+        if: ${{ steps.signing.outputs.ready != 'true' }}
         run: gradle --no-daemon -p tirbal-app :app:assembleDebug
 
-      - name: Stage APK
+      - name: Verify signed update APK
+        if: ${{ steps.signing.outputs.ready == 'true' }}
+        run: |
+          set -euo pipefail
+          apk=tirbal-app/app/build/outputs/apk/release/app-release.apk
+          test -s "$apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "package: name='com.mohammedmustafa.tirbal'"
+
+      - name: Verify review APK identity
+        if: ${{ steps.signing.outputs.ready != 'true' }}
+        run: |
+          set -euo pipefail
+          apk=tirbal-app/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$apk"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" | grep -F "package: name='com.mohammedmustafa.tirbal.review'"
+
+      - name: Stage signed update APK
+        if: ${{ steps.signing.outputs.ready == 'true' }}
         run: |
           mkdir -p tirbal-app/dist
-          if [ -f tirbal-app/app/build/outputs/apk/release/app-release.apk ]; then
-            cp tirbal-app/app/build/outputs/apk/release/app-release.apk tirbal-app/dist/hisab-al-tirbal.apk
-          else
-            cp tirbal-app/app/build/outputs/apk/debug/app-debug.apk tirbal-app/dist/hisab-al-tirbal.apk
-          fi
+          cp tirbal-app/app/build/outputs/apk/release/app-release.apk tirbal-app/dist/hisab-al-tirbal.apk
 
-      - name: Upload APK
+      - name: Stage review-only APK
+        if: ${{ steps.signing.outputs.ready != 'true' }}
+        run: |
+          mkdir -p tirbal-app/dist
+          cp tirbal-app/app/build/outputs/apk/debug/app-debug.apk tirbal-app/dist/hisab-al-tirbal-review.apk
+
+      - name: Upload signed update APK
+        if: ${{ steps.signing.outputs.ready == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: hisab-al-tirbal-1.8.1-review-apk
+          name: hisab-al-tirbal-commercial-2.0.0-signed-update-apk
           path: tirbal-app/dist/hisab-al-tirbal.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload review-only APK
+        if: ${{ steps.signing.outputs.ready != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: hisab-al-tirbal-commercial-2.0.0-review-only-apk
+          path: tirbal-app/dist/hisab-al-tirbal-review.apk
           if-no-files-found: error
           retention-days: 14
