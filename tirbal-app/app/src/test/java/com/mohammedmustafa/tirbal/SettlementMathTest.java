@@ -35,7 +35,7 @@ public class SettlementMathTest {
 
     @Test(expected = ArithmeticException.class)
     public void detectsOverflowWhenSubtractingInvoiceCosts() {
-        SettlementMath.netSale(Long.MAX_VALUE, 0L, -1L);
+        SettlementMath.netSale(0L, Long.MAX_VALUE, Long.MAX_VALUE);
     }
 
     @Test(expected = ArithmeticException.class)
