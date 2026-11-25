@@ -20,9 +20,27 @@ public class SettlementMathTest {
         assertEquals(20_750_000L, share.netDue);
     }
 
-    @Test public void handlesOddHalvesWithoutCreatingMoney() {
+    @Test public void oddSettlementRemainderIsExplicitAndNeverSilentlyDuplicated() {
         SettlementMath.Share share = SettlementMath.calculateWorkerShare(101L, 0L, 0L);
         assertEquals(50L, share.halfShare);
+        assertEquals(1L, share.distributable - (share.halfShare * 2L));
+    }
+
+    @Test public void zeroValuesProduceZeroSettlement() {
+        SettlementMath.Share share = SettlementMath.calculateWorkerShare(0L, 0L, 0L);
+        assertEquals(0L, share.distributable);
+        assertEquals(0L, share.halfShare);
+        assertEquals(0L, share.netDue);
+    }
+
+    @Test(expected = ArithmeticException.class)
+    public void detectsOverflowWhenSubtractingInvoiceCosts() {
+        SettlementMath.netSale(Long.MAX_VALUE, 0L, -1L);
+    }
+
+    @Test(expected = ArithmeticException.class)
+    public void detectsOverflowWhenSubtractingLargeSharedCosts() {
+        SettlementMath.calculateWorkerShare(Long.MIN_VALUE, Long.MAX_VALUE, 0L);
     }
 
     @Test public void permitsNegativeSettlementWhenDeductionsExceedShare() {
