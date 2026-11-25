@@ -532,7 +532,7 @@ public class MainActivity extends Activity {
         addTile("🧑‍🌾 الوكلاء والرواكيب", "الوكلاء وكبار المزارعين وسكان الرواكيب", v -> showAgents());
         addTile("🧮 المحاسب والدفاتر", "دفتر اليومية والأستاذ وميزان المراجعة", v -> showJournal());
         addTile("🧾 الفواتير والمبيعات", "فواتير السوق والترحيل وصافي البيع", v -> showSales());
-        addTile("🍅 محاصيلنا الزراعية", "الطماطم والبطيخ والبامية والذرة والسمسم وغيرها", v -> showCropHub());
+        addTile("🌱 الدليل الزراعي والمواسم", "محاصيل ومواعيد الزراعة حسب أقاليم السودان", v -> showCropHub());
         addTile("🌾 تكلفة الزراعة", "الميز والأسمدة والمبيدات والتقاوي والخدمات", v -> showCosts());
         addTile("⚖️ التسوية والميزان", "تسوية الحقوق والالتزامات وحساب الأنصبة", v -> showSettlement());
         addTile("📊 التقارير", "تقارير الموسم والأرباح والخسائر", v -> showReports());
@@ -595,37 +595,73 @@ public class MainActivity extends Activity {
     }
 
     private void showCropHub() {
-        base("محاصيلنا الزراعية");
-        content.addView(text("اختر المحصول لعرض أدواته الزراعية. التسجيل المحاسبي يبقى في دفاتر التكلفة والمدخلات والفواتير الحالية.",14,DARK,false));
-        String[][] crops = {
-                {"🍅","الطماطم","شتلات، تسميد، ري، مكافحة، حصاد وفرز"},
-                {"🍉","البطيخ","بذور، تجهيز الجور، ري، تسميد وحصاد"},
-                {"🌿","البامية","بذور، خدمة، مكافحة، جمع وتسويق"},
-                {"🌽","الذرة","تقاوي، تحضير، تسميد، ري وحصاد"},
-                {"🌾","القمح","تقاوي، تسميد، مكافحة وحصاد"},
-                {"🥜","الفول السوداني","بذور، خدمة، قلع وتجفيف"},
-                {"🫘","السمسم","تقاوي، مكافحة، حصاد وتجفيف"},
-                {"🧅","البصل","شتل، ري، تسميد، تقليع وتخزين"}
+        base("الدليل الزراعي ومواسم المحاصيل");
+        content.addView(text("دليل محلي يعمل دون إنترنت. اختر الإقليم لعرض نوافذ الزراعة والحصاد والمحاصيل المناسبة وفق المراجع المنشورة. المواعيد تقريبية وتتغير مع الأمطار والصنف ومصدر الري.",14,DARK,false));
+        String[] regionNames=new String[CropGuideCatalog.REGIONS.length];
+        for(int i=0;i<CropGuideCatalog.REGIONS.length;i++)regionNames[i]=CropGuideCatalog.REGIONS[i][1];
+        Spinner region=spinner(regionNames);
+        content.addView(text("الإقليم الزراعي",15,GREEN,true));
+        content.addView(region);
+        TextView regionInfo=text("",13,Color.DKGRAY,false);
+        regionInfo.setBackground(rounded(Color.WHITE,12,Color.rgb(220,230,218)));
+        regionInfo.setPadding(12,10,12,10);
+        content.addView(regionInfo);
+        LinearLayout cropList=new LinearLayout(this);
+        cropList.setOrientation(LinearLayout.VERTICAL);
+        content.addView(cropList);
+        Runnable render=()->{
+            int selected=Math.max(0,Math.min(region.getSelectedItemPosition(),CropGuideCatalog.REGIONS.length-1));
+            String[] selectedRegion=CropGuideCatalog.REGIONS[selected];
+            regionInfo.setText("التربة: "+selectedRegion[2]+"\nالمناخ والموسم: "+selectedRegion[3]);
+            cropList.removeAllViews();
+            String[][] crops=CropGuideCatalog.cropsForRegion(selectedRegion[0]);
+            for(String[] crop:crops){
+                LinearLayout card=new LinearLayout(this);
+                card.setOrientation(LinearLayout.VERTICAL);
+                card.setPadding(14,10,14,10);
+                card.setBackground(rounded(Color.WHITE,14,Color.rgb(220,230,218)));
+                card.addView(text("🌱  "+crop[1],18,GREEN,true));
+                card.addView(text("الزراعة: "+crop[2],14,DARK,true));
+                card.addView(text("الحصاد: "+crop[3]+"  •  دورة المحصول: "+crop[4],13,Color.DKGRAY,false));
+                Button details=button("تفاصيل الإرشاد الزراعي");
+                card.addView(details);
+                details.setOnClickListener(v->{
+                    String message="نافذة الزراعة: "+crop[2]+"\nنافذة الحصاد: "+crop[3]+"\nمدة الدورة: "+crop[4]
+                        +"\n\nإرشادات الحقل\n"+crop[5]+"\n\nالمخاطر والآفات التي تستحق المتابعة\n"+crop[6]
+                        +"\n\nالمصدر\n"+crop[7];
+                    new AlertDialog.Builder(this).setTitle(crop[1]).setMessage(message).setPositiveButton("حسناً",null).show();
+                });
+                cropList.addView(card,margin(-1,-2,0,0,0,10));
+            }
         };
-        for(String[] crop:crops) {
-            LinearLayout card=new LinearLayout(this);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(14,10,14,10);
-            card.setBackground(rounded(Color.WHITE,16,Color.rgb(220,230,218)));
-            card.addView(text(crop[0]+"  "+crop[1],19,GREEN,true));
-            card.addView(text(crop[2],13,Color.DKGRAY,false));
-            Button open=button("فتح أدوات المحصول");
-            card.addView(open);
-            open.setOnClickListener(v->{
-                new AlertDialog.Builder(this).setTitle(crop[0]+" "+crop[1])
-                    .setMessage("اختر الإجراء المطلوب لهذا المحصول. أدخل بيانات الموسم في شاشة المشروع، ثم سجّل التكاليف والمدخلات والمواعيد والفواتير في الأقسام المخصصة.")
-                    .setPositiveButton("مدخلات الزراعة",(d,w)->showAgricultureInputs())
-                    .setNeutralButton("الرزنامة الزراعية",(d,w)->showCalendar())
-                    .setNegativeButton("دفتر التكلفة",(d,w)->showCosts()).show();
-            });
-            content.addView(card,margin(-1,-2,0,0,0,10));
-        }
+        region.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            public void onNothingSelected(android.widget.AdapterView<?> parent){}
+            public void onItemSelected(android.widget.AdapterView<?> parent,View view,int position,long id){render.run();}
+        });
+        render.run();
+        content.addView(text("إدارة التربة والآفات",18,GREEN,true));
+        Button soil=button("دليل أنواع التربة وتحسينها");
+        content.addView(soil);
+        soil.setOnClickListener(v->showSoilGuide());
+        Button pests=button("دليل الآفات والمكافحة والمبيدات");
+        content.addView(pests);
+        pests.setOnClickListener(v->showPestGuide());
+        Button calendar=button("فتح رزنامة أعمال المزرعة");
+        content.addView(calendar);
+        calendar.setOnClickListener(v->showCalendar());
         addBack();
+    }
+
+    private void showSoilGuide() {
+        new AlertDialog.Builder(this).setTitle("دليل التربة الزراعية")
+            .setMessage("التربة الطينية: تحتفظ بالماء والعناصر، لكنها تحتاج إدارة صرف وتجنب التغريق والانضغاط.\n\nالتربة الرملية: صرفها سريع واحتفاظها بالماء والعناصر أقل؛ قسّم الري إلى دفعات مناسبة وأضف المادة العضوية وفق التحليل.\n\nالتربة الطميية/اللومية: غالباً متوازنة في الصرف والاحتفاظ بالماء، لكن خصوبتها تختلف من حقل لآخر.\n\nالتربة الملحية أو الصودية: لا تعالجها بالتخمين؛ افحص ملوحة التربة ومياه الري، وحدد الصرف والمعالجة مع اختصاصي.\n\nقبل اختيار السماد أو برنامج الري: حلّل التربة والماء، وسجّل القوام والـ pH والملوحة والمادة العضوية. لا توجد جرعة سماد واحدة تصلح لكل الحقول.")
+            .setPositiveButton("حسناً",null).show();
+    }
+
+    private void showPestGuide() {
+        new AlertDialog.Builder(this).setTitle("الآفات والمكافحة الآمنة")
+            .setMessage("ابدأ بالمكافحة المتكاملة: فحص دوري، إزالة بقايا النباتات المصابة، دورة زراعية، أصناف سليمة، نظافة الحقل، ومراقبة الحشرات النافعة.\n\nمجموعات المبيدات بحسب المشكلة: مبيدات حشرية للحشرات، مبيدات فطرية للأمراض الفطرية، مبيدات حشائش للأعشاب، ومعاملات بذور عند وجود توصية معتمدة. اختيار المجموعة وحده لا يكفي لتحديد المنتج.\n\nلا تستخدم اسماً تجارياً أو مادة فعالة أو جرعة قبل التأكد من تسجيل المنتج للمحصول والآفة في السودان وقراءة ملصق العبوة. التزم بمعدات الوقاية، وفترة ما قبل الحصاد، وفترة إعادة الدخول، وعدم خلط المنتجات دون توصية مكتوبة. أبعد المبيدات عن الأطفال والمياه والأعلاف، وتخلص من العبوات حسب تعليمات الجهة المختصة.\n\nإذا لم تتأكد من نوع الآفة، صوّر العَرَض واعرضه على مهندس وقاية نبات قبل الرش.")
+            .setPositiveButton("حسناً",null).show();
     }
 
     private void showSubscriptionInfo() {
