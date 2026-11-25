@@ -9,6 +9,7 @@ on:
       - feature/tirbal-commercial-1.8.0
       - feature/tirbal-visual-identity-1.9.0
       - fix/tirbal-startup-playprotect-1.8.1
+      - feature/tirbal-commercial-2.0.0
     paths:
       - 'tirbal-app/**'
       - '.github/workflows/build-tirbal-apk.yml'
@@ -83,7 +84,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: hisab-al-tirbal-1.8.1-review-apk
+          name: hisab-al-tirbal-commercial-2.0.0-review-apk
           path: tirbal-app/dist/hisab-al-tirbal.apk
           if-no-files-found: error
           retention-days: 14
