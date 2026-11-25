@@ -33,6 +33,10 @@ android {
 
     buildTypes {
         debug {
+            // Keep the review APK side-by-side with a customer's installed commercial app.
+            // It uses a separate application ID and never overwrites production data.
+            applicationIdSuffix '.review'
+            versionNameSuffix '-review'
             buildConfigField 'boolean', 'REVIEW_MODE', 'true'
         }
         release {
