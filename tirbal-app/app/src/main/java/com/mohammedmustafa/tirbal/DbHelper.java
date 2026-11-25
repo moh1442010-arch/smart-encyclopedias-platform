@@ -10,7 +10,7 @@ import java.io.FileInputStream;
 
 public final class DbHelper extends SQLiteOpenHelper {
     private static final String DB_NAME = "tirbal.db";
-    private static final int DB_VERSION = 7;
+    private static final int DB_VERSION = 8;
     private static final String MIGRATION_PREFS = "tirbal_db_migration";
 
     static { System.loadLibrary("sqlcipher"); }
@@ -143,7 +143,12 @@ public final class DbHelper extends SQLiteOpenHelper {
 
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE project (id INTEGER PRIMARY KEY CHECK(id=1), name TEXT NOT NULL, crop TEXT NOT NULL, trader TEXT NOT NULL, owner TEXT NOT NULL, accountant TEXT NOT NULL, area REAL NOT NULL DEFAULT 0, start_date TEXT NOT NULL, region TEXT)");
-        db.execSQL("CREATE TABLE costs (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, entry_date TEXT NOT NULL, worker TEXT NOT NULL, category TEXT NOT NULL, item TEXT NOT NULL, quantity REAL NOT NULL, unit_price INTEGER NOT NULL, total INTEGER NOT NULL, payer TEXT NOT NULL DEFAULT 'غير محدد', responsible_party TEXT NOT NULL DEFAULT 'غير محدد', settlement_type TEXT NOT NULL DEFAULT 'owner_bears', deduction_from TEXT NOT NULL DEFAULT 'none', agreement_note TEXT, notes TEXT, FOREIGN KEY(project_id) REFERENCES project(id))");
+        db.execSQL("CREATE TABLE agents (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, name TEXT NOT NULL, phone TEXT, notes TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+        db.execSQL("CREATE TABLE raqubas (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, agent_id INTEGER NOT NULL, name TEXT NOT NULL, senior_farmer TEXT NOT NULL, notes TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE)");
+        db.execSQL("CREATE TABLE raquba_workers (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, raquba_id INTEGER NOT NULL, worker_name TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(raquba_id,worker_name), FOREIGN KEY(raquba_id) REFERENCES raqubas(id) ON DELETE CASCADE)");
+        db.execSQL("CREATE INDEX idx_raqubas_agent ON raqubas(agent_id)");
+        db.execSQL("CREATE INDEX idx_raquba_workers_raquba ON raquba_workers(raquba_id)");
+        db.execSQL("CREATE TABLE costs (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, entry_date TEXT NOT NULL, worker TEXT NOT NULL, category TEXT NOT NULL, item TEXT NOT NULL, quantity REAL NOT NULL, unit_price INTEGER NOT NULL, total INTEGER NOT NULL, payer TEXT NOT NULL DEFAULT 'غير محدد', responsible_party TEXT NOT NULL DEFAULT 'غير محدد', settlement_type TEXT NOT NULL DEFAULT 'owner_bears', deduction_from TEXT NOT NULL DEFAULT 'none', agreement_note TEXT, notes TEXT, agent_id INTEGER, raquba_id INTEGER, FOREIGN KEY(project_id) REFERENCES project(id))");
         db.execSQL("CREATE TABLE partnership_terms (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, category TEXT NOT NULL UNIQUE, responsible_party TEXT NOT NULL, default_payer TEXT NOT NULL, settlement_type TEXT NOT NULL, deduction_from TEXT NOT NULL, note TEXT)");
         seedPartnershipTerms(db);
         db.execSQL("CREATE TABLE sales (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, invoice TEXT NOT NULL, sale_date TEXT NOT NULL, gross INTEGER NOT NULL, allocated_cost INTEGER NOT NULL DEFAULT 0, market_expenses INTEGER NOT NULL DEFAULT 0, net INTEGER NOT NULL, trader TEXT, notes TEXT, FOREIGN KEY(project_id) REFERENCES project(id))");
@@ -175,6 +180,15 @@ public final class DbHelper extends SQLiteOpenHelper {
             db.execSQL("UPDATE partnership_terms SET responsible_party='مشترك', settlement_type='shared_half', deduction_from='مناصفة', note='الديون الزراعية المشتركة توزع مناصفة بين التاجر والتربال' WHERE category='الديون' AND settlement_type='deduct_worker' AND deduction_from='من نصيب التربال'");
         }
         if (oldVersion < 7) AccountingBook.install(db);
+        if (oldVersion < 8) {
+            db.execSQL("ALTER TABLE costs ADD COLUMN agent_id INTEGER");
+            db.execSQL("ALTER TABLE costs ADD COLUMN raquba_id INTEGER");
+            db.execSQL("CREATE TABLE agents (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, name TEXT NOT NULL, phone TEXT, notes TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+            db.execSQL("CREATE TABLE raqubas (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, agent_id INTEGER NOT NULL, name TEXT NOT NULL, senior_farmer TEXT NOT NULL, notes TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE)");
+            db.execSQL("CREATE TABLE raquba_workers (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id INTEGER NOT NULL DEFAULT 1, raquba_id INTEGER NOT NULL, worker_name TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(raquba_id,worker_name), FOREIGN KEY(raquba_id) REFERENCES raqubas(id) ON DELETE CASCADE)");
+            db.execSQL("CREATE INDEX idx_raqubas_agent ON raqubas(agent_id)");
+            db.execSQL("CREATE INDEX idx_raquba_workers_raquba ON raquba_workers(raquba_id)");
+        }
     }
 
     private void seedPartnershipTerms(SQLiteDatabase db) {
@@ -224,6 +238,29 @@ public final class DbHelper extends SQLiteOpenHelper {
             db.update("costs", cost, "category=? AND settlement_type='agreement_pending' AND payer='التاجر'", new String[]{row[0]});
         }
     }
+
+    public void saveAgent(String name,String phone,String notes) {
+        ContentValues v=new ContentValues();v.put("project_id",1);v.put("name",name.trim());v.put("phone",phone);v.put("notes",notes);
+        getWritableDatabase().insertOrThrow("agents",null,v);
+    }
+    public Cursor agents() {
+        return getReadableDatabase().rawQuery("SELECT id,name,phone FROM agents WHERE project_id=1 ORDER BY name COLLATE NOCASE",null);
+    }
+    public void saveRaquba(long agentId,String name,String senior,String notes) {
+        ContentValues v=new ContentValues();v.put("project_id",1);v.put("agent_id",agentId);v.put("name",name.trim());v.put("senior_farmer",senior.trim());v.put("notes",notes);
+        getWritableDatabase().insertOrThrow("raqubas",null,v);
+    }
+    public Cursor raqubasForAgent(long agentId) {
+        return getReadableDatabase().rawQuery("SELECT id,name,senior_farmer FROM raqubas WHERE project_id=1 AND agent_id=? ORDER BY name COLLATE NOCASE",new String[]{String.valueOf(agentId)});
+    }
+    public void addRaqubaWorker(long raqubaId,String worker) {
+        ContentValues v=new ContentValues();v.put("project_id",1);v.put("raquba_id",raqubaId);v.put("worker_name",worker.trim());
+        getWritableDatabase().insertOrThrow("raquba_workers",null,v);
+    }
+    public Cursor workersForRaquba(long raqubaId) {
+        return getReadableDatabase().rawQuery("SELECT worker_name FROM raquba_workers WHERE project_id=1 AND raquba_id=? ORDER BY worker_name COLLATE NOCASE",new String[]{String.valueOf(raqubaId)});
+    }
+
     public boolean hasProject() {
         try (Cursor c = getReadableDatabase().rawQuery("SELECT 1 FROM project WHERE id=1", null)) { return c.moveToFirst(); }
     }
@@ -248,6 +285,19 @@ public final class DbHelper extends SQLiteOpenHelper {
         v.put("agreement_note", agreementNote); v.put("notes", notes);
         long id = getWritableDatabase().insertOrThrow("costs", null, v);
         AccountingBook.postCost(getWritableDatabase(), id, date, category, item, Math.round(quantity * price), payer);
+    }
+
+
+    public void addAgentCost(long agentId,long raqubaId,String date,String worker,String category,String item,double quantity,long price,
+                             String payer,String responsible,String settlementType,String deductionFrom,String agreementNote,String notes) {
+        long total=Math.round(quantity*price);
+        ContentValues v=new ContentValues();v.put("project_id",1);v.put("entry_date",date);v.put("worker",worker);
+        v.put("category",category);v.put("item",item);v.put("quantity",quantity);v.put("unit_price",price);v.put("total",total);
+        v.put("payer",payer);v.put("responsible_party",responsible);v.put("settlement_type",settlementType);
+        v.put("deduction_from",deductionFrom);v.put("agreement_note",agreementNote);v.put("notes",notes);
+        v.put("agent_id",agentId);v.put("raquba_id",raqubaId);
+        long id=getWritableDatabase().insertOrThrow("costs",null,v);
+        AccountingBook.postCost(getWritableDatabase(),id,date,category,item,total,payer);
     }
 
     public String[] defaultResponsibility(String category) {
@@ -284,7 +334,7 @@ public final class DbHelper extends SQLiteOpenHelper {
         ContentValues v = new ContentValues();
         v.put("project_id", 1); v.put("invoice", invoice); v.put("sale_date", date);
         v.put("gross", gross); v.put("allocated_cost", allocatedCost); v.put("market_expenses", marketExpenses);
-        v.put("net", gross - allocatedCost - marketExpenses); v.put("trader", trader); v.put("notes", notes);
+        v.put("net", SettlementMath.netSale(gross, allocatedCost, marketExpenses)); v.put("trader", trader); v.put("notes", notes);
         long id = getWritableDatabase().insertOrThrow("sales", null, v);
         AccountingBook.postSale(getWritableDatabase(), id, date, invoice, gross, allocatedCost, marketExpenses);
     }

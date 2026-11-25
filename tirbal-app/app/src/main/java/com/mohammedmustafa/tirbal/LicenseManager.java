@@ -84,7 +84,7 @@ final class LicenseManager {
 
     private static JSONObject request(String method,String path,JSONObject body) throws Exception {
         HttpURLConnection connection=(HttpURLConnection)new URL(API+path).openConnection();
-        connection.setRequestMethod(method); connection.setConnectTimeout(12000); connection.setReadTimeout(12000);
+        connection.setRequestMethod(method); connection.setConnectTimeout(8000); connection.setReadTimeout(8000);
         connection.setRequestProperty("Accept","application/json");
         if(body!=null) {
             connection.setDoOutput(true); connection.setRequestProperty("Content-Type","application/json; charset=utf-8");

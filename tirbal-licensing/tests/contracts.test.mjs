@@ -15,13 +15,16 @@ const manifest = read("tirbal-app/app/src/main/AndroidManifest.xml");
 const config = read("tirbal-licensing/wrangler.toml");
 
 test("Android, Worker and Wrangler use the same product version", () => {
-  assert.ok(gradle.includes("versionName '1.7.0'"));
-  assert.ok(worker.includes('APP_VERSION = "1.7.0"'));
-  assert.ok(config.includes('APP_VERSION = "1.7.0"'));
+  assert.ok(gradle.includes("versionName '1.8.2'"));
+  assert.ok(gradle.includes("targetSdk 36"));
+  assert.ok(worker.includes('APP_VERSION = "1.8.2"'));
+  assert.ok(config.includes('APP_VERSION = "1.8.2"'));
 });
 
 test("trial and prices are consistent across app and Worker", () => {
-  assert.ok(worker.includes("trialDays:15"));
+  assert.ok(worker.includes("trialDays:7"));
+  assert.ok(worker.includes("licenseEnforcement:true"));
+  assert.match(worker,/trialDays===15[\s\S]*values\.trialDays=7[\s\S]*licenseEnforcement=true/);
   assert.ok(worker.includes("monthly: { amount: 70000, seconds: 30 * 86400 }"));
   assert.ok(worker.includes("annual: { amount: 650000, seconds: 365 * 86400 }"));
   assert.ok(worker.includes("lifetime: { amount: 1300000, seconds: 0 }"));
@@ -29,10 +32,16 @@ test("trial and prices are consistent across app and Worker", () => {
   assert.match(activity, /monthly\.optLong\("amount"\)/);
   assert.match(activity, /annual\.optLong\("amount"\)/);
   assert.match(activity, /lifetime\.optLong\("amount"\)/);
-  assert.match(activity, /جارٍ تحميل الخطة الشهرية/);
+  assert.match(activity, /أسعار مرجعية غير مؤكدة من الخادم/);
+  assert.match(activity, /private void loadSubscriptionConfig\(/);
+  assert.match(activity, /إعادة تحميل الأسعار وبيانات الدفع/);
+  assert.match(activity, /submit\.setEnabled\(false\)/);
+  assert.ok(activity.includes('SUPPORT_WHATSAPP = "+249121851285"'));
+  assert.match(license, /setConnectTimeout\(8000\)/);
+  assert.match(license, /setReadTimeout\(8000\)/);
   assert.match(activity, /https:\/\/wa\.me\//);
-  assert.match(activity, /String whatsappNumber=p\.optString\("whatsapp",""\)/);
-  assert.match(activity, /String digits=whatsappNumber\.replaceAll\("\[\^0-9\]",""\)/);
+  assert.match(activity, /p\.optString\("whatsapp",SUPPORT_WHATSAPP\)/);
+  assert.match(activity, /private void openWhatsApp\(String digits\)/);
 });
 
 test("licensing is device-bound and signed, not a local date-only trial", () => {
@@ -44,9 +53,19 @@ test("licensing is device-bound and signed, not a local date-only trial", () => 
   assert.match(license, /boot_count/);
 });
 
-test("database opens only after license gate and uses encrypted SQLCipher storage", () => {
+test("review APK opens the complete local app without network licensing; release keeps licensing", () => {
+  assert.match(gradle, /versionCode 13/);
+  assert.match(gradle, /versionName '1.8.2'/);
+  assert.match(gradle, /buildConfigField 'boolean', 'REVIEW_MODE', 'true'/);
+  assert.match(gradle, /buildConfigField 'boolean', 'REVIEW_MODE', 'false'/);
+  assert.match(activity, /if \(BuildConfig\.REVIEW_MODE\) \{\s*openReviewSession\(\);\s*return;/);
+  assert.match(activity, /if \(BuildConfig\.REVIEW_MODE\) \{\s*if \(openDatabaseSafely\(\)\) showGate\(\);\s*return;/);
   assert.match(activity, /LicenseManager\.check\(this/);
-  assert.match(activity, /openDatabaseSafely\(\)/);
+  assert.match(database, /net\.zetetic\.database\.sqlcipher\.SQLiteDatabase/);
+  assert.match(database, /migrateLegacyIfNeeded/);
+  assert.match(keyStore, /AES\/GCM\/NoPadding/);
+  assert.match(keyStore, /AndroidKeyStore/);
+  assert.match(manifest, /allowBackup="false"/);
   assert.match(database, /net\.zetetic\.database\.sqlcipher\.SQLiteDatabase/);
   assert.match(database, /migrateLegacyIfNeeded/);
   assert.match(keyStore, /AES\/GCM\/NoPadding/);
@@ -58,7 +77,27 @@ test("review build can defer licensing and the website nucleus can enforce it la
   assert.match(gradle, /REMOTE_LICENSE_CONTROL/);
   assert.match(activity, /config\.optBoolean\("licenseEnforcement",false\)/);
   assert.match(activity, /openReviewSession\(\)/);
-  assert.match(worker, /licenseEnforcement:false/);
+  assert.match(activity, /if \(BuildConfig\.REVIEW_MODE\) \{\s*openReviewSession\(\);\s*return;/);
+  assert.match(activity, /if\(config==null\)[\s\S]*continueLicenseCheck\(\)/);
+  assert.match(activity, /optInt\("trialDays",7\)/);
+  assert.ok(activity.includes("title.indexOf(' ')"));
+  assert.ok(activity.includes("card.setElevation(dp(3))"));
+  assert.ok(activity.includes("private void showCropHub()"));
+  assert.ok(activity.includes("الطماطم"));
+  assert.ok(activity.includes("البطيخ"));
+  assert.ok(activity.includes("البامية"));
+  assert.ok(activity.includes("private void showSubscriptionInfo()"));
+  assert.ok(activity.includes("private void showSettingsHub()"));
+  assert.ok(activity.includes("private void showSupportHub()"));
+  assert.ok(activity.includes("private void openSupportWhatsApp()"));
+  assert.ok(activity.includes("private void showUserGuide()"));
+  assert.ok(activity.includes('"١. إعداد المشروع"'));
+  assert.ok(activity.includes('"٨. الأسعار والترخيص والتحديث"'));
+  assert.ok(activity.includes('"١١. حماية البيانات"'));
+  assert.ok(activity.includes("عودة إلى الرئيسية"));
+  assert.ok(activity.includes("private void base(String title)"));
+  assert.ok(activity.includes("private void addBack() { /* Navigation button is injected once by base()"));
+  assert.match(worker, /licenseEnforcement:true/);
   assert.match(worker, /licenseEnforcement:settings\.licenseEnforcement/);
   assert.match(worker, /licenseEnforcement:b\.licenseEnforcement===true/);
   assert.match(worker, /id="licenseEnforcement"/);
@@ -76,7 +115,7 @@ test("manual review and payment configuration are server-controlled", () => {
 
 
 test("agricultural costs and sales are posted to a balanced double-entry ledger", () => {
-  assert.match(database, /DB_VERSION = 7/);
+  assert.match(database, /DB_VERSION = 8/);
   assert.match(database, /AccountingBook\.install\(db\)/);
   assert.match(database, /AccountingBook\.postCost\(/);
   assert.match(database, /AccountingBook\.postSale\(/);
@@ -89,6 +128,29 @@ test("agricultural costs and sales are posted to a balanced double-entry ledger"
 });
 
 
+
+test("agent hierarchy, raquba roster and offline daily entries are linked without losing existing data", () => {
+  assert.match(database, /DB_VERSION = 8/);
+  assert.match(database, /CREATE TABLE agents/);
+  assert.match(database, /CREATE TABLE raqubas/);
+  assert.match(database, /CREATE TABLE raquba_workers/);
+  assert.match(database, /ALTER TABLE costs ADD COLUMN agent_id INTEGER/);
+  assert.match(database, /ALTER TABLE costs ADD COLUMN raquba_id INTEGER/);
+  assert.match(database, /void addAgentCost\(/);
+  assert.match(database, /v\.put\("agent_id",agentId\)/);
+  assert.match(database, /v\.put\("raquba_id",raqubaId\)/);
+  assert.match(database, /AccountingBook\.postCost\(/);
+  assert.match(activity, /private void showAgents\(\)/);
+  assert.match(activity, /private void showAgentDetail\(/);
+  assert.match(activity, /private void showRaqubaPanel\(/);
+  assert.match(activity, /كبير المزارعين/);
+  assert.match(activity, /سكان الراكوبة/);
+  assert.match(activity, /private void dailyAgentEntry\(/);
+  assert.match(activity, /db\.addAgentCost\(/);
+  assert.match(activity, /🧑‍🌾 الوكلاء والرواكيب/);
+  assert.match(activity, /١٠\. الوكلاء والرواكيب/);
+});
+
 test("quick worker cost sheet, crop input rows, invoices and settlement follow the requested workflow", () => {
   assert.match(activity, /اسم التربال/);
   assert.match(activity, /QUICK_CATEGORIES = \{"الميز","الأسمدة","المبيدات","التقاوي","تحضير الأرض","الديون","السلفيات"\}/);
@@ -100,7 +162,7 @@ test("quick worker cost sheet, crop input rows, invoices and settlement follow t
   assert.match(activity, /sumCostsForWorker\(worker,SHARED_CATEGORIES\)/);
   assert.match(activity, /WORKER_DEDUCTIONS = \{"الميز","السلفيات"/);
   assert.match(activity, /sumCostsForWorker\(worker,WORKER_DEDUCTIONS\)/);
-  assert.match(database, /DB_VERSION = 7/);
+  assert.match(database, /DB_VERSION = 8/);
   assert.match(database, /UPDATE partnership_terms SET responsible_party='مشترك', settlement_type='shared_half'/);
   assert.match(activity, /التكاليف المشتركة قبل المناصفة/);
   assert.match(activity, /الميز والسلفيات المخصومة من نصيب التربال/);

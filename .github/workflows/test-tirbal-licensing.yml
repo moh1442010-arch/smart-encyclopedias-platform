@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/hisab-al-tirbal-android-v1
+      - fix/tirbal-startup-playprotect-1.8.1
     paths:
       - "tirbal-app/**"
       - "tirbal-licensing/**"

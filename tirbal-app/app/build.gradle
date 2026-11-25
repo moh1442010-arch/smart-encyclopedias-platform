@@ -24,15 +24,23 @@ android {
     defaultConfig {
         applicationId 'com.mohammedmustafa.tirbal'
         minSdk 23
-        targetSdk 35
-        versionCode 10
-        versionName '1.7.0'
-        // Licensing is remotely controlled by the website nucleus. Keep disabled during review.
+        targetSdk 36
+        versionCode 13
+        versionName '1.8.2'
+        // Commercial licensing is controlled by the website nucleus.
         buildConfigField 'boolean', 'REMOTE_LICENSE_CONTROL', 'true'
     }
 
     buildTypes {
+        debug {
+            // Keep the review APK side-by-side with a customer's installed commercial app.
+            // It uses a separate application ID and never overwrites production data.
+            applicationIdSuffix '.review'
+            versionNameSuffix '-review'
+            buildConfigField 'boolean', 'REVIEW_MODE', 'true'
+        }
         release {
+            buildConfigField 'boolean', 'REVIEW_MODE', 'false'
             if (hasTirbalReleaseSigning) signingConfig signingConfigs.release
             minifyEnabled false
         }
@@ -47,4 +55,5 @@ android {
 dependencies {
     implementation 'net.zetetic:sqlcipher-android:4.20.0@aar'
     implementation 'androidx.sqlite:sqlite:2.7.0'
+    testImplementation 'junit:junit:4.13.2'
 }
